@@ -206,6 +206,8 @@ void Server::RunTCP (void) {
 	if (tokens >= 0.0) {
 	    int n = 0;
 	    int readLen = mSettings->mBufLen;
+	    if (burst_nleft > 0)
+	      readLen = (mSettings->mBufLen < burst_nleft) ? mSettings->mBufLen : burst_nleft;
 	    reportstruct->emptyreport=1;
 	    if ((isIsochronous(mSettings) || isTripTime(mSettings)) && (burst_nleft == 0)) {
 		if ((n = recvn(mSettings->mSock, (char *)&burst_info, sizeof(struct TCP_burst_payload), 0)) == sizeof(struct TCP_burst_payload)) {
@@ -216,7 +218,7 @@ void Server::RunTCP (void) {
 		    assert(burst_info.burst_size > 0);
 		    reportstruct->burstsize = burst_info.burst_size;
 		    burst_info.burst_id = ntohl(burst_info.burst_id);
-		    // printf("**** burst size = %d id = %d\n", burst_info.burst_size, burst_info.burst_id);
+//		    printf("**** burst size = %d id = %d\n", burst_info.burst_size, burst_info.burst_id);
 		    reportstruct->frameID = burst_info.burst_id;
 		    if (isTripTime(mSettings)) {
 			reportstruct->sentTime.tv_sec = ntohl(burst_info.send_tt.write_tv_sec);

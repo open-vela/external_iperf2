@@ -512,7 +512,7 @@ void Client::RunTCP( void ) {
 	} else {
 	    totLen += (len + n);
 	    reportstruct->errwrite=WriteNoErr;
-#ifdef HAVE_THREAD_DEBUG<
+#ifdef HAVE_THREAD_DEBUG
 	    {
 		if (len != reportstruct->packetLen)
 		    thread_debug("write size mismatch req=%ld, actual=%d", reportstruct->packetLen, len);
