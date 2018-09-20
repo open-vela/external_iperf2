@@ -87,6 +87,6 @@ int gettimeofday( struct timeval* tv, void* timezone ) {
 
 #ifdef __cplusplus
 } /* end extern "C" */
-    #endif
+#endif
 
 #endif /* HAVE_GETTIMEOFDAY */
