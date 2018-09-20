@@ -175,9 +175,33 @@ void sig_exit( int inSigno ) {
 #endif
     {
         fflush( 0 );
-        exit(0);
+        _exit(0);
     }
 } /* end sig_exit */
+
+void disarm_itimer(void) {
+#ifdef HAVE_SETITIMER
+    struct itimerval it;
+    memset (&it, 0, sizeof (it));
+    setitimer(ITIMER_REAL, &it, NULL);
+#endif
+}
+
+int set_itimer(int usecs) {
+    int err = 0;
+#ifdef HAVE_SETITIMER
+    if (usecs < 0) {
+	WARN(1, "set_itimer value invalid");
+    } else {
+	struct itimerval it;
+	memset (&it, 0, sizeof (it));
+	it.it_value.tv_sec = (int)(usecs / 1000000);
+	it.it_value.tv_usec = (int)(usecs % 1000000);
+	err = setitimer(ITIMER_REAL, &it, NULL);
+    }
+#endif
+    return err;
+}
 
 #ifdef __cplusplus
 } /* end extern "C" */

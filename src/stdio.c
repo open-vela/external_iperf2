@@ -74,17 +74,17 @@ const long kgiga_to_Unit = 1000 * 1000 * 1000;
  * Gg, Mm, Kk are giga, mega, kilo respectively
  * ------------------------------------------------------------------- */
 
-double byte_atof( const char *inString ) {
+double byte_atof(const char *inString) {
     double theNum;
     char suffix = '\0';
 
-    assert( inString != NULL );
+    assert(inString != NULL);
 
     /* scan the number and any suffices */
-    sscanf( inString, "%lf%c", &theNum, &suffix );
+    sscanf(inString, "%lf%c", &theNum, &suffix);
 
     /* convert according to [Gg Mm Kk] */
-    switch ( suffix ) {
+    switch (suffix) {
         case 'G':  theNum *= kGiga_to_Unit;  break;
         case 'M':  theNum *= kMega_to_Unit;  break;
         case 'K':  theNum *= kKilo_to_Unit;  break;
@@ -104,17 +104,17 @@ double byte_atof( const char *inString ) {
  * Gg, Mm, Kk are giga, mega, kilo respectively
  * ------------------------------------------------------------------- */
 
-max_size_t byte_atoi( const char *inString ) {
+intmax_t byte_atoi(const char *inString) {
     double theNum;
     char suffix = '\0';
 
-    assert( inString != NULL );
+    assert(inString != NULL);
 
     /* scan the number and any suffices */
-    sscanf( inString, "%lf%c", &theNum, &suffix );
+    sscanf(inString, "%lf%c", &theNum, &suffix);
 
     /* convert according to [Gg Mm Kk] */
-    switch ( suffix ) {
+    switch (suffix) {
         case 'G':  theNum *= kGiga_to_Unit;  break;
         case 'M':  theNum *= kMega_to_Unit;  break;
         case 'K':  theNum *= kKilo_to_Unit;  break;
@@ -123,7 +123,7 @@ max_size_t byte_atoi( const char *inString ) {
         case 'k':  theNum *= kkilo_to_Unit;  break;
         default: break;
     }
-    return (max_size_t) theNum;
+    return (intmax_t) theNum;
 } /* end byte_atof */
 
 /* -------------------------------------------------------------------
@@ -133,17 +133,17 @@ max_size_t byte_atoi( const char *inString ) {
  * character listed below, this returns the interpreted integer.
  * Gg, Mm, Kk are giga, mega, kilo respectively
  * ------------------------------------------------------------------- */
-unsigned int bitorbyte_atoi( const char *inString ) {
+uintmax_t bitorbyte_atoi(const char *inString) {
     double theNum;
     char suffix = '\0';
 
-    assert( inString != NULL );
+    assert(inString != NULL);
 
     /* scan the number and any suffices */
-    sscanf( inString, "%lf%c", &theNum, &suffix );
+    sscanf(inString, "%lf%c", &theNum, &suffix);
 
     /* convert according to [Gg Mm Kk] */
-    switch ( suffix ) {
+    switch (suffix) {
     case 'G':  theNum *= (kgiga_to_Unit * 8.0);  break;
     case 'M':  theNum *= (kmega_to_Unit * 8.0);  break;
     case 'K':  theNum *= (kkilo_to_Unit * 8.0);  break;
@@ -152,7 +152,7 @@ unsigned int bitorbyte_atoi( const char *inString ) {
     case 'k':  theNum *= kkilo_to_Unit;  break;
     default: break;
     }
-    return (unsigned int) theNum;
+    return (uintmax_t) theNum;
 } /* end byte_atof */
 
 /* -------------------------------------------------------------------
@@ -162,23 +162,25 @@ unsigned int bitorbyte_atoi( const char *inString ) {
  * character listed below, this returns the interpreted integer.
  * Gg, Mm, Kk are giga, mega, kilo respectively
  * ------------------------------------------------------------------- */
-double bitorbyte_atof( const char *inString ) {
+double bitorbyte_atof(const char *inString) {
     double theNum;
     char suffix = '\0';
 
-    assert( inString != NULL );
+    assert(inString != NULL);
 
     /* scan the number and any suffices */
-    sscanf( inString, "%lf%c", &theNum, &suffix );
+    sscanf(inString, "%lf%c", &theNum, &suffix);
 
     /* convert according to [Gg Mm Kk] */
-    switch ( suffix ) {
+    switch (suffix) {
     case 'G':  theNum *= (kgiga_to_Unit * 8.0);  break;
     case 'M':  theNum *= (kmega_to_Unit * 8.0);  break;
     case 'K':  theNum *= (kkilo_to_Unit * 8.0);  break;
     case 'g':  theNum *= kgiga_to_Unit;  break;
     case 'm':  theNum *= kmega_to_Unit;  break;
     case 'k':  theNum *= kkilo_to_Unit;  break;
+    case 'p':
+    case 'P':  theNum *= -1; break;
     default: break;
     }
     return theNum;
@@ -255,18 +257,18 @@ const char* kLabel_bit[]  =
  * (4 digits + space + 5 chars max + null)
  * ------------------------------------------------------------------- */
 
-void byte_snprintf( char* outString, int inLen,
-                    double inNum, char inFormat ) {
+void byte_snprintf(char* outString, int inLen, double inNum, char inFormat) {
     int conv = 0;
     const char* suffix;
     const char* format;
+    double tmpNum;
 
     /* convert to bits for [bkmga] */
-    if ( ! isupper( (int)inFormat ) ) {
+    if (!isupper((int)inFormat)) {
         inNum *= 8;
     }
 
-    switch ( toupper( (int)inFormat) ) {
+    switch (toupper((int)inFormat)) {
         case 'B': conv = kConv_Unit; break;
         case 'K': conv = kConv_Kilo; break;
         case 'M': conv = kConv_Mega; break;
@@ -276,16 +278,16 @@ void byte_snprintf( char* outString, int inLen,
 
         default:
         case 'A': {
-	    double tmpNum = inNum;
+	    tmpNum = (inNum < 0.0 ? (-1 * inNum) : inNum);
 	    conv = kConv_Unit;
 
-	    if ( isupper((int)inFormat) ) {
-		while ( tmpNum >= 1024.0  &&  conv < kConv_Peta ) {
+	    if (isupper((int)inFormat)) {
+		while (tmpNum >= 1024.0  &&  conv < kConv_Peta) {
 		    tmpNum /= 1024.0;
 		    conv++;
 		}
 	    } else {
-		while ( tmpNum >= 1000.0  &&  conv < kConv_Peta ) {
+		while (tmpNum >= 1000.0  &&  conv < kConv_Peta) {
 		    tmpNum /= 1000.0;
 		    conv++;
 		}
@@ -294,27 +296,30 @@ void byte_snprintf( char* outString, int inLen,
 	}
     }
 
-    if ( ! isupper ((int)inFormat) ) {
-        inNum *= kConversionForBits[ conv ];
+    if (!isupper((int)inFormat)) {
+        inNum *= kConversionForBits[conv];
         suffix = kLabel_bit[conv];
     } else {
-        inNum *= kConversion [conv];
-        suffix = kLabel_Byte[ conv ];
+        inNum *= kConversion[conv];
+        suffix = kLabel_Byte[conv];
     }
 
     /* print such that we always fit in 4 places */
-    if ( inNum < 9.995 ) {          /* 9.995 would be rounded to 10.0 */
+    tmpNum = (inNum < 0.0 ? (-1 * inNum) : inNum);
+    if (tmpNum < 0.9995) {          /* 0.995 would be rounded to 1.000 */
+        format = "%4.3f %s";        /* #.## */
+    } else if (tmpNum < 9.995) {    /* 9.995 would be rounded to 10.00 */
         format = "%4.2f %s";        /* #.## */
-    } else if ( inNum < 99.95 ) {   /* 99.95 would be rounded to 100 */
+    } else if (tmpNum < 99.95) {    /* 99.95 would be rounded to 100.0 */
         format = "%4.1f %s";        /* ##.# */
-    } else if ( inNum < 999.5 ) {   /* 999.5 would be rounded to 1000 */
+    } else if (tmpNum < 999.5) {    /* 999.5 would be rounded to 1000 */
 	format = "%4.0f %s";        /*  ### */
     } else {                        /* 1000-1024 fits in 4 places
 				     * If not using Adaptive sizes then
 				     * this code will not control spaces*/
         format = "%4.0f %s";        /* #### */
     }
-    snprintf( outString, inLen, format, inNum, suffix );
+    snprintf(outString, inLen, format, inNum, suffix);
 } /* end byte_snprintf */
 
 /* -------------------------------------------------------------------
@@ -329,20 +334,19 @@ void redirect(const char *inOutputFileName) {
 
     FILE *fp;
 
-    if ( inOutputFileName == NULL ) {
+    if (inOutputFileName == NULL) {
         fprintf(stderr, "should specify the output file name.\n");
         return;
     }
 
     fp = freopen(inOutputFileName, "a+", stdout);
-    if ( fp == NULL ) {
+    if (fp == NULL) {
         fprintf(stderr, "redirect stdout failed!\n");
         return;
     }
 
 #endif
 
-    return;
 }
 
 

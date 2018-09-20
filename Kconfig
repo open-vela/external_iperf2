@@ -1,0 +1,29 @@
+#
+# For a description of the syntax of this configuration file,
+# see kconfig-language at https://www.kernel.org/doc/Documentation/kbuild/kconfig-language.txt
+#
+
+menu "The ultimate speed test tool for TCP, UDP and SCTP"
+
+config TOOLS_IPERF2
+	tristate "iperf2 support"
+	default n
+	select HAVE_CXX
+	select SCHED_CHILD_EXIT
+	select LIBC_FLOATINGPOINT
+	select SCHED_ATEXIT
+	---help---
+
+if TOOLS_IPERF2
+
+config TOOLS_IPERF2_PRIORITY
+	int "iperf2 task priority"
+	default 100
+
+config TOOLS_IPERF2_STACKSIZE
+	int "iperf2 stack size"
+	default 2048
+
+endif
+
+endmenu
