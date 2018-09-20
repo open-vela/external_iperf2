@@ -151,6 +151,7 @@ Client::Client( thread_Settings *inSettings ) {
 
     reportstruct = new ReportStruct;
     FAIL_errno( reportstruct == NULL, "No memory for report structure\n", mSettings );
+    memset(reportstruct, 0, sizeof(ReportStruct));
     reportstruct->packetID = (isPeerVerDetect(mSettings)) ? 1 : 0;
     reportstruct->errwrite=WriteNoErr;
     reportstruct->emptyreport=0;

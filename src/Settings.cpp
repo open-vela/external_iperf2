@@ -224,7 +224,7 @@ const int  kDefault_UDPBufLen = 1470;      // -u  if set, read/write 1470 bytes
 // v4: 1470 bytes UDP payload will fill one and only one ethernet datagram (IPv4 overhead is 20 bytes)
 const int  kDefault_UDPBufLenV6 = 1450;      // -u  if set, read/write 1470 bytes
 // v6: 1450 bytes UDP payload will fill one and only one ethernet datagram (IPv6 overhead is 40 bytes)
-const int kDefault_TCPBufLen = 128 * 1024; // TCP default read/write size
+const int kDefault_TCPBufLen = 10 * 1024; // TCP default read/write size
 /* -------------------------------------------------------------------
  * Initialize all settings to defaults.
  * ------------------------------------------------------------------- */

@@ -105,6 +105,8 @@ struct option {
 #define required_argument	1
 #define optional_argument	2
 
+void gnu_reset(void);
+
 int gnu_getopt( int argc,
                 char *const *argv,
                 const char *shortopts );

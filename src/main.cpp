@@ -70,6 +70,7 @@
 #include "Listener.hpp"
 #include "List.h"
 #include "util.h"
+#include "gnu_getopt.h"
 
 #ifdef WIN32
 #include "service.h"
@@ -119,16 +120,26 @@ void waitUntilQuit( void );
  * starts up server or client thread
  * waits for all threads to complete
  * ------------------------------------------------------------------- */
+extern "C"
+{
+#if defined(BUILD_MODULE)
 int main( int argc, char **argv ) {
+#else
+int iperf2_main(int argc, char **argv) {
+#endif
 
     // Set SIGTERM and SIGINT to call our user interrupt function
+#ifdef SIGTERM
     my_signal( SIGTERM, Sig_Interupt );
+#endif
     my_signal( SIGINT,  Sig_Interupt );
 #ifndef WIN32
     my_signal( SIGALRM,  Sig_Interupt );
 
+#ifdef SIGPIPE
     // Ignore broken pipes
     signal(SIGPIPE,SIG_IGN);
+#endif
 #else
     // Start winsock
     WSADATA wsaData;
@@ -147,14 +158,19 @@ int main( int argc, char **argv ) {
     Mutex_Initialize( &groupCond );
     Mutex_Initialize( &clients_mutex );
 
+    // reset gnu
+    gnu_reset();
+
     // Initialize the thread subsystem
     thread_init( );
 
     // Initialize the interrupt handling thread to 0
     sThread = thread_zeroid();
 
+#ifdef HAVE_ATEXIT
     // perform any cleanup when quitting Iperf
     atexit( cleanup );
+#endif
 
     // Allocate the "global" settings
     thread_Settings* ext_gSettings = new thread_Settings;
@@ -261,6 +277,7 @@ int main( int argc, char **argv ) {
     // all done!
     return 0;
 } // end main
+}
 
 /* -------------------------------------------------------------------
  * Signal handler sets the sInterupted flag, so the object can
