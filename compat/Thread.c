@@ -73,6 +73,7 @@
 #include "Thread.h"
 #include "Locale.h"
 #include "util.h"
+#include "delay.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -405,6 +406,7 @@ int thread_numuserthreads( void ) {
 void thread_rest ( void ) {
 #if defined( HAVE_THREAD )
 #if defined( HAVE_POSIX_THREAD )
+    delay_nanosleep(1000);
 #else // Win32
     SwitchToThread( );
 #endif

@@ -651,8 +651,7 @@ typedef struct client_hdr_ack {
     signed int flags    : 32;
     signed int version_u   : 32;
     signed int version_l   : 32;
-    signed int reserved1   : 32;
-    signed int reserved2   : 32;
+    signed int reserved    : 32;
 #endif
 } client_hdr_ack;
 
