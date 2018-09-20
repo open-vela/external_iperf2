@@ -58,94 +58,32 @@ extern "C" {
 #endif
 
 /* -------------------------------------------------------------------
- * If inMSS > 0, set the TCP maximum segment size  for inSock.
- * Otherwise leave it as the system default.
- * ------------------------------------------------------------------- */
-
-const char warn_mss_fail[] = "\
-WARNING: attempt to set TCP maxmimum segment size to %d failed.\n\
-Setting the MSS may not be implemented on this OS.\n";
-
-const char warn_mss_notset[] =
-"WARNING: attempt to set TCP maximum segment size to %d, but got %d\n";
-
-void setsock_tcp_mss( int inSock, int inMSS ) {
-#ifdef TCP_MAXSEG
-    int rc;
-    int newMSS;
-    Socklen_t len;
-
-    assert( inSock != INVALID_SOCKET );
-
-    if ( inMSS > 0 ) {
-        /* set */
-        newMSS = inMSS;
-        len = sizeof( newMSS );
-        rc = setsockopt( inSock, IPPROTO_TCP, TCP_MAXSEG, (char*) &newMSS,  len );
-        if ( rc == SOCKET_ERROR ) {
-            fprintf( stderr, warn_mss_fail, newMSS );
-            return;
-        }
-
-        /* verify results */
-        rc = getsockopt( inSock, IPPROTO_TCP, TCP_MAXSEG, (char*) &newMSS, &len );
-        WARN_errno( rc == SOCKET_ERROR, "getsockopt TCP_MAXSEG" );
-        if ( newMSS != inMSS ) {
-            fprintf( stderr, warn_mss_notset, inMSS, newMSS );
-        }
-    }
-#endif
-} /* end setsock_tcp_mss */
-
-/* -------------------------------------------------------------------
- * returns the TCP maximum segment size
- * ------------------------------------------------------------------- */
-
-int getsock_tcp_mss( int inSock ) {
-    int theMSS = 0;
-
-#ifdef TCP_MAXSEG
-    int rc;
-    Socklen_t len;
-    assert( inSock >= 0 );
-
-    /* query for MSS */
-    len = sizeof( theMSS );
-    rc = getsockopt( inSock, IPPROTO_TCP, TCP_MAXSEG, (char*) &theMSS, &len );
-    WARN_errno( rc == SOCKET_ERROR, "getsockopt TCP_MAXSEG" );
-#endif
-
-    return theMSS;
-} /* end getsock_tcp_mss */
-
-/* -------------------------------------------------------------------
  * Attempts to reads n bytes from a socket.
  * Returns number actually read, or -1 on error.
  * If number read < inLen then we reached EOF.
  *
  * from Stevens, 1998, section 3.9
  * ------------------------------------------------------------------- */
-
-ssize_t readn( int inSock, void *outBuf, size_t inLen ) {
+ssize_t readn (int inSock, void *outBuf, size_t inLen) {
     size_t  nleft;
     ssize_t nread;
     char *ptr;
 
-    assert( inSock >= 0 );
-    assert( outBuf != NULL );
-    assert( inLen > 0 );
+    assert(inSock >= 0);
+    assert(outBuf != NULL);
+    assert(inLen > 0);
 
     ptr   = (char*) outBuf;
     nleft = inLen;
 
-    while ( nleft > 0 ) {
-        nread = read( inSock, ptr, nleft );
-        if ( nread < 0 ) {
-            if ( errno == EINTR )
+    while (nleft > 0) {
+        nread = read(inSock, ptr, nleft);
+        if (nread < 0) {
+            if (errno == EINTR)
                 nread = 0;  /* interupted, call read again */
             else
                 return -1;  /* error */
-        } else if ( nread == 0 )
+        } else if (nread == 0)
             break;        /* EOF */
 
         nleft -= nread;
@@ -161,36 +99,86 @@ ssize_t readn( int inSock, void *outBuf, size_t inLen ) {
  * If number read < inLen then we reached EOF.
  * from Stevens, 1998, section 3.9
  * ------------------------------------------------------------------- */
-int recvn( int inSock, char *outBuf, int inLen, int flags ) {
+int recvn (int inSock, char *outBuf, int inLen, int flags) {
     int  nleft;
-    int nread;
+    int nread = 0;
     char *ptr;
 
-    assert( inSock >= 0 );
-    assert( outBuf != NULL );
-    assert( inLen > 0 );
+    assert(inSock >= 0);
+    assert(outBuf != NULL);
+    assert(inLen > 0);
 
     ptr   = outBuf;
     nleft = inLen;
-
-    while ( nleft > 0 ) {
-        nread = recv( inSock, ptr, nleft, flags );
-        if ( nread < 0 ) {
-            if ( errno == EAGAIN ) {
-                nread = 0;  /* Socket read timeout */
+#if (HAVE_DECL_MSG_PEEK)
+    if (flags & MSG_PEEK) {
+	while ((nleft != nread) && !sInterupted) {
+	    nread = recv(inSock, ptr, nleft, flags);
+	    switch (nread) {
+	    case SOCKET_ERROR :
+		// Note: use TCP fatal error codes even for UDP
+		if (FATALTCPREADERR(errno)) {
+		    WARN_errno(1, "recvn peek");
+		    nread = -1;
+		    sInterupted = 1;
+		    goto DONE;
+		}
+#ifdef HAVE_THREAD_DEBUG
+		WARN_errno(1, "recvn peek non-fatal");
+#endif
 		break;
-            } else {
-		WARN_errno( 1, "recvn" );
-                return -1;  /* error */
+	    case 0:
+#ifdef HAVE_THREAD_DEBUG
+		WARN(1, "recvn peek peer close");
+#endif
+		goto DONE;
+		break;
+	    default :
+		break;
 	    }
-	} else if ( nread == 0 ) {
-	    WARN_errno( 1, "recvn abort" );
-            break;        /* EOF */
 	}
-        nleft -= nread;
-        ptr   += nread;
+    } else
+#endif
+    {
+	while ((nleft > 0) && !sInterupted) {
+#if (HAVE_DECL_MSG_WAITALL)
+	    nread = recv(inSock, ptr, nleft, MSG_WAITALL);
+#else
+	    nread = recv(inSock, ptr, nleft, 0);
+#endif
+	    switch (nread) {
+	    case SOCKET_ERROR :
+		// Note: use TCP fatal error codes even for UDP
+		if (FATALTCPREADERR(errno)) {
+		    WARN_errno(1, "recvn");
+		    nread = -1;
+		    sInterupted = 1;
+		    goto DONE;
+		} else {
+		    nread = -2;
+		    goto DONE;
+		}
+#ifdef HAVE_THREAD_DEBUG
+		WARN_errno(1, "recvn non-fatal");
+#endif
+		break;
+	    case 0:
+#ifdef HAVE_THREAD_DEBUG
+		WARN(1, "recvn peer close");
+#endif
+		nread = inLen - nleft;
+		goto DONE;
+		break;
+	    default :
+		nleft -= nread;
+		ptr   += nread;
+		break;
+	    }
+	    nread = inLen - nleft;
+	}
     }
-    return(inLen - nleft);
+  DONE:
+    return(nread);
 } /* end readn */
 
 /* -------------------------------------------------------------------
@@ -201,55 +189,47 @@ int recvn( int inSock, char *outBuf, int inLen, int flags ) {
  * from Stevens, 1998, section 3.9
  * ------------------------------------------------------------------- */
 
-ssize_t writen( int inSock, const void *inBuf, size_t inLen ) {
-    size_t  nleft;
-    ssize_t nwritten;
+int writen (int inSock, const void *inBuf, int inLen, int *count) {
+    int nleft;
+    int nwritten;
     const char *ptr;
 
-    assert( inSock >= 0 );
-    assert( inBuf != NULL );
-    assert( inLen > 0 );
+    assert(inSock >= 0);
+    assert(inBuf != NULL);
+    assert(inLen > 0);
+    assert(count != NULL);
 
     ptr   = (char*) inBuf;
     nleft = inLen;
+    nwritten = 0;
+    *count = 0;
 
-    while ( nleft > 0 ) {
-        nwritten = write( inSock, ptr, nleft );
-        if ( nwritten <= 0 ) {
-            if ( errno == EINTR )
-                nwritten = 0; /* interupted, call write again */
-            else
-                return -1;    /* error */
-        }
-
-        nleft -= nwritten;
-        ptr   += nwritten;
+    while ((nleft > 0) && !sInterupted) {
+        nwritten = write(inSock, ptr, nleft);
+	(*count)++;
+	switch (nwritten) {
+	case SOCKET_ERROR :
+	    if (!(errno == EINTR) || (errno == EAGAIN) || (errno == EWOULDBLOCK)) {
+		nwritten = inLen - nleft;
+		WARN_errno(1, "writen fatal");
+		sInterupted = 1;
+		goto DONE;
+	    }
+	    break;
+	case 0:
+	    // write timeout - retry
+	    break;
+	default :
+	    nleft -= nwritten;
+	    ptr   += nwritten;
+	    break;
+	}
+	nwritten = inLen - nleft;
     }
-
-    return inLen;
+  DONE:
+    return (nwritten);
 } /* end writen */
 
-
-/*
- * Set a socket to blocking or non-blocking
-*
- * Returns true on success, or false if there was an error
-*/
-#define FALSE 0
-#define TRUE 1
-bool setsock_blocking (int fd, bool blocking) {
-   if (fd < 0) return FALSE;
-
-#ifdef WIN32
-   unsigned long mode = blocking ? 0 : 1;
-   return (ioctlsocket(fd, FIONBIO, &mode) == 0) ? TRUE : FALSE;
-#else
-   int flags = fcntl(fd, F_GETFL, 0);
-   if (flags < 0) return FALSE;
-   flags = blocking ? (flags&~O_NONBLOCK) : (flags|O_NONBLOCK);
-   return (fcntl(fd, F_SETFL, flags) == 0) ? TRUE : FALSE;
-#endif
-}
 
 
 #ifdef __cplusplus
