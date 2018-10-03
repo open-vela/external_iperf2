@@ -575,33 +575,21 @@ typedef struct client_hdrext {
  *                +--------+--------+--------+--------+
  *            13  |        iperf version minor        |
  *                +--------+--------+--------+--------+
- *            14  |        ref sync sample tv_sec     |
+ *            14  |        isoch burst period (us)    |
  *                +--------+--------+--------+--------+
- *            15  |        ref sync sample tv_used    |
+ *            15  |        isoch start timestamp (s)  |
  *                +--------+--------+--------+--------+
- *            16  |        gps sync sample tv_sec     |
+ *            16  |        isoch start timestamp (us) |
  *                +--------+--------+--------+--------+
- *            17  |        gps sync sample tv_usec    |
+ *            17  |        isoch prev frameid         |
  *                +--------+--------+--------+--------+
- *            18  |        isoch burst period (us)    |
+ *            18  |        isoch frameid              |
  *                +--------+--------+--------+--------+
- *            19  |        isoch start timestamp (s)  |
+ *            19  |        isoch burtsize             |
  *                +--------+--------+--------+--------+
- *            20  |        isoch start timestamp (us) |
+ *            20  |        isoch bytes remaining      |
  *                +--------+--------+--------+--------+
- *            21  |        isoch prev frameid         |
- *                +--------+--------+--------+--------+
- *            22  |        isoch frameid              |
- *                +--------+--------+--------+--------+
- *            23  |        isoch burtsize             |
- *                +--------+--------+--------+--------+
- *            24  |        isoch bytes remaining      |
- *                +--------+--------+--------+--------+
- *            25  |        isoch reserved             |
- *                +--------+--------+--------+--------+
- *            26  |        hw timestamps ...          |
- *                +--------+--------+--------+--------+
- *            n   |        hw timestamps ...
+ *            21  |        isoch reserved             |
  *                +--------+--------+--------+--------+
  *
  */
