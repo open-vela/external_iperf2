@@ -499,6 +499,8 @@ void Listener::McastJoin( ) {
 		struct sockaddr_in6 *group;
 		struct sockaddr_in6 *source;
 
+		memset(&group_source_req, 0, sizeof(struct group_source_req));
+
 		group_source_req.gsr_interface = iface;
 		group=(struct sockaddr_in6*)&group_source_req.gsr_group;
 		source=(struct sockaddr_in6*)&group_source_req.gsr_source;
@@ -523,6 +525,8 @@ void Listener::McastJoin( ) {
 		struct group_req group_req;
 		struct sockaddr_in6 *group;
 
+		memset(&group_req, 0, sizeof(struct group_req));
+
 		group_req.gr_interface = iface;
 		group=(struct sockaddr_in6*)&group_req.gr_group;
 		group->sin6_family = AF_INET6;
@@ -541,8 +545,10 @@ void Listener::McastJoin( ) {
 	    if (mSettings->mSSMMulticastStr) {
 		struct group_source_req group_source_req;
 		struct sockaddr_in *group;
-
 		struct sockaddr_in *source;
+
+		memset(&group_source_req, 0, sizeof(struct group_source_req));
+
 		group_source_req.gsr_interface = iface;
 		group=(struct sockaddr_in*)&group_source_req.gsr_group;
 		source=(struct sockaddr_in*)&group_source_req.gsr_source;
@@ -566,6 +572,8 @@ void Listener::McastJoin( ) {
 	    } else {
 		struct group_req group_req;
 		struct sockaddr_in *group;
+
+		memset(&group_req, 0, sizeof(struct group_req));
 
 		group_req.gr_interface = iface;
 		group=(struct sockaddr_in*)&group_req.gr_group;
