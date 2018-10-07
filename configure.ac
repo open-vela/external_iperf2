@@ -244,6 +244,7 @@ if test "$ac_cv_multicast" != no; then
     AC_DEFINE([HAVE_MULTICAST], 1, [Define to enable multicast support])
   fi
   AC_CHECK_TYPES(struct group_source_req,,,[#include "$srcdir/compat/headers_slim.h"])
+  AC_CHECK_TYPES(struct ip_mreq_source,,,[#include "$srcdir/compat/headers_slim.h"])
   AC_CHECK_DECLS(MCAST_JOIN_SOURCE_GROUP,,,[#include "$srcdir/compat/headers_slim.h"])
   AC_CHECK_DECLS(IP_ADD_SOURCE_MEMBERSHIP,,,[#include "$srcdir/compat/headers_slim.h"])
   AC_MSG_CHECKING(for multicast ssm support)

@@ -545,20 +545,24 @@ void Listener::McastJoin( ) {
 	    if (mSettings->mSSMMulticastStr) {
 		struct sockaddr_in *group;
 		struct sockaddr_in *source;
+
 		// Fill out both structures because we don't which one will succeed
 		// and both may need to be tried
+#ifdef HAVE_STRUCT_IP_MREQ_SOURCE
+		struct ip_mreq_source imr;
+		memset (&imr, 0, sizeof (imr));
+#endif
 #ifdef HAVE_STRUCT_GROUP_SOURCE_REQ
 		struct group_source_req group_source_req;
 		memset(&group_source_req, 0, sizeof(struct group_source_req));
 		group_source_req.gsr_interface = iface;
 		group=(struct sockaddr_in*)&group_source_req.gsr_group;
 		source=(struct sockaddr_in*)&group_source_req.gsr_source;
-#endif
-#ifdef HAVE_STRUCT_IP_MREQ
-		struct ip_mreq_source imr;
-		memset (&imr, 0, sizeof (imr));
-		imr.imr_multiaddr = ((const struct sockaddr_in *)group)->sin_addr;
-		imr.imr_sourceaddr = ((const struct sockaddr_in *)source)->sin_addr;
+#else
+		struct sockaddr_in imrgroup;
+		struct sockaddr_in imrsource;
+		group = &imrgroup;
+		source = &imrsource;
 #endif
 		source->sin_family = AF_INET;
 		group->sin_family = AF_INET;
@@ -575,16 +579,22 @@ void Listener::McastJoin( ) {
 #endif
 		source->sin_port = 0;    /* Ignored */
 		rc = -1;
+
 #if HAVE_DECL_MCAST_JOIN_SOURCE_GROUP
 		rc = setsockopt(mSettings->mSock,IPPROTO_IP,MCAST_JOIN_SOURCE_GROUP, &group_source_req,
 				sizeof(group_source_req));
 #endif
+
 #if HAVE_DECL_IP_ADD_SOURCE_MEMBERSHIP
+#ifdef HAVE_STRUCT_IP_MREQ_SOURCE
 		// Some operating systems will have MCAST_JOIN_SOURCE_GROUP but still fail
 		// In those cases try the IP_ADD_SOURCE_MEMBERSHIP
 		if (rc < 0) {
+		    imr.imr_multiaddr = ((const struct sockaddr_in *)group)->sin_addr;
+		    imr.imr_sourceaddr = ((const struct sockaddr_in *)source)->sin_addr;
 		    rc = setsockopt (mSettings->mSock, IPPROTO_IP, IP_ADD_SOURCE_MEMBERSHIP, &imr, sizeof (imr));
 		}
+#endif
 #endif
 		FAIL_errno( rc == SOCKET_ERROR, "mcast join source group",mSettings);
 	    } else {

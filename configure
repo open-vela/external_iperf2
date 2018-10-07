@@ -8664,6 +8664,17 @@ _ACEOF
 
 fi
 
+  ac_fn_c_check_type "$LINENO" "struct ip_mreq_source" "ac_cv_type_struct_ip_mreq_source" "#include \"$srcdir/compat/headers_slim.h\"
+"
+if test "x$ac_cv_type_struct_ip_mreq_source" = xyes; then :
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_STRUCT_IP_MREQ_SOURCE 1
+_ACEOF
+
+
+fi
+
   ac_fn_c_check_decl "$LINENO" "MCAST_JOIN_SOURCE_GROUP" "ac_cv_have_decl_MCAST_JOIN_SOURCE_GROUP" "#include \"$srcdir/compat/headers_slim.h\"
 "
 if test "x$ac_cv_have_decl_MCAST_JOIN_SOURCE_GROUP" = xyes; then :
