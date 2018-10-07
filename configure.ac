@@ -245,9 +245,10 @@ if test "$ac_cv_multicast" != no; then
   fi
   AC_CHECK_TYPES(struct group_source_req,,,[#include "$srcdir/compat/headers_slim.h"])
   AC_CHECK_DECLS(MCAST_JOIN_SOURCE_GROUP,,,[#include "$srcdir/compat/headers_slim.h"])
+  AC_CHECK_DECLS(IP_ADD_SOURCE_MEMBERSHIP,,,[#include "$srcdir/compat/headers_slim.h"])
   AC_MSG_CHECKING(for multicast ssm support)
   ac_cv_ssm_multicast=no
-  if test "$ac_cv_have_decl_MCAST_JOIN_SOURCE_GROUP" = yes; then
+  if test "$ac_cv_have_decl_MCAST_JOIN_SOURCE_GROUP" = yes || "$ac_cv_have_decl_IP_ADD_SOURCE_MEMBERSHIP" = yes; then
     if test "$ac_cv_type_struct_group_source_req" = yes; then
       ac_cv_ssm_multicast=yes
     fi

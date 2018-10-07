@@ -568,6 +568,18 @@ void Listener::McastJoin( ) {
 		source->sin_port = 0;    /* Ignored */
 		rc = setsockopt(mSettings->mSock,IPPROTO_IP,MCAST_JOIN_SOURCE_GROUP, &group_source_req,
 				sizeof(group_source_req));
+# ifdef IP_ADD_SOURCE_MEMBERSHIP
+		// Some operating systems will have MCAST_JOIN_SOURCE_GROUP but still fail
+		// In those cases try the IP_ADD_SOURCE_MEMBERSHIP
+		if (rc < 0) {
+		    struct ip_mreq_source imr;
+
+		    memset (&imr, 0, sizeof (imr));
+		    imr.imr_multiaddr = ((const struct sockaddr_in *)group)->sin_addr;
+		    imr.imr_sourceaddr = ((const struct sockaddr_in *)source)->sin_addr;
+		    rc = setsockopt (mSettings->mSock, IPPROTO_IP, IP_ADD_SOURCE_MEMBERSHIP, &imr, sizeof (imr));
+		}
+#endif
 		FAIL_errno( rc == SOCKET_ERROR, "mcast join source group",mSettings);
 	    } else {
 		struct group_req group_req;

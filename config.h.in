@@ -53,6 +53,10 @@
    you don't. */
 #undef HAVE_DECL_IP_ADD_MEMBERSHIP
 
+/* Define to 1 if you have the declaration of `IP_ADD_SOURCE_MEMBERSHIP', and
+   to 0 if you don't. */
+#undef HAVE_DECL_IP_ADD_SOURCE_MEMBERSHIP
+
 /* Define to 1 if you have the declaration of `MCAST_JOIN_SOURCE_GROUP', and
    to 0 if you don't. */
 #undef HAVE_DECL_MCAST_JOIN_SOURCE_GROUP
