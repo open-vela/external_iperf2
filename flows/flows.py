@@ -1,4 +1,4 @@
-# ---------------------------------------------------------------
+# ----------------------------------------------------------------
 # * Copyright (c) 2018
 # * Broadcom Corporation
 # * All Rights Reserved.
@@ -40,12 +40,16 @@ import scipy
 import scipy.spatial
 import numpy as np
 import tkinter
+import ctypes
+import ipaddress
+import collections
 
 from datetime import datetime as datetime, timezone
 from scipy import stats
 from scipy.cluster import hierarchy
 from scipy.cluster.hierarchy import linkage
 import matplotlib.pyplot as plt
+from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +60,7 @@ class iperf_flow(object):
     loop = None
     flow_scope = ("flowstats")
     tasks = []
+    flowid2name = defaultdict(str)
 
     @classmethod
     def sleep(cls, time=0, text=None, stoptext=None) :
@@ -344,7 +349,7 @@ class iperf_flow(object):
 
     def stats_reset(self) :
         # Initialize the flow stats dictionary
-        self.flowstats = {'current_rxbytes' : None , 'current_txbytes' : None , 'flowrate' : None, 'starttime' : None}
+        self.flowstats = {'current_rxbytes' : None , 'current_txbytes' : None , 'flowrate' : None, 'starttime' : None, 'flowid' : None, 'endtime' : None}
         self.flowstats['txdatetime']=[]
         self.flowstats['txbytes']=[]
         self.flowstats['txthroughput']=[]
@@ -363,7 +368,7 @@ class iperf_flow(object):
         self.flowstats['trip_time']=[]
 
     async def start(self):
-        self.flowstats = {'current_rxbytes' : None , 'current_txbytes' : None , 'flowrate' : None}
+        self.flowstats = {'current_rxbytes' : None , 'current_txbytes' : None , 'flowrate' : None, 'flowid' : None}
         await self.rx.start()
         await self.tx.start()
 
@@ -429,7 +434,7 @@ class iperf_flow(object):
             logging.info('{} {}(condensed distance matrix)\n{}'.format(self.name, this_name,self.condensed_distance_matrix))
             self.linkage_matrix=linkage(self.condensed_distance_matrix, 'ward')
             try :
-                plt.figure()
+                plt.figure(figsize=(18,10))
                 dn = hierarchy.dendrogram(self.linkage_matrix)
                 plt.title("{} {}".format(self.name, this_name))
                 plt.savefig('{}/dn_{}_{}.png'.format(directory,self.name,this_name))
@@ -530,6 +535,7 @@ class iperf_server(object):
                             m = self._server.regex_final_histogram_traffic.match(line)
                             if m :
                                 timestamp = datetime.now(timezone.utc).astimezone()
+                                self.flowstats['endtime']= timestamp
                                 self.flowstats['histogram_names'].add(m.group('pdfname'))
                                 self.flowstats['histograms'].append(flow_histogram(name=m.group('pdfname'),values=m.group('pdf'), population=m.group('population'), binwidth=m.group('binwidth'), starttime=self.flowstats['starttime'], endtime=timestamp, outliers=m.group('outliers'), uci=m.group('uci'), uci_val=m.group('uci_val'), lci=m.group('lci'), lci_val=m.group('lci_val')))
                                 # logging.debug('pdf {} {}={}'.format(m.group('pdfname'), m.group('pdf'), m.group('binwidth')))
@@ -631,7 +637,7 @@ class iperf_server(object):
 
 class iperf_client(object):
 
-    # Asycnio protocol for subprocess transport
+    # Asyncio protocol for subprocess transport
     class IperfClientProtocol(asyncio.SubprocessProtocol):
         def __init__(self, client, flow):
             self.__dict__['flow'] = flow
@@ -686,6 +692,39 @@ class iperf_client(object):
                             self.flowstats['starttime'] = datetime.now(timezone.utc).astimezone()
                             logging.debug('{} pipe reading at {} (stdout,{})'.format(self._client.name, self.flowstats['starttime'].isoformat(), self._client.remotepid))
                     else :
+                        if self.flowstats['flowid'] is None :
+                            m = self._client.regex_flowid.match(line)
+                            if m :
+                                # self.regex_flowid = re.compile(r'local\s(?P<srcip>[0-9]{0,3}\.[0-9]{0,3}\.[0-9]{0,3}\.[0-9]{0,3})\sport\s(?P<srcport>[0-9]+)\sconnected with\s(?P<dstip>[0-9]{0,3}\.[0-9]{0,3}\.[0-9]{0,3}\.[0-9]{0,3})\sport\s(?P<dstport>[0-9]+)')
+                                #
+                                # temp = htonl(config->src_ip);
+                                # checksum ^= bcm_compute_xor32((volatile uint32 *)&temp, sizeof(temp) / sizeof(uint32));
+                                # temp = htonl(config->dst_ip);
+                                # checksum ^= bcm_compute_xor32((volatile uint32 *)&temp, sizeof(temp) / sizeof(uint32));
+                                # temp = (hton16(config->dst_port) << 16) | hton16(config->src_port);
+                                # checksum ^= bcm_compute_xor32((volatile uint32 *)&temp, sizeof(temp) / sizeof(uint32));
+                                # temp = config->proto;
+                                # checksum ^= bcm_compute_xor32((volatile uint32 *)&temp, sizeof(temp) / sizeof(uint32));
+                                # return "%08x" % netip
+                                # NOTE: the network or big endian byte order
+                                srcipaddr = ipaddress.ip_address(m.group('srcip'))
+                                srcip32 = ctypes.c_uint32(int.from_bytes(srcipaddr.packed, byteorder='little', signed=False))
+                                dstipaddr = ipaddress.ip_address(m.group('dstip'))
+                                dstip32 = ctypes.c_uint32(int.from_bytes(dstipaddr.packed, byteorder='little', signed=False))
+                                dstportbytestr = int(m.group('dstport')).to_bytes(2, byteorder='big', signed=False)
+                                dstport16 = ctypes.c_uint16(int.from_bytes(dstportbytestr, byteorder='little', signed=False))
+                                srcportbytestr = int(m.group('srcport')).to_bytes(2, byteorder='big', signed=False)
+                                srcport16 = ctypes.c_uint16(int.from_bytes(srcportbytestr, byteorder='little', signed=False))
+                                ports32 = ctypes.c_uint32((dstport16.value << 16) | srcport16.value)
+                                if self._client.proto == 'UDP':
+                                    proto32 = ctypes.c_uint32(0x11)
+                                else :
+                                    proto32 = ctypes.c_uint32(0x06)
+                                quintuplehash = srcip32.value ^ dstip32.value ^ ports32.value ^ proto32.value
+                                self.flowstats['flowid'] = '0x{:08x}'.format(quintuplehash)
+                                iperf_flow.flowid2name[self.flowstats['flowid']] = self._client.name
+                                logging.info('Flow hash = {} uses name {}'.format(self.flowstats['flowid'], self._client.name))
+
                         if self._client.proto == 'TCP':
                             m = self._client.regex_traffic.match(line)
                             if m :
@@ -767,7 +806,8 @@ class iperf_client(object):
         # traffic ex: [  3] 0.00-0.50 sec  655620 Bytes  10489920 bits/sec  14/211        446      446K/0 us
         self.regex_traffic = re.compile(r'\[\s+\d+] (?P<timestamp>.*) sec\s+(?P<bytes>\d+) Bytes\s+(?P<throughput>\d+) bits/sec\s+(?P<writes>\d+)/(?P<errwrites>\d+)\s+(?P<retry>\d+)\s+(?P<cwnd>\d+)K/(?P<rtt>\d+) us')
         self.regex_connect_time = re.compile(r'\[\s+\d+]\slocal.*\(ct=(?P<connect_time>\d+\.\d+) ms\)')
-
+        # local 192.168.1.4 port 56949 connected with 192.168.1.1 port 61001
+        self.regex_flowid = re.compile(r'\[\s+\d+]\slocal\s(?P<srcip>[0-9]{0,3}\.[0-9]{0,3}\.[0-9]{0,3}\.[0-9]{0,3})\sport\s(?P<srcport>[0-9]+)\sconnected with\s(?P<dstip>[0-9]{0,3}\.[0-9]{0,3}\.[0-9]{0,3}\.[0-9]{0,3})\sport\s(?P<dstport>[0-9]+)')
     def __getattr__(self, attr):
         return getattr(self.flow, attr)
 
@@ -778,6 +818,7 @@ class iperf_client(object):
         self.opened.clear()
         self.txcompleted.clear()
         self.remotepid = None
+        self.flowstats['flowid']=None
 
         # Client connecting to 192.168.100.33, TCP port 61009 with pid 1903
         self.regex_open_pid = re.compile(r'Client connecting to .*, {} port {} with pid (?P<pid>\d+)'.format(self.proto, str(self.dstport)))
@@ -883,7 +924,7 @@ class flow_histogram(object):
                     fid.write('set terminal png size 1024,768\n')
 
                 fid.write('set key bottom\n')
-                fid.write('set title \"{}\"\n'.format(mytitle))
+                fid.write('set title \"{}\" noenhanced\n'.format(mytitle))
                 if float(uci_val) < 400:
                     fid.write('set format x \"%.2f"\n')
                 else :
@@ -1045,9 +1086,9 @@ class flow_histogram(object):
 
                 fid.write('set key bottom\n')
                 if self.ks_index is not None :
-                    fid.write('set title \"{}({}) {}({}) E={}\"\n'.format(self.name, str(self.ks_index), title, int(self.population), self.entropy))
+                    fid.write('set title \"{}({}) {}({}) E={}\" noenhanced\n'.format(self.name, str(self.ks_index), title, int(self.population), self.entropy))
                 else :
-                    fid.write('set title \"{}{}({}) E={}\"\n'.format(self.name, title, int(self.population), self.entropy))
+                    fid.write('set title \"{}{}({}) E={}\" noenhanced\n'.format(self.name, title, int(self.population), self.entropy))
                 fid.write('set format x \"%.0f"\n')
                 fid.write('set format y \"%.1f"\n')
                 fid.write('set yrange [0:1.01]\n')
