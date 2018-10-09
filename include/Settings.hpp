@@ -205,8 +205,8 @@ typedef struct thread_Settings {
     int mUDPbins;
     int mUDPbinsize;
     unsigned short mUDPunits;
-    unsigned short mUDPci_lower;
-    unsigned short mUDPci_upper;
+    double mUDPci_lower;
+    double mUDPci_upper;
 #if defined( HAVE_WIN32_THREAD )
     HANDLE mHandle;
 #endif

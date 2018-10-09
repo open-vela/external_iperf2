@@ -900,9 +900,9 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 	    if ((results = strtok(results+strlen(results)+1, ",")) != NULL) {
 		mExtSettings->mUDPbins = byte_atoi(results);
 		if ((results = strtok(NULL, ",")) != NULL) {
-		    mExtSettings->mUDPci_lower = atoi(results);
+		    mExtSettings->mUDPci_lower = atof(results);
 		    if ((results = strtok(NULL, ",")) != NULL) {
-			mExtSettings->mUDPci_upper = atoi(results);
+			mExtSettings->mUDPci_upper = atof(results);
 		    }
 		}
 	    }

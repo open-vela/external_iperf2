@@ -60,13 +60,13 @@ typedef struct histogram_t {
     char *myname;
     char *outbuf;
     float units;
-    unsigned short ci_lower;
-    unsigned short ci_upper;
+    double ci_lower;
+    double ci_upper;
     struct histogram_t *prev;
 } histogram_t;
 
 extern histogram_t *histogram_init(unsigned int bincount, unsigned int binwidth, float offset,\
-				   float units, unsigned short ci_lower, unsigned short ci_upper, unsigned int id, char *name);
+				   float units, double ci_lower, double ci_upper, unsigned int id, char *name);
 extern void histogram_delete(histogram_t *h);
 extern int histogram_insert(histogram_t *h, float value);
 extern void histogram_clear(histogram_t *h);
