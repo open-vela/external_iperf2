@@ -662,6 +662,8 @@ void Client::RunUDPIsochronous (void) {
     int fatalwrite_err = 0;
     while (InProgress() && !fatalwrite_err) {
 	int bytecnt = (int) (lognormal(mSettings->mMean,mSettings->mVariance)) / (mSettings->mFPS * 8);
+	if (bytecnt < bytecntmin) 
+	    bytecnt = bytecntmin;
 	delay = 0;
 
 	// printf("bits=%d\n", (int) (mSettings->mFPS * bytecnt * 8));
