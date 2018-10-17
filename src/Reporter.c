@@ -959,7 +959,7 @@ int reporter_handle_packet( ReportHeader *reporthdr ) {
 			stats->isochstats.framecnt=1;
 		    }
 		    // perform client and server frame based accounting
-		    if (framedelta = (packet->frameID - data->isochstats.frameID)) {
+		    if ((framedelta = (packet->frameID - data->isochstats.frameID))) {
 			data->isochstats.framecnt++;
 			stats->isochstats.framecnt++;
 			if (framedelta > 1) {
