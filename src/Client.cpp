@@ -653,7 +653,8 @@ void Client::RunUDPIsochronous (void) {
     int currLen = 1;
     int frameid=0;
     Timestamp t1;
-    int bytecntmin = sizeof(UDP_datagram) + sizeof(client_hdr_udp_tests);
+    // make sure the packet can carry the isoch payload and a least one byte 
+    int bytecntmin = sizeof(UDP_datagram) + sizeof(struct client_hdr_udp_isoch_tests) + 1;
 
     mBuf_isoch->burstperiod = htonl(fc->period_us());
 
@@ -667,7 +668,7 @@ void Client::RunUDPIsochronous (void) {
 	// adjust bytecnt so last packet of burst is greater or equal to min packet
 	int remainder = bytecnt % mSettings->mBufLen;
 	if (remainder < bytecntmin) {
-	    bytecnt += (bytecntmin - remainder);
+	    bytecnt = bytecntmin;
 	}
 	mBuf_isoch->burstsize  = htonl(bytecnt);
 	mBuf_isoch->prevframeid  = htonl(frameid);

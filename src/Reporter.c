@@ -957,39 +957,37 @@ int reporter_handle_packet( ReportHeader *reporthdr ) {
 			data->isochstats.framecnt=packet->frameID;
 			data->isochstats.framecnt=1;
 			stats->isochstats.framecnt=1;
-		    } else {
-			static int matchframeid=0;
-			// perform client and server frame based accounting
-			framedelta = (packet->frameID - data->isochstats.frameID);
-			if (framedelta) {
-			    data->isochstats.framecnt++;
-			    stats->isochstats.framecnt++;
-			    if (framedelta > 1) {
-				if (stats->mUDP == kMode_Server) {
-				    int lost = framedelta - (packet->frameID - packet->prevframeID);
-				    stats->isochstats.framelostcnt += lost;
-				    data->isochstats.framelostcnt += lost;
-				} else {
-				    stats->isochstats.framelostcnt += (framedelta-1);
-				    data->isochstats.framelostcnt += (framedelta-1);
-				    stats->isochstats.slipcnt++;
-				    data->isochstats.slipcnt++;
-				}
+		    }
+		    // perform client and server frame based accounting
+		    if (framedelta = (packet->frameID - data->isochstats.frameID)) {
+			data->isochstats.framecnt++;
+			stats->isochstats.framecnt++;
+			if (framedelta > 1) {
+			    if (stats->mUDP == kMode_Server) {
+				int lost = framedelta - (packet->frameID - packet->prevframeID);
+				stats->isochstats.framelostcnt += lost;
+				data->isochstats.framelostcnt += lost;
+			    } else {
+				stats->isochstats.framelostcnt += (framedelta-1);
+				data->isochstats.framelostcnt += (framedelta-1);
+				stats->isochstats.slipcnt++;
+				data->isochstats.slipcnt++;
 			    }
 			}
-			// peform frame latency checks
-			if (stats->framelatency_histogram) {
-			    // first packet of a burst and not a duplicate
-			    if ((packet->burstsize == packet->remaining) && (matchframeid!=packet->frameID)) {
-				matchframeid=packet->frameID;
-			    }
-			    if ((packet->packetLen == packet->remaining) && (packet->frameID == matchframeid)) {
-				// last packet of a burst (or first-last in case of a duplicate) and frame id match
-				double frametransit = TimeDifference(packet->packetTime, packet->isochStartTime) \
-				    - ((packet->burstperiod * (packet->frameID - 1)) / 1000000.0);
-			        histogram_insert(stats->framelatency_histogram, frametransit);
-				matchframeid = 0;  // reset the matchid so any potential duplicate is ignored
-			    }
+		    }
+		    // peform frame latency checks
+		    if (stats->framelatency_histogram) {
+			static int matchframeid=0;
+			// first packet of a burst and not a duplicate
+			if ((packet->burstsize == packet->remaining) && (matchframeid!=packet->frameID)) {
+			    matchframeid=packet->frameID;
+			}
+			if ((packet->packetLen == packet->remaining) && (packet->frameID == matchframeid)) {
+			    // last packet of a burst (or first-last in case of a duplicate) and frame id match
+			    double frametransit = TimeDifference(packet->packetTime, packet->isochStartTime) \
+				- ((packet->burstperiod * (packet->frameID - 1)) / 1000000.0);
+			    histogram_insert(stats->framelatency_histogram, frametransit);
+			    matchframeid = 0;  // reset the matchid so any potential duplicate is ignored
 			}
 		    }
 		    data->isochstats.frameID = packet->frameID;
