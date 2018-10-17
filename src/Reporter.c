@@ -976,7 +976,7 @@ int reporter_handle_packet( ReportHeader *reporthdr ) {
 			}
 		    }
 		    // peform frame latency checks
-		    if (stats->framelatency_histogram) {
+		    if (stats->framelatency_histogram && packet->burstsize && packet->remaining) {
 			static int matchframeid=0;
 			// first packet of a burst and not a duplicate
 			if ((packet->burstsize == packet->remaining) && (matchframeid!=packet->frameID)) {
