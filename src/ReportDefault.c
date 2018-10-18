@@ -416,6 +416,9 @@ void reporter_reportsettings( ReporterData *data ) {
 	byte_snprintf(meanbuf, sizeof(meanbuf), data->isochstats.mMean, 'a');
 	byte_snprintf(variancebuf, sizeof(variancebuf), data->isochstats.mVariance, 'a');
 	printf(client_udp_isochronous, data->isochstats.mFPS, meanbuf, variancebuf, (data->isochstats.mBurstInterval/1000.0), (data->isochstats.mBurstIPG/1000.0));
+	if ((data->isochstats.mMean / data->isochstats.mFPS) < ((double) (sizeof(UDP_datagram) + sizeof(client_hdr_v1) + sizeof(struct client_hdr_udp_isoch_tests)))) {
+	    fprintf(stderr, "Warning: Requested mean too small to carry isoch payload, code will auto adjust payload sizes\n");
+	}
 #else
 	fprintf(stderr, "--isochronous not supportted, try --enable-isochronous during config and remake\n");
 #endif
