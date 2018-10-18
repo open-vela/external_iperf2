@@ -91,7 +91,7 @@ private:
     bool ReadPacketID (void);
     void L2_processing (void);
     int L2_quintuple_filter (void);
-    void Isoch_processing (void);
+    void Isoch_processing (int);
     bool InProgress(void);
     Timestamp connect_done;
 

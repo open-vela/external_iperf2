@@ -950,7 +950,7 @@ int reporter_handle_packet( ReportHeader *reporthdr ) {
 		stats->IPGcnt++;
 		data->IPGstart = data->packetTime;
 #ifdef HAVE_ISOCHRONOUS
-		{
+		if (packet->frameID && packet->burstsize && packet->remaining) {
 		    int framedelta=0;
 		    // very first isochronous frame
 		    if (!data->isochstats.frameID) {
@@ -976,7 +976,7 @@ int reporter_handle_packet( ReportHeader *reporthdr ) {
 			}
 		    }
 		    // peform frame latency checks
-		    if (stats->framelatency_histogram && packet->burstsize && packet->remaining) {
+		    if (stats->framelatency_histogram) {
 			static int matchframeid=0;
 			// first packet of a burst and not a duplicate
 			if ((packet->burstsize == packet->remaining) && (matchframeid!=packet->frameID)) {
