@@ -656,7 +656,7 @@ void Client::RunUDPIsochronous (void) {
     int bytecntmin;
     // make sure the packet can carry the isoch payload
     if (isModeTime(mSettings)) {
-	bytecntmin = sizeof(UDP_datagram) + sizeof(struct client_hdr_udp_isoch_tests);
+	bytecntmin = sizeof(UDP_datagram) + sizeof(client_hdr_v1) + sizeof(struct client_hdr_udp_isoch_tests);
     } else {
 	bytecntmin = 1;
     }

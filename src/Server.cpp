@@ -485,8 +485,12 @@ int Server::L2_quintuple_filter(void) {
 
 void Server::Isoch_processing (int rxlen) {
 #ifdef HAVE_ISOCHRONOUS
-    // Ignore runt size isoch packets
-    if (rxlen > (int) (sizeof(UDP_datagram) +  sizeof(client_hdr_v1) + sizeof(client_hdr_udp_isoch_tests))) {
+    // Ignore runt sized isoch packets
+    if (rxlen < (int) (sizeof(UDP_datagram) +  sizeof(client_hdr_v1) + sizeof(client_hdr_udp_isoch_tests))) {
+	reportstruct->burstsize = 0;
+	reportstruct->remaining = 0;
+	reportstruct->frameID = 0;
+    } else {
 	struct client_hdr_udp_isoch_tests *testhdr = (client_hdr_udp_isoch_tests *)(mBuf + sizeof(client_hdr_v1) + sizeof(UDP_datagram));
 	struct UDP_isoch_payload* mBuf_isoch = &(testhdr->isoch);
 	reportstruct->isochStartTime.tv_sec = ntohl(mBuf_isoch->start_tv_sec);
@@ -496,10 +500,6 @@ void Server::Isoch_processing (int rxlen) {
 	reportstruct->burstsize = ntohl(mBuf_isoch->burstsize);
 	reportstruct->burstperiod = ntohl(mBuf_isoch->burstperiod);
 	reportstruct->remaining = ntohl(mBuf_isoch->remaining);
-    } else {
-	reportstruct->burstsize = 0;
-	reportstruct->remaining = 0;
-	reportstruct->frameID = 0;
     }
 #endif
 }
