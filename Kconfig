@@ -9,7 +9,7 @@ config TOOLS_IPERF2
 	tristate "iperf2 support"
 	default n
 	select HAVE_CXX
-	select SCHED_CHILD_EXIT
+	select SCHED_EXIT_KILL_CHILDREN
 	select LIBC_FLOATINGPOINT
 	select SCHED_ATEXIT
 	---help---
