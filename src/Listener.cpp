@@ -441,7 +441,7 @@ void Listener::Listen( ) {
  * net.ipv4.conf.eth0.force_igmp_version = 0
  *
  * ------------------------------------------------------------------- */
-#ifdef HAVE_MULTICAST
+
 void Listener::McastJoin( ) {
     // This is the older mulitcast join code.  Both SSM and binding the
     // an interface requires the newer socket options.  Using the older
@@ -621,7 +621,6 @@ void Listener::McastJoin( ) {
 #endif
     }
 }
-#endif
 // end McastJoin
 
 int Listener::L2_setup (void) {
@@ -1179,7 +1178,8 @@ int Listener::ClientHeaderAck(void) {
     ack.typelen.type  = htonl(CLIENTHDRACK);
     ack.typelen.length = htonl(sizeof(client_hdr_ack));
     ack.flags = 0;
-    ack.reserved = 0;
+    ack.reserved1 = 0;
+    ack.reserved2 = 0;
     ack.version_u = htonl(IPERF_VERSION_MAJORHEX);
     ack.version_l = htonl(IPERF_VERSION_MINORHEX);
     int rc = 1;
