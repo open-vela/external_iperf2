@@ -70,14 +70,14 @@ extern "C" {
  */
 void reporter_printstats( Transfer_Info *stats ) {
     static char header_printed = 0;
-    int bytesxfered;
+    double bytesxfered;
 
     byte_snprintf( buffer, sizeof(buffer)/2, (double) stats->TotalLen,
                    toupper( (int)stats->mFormat));
     if (!stats->TotalLen || (stats->endTime < SMALLEST_INTERVAL)) {
         bytesxfered = 0;
     } else {
-        bytesxfered = stats->TotalLen;
+        bytesxfered = (double) stats->TotalLen;
     }
     byte_snprintf( &buffer[sizeof(buffer)/2], sizeof(buffer)/2,
                    (bytesxfered / (stats->endTime - stats->startTime)),
