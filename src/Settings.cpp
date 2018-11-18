@@ -100,7 +100,7 @@ void Settings_ModalOptions( thread_Settings *mExtSettings );
  * ------------------------------------------------------------------- */
 #define LONG_OPTIONS()
 
-const struct option long_options[] =
+const struct gnu_option long_options[] =
 {
 {"singleclient",     no_argument, NULL, '1'},
 {"bandwidth",  required_argument, NULL, 'b'},
