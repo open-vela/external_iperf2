@@ -133,7 +133,7 @@ static void generate_permit_key(struct thread_Settings *mExtSettings);
  * ------------------------------------------------------------------- */
 #define LONG_OPTIONS()
 
-const struct option long_options[] =
+const struct gnu_option long_options[] =
 {
 {"singleclient",     no_argument, NULL, '1'},
 #if 0
@@ -235,7 +235,7 @@ const struct option long_options[] =
 
 #define ENV_OPTIONS()
 
-const struct option env_options[] =
+const struct gnu_option env_options[] =
 {
 {"IPERF_IPV6_DOMAIN",      no_argument, NULL, 'V'},
 {"IPERF_SINGLECLIENT",     no_argument, NULL, '1'},
