@@ -70,13 +70,13 @@ extern int gnu_optopt;
 
 /* Describe the long-named options requested by the application.
    The LONG_OPTIONS argument to gnu_getopt_long or getopt_long_only is a vector
-   of `struct option' terminated by an element containing a name which is
+   of `struct gnu_option' terminated by an element containing a name which is
    zero.
 
    The field `has_arg' is:
-   no_argument		(or 0) if the option does not take an argument,
-   required_argument	(or 1) if the option requires an argument,
-   optional_argument 	(or 2) if the option takes an optional argument.
+   gnu_no_argument		(or 0) if the option does not take an argument,
+   gnu_required_argument	(or 1) if the option requires an argument,
+   gnu_optional_argument 	(or 2) if the option takes an optional argument.
 
    If the field `flag' is not NULL, it points to a variable that is set
    to the value given in the field `val' when the option is found, but
@@ -92,18 +92,18 @@ extern int gnu_optopt;
 /* has_arg can't be an enum because some compilers complain about
    type mismatches in all the code that assumes it is an int.  */
 
-struct option {
+struct gnu_option {
     const char *name;
     int has_arg;
     int *flag;
     int val;
 };
 
-/* Names for the values of the `has_arg' field of `struct option'.  */
+/* Names for the values of the `has_arg' field of `struct gnu_option'.  */
 
-#define	no_argument		    0
-#define required_argument	1
-#define optional_argument	2
+#define	gnu_no_argument		    0
+#define gnu_required_argument	1
+#define gnu_optional_argument	2
 
 void gnu_reset(void);
 
@@ -114,20 +114,20 @@ int gnu_getopt( int argc,
 int gnu_getopt_long( int argc,
                      char *const *argv,
                      const char *shortopts,
-                     const struct option *longopts,
+                     const struct gnu_option *longopts,
                      int *longind );
 
 int gnu_getopt_long_only( int argc,
                           char *const *argv,
                           const char *shortopts,
-                          const struct option *longopts,
+                          const struct gnu_option *longopts,
                           int *longind );
 
 /* Internal only.  Users should not call this directly.  */
 int _gnu_getopt_internal( int argc,
                           char *const *argv,
                           const char *shortopts,
-                          const struct option *longopts,
+                          const struct gnu_option *longopts,
                           int *longind,
                           int long_only );
 
