@@ -114,6 +114,29 @@ int fullduplex_stop_barrier (struct BarrierMutex *barrier) {
 }
 
 /*
+ * listener server and client cleanup function.
+ */
+#ifdef HAVE_PTHREAD_CLEANUP_PUSH
+static void listener_clean(void *arg)
+{
+    Listener *theListener = (Listener *)arg;
+    DELETE_PTR(theListener);
+}
+
+static void server_clean(void *arg)
+{
+    Server *theServer = (Server*)arg;
+    DELETE_PTR(theServer);
+}
+
+static void client_clean(void *arg)
+{
+    Client *theClient = (Client*)arg;
+    DELETE_PTR(theClient);
+}
+#endif
+
+/*
  * listener_spawn is responsible for creating a Listener class
  * and launching the listener. It is provided as a means for
  * the C thread subsystem to launch the listener C++ object.
@@ -124,8 +147,18 @@ void listener_spawn(struct thread_Settings *thread) {
     setReport(thread);
     // start up a listener
     theListener = new Listener(thread);
+
+#ifdef HAVE_PTHREAD_CLEANUP_PUSH
+    pthread_cleanup_push(listener_clean, theListener);
+#endif
+
     // Start listening
     theListener->Run();
+
+#ifdef HAVE_PTHREAD_CLEANUP_PUSH
+    pthread_cleanup_pop(0);
+#endif
+
     DELETE_PTR(theListener);
 }
 
@@ -150,6 +183,11 @@ void server_spawn(struct thread_Settings *thread) {
 #endif
     // Start up the server
     theServer = new Server(thread);
+
+#ifdef HAVE_PTHREAD_CLEANUP_PUSH
+    pthread_cleanup_push(server_clean, theServer);
+#endif
+
     if (isTxStartTime(thread)) {
 	clock_usleep_abstime(&thread->txstart_epoch);
     }
@@ -163,6 +201,11 @@ void server_spawn(struct thread_Settings *thread) {
 	    theServer->RunTCP();
 	}
     }
+
+#ifdef HAVE_PTHREAD_CLEANUP_PUSH
+    pthread_cleanup_pop(0);
+#endif
+
     DELETE_PTR(theServer);
 }
 
@@ -309,6 +352,11 @@ void client_spawn (struct thread_Settings *thread) {
     // start up the client
     setTransferID(thread, 0);
     theClient = new Client(thread);
+
+#ifdef HAVE_PTHREAD_CLEANUP_PUSH
+    pthread_cleanup_push(client_clean, theClient);
+#endif
+
     // let the reporter thread go first in the case of -P greater than 1
     Condition_Lock(reporter_state.await);
     while (!reporter_state.ready) {
@@ -339,6 +387,11 @@ void client_spawn (struct thread_Settings *thread) {
 	    serverside_client_fullduplex(thread, theClient);
 	}
     }
+
+#ifdef HAVE_PTHREAD_CLEANUP_PUSH
+    pthread_cleanup_pop(0);
+#endif
+
     // Call the client's destructor
     DELETE_PTR(theClient);
 }

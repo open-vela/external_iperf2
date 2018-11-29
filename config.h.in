@@ -278,6 +278,9 @@
 /* Define if you have POSIX threads libraries and header files. */
 #undef HAVE_PTHREAD
 
+/* Define to 1 if you have the `pthread_cleanup_push' function. */
+#undef HAVE_PTHREAD_CLEANUP_PUSH
+
 /* Have PTHREAD_PRIO_INHERIT. */
 #undef HAVE_PTHREAD_PRIO_INHERIT
 
