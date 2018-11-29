@@ -271,6 +271,7 @@ sInterupted == SIGALRM
                 // Copy group ID
                 listtemp->holder = exist->holder;
                 server->multihdr = exist->holder;
+                exist->holder->referenceCount++;
             } else {
                 Mutex_Lock( &groupCond );
                 groupID--;
@@ -1048,6 +1049,7 @@ void Listener::UDPSingleServer( ) {
             // Copy group ID
             listtemp->holder = exist->holder;
             server->multihdr = exist->holder;
+            exist->holder->referenceCount++;
         } else {
             Mutex_Lock( &groupCond );
             groupID--;

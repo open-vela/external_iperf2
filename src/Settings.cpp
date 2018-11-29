@@ -340,6 +340,13 @@ void Settings_Destroy( thread_Settings *mSettings) {
 #ifdef HAVE_ISOCHRONOUS
     DELETE_ARRAY( mSettings->mIsochronousStr );
 #endif
+    if (mSettings->multihdr) {
+        mSettings->multihdr->referenceCount--;
+        if (mSettings->multihdr->referenceCount == 0) {
+            DELETE_PTR( mSettings->multihdr );
+        }
+    }
+
     DELETE_PTR( mSettings );
 } // end ~Settings
 
