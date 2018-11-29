@@ -191,6 +191,11 @@
 #define HAVE_PTHREAD_CANCEL 1
 #endif
 
+#ifdef CONFIG_PTHREAD_CLEANUP
+/* Define to 1 if you have the `pthread_cleanup_push' function. */
+#define HAVE_PTHREAD_CLEANUP_PUSH 1
+#endif
+
 /* */
 #define HAVE_QUAD_SUPPORT 1
 
@@ -208,10 +213,8 @@
 /* Define to 1 if you have the `setitimer' function. */
 /* #undef HAVE_SETITIMER */
 
-#ifndef CONFIG_DISABLE_SIGNALS
 /* Define to 1 if you have the <signal.h> header file. */
 #define HAVE_SIGNAL_H 1
-#endif
 
 /* Define to 1 if you have the `snprintf' function. */
 #define HAVE_SNPRINTF 1

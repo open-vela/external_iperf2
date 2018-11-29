@@ -170,6 +170,9 @@
 /* Define to 1 if you have the `pthread_cancel' function. */
 #undef HAVE_PTHREAD_CANCEL
 
+/* Define to 1 if you have the `pthread_cleanup_push' function. */
+#undef HAVE_PTHREAD_CLEANUP_PUSH
+
 /* */
 #undef HAVE_QUAD_SUPPORT
 

@@ -308,6 +308,7 @@ typedef struct MultiHeader {
     int agentindex;
     int groupID;
     int threads;
+    int referenceCount;
     ReporterData *report;
     Transfer_Info *data;
     Condition barrier;

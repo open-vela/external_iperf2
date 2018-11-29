@@ -148,6 +148,7 @@ MultiHeader* InitMulti( thread_Settings *agent, int inID) {
             Condition_Initialize( &multihdr->barrier );
             multihdr->groupID = inID;
             multihdr->threads = agent->mThreads;
+            multihdr->referenceCount = 1;
             if ( isMultipleReport( agent ) ) {
                 int i;
                 ReporterData *data = NULL;
@@ -794,7 +795,7 @@ again:
 #endif
 	    }
         }
-    } while ( 1 );
+    } while ( !sInterupted );
 }
 
 /*
