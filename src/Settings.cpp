@@ -167,7 +167,7 @@ const struct gnu_option long_options[] =
 
 #define ENV_OPTIONS()
 
-const struct option env_options[] =
+const struct gnu_option env_options[] =
 {
 {"IPERF_IPV6_DOMAIN",      no_argument, NULL, 'V'},
 {"IPERF_SINGLECLIENT",     no_argument, NULL, '1'},
