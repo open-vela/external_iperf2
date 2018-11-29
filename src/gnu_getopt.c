@@ -164,6 +164,16 @@ static enum {
 static char *posixly_correct;
 
 
+void
+gnu_reset(void)
+{
+    __gnu_getopt_initialized = 0;
+    gnu_optarg = NULL;
+    gnu_optind = 1;
+    gnu_opterr= 1;
+}
+
+
 /* Avoid depending on library functions or files
    whose names are inconsistent.  */
 

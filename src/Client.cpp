@@ -151,6 +151,7 @@ Client::Client( thread_Settings *inSettings ) {
 
     reportstruct = new ReportStruct;
     FAIL_errno( reportstruct == NULL, "No memory for report structure\n", mSettings );
+    memset(reportstruct, 0, sizeof(ReportStruct));
     reportstruct->packetID = (isPeerVerDetect(mSettings)) ? 1 : 0;
     reportstruct->errwrite=WriteNoErr;
     reportstruct->emptyreport=0;
@@ -652,13 +653,7 @@ void Client::RunUDPIsochronous (void) {
     int currLen = 1;
     int frameid=0;
     Timestamp t1;
-    int bytecntmin;
-    // make sure the packet can carry the isoch payload
-    if (isModeTime(mSettings)) {
-	bytecntmin = sizeof(UDP_datagram) + sizeof(client_hdr_v1) + sizeof(struct client_hdr_udp_isoch_tests);
-    } else {
-	bytecntmin = 1;
-    }
+    int bytecntmin = sizeof(UDP_datagram) + sizeof(client_hdr_udp_tests);
 
     mBuf_isoch->burstperiod = htonl(fc->period_us());
 
@@ -666,11 +661,14 @@ void Client::RunUDPIsochronous (void) {
     int fatalwrite_err = 0;
     while (InProgress() && !fatalwrite_err) {
 	int bytecnt = (int) (lognormal(mSettings->mMean,mSettings->mVariance)) / (mSettings->mFPS * 8);
-	if (bytecnt < bytecntmin)
-	    bytecnt = bytecntmin;
 	delay = 0;
 
 	// printf("bits=%d\n", (int) (mSettings->mFPS * bytecnt * 8));
+	// adjust bytecnt so last packet of burst is greater or equal to min packet
+	int remainder = bytecnt % mSettings->mBufLen;
+	if (remainder < bytecntmin) {
+	    bytecnt += (bytecntmin - remainder);
+	}
 	mBuf_isoch->burstsize  = htonl(bytecnt);
 	mBuf_isoch->prevframeid  = htonl(frameid);
 	frameid =  fc->wait_tick();
@@ -749,11 +747,6 @@ void Client::RunUDPIsochronous (void) {
 		}
 	    } else {
 		bytecnt -= currLen;
-		// adjust bytecnt so last packet of burst is greater or equal to min packet
-		if ((bytecnt > 0) && (bytecnt < bytecntmin)) {
-		    bytecnt = bytecntmin;
-		    mBuf_isoch->burstsize  = htonl(bytecnt);
-		}
 	    }
 
 	    if (!isModeTime(mSettings)) {

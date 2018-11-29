@@ -29,7 +29,7 @@ traffic).
 .SH "GENERAL OPTIONS"
 .TP
 .BR -b ", " --bandwidth " "
-set the target bandwidth and optional standard devation per \fI<mean>\fR,\fI[<stdev>]\fR (See NOTES for suffixes)
+set the target bandwidth (and optional standard devation where supported)
 .TP
 .BR -e ", " --enhanced " "
 Display enhanced output in reports otherwise use legacy report (ver 2.0.5) formatting (see notes)
@@ -131,7 +131,7 @@ run in client mode, connecting to \fIhost\fR
 Do a bidirectional test simultaneously
 .TP
 .BR "    --fq-rate n[kmgKMG]"
-Set a rate to be used with fair-queueing based socket-level pacing, in bytes or bits per second. Only available on platforms supporting the SO_MAX_PACING_RATE socket option. (Note: Here the suffixes indicate bytes/sec or bits/sec per use of uppercase or lowercase, respectively)
+Set a rate to be used with fair-queueing based socket-level pacing, in bits per second. Only available on platforms supporting the SO_MAX_PACING_RATE socket option
 .TP
 .BR "    --incr-dstip"
 increment the destination ip address when using the parallel (-P) option
@@ -140,7 +140,7 @@ increment the destination ip address when using the parallel (-P) option
 set the interpacket gap to \fIn\fR (units of milliseconds) for packets within an isochronous frame (burst), requires --isochronous
 .TP
 .BR "    --isochronous[=" \fIfps\fR:\fImean\fR,\fIstdev\fR "]"
-send isochronous traffic with frequency frames per second and load defined by mean and standard deviation using a log normal distribution, defaults to 60:20m,0.  (Note: Here the suffixes indicate bytes/sec or bits/sec per use of uppercase or lowercase, respectively)
+send isochronous traffic with frequency frames per second and load defined by mean and standard deviation using a log normal distribution, defaults to 60:20m,0
 .TP
 .BR -n ", " --num " \fIn\fR[kmKM]"
 number of bytes to transmit (instead of -t)
