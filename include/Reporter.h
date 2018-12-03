@@ -356,7 +356,7 @@ extern char buffer[SNBUFFERSIZE]; // Buffer for printing
 
 #define rMillion 1000000
 
-#define TimeDifference( left, right ) (left.tv_sec  - right.tv_sec) +   \
+#define TimeDifference( left, right ) (int)(left.tv_sec  - right.tv_sec) +   \
         (left.tv_usec - right.tv_usec) / ((double) rMillion)
 
 #define TimeAdd( left, right )  do {                                    \
