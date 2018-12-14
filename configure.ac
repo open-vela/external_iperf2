@@ -157,7 +157,7 @@ AC_FUNC_SELECT_ARGTYPES
 AC_TYPE_SIGNAL
 AC_FUNC_STRFTIME
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([atexit memset pthread_cleanup_push pthread_cancel select strchr strerror strtol strtoll usleep clock_gettime sched_setscheduler mlockall setitimer nanosleep clock_nanosleep])
+AC_CHECK_FUNCS([atexit memset pthread_cancel select strchr strerror strtol strtoll usleep clock_gettime sched_setscheduler mlockall setitimer nanosleep clock_nanosleep])
 AC_REPLACE_FUNCS(snprintf inet_pton inet_ntop gettimeofday)
 AC_CHECK_DECLS([ENOBUFS, EWOULDBLOCK],[],[],[#include <errno.h>])
 AC_CHECK_DECLS([SO_TIMESTAMP, SO_SNDTIMEO, SO_MAX_PACING_RATE],[],[],[#include <sys/socket.h>])
@@ -244,10 +244,12 @@ if test "$ac_cv_multicast" != no; then
     AC_DEFINE([HAVE_MULTICAST], 1, [Define to enable multicast support])
   fi
   AC_CHECK_TYPES(struct group_source_req,,,[#include "$srcdir/compat/headers_slim.h"])
+  AC_CHECK_TYPES(struct ip_mreq_source,,,[#include "$srcdir/compat/headers_slim.h"])
   AC_CHECK_DECLS(MCAST_JOIN_SOURCE_GROUP,,,[#include "$srcdir/compat/headers_slim.h"])
+  AC_CHECK_DECLS(IP_ADD_SOURCE_MEMBERSHIP,,,[#include "$srcdir/compat/headers_slim.h"])
   AC_MSG_CHECKING(for multicast ssm support)
   ac_cv_ssm_multicast=no
-  if test "$ac_cv_have_decl_MCAST_JOIN_SOURCE_GROUP" = yes; then
+  if test "$ac_cv_have_decl_MCAST_JOIN_SOURCE_GROUP" = yes || test "$ac_cv_have_decl_IP_ADD_SOURCE_MEMBERSHIP" = yes; then
     if test "$ac_cv_type_struct_group_source_req" = yes; then
       ac_cv_ssm_multicast=yes
     fi

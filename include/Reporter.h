@@ -62,7 +62,7 @@ struct server_hdr;
 
 #include "Settings.hpp"
 
-#define NUM_REPORT_STRUCTS 5
+#define NUM_REPORT_STRUCTS 10000
 #define NUM_MULTI_SLOTS    5
 // If the minimum latency exceeds the boundaries below
 // assume the clocks are not synched and suppress the
@@ -308,7 +308,6 @@ typedef struct MultiHeader {
     int agentindex;
     int groupID;
     int threads;
-    int referenceCount;
     ReporterData *report;
     Transfer_Info *data;
     Condition barrier;
@@ -356,7 +355,7 @@ extern char buffer[SNBUFFERSIZE]; // Buffer for printing
 
 #define rMillion 1000000
 
-#define TimeDifference( left, right ) (int)(left.tv_sec  - right.tv_sec) +   \
+#define TimeDifference( left, right ) (left.tv_sec  - right.tv_sec) +   \
         (left.tv_usec - right.tv_usec) / ((double) rMillion)
 
 #define TimeAdd( left, right )  do {                                    \
