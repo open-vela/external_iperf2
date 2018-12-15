@@ -229,8 +229,8 @@ int main( int argc, char **argv ) {
 	    if (daemon(1, 0) < 0) {
 	        perror("daemon");
 	    }
-	}
 #endif
+	}
 	break;
     default :
 	fprintf( stderr, "unknown mode");
