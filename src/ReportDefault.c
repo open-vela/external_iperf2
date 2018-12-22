@@ -302,7 +302,7 @@ void reporter_multistats( Transfer_Info *stats ) {
     byte_snprintf( buffer, sizeof(buffer)/2, (double) stats->TotalLen,
                    toupper( (int)stats->mFormat));
     byte_snprintf( &buffer[sizeof(buffer)/2], sizeof(buffer)/2,
-                   stats->TotalLen / (stats->endTime - stats->startTime),
+                   ((double) stats->TotalLen) / (stats->endTime - stats->startTime),
                    stats->mFormat);
 
     if (!stats->mEnhanced) {
