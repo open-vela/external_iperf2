@@ -57,6 +57,10 @@
    to 0 if you don't. */
 #undef HAVE_DECL_IP_ADD_SOURCE_MEMBERSHIP
 
+/* Define to 1 if you have the declaration of `MCAST_JOIN_GROUP', and to 0 if
+   you don't. */
+#undef HAVE_DECL_MCAST_JOIN_GROUP
+
 /* Define to 1 if you have the declaration of `MCAST_JOIN_SOURCE_GROUP', and
    to 0 if you don't. */
 #undef HAVE_DECL_MCAST_JOIN_SOURCE_GROUP
@@ -82,9 +86,6 @@
 
 /* Define if fast sampling for report intervals is desired */
 #undef HAVE_FASTSAMPLING
-
-/* Define to 1 if you have the `fork' function. */
-#undef HAVE_FORK
 
 /* Define to 1 if you have the `gettimeofday' function. */
 #undef HAVE_GETTIMEOFDAY
@@ -118,9 +119,6 @@
 
 /* Define to 1 if you have the `rt' library (-lrt). */
 #undef HAVE_LIBRT
-
-/* Define if libws2_32 exists. */
-#undef HAVE_LIBWS2_32
 
 /* Define to 1 if you have the <linux/filter.h> header file. */
 #undef HAVE_LINUX_FILTER_H
@@ -157,6 +155,9 @@
 
 /* Define to 1 if you have the <net/ethernet.h> header file. */
 #undef HAVE_NET_ETHERNET_H
+
+/* Define to 1 if you have the <net/if.h> header file. */
+#undef HAVE_NET_IF_H
 
 /* */
 #undef HAVE_POSIX_THREAD
@@ -236,6 +237,10 @@
 /* Define to 1 if the system has the type `struct ip_mreq_source'. */
 #undef HAVE_STRUCT_IP_MREQ_SOURCE
 
+/* Define to 1 if `imr_multiaddr.s_addr' is a member of `struct
+   ip_mreq_source'. */
+#undef HAVE_STRUCT_IP_MREQ_SOURCE_IMR_MULTIADDR_S_ADDR
+
 /* Define to 1 if the system has the type `struct sockaddr_in6'. */
 #undef HAVE_STRUCT_SOCKADDR_IN6
 
@@ -275,12 +280,6 @@
 /* Define to 1 if you have the `usleep' function. */
 #undef HAVE_USLEEP
 
-/* Define to 1 if you have the `vfork' function. */
-#undef HAVE_VFORK
-
-/* Define to 1 if you have the <vfork.h> header file. */
-#undef HAVE_VFORK_H
-
 /* Define to 1 if you have the `vprintf' function. */
 #undef HAVE_VPRINTF
 
@@ -290,11 +289,8 @@
 /* Define if using WIN32 threads */
 #undef HAVE_WIN32_THREAD
 
-/* Define to 1 if `fork' works. */
-#undef HAVE_WORKING_FORK
-
-/* Define to 1 if `vfork' works. */
-#undef HAVE_WORKING_VFORK
+/* Define if winsock2.h exists. */
+#undef HAVE_WINSOCK2_H
 
 /* Name of package */
 #undef PACKAGE
@@ -390,9 +386,6 @@
 /* */
 #undef false
 
-/* Define to `int' if <sys/types.h> does not define. */
-#undef pid_t
-
 /* Define to `unsigned int' if <sys/types.h> does not define. */
 #undef size_t
 
@@ -401,6 +394,3 @@
 
 /* */
 #undef true
-
-/* Define as `fork' if `vfork' does not work. */
-#undef vfork

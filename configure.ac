@@ -101,10 +101,11 @@ fi
 dnl check for -lnsl, -lsocket
 AC_SEARCH_LIBS([gethostbyname], [nsl])
 AC_SEARCH_LIBS([socket], [socket], [],
-  [AC_CHECK_HEADER([winsock2.h],
-  [AC_DEFINE([HAVE_LIBWS2_32], [1], [Define if libws2_32 exists.])
+  [AC_CHECK_HEADER([winsock2.h],[
+
+  AC_DEFINE([HAVE_WINSOCK2_H], 1, [Define if winsock2.h exists.])
   if test "$acx_pthread_ok" != yes; then
-  AC_DEFINE([HAVE_WIN32_THREAD], [1], [Define if using WIN32 threads])
+  AC_DEFINE([HAVE_WIN32_THREAD], 1, [Define if using WIN32 threads])
   fi
   LIBS="-lws2_32 $LIBS"],
   [],
@@ -112,7 +113,7 @@ AC_SEARCH_LIBS([socket], [socket], [],
 
 dnl Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([arpa/inet.h libintl.h net/ethernet.h linux/ip.h linux/udp.h linux/if_packet.h linux/filter.h netdb.h netinet/in.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h signal.h ifaddrs.h])
+AC_CHECK_HEADERS([arpa/inet.h libintl.h net/ethernet.h net/if.h linux/ip.h linux/udp.h linux/if_packet.h linux/filter.h netdb.h netinet/in.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h signal.h ifaddrs.h])
 
 dnl ===================================================================
 dnl Checks for typedefs, structures
@@ -151,7 +152,6 @@ fi
 AC_DEFINE_UNQUOTED([Socklen_t], $ac_cv_accept_arg, [Define 3rd arg of accept])
 
 dnl Checks for library functions.
-AC_FUNC_FORK
 AC_FUNC_MEMCMP
 AC_FUNC_SELECT_ARGTYPES
 AC_TYPE_SIGNAL
@@ -160,17 +160,39 @@ AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([atexit memset pthread_cancel select strchr strerror strtol strtoll usleep clock_gettime sched_setscheduler mlockall setitimer nanosleep clock_nanosleep])
 AC_REPLACE_FUNCS(snprintf inet_pton inet_ntop gettimeofday)
 AC_CHECK_DECLS([ENOBUFS, EWOULDBLOCK],[],[],[#include <errno.h>])
-AC_CHECK_DECLS([SO_TIMESTAMP, SO_SNDTIMEO, SO_MAX_PACING_RATE],[],[],[#include <sys/socket.h>])
-AC_CHECK_DECLS([IPV6_TCLASS],[],[],[#include <netinet/in.h>])
 AC_CHECK_DECLS([CPU_SET],[],[],[
 	#define _GNU_SOURCE
 	#include <sched.h>
 	])
 AC_CHECK_DECLS([SIGALRM],[],[],[#include <signal.h>])
-AC_CHECK_MEMBERS([struct tcp_info.tcpi_total_retrans],[],[],
-			 [#include <netinet/tcp.h>])
-AC_CHECK_MEMBERS([struct sockaddr_in6.sin6_len], [],[],
-			 [#include <netinet/in.h>])
+
+
+in_h='
+#ifdef HAVE_WINSOCK2_H
+#define _WIN32_WINNT 0x0501 /* use (at least) WinXP API */
+#define WIN32_LEAN_AND_MEAN /* exclude unnecesary headers */
+#include <windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
+#include <sys/socket.h>
+#include <netinet/in.h>
+#endif
+'
+
+AC_CHECK_DECLS([AF_INET6, SO_TIMESTAMP, SO_SNDTIMEO,
+			  SO_MAX_PACING_RATE, IPV6_TCLASS,
+			  MCAST_JOIN_GROUP, MCAST_JOIN_SOURCE_GROUP,
+			  IPV6_ADD_MEMBERSHIP, IPV6_MULTICAST_HOPS,
+			  IP_ADD_MEMBERSHIP, IP_ADD_SOURCE_MEMBERSHIP],[],[],[$in_h])
+
+AC_CHECK_TYPES([struct sockaddr_storage, struct sockaddr_in6,
+		       struct group_source_req, struct ip_mreq,
+		       struct ipv6_mreq, struct ip_mreq_source],,,[$in_h])
+
+AC_CHECK_MEMBERS([struct tcp_info.tcpi_total_retrans,
+			 struct sockaddr_in6.sin6_len,
+			 struct ip_mreq_source.imr_multiaddr.s_addr], [], [],[$in_h])
 
 dnl             Gotten from some NetBSD configure.in
 dnl		We assume that if sprintf() supports %lld or %qd,
@@ -230,8 +252,6 @@ dnl Check for system services
 
 dnl check for multicast
 if test "$ac_cv_multicast" != no; then
-  AC_CHECK_TYPES(struct ip_mreq,,,[#include "$srcdir/compat/headers_slim.h"])
-  AC_CHECK_DECLS(IP_ADD_MEMBERSHIP,,,[#include "$srcdir/compat/headers_slim.h"])
   AC_MSG_CHECKING(for multicast support)
   ac_cv_multicast=no
   if test "$ac_cv_have_decl_IP_ADD_MEMBERSHIP" = yes; then
@@ -243,10 +263,6 @@ if test "$ac_cv_multicast" != no; then
   if test "$ac_cv_multicast" = yes; then
     AC_DEFINE([HAVE_MULTICAST], 1, [Define to enable multicast support])
   fi
-  AC_CHECK_TYPES(struct group_source_req,,,[#include "$srcdir/compat/headers_slim.h"])
-  AC_CHECK_TYPES(struct ip_mreq_source,,,[#include "$srcdir/compat/headers_slim.h"])
-  AC_CHECK_DECLS(MCAST_JOIN_SOURCE_GROUP,,,[#include "$srcdir/compat/headers_slim.h"])
-  AC_CHECK_DECLS(IP_ADD_SOURCE_MEMBERSHIP,,,[#include "$srcdir/compat/headers_slim.h"])
   AC_MSG_CHECKING(for multicast ssm support)
   ac_cv_ssm_multicast=no
   if test "$ac_cv_have_decl_MCAST_JOIN_SOURCE_GROUP" = yes || test "$ac_cv_have_decl_IP_ADD_SOURCE_MEMBERSHIP" = yes; then
@@ -262,9 +278,6 @@ fi
 
 dnl check for IPv6
 if test "$ac_cv_have_ipv6" != no; then
-  AC_CHECK_TYPES(struct sockaddr_storage,,,[#include "$srcdir/compat/headers_slim.h"])
-  AC_CHECK_TYPES(struct sockaddr_in6,,,[#include "$srcdir/compat/headers_slim.h"])
-  AC_CHECK_DECLS(AF_INET6,,,[#include "$srcdir/compat/headers_slim.h"])
   AC_MSG_CHECKING(for IPv6 headers and structures)
   ac_cv_have_ipv6=no
   if test "$ac_cv_type_struct_sockaddr_storage" = yes; then
@@ -280,9 +293,6 @@ fi
 
 if test "$ac_cv_have_ipv6" = yes; then
   if test "$ac_cv_multicast" = yes; then
-    AC_CHECK_TYPES(struct ipv6_mreq,,,[#include "$srcdir/compat/headers_slim.h"])
-    AC_CHECK_DECLS(IPV6_ADD_MEMBERSHIP,,,[#include "$srcdir/compat/headers_slim.h"])
-    AC_CHECK_DECLS(IPV6_MULTICAST_HOPS,,,[#include "$srcdir/compat/headers_slim.h"])
     AC_MSG_CHECKING(for IPv6 multicast support)
     ac_cv_have_ipv6_multicast=no
     if test "$ac_cv_type_struct_ipv6_mreq" = yes; then
