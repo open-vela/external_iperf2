@@ -84,7 +84,7 @@
 #include "Locale.h"
 #include "SocketAddr.h"
 
-#ifdef HAVE_SSM_MULTICAST
+#if (defined HAVE_SSM_MULTICAST) && (defined HAVE_NET_IF_H)
 #include <net/if.h>
 #endif
 /* -------------------------------------------------------------------
@@ -484,6 +484,7 @@ void Listener::McastJoin( ) {
 	int iface=0;
 	int rc;
 
+#ifdef HAVE_NET_IF_H
 	/* Set the interface or any */
 	if (mSettings->mIfrname) {
 	    iface = if_nametoindex(mSettings->mIfrname);
@@ -491,6 +492,7 @@ void Listener::McastJoin( ) {
 	} else {
 	    iface = 0;
 	}
+#endif
 
         if (isIPV6(mSettings)) {
 #ifdef HAVE_IPV6_MULTICAST
@@ -518,8 +520,11 @@ void Listener::McastJoin( ) {
 #ifdef HAVE_STRUCT_SOCKADDR_IN6_SIN6_LEN
 		source->sin6_len = group->sin6_len;
 #endif
+		rc = -1;
+#if HAVE_DECL_MCAST_JOIN_SOURCE_GROUP
 		rc = setsockopt(mSettings->mSock,IPPROTO_IPV6,MCAST_JOIN_SOURCE_GROUP, &group_source_req,
 			    sizeof(group_source_req));
+#endif
 		FAIL_errno( rc == SOCKET_ERROR, "mcast v6 join source group",mSettings);
 	    } else {
 		struct group_req group_req;
@@ -534,8 +539,11 @@ void Listener::McastJoin( ) {
 		rc=getsockname(mSettings->mSock,(struct sockaddr *)group, &socklen);
 		FAIL_errno( rc == SOCKET_ERROR, "mcast v6 join group getsockname",mSettings );
 		group->sin6_port = 0;    /* Ignored */
+		rc = -1;
+#if HAVE_DECL_MCAST_JOIN_GROUP
 		rc = setsockopt(mSettings->mSock,IPPROTO_IPV6,MCAST_JOIN_GROUP, &group_req,
 				sizeof(group_source_req));
+#endif
 		FAIL_errno( rc == SOCKET_ERROR, "mcast v6 join group",mSettings);
 	    }
 #else
@@ -590,9 +598,15 @@ void Listener::McastJoin( ) {
 		// Some operating systems will have MCAST_JOIN_SOURCE_GROUP but still fail
 		// In those cases try the IP_ADD_SOURCE_MEMBERSHIP
 		if (rc < 0) {
+#ifdef HAVE_STRUCT_IP_MREQ_SOURCE_IMR_MULTIADDR_S_ADDR
 		    imr.imr_multiaddr = ((const struct sockaddr_in *)group)->sin_addr;
 		    imr.imr_sourceaddr = ((const struct sockaddr_in *)source)->sin_addr;
-		    rc = setsockopt (mSettings->mSock, IPPROTO_IP, IP_ADD_SOURCE_MEMBERSHIP, &imr, sizeof (imr));
+#else
+		    // Some Android versions declare mreq_source without an s_addr
+		    imr.imr_multiaddr = ((const struct sockaddr_in *)group)->sin_addr.s_addr;
+		    imr.imr_sourceaddr = ((const struct sockaddr_in *)source)->sin_addr.s_addr;
+#endif
+		    rc = setsockopt (mSettings->mSock, IPPROTO_IP, IP_ADD_SOURCE_MEMBERSHIP, (char*)(&imr), sizeof (imr));
 		}
 #endif
 #endif
@@ -610,8 +624,11 @@ void Listener::McastJoin( ) {
 		rc=getsockname(mSettings->mSock,(struct sockaddr *)group, &socklen);
 		FAIL_errno( rc == SOCKET_ERROR, "mcast join group getsockname",mSettings );
 		group->sin_port = 0;    /* Ignored */
+		rc = -1;
+#if HAVE_DECL_MCAST_JOIN_GROUP
 		rc = setsockopt(mSettings->mSock,IPPROTO_IP,MCAST_JOIN_GROUP, &group_req,
 				sizeof(group_source_req));
+#endif
 		FAIL_errno( rc == SOCKET_ERROR, "mcast join group",mSettings);
 	    }
 	}
