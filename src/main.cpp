@@ -210,27 +210,30 @@ int main( int argc, char **argv ) {
 #endif
 	break;
     case kMode_Listener :
+#ifdef WIN32
+     // Remove the Windows service if requested
+	if ( isRemoveService( ext_gSettings ) ) {
+	    // remove the service
+	    if ( CmdRemoveService() ) {
+		fprintf(stderr, "IPerf Service is removed.\n");
+	    }
+	}
+	if ( isDaemon( ext_gSettings ) ) {
+	    CmdInstallService(argc, argv);
+	} else if (isRemoveService(ext_gSettings)) {
+	    return 0;
+	}
+#else // *nix system
 	if ( isDaemon( ext_gSettings ) ) {
 	    fprintf( stderr, "Running Iperf Server as a daemon\n");
 	    // Start the server as a daemon
-#ifdef WIN32
-	    CmdInstallService(argc, argv);
-	    // Remove the Windows service if requested
-	    if ( isRemoveService( ext_gSettings ) ) {
-		// remove the service
-		if ( CmdRemoveService() ) {
-		    fprintf(stderr, "IPerf Service is removed.\n");
-		    return 0;
-		}
-	    }
-#else
 	    fflush(stderr);
 	    // redirect stdin, stdout and sterr to /dev/null (see dameon and no close flag)
 	    if (daemon(1, 0) < 0) {
 	        perror("daemon");
 	    }
-#endif
 	}
+#endif
 	break;
     default :
 	fprintf( stderr, "unknown mode");
