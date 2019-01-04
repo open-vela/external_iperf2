@@ -249,6 +249,11 @@ typedef struct sockaddr_in iperf_sockaddr;
   #define IPERFdMAX "d"
 #endif
 
+#ifdef HAVE_STDINT_H
+// Use stdint typedefs, either native, or as generated in iperf-int.h
+typedef intmax_t max_size_t;
+typedef uintmax_t umax_size_t;
+#else
 #ifdef HAVE_QUAD_SUPPORT
 #  ifdef HAVE_INT64_T
 typedef int64_t max_size_t;
@@ -266,6 +271,7 @@ typedef long max_size_t;
 typedef unsigned long umax_size_t;
 #  endif // INT32
 #endif
+#endif // STDINT_H
 
 #ifdef HAVE_FASTSAMPLING
 #define IPERFTimeFrmt "%4.4f-%4.4f"
