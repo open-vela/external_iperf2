@@ -148,7 +148,6 @@ MultiHeader* InitMulti( thread_Settings *agent, int inID) {
             Condition_Initialize( &multihdr->barrier );
             multihdr->groupID = inID;
             multihdr->threads = agent->mThreads;
-            multihdr->referenceCount = 1;
             if ( isMultipleReport( agent ) ) {
                 int i;
                 ReporterData *data = NULL;
@@ -624,7 +623,7 @@ void ReportServerUDP( thread_Settings *agent, server_hdr *server ) {
 	stats->mFormat = agent->mFormat;
 	stats->jitter = ntohl( server->base.jitter1 );
 	stats->jitter += ntohl( server->base.jitter2 ) / (double)rMillion;
-#ifdef HAVE_QUAD_SUPPORT
+#ifdef HAVE_INT64_T
 	stats->TotalLen = (((max_size_t) ntohl( server->base.total_len1 )) << 32) + \
 	    ntohl( server->base.total_len2 );
 #else
@@ -638,7 +637,7 @@ void ReportServerUDP( thread_Settings *agent, server_hdr *server ) {
 #ifndef HAVE_SEQNO64b
 	stats->cntDatagrams = ntohl( server->base.datagrams );
 #else
-  #ifdef HAVE_QUAD_SUPPORT
+  #ifdef HAVE_INT64_T
 	stats->cntDatagrams = (((max_size_t) ntohl( server->base.datagrams2 )) << 32) + \
 	    ntohl( server->base.datagrams );
   #else
@@ -795,7 +794,7 @@ again:
 #endif
 	    }
         }
-    } while ( !sInterupted );
+    } while ( 1 );
 }
 
 /*

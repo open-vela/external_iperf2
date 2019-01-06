@@ -271,7 +271,6 @@ sInterupted == SIGALRM
                 // Copy group ID
                 listtemp->holder = exist->holder;
                 server->multihdr = exist->holder;
-                exist->holder->referenceCount++;
             } else {
                 Mutex_Lock( &groupCond );
                 groupID--;
@@ -442,7 +441,7 @@ void Listener::Listen( ) {
  * net.ipv4.conf.eth0.force_igmp_version = 0
  *
  * ------------------------------------------------------------------- */
-#ifdef HAVE_MULTICAST
+
 void Listener::McastJoin( ) {
     // This is the older mulitcast join code.  Both SSM and binding the
     // an interface requires the newer socket options.  Using the older
@@ -639,7 +638,6 @@ void Listener::McastJoin( ) {
 #endif
     }
 }
-#endif
 // end McastJoin
 
 int Listener::L2_setup (void) {
@@ -987,7 +985,7 @@ void Listener::UDPSingleServer( ) {
                         hdr = (server_hdr*) (UDP_Hdr+1);
 
                         hdr->base.flags        = htonl( HEADER_VERSION1 );
-#ifdef HAVE_QUAD_SUPPORT
+#ifdef HAVE_INT64_T
 			hdr->base.total_len1   = htonl( (long) (stats->TotalLen >> 32) );
 #else
 			hdr->base.total_len1   = htonl(0x0);
@@ -1066,7 +1064,6 @@ void Listener::UDPSingleServer( ) {
             // Copy group ID
             listtemp->holder = exist->holder;
             server->multihdr = exist->holder;
-            exist->holder->referenceCount++;
         } else {
             Mutex_Lock( &groupCond );
             groupID--;
@@ -1198,7 +1195,8 @@ int Listener::ClientHeaderAck(void) {
     ack.typelen.type  = htonl(CLIENTHDRACK);
     ack.typelen.length = htonl(sizeof(client_hdr_ack));
     ack.flags = 0;
-    ack.reserved = 0;
+    ack.reserved1 = 0;
+    ack.reserved2 = 0;
     ack.version_u = htonl(IPERF_VERSION_MAJORHEX);
     ack.version_l = htonl(IPERF_VERSION_MINORHEX);
     int rc = 1;

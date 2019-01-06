@@ -232,46 +232,11 @@ typedef struct sockaddr_in iperf_sockaddr;
     #endif
 //#endif
 
-// Rationalize stdint definitions and sizeof, thanks to ac_create_stdint_h.m4
-// from the gnu archive
+// inttypes.h is already included
 
-#include <iperf-int.h>
-// Override <stdint.h> PRIdMAX (hack for now, fix this to use <stdint.h> properly)
-#ifdef HAVE_QUAD_SUPPORT
-  #ifdef WIN32
-    #define IPERFdMAX "I64d"
-  #elif defined HAVE_PRINTF_QD
-    #define IPERFdMAX "qd"
-  #else
-    #define IPERFdMAX "lld"
-  #endif
-#else
-  #define IPERFdMAX "d"
-#endif
-
-#ifdef HAVE_STDINT_H
-// Use stdint typedefs, either native, or as generated in iperf-int.h
+#define IPERFdMAX PRIdMAX
 typedef intmax_t max_size_t;
 typedef uintmax_t umax_size_t;
-#else
-#ifdef HAVE_QUAD_SUPPORT
-#  ifdef HAVE_INT64_T
-typedef int64_t max_size_t;
-typedef u_int64_t umax_size_t;
-#  else
-typedef long long max_size_t;
-typedef unsigned long long umax_size_t;
-#  endif // INT64
-#else
-#  ifdef HAVE_INT32_T
-typedef int32_t max_size_t;
-typedef u_int32_t umax_size_t;
-#  else
-typedef long max_size_t;
-typedef unsigned long umax_size_t;
-#  endif // INT32
-#endif
-#endif // STDINT_H
 
 #ifdef HAVE_FASTSAMPLING
 #define IPERFTimeFrmt "%4.4f-%4.4f"

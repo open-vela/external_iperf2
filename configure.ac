@@ -125,8 +125,7 @@ AC_CHECK_TYPES(ssize_t,,AC_DEFINE_UNQUOTED(ssize_t, int))
 AC_HEADER_TIME
 AC_STRUCT_TM
 
-dnl these intXX_t and u_intXX_t need to be defined to be the right size.
-AX_CREATE_STDINT_H(include/iperf-int.h)
+AC_CHECK_TYPES(int64_t)
 
 AC_CACHE_CHECK(3rd argument of accept, ac_cv_accept_arg, [
   dnl Try socklen_t (POSIX)
@@ -157,7 +156,7 @@ AC_FUNC_SELECT_ARGTYPES
 AC_TYPE_SIGNAL
 AC_FUNC_STRFTIME
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([atexit memset pthread_cleanup_push pthread_cancel select strchr strerror strtol strtoll usleep clock_gettime sched_setscheduler mlockall setitimer nanosleep clock_nanosleep])
+AC_CHECK_FUNCS([atexit memset pthread_cancel select strchr strerror strtol strtoll usleep clock_gettime sched_setscheduler mlockall setitimer nanosleep clock_nanosleep])
 AC_REPLACE_FUNCS(snprintf inet_pton inet_ntop gettimeofday)
 AC_CHECK_DECLS([ENOBUFS, EWOULDBLOCK],[],[],[#include <errno.h>])
 AC_CHECK_DECLS([CPU_SET],[],[],[
@@ -193,52 +192,6 @@ AC_CHECK_TYPES([struct sockaddr_storage, struct sockaddr_in6,
 AC_CHECK_MEMBERS([struct tcp_info.tcpi_total_retrans,
 			 struct sockaddr_in6.sin6_len,
 			 struct ip_mreq_source.imr_multiaddr.s_addr], [], [],[$in_h])
-
-dnl             Gotten from some NetBSD configure.in
-dnl		We assume that if sprintf() supports %lld or %qd,
-dnl		then all of *printf() does. If not, disable long long
-dnl		support because we don't know how to display it.
-
-AH_TEMPLATE(HAVE_QUAD_SUPPORT)
-AH_TEMPLATE(HAVE_PRINTF_QD)
-
-AC_MSG_CHECKING(*printf() support for %lld)
-can_printf_longlong=no
-AC_TRY_RUN([
-        #include <stdio.h>
-        int main() {
-                char buf[100];
-                sprintf(buf, "%lld", 21726587590LL);
-                return (strcmp(buf, "21726587590"));
-        }
-        ], [
-        AC_MSG_RESULT(yes)
-        can_printf_longlong=yes
-        ], [
-        AC_MSG_RESULT(no)
-        ], [ : ])
-
-if test $can_printf_longlong != yes; then
-        AC_MSG_CHECKING(*printf() support for %qd)
-        AC_TRY_RUN([
-                #include <stdio.h>
-                int main() {
-                        char buf[100];
-                        sprintf(buf, "%qd", 21726587590LL);
-                        return (strcmp(buf, "21726587590"));
-                }
-                ], [
-                AC_MSG_RESULT(yes)
-                can_printf_longlong=yes
-                AC_DEFINE(HAVE_PRINTF_QD, 1)
-                ], [
-                AC_MSG_RESULT(no)
-                ], [ : ])
-fi
-
-if test $can_printf_longlong = yes; then
-        AC_DEFINE(HAVE_QUAD_SUPPORT, 1)
-fi
 
 dnl ===================================================================
 dnl Check for compiler characteristics

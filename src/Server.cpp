@@ -342,7 +342,7 @@ bool Server::ReadPacketID (void) {
 
     // terminate when datagram begins with negative index
     // the datagram ID should be correct, just negated
-#if (HAVE_QUAD_SUPPORT || HAVE_INT64_T)
+#ifdef HAVE_INT64_T
     if (isSeqNo64b(mSettings)) {
 	reportstruct->packetID = (((max_size_t) (ntohl(mBuf_UDP->id2)) << 32) | ntohl(mBuf_UDP->id));
 	if (reportstruct->packetID & 0x8000000000000000LL) {
@@ -603,7 +603,7 @@ void Server::write_UDP_AckFIN( ) {
             Transfer_Info *stats = GetReport( mSettings->reporthdr );
             hdr = (server_hdr*) (UDP_Hdr+1);
 	    hdr->base.flags        = htonl((long) flags);
-#ifdef HAVE_QUAD_SUPPORT
+#ifdef HAVE_INT64_T
             hdr->base.total_len1   = htonl( (long) (stats->TotalLen >> 32) );
 #else
             hdr->base.total_len1   = htonl(0x0);
@@ -616,7 +616,7 @@ void Server::write_UDP_AckFIN( ) {
 #ifndef HAVE_SEQNO64b
             hdr->base.datagrams    = htonl( stats->cntDatagrams );
 #else
-  #ifdef HAVE_QUAD_SUPPORT
+  #ifdef HAVE_INT64_T
 	    hdr->base.datagrams2   = htonl( (long) (stats->cntDatagrams >> 32) );
   #else
             hdr->base.datagrams2   = htonl(0x0);
