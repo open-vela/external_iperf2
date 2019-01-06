@@ -199,6 +199,14 @@ void redirect(const char *inOutputFileName);
     }                                           \
   } while( false )
 
+#define FREE_ARRAY( ptr )                     \
+  do {                                          \
+    if ( ptr != NULL ) {                        \
+      free(ptr); \
+      ptr = NULL;                               \
+    }                                           \
+  } while( false )
+
 #ifdef __cplusplus
 } /* end extern "C" */
 #endif
