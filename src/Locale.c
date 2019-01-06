@@ -50,16 +50,8 @@
  * -------------------------------------------------------------------
  * Strings and other stuff that is locale specific.
  * ------------------------------------------------------------------- */
-#include <inttypes.h>
 #include "headers.h"
 #include "version.h"
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#else
-#ifdef WIN32
-#include "config.win32.h"
-#endif
-#endif
 
 #ifdef __cplusplus
 extern "C" {
