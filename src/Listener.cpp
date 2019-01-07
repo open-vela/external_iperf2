@@ -985,7 +985,7 @@ void Listener::UDPSingleServer( ) {
                         hdr = (server_hdr*) (UDP_Hdr+1);
 
                         hdr->base.flags        = htonl( HEADER_VERSION1 );
-#ifdef HAVE_QUAD_SUPPORT
+#ifdef HAVE_INT64_T
 			hdr->base.total_len1   = htonl( (long) (stats->TotalLen >> 32) );
 #else
 			hdr->base.total_len1   = htonl(0x0);
