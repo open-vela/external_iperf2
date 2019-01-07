@@ -219,8 +219,7 @@ void Server::InitTimeStamping (void) {
 void Server::InitTrafficLoop (void) {
     InitReport(mSettings);
     PostFirstReport(mSettings);
-    reportstruct = new ReportStruct;
-    memset(reportstruct, 0, sizeof(ReportStruct));
+    reportstruct = new ReportStruct();
     FAIL(reportstruct == NULL, "Out of memory! Closing server thread\n", mSettings);
     reportstruct->packetID = 0;
     reportstruct->l2len = 0;

@@ -884,9 +884,8 @@ void Listener::UDPSingleServer( ) {
     int32_t datagramID;
     client_hdr* hdr = ( UDP ? (client_hdr*) (((UDP_datagram*)mBuf) + 1) :
                               (client_hdr*) mBuf);
-    ReportStruct *reportstruct = new ReportStruct;
+    ReportStruct *reportstruct = new ReportStruct();
     FAIL_errno( reportstruct == NULL, "No memory for report structure\n", mSettings );
-    memset(reportstruct, 0, sizeof(ReportStruct));
     bool mMode_Time = isServerModeTime( mSettings ) && !isDaemon( mSettings );
     // setup termination variables
     if ( mMode_Time ) {
