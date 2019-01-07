@@ -234,7 +234,6 @@ typedef struct sockaddr_in iperf_sockaddr;
 
 // inttypes.h is already included
 
-#define IPERFdMAX PRIdMAX
 typedef intmax_t max_size_t;
 typedef uintmax_t umax_size_t;
 
