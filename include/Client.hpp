@@ -118,6 +118,11 @@ private:
     Timestamp now;
     char* readAt;
     Timestamp connect_done, connect_start;
+#ifdef WIN32
+    // temporary WAR for memory issue
+    int32_t pad1;
+    int32_t pad2;
+#endif
 }; // end class Client
 
 #endif // CLIENT_H
