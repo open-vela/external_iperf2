@@ -131,7 +131,6 @@ bool Server::InProgress (void) {
 void Server::RunTCP( void ) {
     long currLen;
     max_size_t totLen = 0;
-    ReportStruct *reportstruct = NULL;
     bool err  = 0;
 
     Timestamp time1, time2;
@@ -139,62 +138,55 @@ void Server::RunTCP( void ) {
 
     InitTrafficLoop();
 
-    reportstruct = new ReportStruct;
-    if ( reportstruct != NULL ) {
-        reportstruct->packetID = 0;
-
-	while (InProgress() && !err) {
-	    reportstruct->emptyreport=0;
-	    // perform read
-	    if (isBWSet(mSettings)) {
-		time2.setnow();
-		tokens += time2.subSec(time1) * (mSettings->mUDPRate / 8.0);
-		time1 = time2;
-	    }
-	    if (tokens >= 0.0) {
-		currLen = recv( mSettings->mSock, mBuf, mSettings->mBufLen, 0 );
-		now.setnow();
-		reportstruct->packetTime.tv_sec = now.getSecs();
-		reportstruct->packetTime.tv_usec = now.getUsecs();
-		if (currLen <= 0) {
-		    reportstruct->emptyreport=1;
-		    // End loop on 0 read or socket error
-		    // except for socket read timeout
-		    if (currLen == 0 ||
+    while (InProgress() && !err) {
+	reportstruct->emptyreport=0;
+	// perform read
+	if (isBWSet(mSettings)) {
+	    time2.setnow();
+	    tokens += time2.subSec(time1) * (mSettings->mUDPRate / 8.0);
+	    time1 = time2;
+	}
+	if (tokens >= 0.0) {
+	    currLen = recv( mSettings->mSock, mBuf, mSettings->mBufLen, 0 );
+	    now.setnow();
+	    reportstruct->packetTime.tv_sec = now.getSecs();
+	    reportstruct->packetTime.tv_usec = now.getUsecs();
+	    if (currLen <= 0) {
+		reportstruct->emptyreport=1;
+		// End loop on 0 read or socket error
+		// except for socket read timeout
+		if (currLen == 0 ||
 #ifdef WIN32
-			(WSAGetLastError() != WSAEWOULDBLOCK)
+		    (WSAGetLastError() != WSAEWOULDBLOCK)
 #else
-			(errno != EAGAIN && errno != EWOULDBLOCK)
+		    (errno != EAGAIN && errno != EWOULDBLOCK)
 #endif // WIN32
-			) {
-			err = 1;
-		    }
-		    currLen = 0;
+		    ) {
+		    err = 1;
 		}
-		totLen += currLen;
-		if (isBWSet(mSettings))
-		    tokens -= currLen;
-		reportstruct->packetLen = currLen;
-		ReportPacket( mSettings->reporthdr, reportstruct );
-	    } else {
-		// Use a 4 usec delay to fill tokens
-		delay_loop(4);
+		currLen = 0;
 	    }
-        }
-
-        // stop timing
-	now.setnow();
-	reportstruct->packetTime.tv_sec = now.getSecs();
-	reportstruct->packetTime.tv_usec = now.getUsecs();
-
-	if(0.0 == mSettings->mInterval) {
-	    reportstruct->packetLen = totLen;
-        }
-	ReportPacket( mSettings->reporthdr, reportstruct );
-        CloseReport( mSettings->reporthdr, reportstruct );
-    } else {
-        FAIL(1, "Out of memory! Closing server thread\n", mSettings);
+	    totLen += currLen;
+	    if (isBWSet(mSettings))
+		tokens -= currLen;
+	    reportstruct->packetLen = currLen;
+	    ReportPacket( mSettings->reporthdr, reportstruct );
+	} else {
+	    // Use a 4 usec delay to fill tokens
+	    delay_loop(4);
+	}
     }
+
+    // stop timing
+    now.setnow();
+    reportstruct->packetTime.tv_sec = now.getSecs();
+    reportstruct->packetTime.tv_usec = now.getUsecs();
+
+    if(0.0 == mSettings->mInterval) {
+	reportstruct->packetLen = totLen;
+    }
+    ReportPacket( mSettings->reporthdr, reportstruct );
+    CloseReport( mSettings->reporthdr, reportstruct );
 
     Mutex_Lock( &clients_mutex );
     Iperf_delete( &(mSettings->peer), &clients );
@@ -228,7 +220,7 @@ void Server::InitTrafficLoop (void) {
     InitReport(mSettings);
     PostFirstReport(mSettings);
     reportstruct = new ReportStruct;
-    reportstruct->emptyreport=0;
+    memset(reportstruct, 0, sizeof(ReportStruct));
     FAIL(reportstruct == NULL, "Out of memory! Closing server thread\n", mSettings);
     reportstruct->packetID = 0;
     reportstruct->l2len = 0;
