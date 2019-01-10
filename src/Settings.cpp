@@ -73,7 +73,6 @@
 #include "pdfs.h"
 #endif
 
-static int seqno64b = 0;
 static int reversetest = 0;
 static int udphistogram = 0;
 static int l2checks = 0;
@@ -148,7 +147,6 @@ const struct option long_options[] =
 {"suggest_win_size", no_argument, NULL, 'W'},
 {"peer-detect",      no_argument, NULL, 'X'},
 {"linux-congestion", required_argument, NULL, 'Z'},
-{"udp-counters-64bit", no_argument, &seqno64b, 1},
 {"udp-histogram", optional_argument, &udphistogram, 1},
 {"l2checks", no_argument, &l2checks, 1},
 {"incr-dstip", no_argument, &incrdstip, 1},
@@ -725,14 +723,6 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
 	    break;
 
         case 0:
-	    if (seqno64b) {
-		seqno64b = 0;
-#if (defined HAVE_SEQNO64b && defined HAVE_INT64_T)
-		setSeqNo64b(mExtSettings);
-#else
-		fprintf( stderr, "WARNING: 64 bit sequence numbers not supported\n");
-#endif
-	    }
 	    if (incrdstip) {
 		incrdstip = 0;
 		setIncrDstIP(mExtSettings);
@@ -1158,6 +1148,7 @@ int Settings_GenerateClientHdr( thread_Settings *client, client_hdr *hdr ) {
     if (isPeerVerDetect(client) || (client->mMode != kTest_Normal && isBWSet(client))) {
 	flags |= HEADER_EXTEND;
     }
+    flags |= HEADER_SEQNO64B;
     if ( client->mMode != kTest_Normal ) {
 	flags |= HEADER_VERSION1;
 	if ( isBuflenSet( client ) ) {

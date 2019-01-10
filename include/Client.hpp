@@ -88,7 +88,7 @@ public:
     void InitiateServer();
 
 private:
-    void WritePacketID(void);
+    void WritePacketID( intmax_t );
     void InitTrafficLoop(void);
     void FinishTrafficActions(void);
     void FinalUDPHandshake(void);
