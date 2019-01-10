@@ -72,6 +72,10 @@ const int    kBytes_to_Bits = 8;
 #define VARYLOAD_PERIOD 0.1 // recompute the variable load every n seconds
 #define MAXUDPBUF 1470
 
+#ifndef INITIAL_PACKETID
+# define INITIAL_PACKETID 0
+#endif
+
 Client::Client( thread_Settings *inSettings ) {
     mSettings = inSettings;
     mBuf = NULL;
@@ -151,7 +155,7 @@ Client::Client( thread_Settings *inSettings ) {
 
     reportstruct = new ReportStruct();
     FAIL_errno( reportstruct == NULL, "No memory for report structure\n", mSettings );
-    reportstruct->packetID = (isPeerVerDetect(mSettings)) ? 1 : 0;
+    reportstruct->packetID = (isPeerVerDetect(mSettings)) ? 1 : INITIAL_PACKETID;
     reportstruct->errwrite=WriteNoErr;
     reportstruct->emptyreport=0;
     reportstruct->socket = mSettings->mSock;
@@ -547,15 +551,10 @@ void Client::RunUDP( void ) {
 	    }
 	}
 	// store datagram ID into buffer
-	WritePacketID();
+	WritePacketID(reportstruct->packetID++);
 	mBuf_UDP->tv_sec  = htonl(reportstruct->packetTime.tv_sec);
 	mBuf_UDP->tv_usec = htonl(reportstruct->packetTime.tv_usec);
 
-	if (!isSeqNo64b(mSettings) && (reportstruct->packetID & 0x80000000L)) {
-	    // seqno wrapped
-	    fprintf(stderr, "%s", warn_seqno_wrap);
-	    break;
-	}
 	// Adjustment for the running delay
 	// o measure how long the last loop iteration took
 	// o calculate the delay adjust
@@ -688,13 +687,8 @@ void Client::RunUDPIsochronous (void) {
 	    reportstruct->packetTime.tv_usec = t1.getUsecs();
 	    mBuf_UDP->tv_sec  = htonl(reportstruct->packetTime.tv_sec);
 	    mBuf_UDP->tv_usec = htonl(reportstruct->packetTime.tv_usec);
-	    WritePacketID();
+	    WritePacketID(reportstruct->packetID++);
 
-	    if (!isSeqNo64b(mSettings) && (reportstruct->packetID & 0x80000000L)) {
-		// seqno wrapped
-		fprintf(stderr, "%s", warn_seqno_wrap);
-		break;
-	    }
 	    // Adjustment for the running delay
 	    // o measure how long the last loop iteration took
 	    // o calculate the delay adjust
@@ -789,14 +783,36 @@ void Client::RunUDPIsochronous (void) {
 
 
 
-void Client::WritePacketID (void) {
+void Client::WritePacketID (intmax_t packetID) {
     struct UDP_datagram * mBuf_UDP = (struct UDP_datagram *) mBuf;
     // store datagram ID into buffer
-    mBuf_UDP->id = htonl((reportstruct->packetID & 0xFFFFFFFFL));
-    if (isSeqNo64b(mSettings)) {
-	mBuf_UDP->id2 = htonl(((reportstruct->packetID & 0xFFFFFFFF00000000LL) >> 32));
+#ifdef HAVE_INT64_T
+    // Pack signed 64bit packetID into signed 32bit id1 + unsigned
+    // 32bit id2 in such a way that a legacy server reading only id1
+    // will still be able to reconstruct a valid signed packet ID
+    // number.
+    intmax_t mag = packetID;
+    int32_t id1, sign = 1;
+    uint32_t id2;
+    if (packetID < 0) {
+      mag = -packetID;
+      sign = -1;
     }
-    reportstruct->packetID++;
+    id1 = mag & 0x7FFFFFFFLL;
+    id2 =  (mag & 0x7FFFFFFF80000000LL) >> 31;
+    if ((sign < 0) ^ (id2 != 0)) {
+      id1 = -id1;
+    }
+
+    mBuf_UDP->id = htonl(id1);
+    mBuf_UDP->id2 = htonl(id2);
+#ifdef SHOW_PACKETID
+    printf("id %" PRIdMAX " (0x%" PRIxMAX ") -> 0x%x, 0x%x\n",
+	   packetID, packetID, id1, id2);
+#endif
+#else
+    mBuf_UDP->id = htonl((reportstruct->packetID));
+#endif
 }
 
 bool Client::InProgress (void) {
@@ -868,13 +884,7 @@ void Client::FinalUDPHandshake(void) {
     // but didn't count our first datagram, so we're even now.
     // The negative datagram ID signifies termination to the server.
 
-    // store datagram ID into buffer
-    if (isSeqNo64b(mSettings)) {
-	mBuf_UDP->id      = htonl((reportstruct->packetID & 0xFFFFFFFFL));
-	mBuf_UDP->id2     = htonl((((reportstruct->packetID & 0xFFFFFFFF00000000LL) >> 32) | 0x80000000L));
-    } else {
-	mBuf_UDP->id      = htonl(((reportstruct->packetID & 0xFFFFFFFFL) | 0x80000000L));
-    }
+    WritePacketID(-reportstruct->packetID);
     mBuf_UDP->tv_usec = htonl( reportstruct->packetTime.tv_usec );
 
     if ( isMulticast( mSettings ) ) {
@@ -891,10 +901,8 @@ void Client::write_UDP_FIN (void) {
     int rc;
     fd_set readSet;
     struct timeval timeout;
-    struct UDP_datagram* mBuf_UDP = (struct UDP_datagram*) mBuf;
 
     int count = 0;
-    int packetid;
     while ( count < 10 ) {
         count++;
 
@@ -909,8 +917,7 @@ void Client::write_UDP_FIN (void) {
         // If the retries weren't decrement here the server can get out
         // of order packets per these retries actually being received
         // by the server (e.g. -1000, -1000, -1000)
-	packetid = ntohl(mBuf_UDP->id);
-        mBuf_UDP->id = htonl(--packetid);
+	WritePacketID(-(++reportstruct->packetID));
 
         // wait until the socket is readable, or our timeout expires
         FD_ZERO( &readSet );

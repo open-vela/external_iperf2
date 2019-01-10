@@ -1115,6 +1115,9 @@ int Listener::ReadClientHeader(client_hdr *hdr ) {
     int testflags = 0;
     if (isUDP(mSettings)) {
 	flags = ntohl(hdr->base.flags);
+	if (flags & HEADER_SEQNO64B) {
+	  setSeqNo64b(server);
+	}
 	if ((flags & HEADER_UDPTESTS) != 0) {
 	    testflags = ntohs(hdr->udp.testflags);
 	    // Handle stateless flags
