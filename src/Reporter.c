@@ -64,6 +64,10 @@
 extern "C" {
 #endif
 
+#ifndef INITIAL_PACKETID
+# define INITIAL_PACKETID 0
+#endif
+
 /*
   The following 4 functions are provided for Reporting
   styles that do not have all the reporting formats. For
@@ -297,6 +301,9 @@ void InitDataReport(thread_Settings *mSettings) {
 	reporthdr->multireport = mSettings->multihdr;
 	data = &reporthdr->report;
 	reporthdr->reporterindex = NUM_REPORT_STRUCTS - 1;
+	data->lastError = INITIAL_PACKETID;
+	data->lastDatagrams = INITIAL_PACKETID;
+	data->PacketID = INITIAL_PACKETID;
 	data->info.transferID = mSettings->mSock;
 	data->info.groupID = (mSettings->multihdr != NULL ? mSettings->multihdr->groupID : -1);
 	data->type = TRANSFER_REPORT;
@@ -632,18 +639,19 @@ void ReportServerUDP( thread_Settings *agent, server_hdr *server ) {
 	stats->startTime = 0;
 	stats->endTime = ntohl( server->base.stop_sec );
 	stats->endTime += ntohl( server->base.stop_usec ) / (double)rMillion;
-	stats->cntError = ntohl( server->base.error_cnt );
-	stats->cntOutofOrder = ntohl( server->base.outorder_cnt );
-#ifndef HAVE_SEQNO64b
-	stats->cntDatagrams = ntohl( server->base.datagrams );
-#else
-  #ifdef HAVE_INT64_T
-	stats->cntDatagrams = (((max_size_t) ntohl( server->base.datagrams2 )) << 32) + \
+	if ((flags & HEADER_SEQNO64B)) {
+	  stats->cntError = (((max_size_t) ntohl( server->extend2.error_cnt2 )) << 32) + \
+	    ntohl( server->base.error_cnt );
+	  stats->cntOutofOrder = (((max_size_t) ntohl( server->extend2.outorder_cnt2 )) << 32) + \
+	    ntohl( server->base.outorder_cnt );
+	  stats->cntDatagrams = (((max_size_t) ntohl( server->extend2.datagrams2 )) << 32) + \
 	    ntohl( server->base.datagrams );
-  #else
-        stats->TotalLen = (max_size_t) ntohl(server->base.datagrams);
-  #endif
-#endif
+	} else {
+	  stats->cntError  = ntohl( server->base.error_cnt );
+	  stats->cntOutofOrder = ntohl( server->base.outorder_cnt );
+	  stats->cntDatagrams = ntohl( server->base.datagrams );
+	}
+
 	if ((flags & HEADER_EXTEND) != 0) {
 	    stats->mEnhanced = 1;
 	    stats->transit.minTransit = ntohl( server->extend.minTransit1 );
@@ -1251,7 +1259,7 @@ int reporter_condprintstats( ReporterData *stats, MultiHeader *multireport, int 
         if ( stats->info.cntError < 0 ) {
             stats->info.cntError = 0;
         }
-        stats->info.cntDatagrams = ((stats->info.mUDP == kMode_Server) ? stats->PacketID : stats->cntDatagrams);
+        stats->info.cntDatagrams = ((stats->info.mUDP == kMode_Server) ? stats->PacketID - INITIAL_PACKETID : stats->cntDatagrams);
         stats->info.TotalLen = stats->TotalLen;
         stats->info.startTime = 0;
         stats->info.endTime = TimeDifference( stats->packetTime, stats->startTime );

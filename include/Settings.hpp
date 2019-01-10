@@ -416,6 +416,7 @@ typedef struct thread_Settings {
 #define HEADER_EXTEND   0x40000000
 #define HEADER_UDPTESTS 0x20000000
 #define HEADER_TIMESTAMP 0x10000000
+#define HEADER_SEQNO64B  0x08000000
 
 // Below flags are used to pass test settings in *every* UDP packet
 // and not just during the header exchange
@@ -628,9 +629,6 @@ typedef struct server_hdr_v1 {
     int32_t error_cnt;
     int32_t outorder_cnt;
     int32_t datagrams;
-#ifdef HAVE_SEQNO64b
-    int32_t datagrams2;
-#endif // SEQ
     int32_t jitter1;
     int32_t jitter2;
 } server_hdr_v1;
@@ -653,9 +651,17 @@ typedef struct server_hdr_extension {
     int32_t IPGsum;
 } server_hdr_extension;
 
+  // Extension for 64bit datagram counts
+typedef struct server_hdr_extension2 {
+    int32_t error_cnt2;
+    int32_t outorder_cnt2;
+    int32_t datagrams2;
+} server_hdr_extension2;
+
 typedef struct server_hdr {
     server_hdr_v1 base;
     server_hdr_extension extend;
+    server_hdr_extension2 extend2;
 } server_hdr;
 
 #pragma pack(pop)

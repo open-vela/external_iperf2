@@ -256,4 +256,9 @@ typedef uintmax_t umax_size_t;
     #define SHUT_RDWR 2
 #endif // SHUT_RD
 
+
+/* Internal debug */
+//#define INITIAL_PACKETID 0x7FFFFF00LL
+//#define SHOW_PACKETID
+
 #endif /* HEADERS_H */
