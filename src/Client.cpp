@@ -282,22 +282,29 @@ void Client::InitTrafficLoop (void) {
      *
      * Side note: An advantage of not using interval reports w/TCP is that
      * the code path won't make any clock syscalls in the main loop
+     *
+     * For Dual and TradeOff tests we can't use itimer in the Client
+     * thread because it is executed at both ends, conflicting with
+     * the Server thread's itimer.  The Client process then rejects
+     * the reverse connection, and the Server process exits early.  To
+     * resolve this, only use the itimer mechanism for "Normal" tests.
      */
 
     if (isModeTime(mSettings)) {
 #ifdef HAVE_SETITIMER
-        int err;
-        struct itimerval it;
-	memset (&it, 0, sizeof (it));
-	it.it_value.tv_sec = (int) (mSettings->mAmount / 100.0);
-	it.it_value.tv_usec = (int) (10000 * (mSettings->mAmount -
-					      it.it_value.tv_sec * 100.0));
-	err = setitimer( ITIMER_REAL, &it, NULL );
-	FAIL_errno( err != 0, "setitimer", mSettings );
-#else
+        if (mSettings->mMode == kTest_Normal) {
+	    int err;
+	    struct itimerval it;
+	    memset (&it, 0, sizeof (it));
+	    it.it_value.tv_sec = (int) (mSettings->mAmount / 100.0);
+	    it.it_value.tv_usec = (int) (10000 * (mSettings->mAmount -
+						  it.it_value.tv_sec * 100.0));
+	    err = setitimer( ITIMER_REAL, &it, NULL );
+	    FAIL_errno( err != 0, "setitimer", mSettings );
+	}
+#endif
         mEndTime.setnow();
         mEndTime.add( mSettings->mAmount / 100.0 );
-#endif
     }
 
     lastPacketTime.setnow();
@@ -394,7 +401,8 @@ void Client::RunTCP( void ) {
 // skip the packet time setting syscall() for the case of no interval reporting
 // or packet reporting needed and an itimer is available to stop the traffic/while loop
 #ifdef HAVE_SETITIMER
-	if ((mSettings->mInterval > 0) || isEnhanced(mSettings))
+	if ((mSettings->mInterval > 0) || isEnhanced(mSettings) ||
+	    mSettings->mMode != kTest_Normal)
 #endif
 	{
 	    now.setnow();
@@ -826,16 +834,11 @@ bool Client::InProgress (void) {
 	    return false;
     }
 
-#ifdef HAVE_SETITIMER
-    if (sInterupted ||
-	(!isModeTime(mSettings) && (mSettings->mAmount <= 0)))
-	return false;
-#else
     if (sInterupted ||
 	(isModeTime(mSettings) &&  mEndTime.before(reportstruct->packetTime))  ||
 	(!isModeTime(mSettings) && (mSettings->mAmount <= 0)))
 	return false;
-#endif
+
     return true;
 }
 
