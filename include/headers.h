@@ -234,9 +234,6 @@ typedef struct sockaddr_in iperf_sockaddr;
 
 // inttypes.h is already included
 
-typedef intmax_t max_size_t;
-typedef uintmax_t umax_size_t;
-
 #ifdef HAVE_FASTSAMPLING
 #define IPERFTimeFrmt "%4.4f-%4.4f"
 #define IPERFTimeSpace "            "

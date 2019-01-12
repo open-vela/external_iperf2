@@ -180,9 +180,9 @@ typedef struct thread_Settings {
     ReportMode mReportMode;
     TestMode mMode;                 // -r or -d
     // Hopefully int64_t's
-    max_size_t mUDPRate;            // -b or -u
+    intmax_t mUDPRate;            // -b or -u
     RateUnits mUDPRateUnits;        // -b is either bw or pps
-    umax_size_t mAmount;             // -n or -t
+    uintmax_t mAmount;             // -n or -t
     // doubles
     double mInterval;               // -i
     // shorts

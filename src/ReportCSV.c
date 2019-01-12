@@ -59,7 +59,7 @@
 
 void CSV_stats( Transfer_Info *stats ) {
     // $TIMESTAMP,$ID,$INTERVAL,$BYTE,$SPEED,$JITTER,$LOSS,$PACKET,$%LOSS
-    max_size_t speed = (max_size_t) ((stats->TotalLen > 0) ? (((double)stats->TotalLen * 8.0) / (stats->endTime -  stats->startTime)) : 0);
+    intmax_t speed = (intmax_t) ((stats->TotalLen > 0) ? (((double)stats->TotalLen * 8.0) / (stats->endTime -  stats->startTime)) : 0);
     char timestamp[160];
     int milliseconds;
 #ifdef HAVE_CLOCK_GETTIME
