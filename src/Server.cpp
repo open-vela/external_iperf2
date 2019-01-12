@@ -130,7 +130,7 @@ bool Server::InProgress (void) {
  * ------------------------------------------------------------------- */
 void Server::RunTCP( void ) {
     long currLen;
-    max_size_t totLen = 0;
+    intmax_t totLen = 0;
     bool err  = 0;
 
     Timestamp time1, time2;
