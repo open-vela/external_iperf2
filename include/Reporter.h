@@ -125,9 +125,9 @@ typedef struct IsochStats {
     double mMean; //variable bit rate mean
     double mVariance; //vbr variance
     int mJitterBufSize; //Server jitter buffer size, units is frames
-    max_size_t slipcnt;
-    max_size_t framecnt;
-    max_size_t framelostcnt;
+    intmax_t slipcnt;
+    intmax_t framecnt;
+    intmax_t framelostcnt;
     unsigned int mBurstInterval;
     unsigned int mBurstIPG; //IPG of packets within the burst
     int frameID;
@@ -150,19 +150,19 @@ typedef enum WriteErrType {
 } WriteErrType;
 
 typedef struct L2Stats {
-    max_size_t cnt;
-    max_size_t unknown;
-    max_size_t udpcsumerr;
-    max_size_t lengtherr;
-    max_size_t tot_cnt;
-    max_size_t tot_unknown;
-    max_size_t tot_udpcsumerr;
-    max_size_t tot_lengtherr;
+    intmax_t cnt;
+    intmax_t unknown;
+    intmax_t udpcsumerr;
+    intmax_t lengtherr;
+    intmax_t tot_cnt;
+    intmax_t tot_unknown;
+    intmax_t tot_udpcsumerr;
+    intmax_t tot_lengtherr;
 } L2Stats;
 
 typedef struct ReportStruct {
-    max_size_t packetID;
-    umax_size_t packetLen;
+    intmax_t packetID;
+    uintmax_t packetLen;
     struct timeval packetTime;
     struct timeval sentTime;
     int errwrite;
@@ -173,11 +173,11 @@ typedef struct ReportStruct {
     int expected_l2len;
 #ifdef HAVE_ISOCHRONOUS
     struct timeval isochStartTime;
-    max_size_t prevframeID;
-    max_size_t frameID;
-    max_size_t burstsize;
-    max_size_t burstperiod;
-    max_size_t remaining;
+    intmax_t prevframeID;
+    intmax_t frameID;
+    intmax_t burstsize;
+    intmax_t burstperiod;
+    intmax_t remaining;
 #endif
 } ReportStruct;
 
@@ -200,15 +200,15 @@ typedef struct Transfer_Info {
     void *reserved_delay;
     int transferID;
     int groupID;
-    max_size_t cntError;
-    max_size_t cntOutofOrder;
-    max_size_t cntDatagrams;
-    max_size_t IPGcnt;
+    intmax_t cntError;
+    intmax_t cntOutofOrder;
+    intmax_t cntDatagrams;
+    intmax_t IPGcnt;
     int socket;
     TransitStats transit;
     SendReadStats sock_callstats;
     // Hopefully int64_t's
-    umax_size_t TotalLen;
+    uintmax_t TotalLen;
     double jitter;
     double startTime;
     double endTime;
@@ -250,18 +250,18 @@ typedef struct ReporterData {
 
     // int's
     int type;
-    max_size_t cntError;
-    max_size_t lastError;
-    max_size_t cntOutofOrder;
-    max_size_t lastOutofOrder;
-    max_size_t cntDatagrams;
-    max_size_t lastDatagrams;
-    max_size_t PacketID;
+    intmax_t cntError;
+    intmax_t lastError;
+    intmax_t cntOutofOrder;
+    intmax_t lastOutofOrder;
+    intmax_t cntDatagrams;
+    intmax_t lastDatagrams;
+    intmax_t PacketID;
 
     int mBufLen;                    // -l
     int mMSS;                       // -M
     int mTCPWin;                    // -w
-    max_size_t mUDPRate;            // -b or -u
+    intmax_t mUDPRate;            // -b or -u
     RateUnits mUDPRateUnits;        // -b is either bw or pps
     /*   flags is a BitMask of old bools
         bool   mBufLenSet;              // -l
@@ -282,8 +282,8 @@ typedef struct ReporterData {
     // enums (which should be special int's)
     ThreadMode mThreadMode;         // -s or -c
     ReportMode mode;
-    umax_size_t TotalLen;
-    umax_size_t lastTotal;
+    uintmax_t TotalLen;
+    uintmax_t lastTotal;
     // doubles
     // shorts
     unsigned short mPort;           // -p

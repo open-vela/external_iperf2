@@ -631,20 +631,20 @@ void ReportServerUDP( thread_Settings *agent, server_hdr *server ) {
 	stats->jitter = ntohl( server->base.jitter1 );
 	stats->jitter += ntohl( server->base.jitter2 ) / (double)rMillion;
 #ifdef HAVE_INT64_T
-	stats->TotalLen = (((max_size_t) ntohl( server->base.total_len1 )) << 32) + \
+	stats->TotalLen = (((intmax_t) ntohl( server->base.total_len1 )) << 32) + \
 	    ntohl( server->base.total_len2 );
 #else
-	stats->TotalLen = (max_size_t) ntohl(server->base.total_len2);
+	stats->TotalLen = (intmax_t) ntohl(server->base.total_len2);
 #endif
 	stats->startTime = 0;
 	stats->endTime = ntohl( server->base.stop_sec );
 	stats->endTime += ntohl( server->base.stop_usec ) / (double)rMillion;
 	if ((flags & HEADER_SEQNO64B)) {
-	  stats->cntError = (((max_size_t) ntohl( server->extend2.error_cnt2 )) << 32) + \
+	  stats->cntError = (((intmax_t) ntohl( server->extend2.error_cnt2 )) << 32) + \
 	    ntohl( server->base.error_cnt );
-	  stats->cntOutofOrder = (((max_size_t) ntohl( server->extend2.outorder_cnt2 )) << 32) + \
+	  stats->cntOutofOrder = (((intmax_t) ntohl( server->extend2.outorder_cnt2 )) << 32) + \
 	    ntohl( server->base.outorder_cnt );
-	  stats->cntDatagrams = (((max_size_t) ntohl( server->extend2.datagrams2 )) << 32) + \
+	  stats->cntDatagrams = (((intmax_t) ntohl( server->extend2.datagrams2 )) << 32) + \
 	    ntohl( server->base.datagrams );
 	} else {
 	  stats->cntError  = ntohl( server->base.error_cnt );
