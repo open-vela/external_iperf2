@@ -334,30 +334,17 @@ bool Server::ReadPacketID (void) {
     // terminate when datagram begins with negative index
     // the datagram ID should be correct, just negated
 
-    int32_t id1, sign;
-    uint32_t id2;
-    id1 = ntohl(mBuf_UDP->id);
     if (isSeqNo64b(mSettings)) {
-      // Client encoded signed 64 bits into id1 + id2, with id1
-      // containing the signed part for compatibility with legacy
-      // servers.
-      id2 = ntohl(mBuf_UDP->id2);
-      sign = (id1 <= 0) ^ (id2 != 0);
-      if (id1 < 0) {
-      	id1 = -id1;
-      }
-
-      reportstruct->packetID = ((int32_t)id1) | ((uintmax_t)id2 << 31);
-      if (sign) {
-	reportstruct->packetID = -reportstruct->packetID;
-      }
+      // New client - Signed PacketID packed into unsigned id2,id
+      reportstruct->packetID = ((uint32_t)ntohl(mBuf_UDP->id)) | ((uintmax_t)(ntohl(mBuf_UDP->id2)) << 32);
 
 #ifdef SHOW_PACKETID
       printf("id 0x%x, 0x%x -> %" PRIdMAX " (0x%" PRIxMAX ")\n",
 	     ntohl(mBuf_UDP->id), ntohl(mBuf_UDP->id2), reportstruct->packetID, reportstruct->packetID);
 #endif
     } else {
-      reportstruct->packetID = id1;
+      // Old client - Signed PacketID in Signed id
+      reportstruct->packetID = (int32_t)ntohl(mBuf_UDP->id);
 #ifdef SHOW_PACKETID
       printf("id 0x%x -> %" PRIdMAX " (0x%" PRIxMAX ")\n",
 	     ntohl(mBuf_UDP->id), reportstruct->packetID, reportstruct->packetID);

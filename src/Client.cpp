@@ -187,7 +187,7 @@ double Client::Connect( ) {
 
     SockAddr_remoteAddr( mSettings );
 
-    assert( mSettings->inHostname != NULL );
+    assert( mSettings->mHost != NULL );
 
     // create an internet socket
     int type = ( isUDP( mSettings )  ?  SOCK_DGRAM : SOCK_STREAM);
@@ -795,25 +795,16 @@ void Client::WritePacketID (intmax_t packetID) {
     struct UDP_datagram * mBuf_UDP = (struct UDP_datagram *) mBuf;
     // store datagram ID into buffer
 #ifdef HAVE_INT64_T
-    // Pack signed 64bit packetID into signed 32bit id1 + unsigned
-    // 32bit id2 in such a way that a legacy server reading only id1
-    // will still be able to reconstruct a valid signed packet ID
-    // number.
-    intmax_t mag = packetID;
-    int32_t id1, sign = 1;
-    uint32_t id2;
-    if (packetID < 0) {
-      mag = -packetID;
-      sign = -1;
-    }
-    id1 = mag & 0x7FFFFFFFLL;
-    id2 =  (mag & 0x7FFFFFFF80000000LL) >> 31;
-    if ((sign < 0) ^ (id2 != 0)) {
-      id1 = -id1;
-    }
+    // Pack signed 64bit packetID into unsigned 32bit id1 + unsigned
+    // 32bit id2.  A legacy server reading only id1 will still be able
+    // to reconstruct a valid signed packet ID number up to 2^31.
+    uint32_t id1, id2;
+    id1 = packetID & 0xFFFFFFFFLL;
+    id2 = (packetID  & 0xFFFFFFFF00000000LL) >> 32;
 
     mBuf_UDP->id = htonl(id1);
     mBuf_UDP->id2 = htonl(id2);
+
 #ifdef SHOW_PACKETID
     printf("id %" PRIdMAX " (0x%" PRIxMAX ") -> 0x%x, 0x%x\n",
 	   packetID, packetID, id1, id2);
