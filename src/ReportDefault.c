@@ -320,7 +320,15 @@ void reporter_multistats( Transfer_Info *stats ) {
 		    buffer, &buffer[sizeof(buffer)/2]);
 	}
     } else {
-	if (stats->mUDP) {
+	if (stats->mUDP == (char)kMode_Server) {
+            // UDP Reporting
+	    printf( report_sum_bw_pps_enhanced_format,
+		    stats->startTime, stats->endTime,
+		    buffer, &buffer[sizeof(buffer)/2],
+		    stats->cntError, stats->cntDatagrams,
+		    (100.0 * stats->cntError) / stats->cntDatagrams,
+		    (stats->IPGcnt ? (stats->IPGcnt / stats->IPGsum) : 0.0));
+	} else if (stats->mUDP) {
 	    // UDP Enhanced Reporting
 	    printf( report_sum_bw_pps_enhanced_format,
 		    stats->startTime, stats->endTime,
