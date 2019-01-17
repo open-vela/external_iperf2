@@ -189,9 +189,10 @@ AC_CHECK_TYPES([struct sockaddr_storage, struct sockaddr_in6,
 		       struct group_source_req, struct ip_mreq,
 		       struct ipv6_mreq, struct ip_mreq_source],,,[$in_h])
 
-AC_CHECK_MEMBERS([struct tcp_info.tcpi_total_retrans,
-			 struct sockaddr_in6.sin6_len,
+AC_CHECK_MEMBERS([struct sockaddr_in6.sin6_len,
 			 struct ip_mreq_source.imr_multiaddr.s_addr], [], [],[$in_h])
+
+AC_CHECK_MEMBERS([struct tcp_info.tcpi_total_retrans], [], [],[#include <netinet/tcp.h>])
 
 dnl ===================================================================
 dnl Check for compiler characteristics
