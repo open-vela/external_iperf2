@@ -7696,16 +7696,6 @@ _ACEOF
 fi
 
 
-ac_fn_c_check_member "$LINENO" "struct tcp_info" "tcpi_total_retrans" "ac_cv_member_struct_tcp_info_tcpi_total_retrans" "$in_h
-"
-if test "x$ac_cv_member_struct_tcp_info_tcpi_total_retrans" = xyes; then :
-
-cat >>confdefs.h <<_ACEOF
-#define HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS 1
-_ACEOF
-
-
-fi
 ac_fn_c_check_member "$LINENO" "struct sockaddr_in6" "sin6_len" "ac_cv_member_struct_sockaddr_in6_sin6_len" "$in_h
 "
 if test "x$ac_cv_member_struct_sockaddr_in6_sin6_len" = xyes; then :
@@ -7722,6 +7712,18 @@ if test "x$ac_cv_member_struct_ip_mreq_source_imr_multiaddr_s_addr" = xyes; then
 
 cat >>confdefs.h <<_ACEOF
 #define HAVE_STRUCT_IP_MREQ_SOURCE_IMR_MULTIADDR_S_ADDR 1
+_ACEOF
+
+
+fi
+
+
+ac_fn_c_check_member "$LINENO" "struct tcp_info" "tcpi_total_retrans" "ac_cv_member_struct_tcp_info_tcpi_total_retrans" "#include <netinet/tcp.h>
+"
+if test "x$ac_cv_member_struct_tcp_info_tcpi_total_retrans" = xyes; then :
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS 1
 _ACEOF
 
 
