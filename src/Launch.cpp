@@ -86,6 +86,29 @@ static void set_scheduler(thread_Settings *thread) {
 }
 
 /*
+ * listener server and client cleanup function.
+ */
+#ifdef HAVE_PTHREAD_CLEANUP_PUSH
+static void listener_clean(void *arg)
+{
+    Listener *theListener = (Listener *)arg;
+    DELETE_PTR(theListener);
+}
+
+static void server_clean(void *arg)
+{
+    Server *theServer = (Server*)arg;
+    DELETE_PTR(theServer);
+}
+
+static void client_clean(void *arg)
+{
+    Client *theClient = (Client*)arg;
+    DELETE_PTR(theClient);
+}
+#endif
+
+/*
  * listener_spawn is responsible for creating a Listener class
  * and launching the listener. It is provided as a means for
  * the C thread subsystem to launch the listener C++ object.
@@ -96,8 +119,17 @@ void listener_spawn( thread_Settings *thread ) {
     // start up a listener
     theListener = new Listener( thread );
 
+#ifdef HAVE_PTHREAD_CLEANUP_PUSH
+    pthread_cleanup_push(listener_clean, theListener);
+#endif
+
     // Start listening
     theListener->Run();
+
+#ifdef HAVE_PTHREAD_CLEANUP_PUSH
+    pthread_cleanup_pop(0);
+#endif
+
     DELETE_PTR( theListener );
 }
 
@@ -111,6 +143,11 @@ void server_spawn( thread_Settings *thread) {
 
     // Start up the server
     theServer = new Server( thread );
+
+#ifdef HAVE_PTHREAD_CLEANUP_PUSH
+    pthread_cleanup_push(server_clean, theServer);
+#endif
+
     // set traffic thread to realtime if needed
     set_scheduler(thread);
     // Run the test
@@ -119,6 +156,11 @@ void server_spawn( thread_Settings *thread) {
     } else {
 	theServer->RunTCP();
     }
+
+#ifdef HAVE_PTHREAD_CLEANUP_PUSH
+    pthread_cleanup_pop(0);
+#endif
+
     DELETE_PTR( theServer);
 }
 
@@ -133,6 +175,10 @@ void client_spawn( thread_Settings *thread ) {
     //start up the client
     theClient = new Client( thread );
 
+#ifdef HAVE_PTHREAD_CLEANUP_PUSH
+    pthread_cleanup_push(client_clean, theClient);
+#endif
+
     // set traffic thread to realtime if needed
     set_scheduler(thread);
 
@@ -141,6 +187,11 @@ void client_spawn( thread_Settings *thread ) {
 
     // Run the test
     theClient->Run();
+
+#ifdef HAVE_PTHREAD_CLEANUP_PUSH
+    pthread_cleanup_pop(0);
+#endif
+
     DELETE_PTR( theClient );
 }
 
