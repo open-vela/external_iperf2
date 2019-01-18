@@ -152,7 +152,7 @@ bool Client::my_connect (bool close_on_fail) {
     SetSocketOptions(mSettings);
     SockAddr_localAddr(mSettings);
     SockAddr_remoteAddr(mSettings);
-    if (mSettings->mLocalhost != NULL) {
+    if (mSettings->mLocalhost != NULL || mSettings->mBindPort != 0) {
         // bind socket to local address
         rc = bind(mySocket, reinterpret_cast<sockaddr*>(&mSettings->local),
 		  SockAddr_get_sizeof_sockaddr(&mSettings->local));
