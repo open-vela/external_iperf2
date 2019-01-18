@@ -64,6 +64,10 @@
 extern "C" {
 #endif
 
+#ifndef INITIAL_PACKETID
+# define INITIAL_PACKETID 0
+#endif
+
 /*
   The following 4 functions are provided for Reporting
   styles that do not have all the reporting formats. For
@@ -148,7 +152,6 @@ MultiHeader* InitMulti( thread_Settings *agent, int inID) {
             Condition_Initialize( &multihdr->barrier );
             multihdr->groupID = inID;
             multihdr->threads = agent->mThreads;
-            multihdr->referenceCount = 1;
             if ( isMultipleReport( agent ) ) {
                 int i;
                 ReporterData *data = NULL;
@@ -298,6 +301,9 @@ void InitDataReport(thread_Settings *mSettings) {
 	reporthdr->multireport = mSettings->multihdr;
 	data = &reporthdr->report;
 	reporthdr->reporterindex = NUM_REPORT_STRUCTS - 1;
+	data->lastError = INITIAL_PACKETID;
+	data->lastDatagrams = INITIAL_PACKETID;
+	data->PacketID = INITIAL_PACKETID;
 	data->info.transferID = mSettings->mSock;
 	data->info.groupID = (mSettings->multihdr != NULL ? mSettings->multihdr->groupID : -1);
 	data->type = TRANSFER_REPORT;
@@ -624,27 +630,28 @@ void ReportServerUDP( thread_Settings *agent, server_hdr *server ) {
 	stats->mFormat = agent->mFormat;
 	stats->jitter = ntohl( server->base.jitter1 );
 	stats->jitter += ntohl( server->base.jitter2 ) / (double)rMillion;
-#ifdef HAVE_QUAD_SUPPORT
-	stats->TotalLen = (((max_size_t) ntohl( server->base.total_len1 )) << 32) + \
+#ifdef HAVE_INT64_T
+	stats->TotalLen = (((intmax_t) ntohl( server->base.total_len1 )) << 32) + \
 	    ntohl( server->base.total_len2 );
 #else
-	stats->TotalLen = (max_size_t) ntohl(server->base.total_len2);
+	stats->TotalLen = (intmax_t) ntohl(server->base.total_len2);
 #endif
 	stats->startTime = 0;
 	stats->endTime = ntohl( server->base.stop_sec );
 	stats->endTime += ntohl( server->base.stop_usec ) / (double)rMillion;
-	stats->cntError = ntohl( server->base.error_cnt );
-	stats->cntOutofOrder = ntohl( server->base.outorder_cnt );
-#ifndef HAVE_SEQNO64b
-	stats->cntDatagrams = ntohl( server->base.datagrams );
-#else
-  #ifdef HAVE_QUAD_SUPPORT
-	stats->cntDatagrams = (((max_size_t) ntohl( server->base.datagrams2 )) << 32) + \
+	if ((flags & HEADER_SEQNO64B)) {
+	  stats->cntError = (((intmax_t) ntohl( server->extend2.error_cnt2 )) << 32) + \
+	    ntohl( server->base.error_cnt );
+	  stats->cntOutofOrder = (((intmax_t) ntohl( server->extend2.outorder_cnt2 )) << 32) + \
+	    ntohl( server->base.outorder_cnt );
+	  stats->cntDatagrams = (((intmax_t) ntohl( server->extend2.datagrams2 )) << 32) + \
 	    ntohl( server->base.datagrams );
-  #else
-        stats->TotalLen = (max_size_t) ntohl(server->base.datagrams);
-  #endif
-#endif
+	} else {
+	  stats->cntError  = ntohl( server->base.error_cnt );
+	  stats->cntOutofOrder = ntohl( server->base.outorder_cnt );
+	  stats->cntDatagrams = ntohl( server->base.datagrams );
+	}
+
 	if ((flags & HEADER_EXTEND) != 0) {
 	    stats->mEnhanced = 1;
 	    stats->transit.minTransit = ntohl( server->extend.minTransit1 );
@@ -795,7 +802,7 @@ again:
 #endif
 	    }
         }
-    } while ( !sInterupted );
+    } while ( 1 );
 }
 
 /*
@@ -951,46 +958,44 @@ int reporter_handle_packet( ReportHeader *reporthdr ) {
 		stats->IPGcnt++;
 		data->IPGstart = data->packetTime;
 #ifdef HAVE_ISOCHRONOUS
-		{
+		if (packet->frameID && packet->burstsize && packet->remaining) {
 		    int framedelta=0;
 		    // very first isochronous frame
 		    if (!data->isochstats.frameID) {
 			data->isochstats.framecnt=packet->frameID;
 			data->isochstats.framecnt=1;
 			stats->isochstats.framecnt=1;
-		    } else {
-			static int matchframeid=0;
-			// perform client and server frame based accounting
-			framedelta = (packet->frameID - data->isochstats.frameID);
-			if (framedelta) {
-			    data->isochstats.framecnt++;
-			    stats->isochstats.framecnt++;
-			    if (framedelta > 1) {
-				if (stats->mUDP == kMode_Server) {
-				    int lost = framedelta - (packet->frameID - packet->prevframeID);
-				    stats->isochstats.framelostcnt += lost;
-				    data->isochstats.framelostcnt += lost;
-				} else {
-				    stats->isochstats.framelostcnt += (framedelta-1);
-				    data->isochstats.framelostcnt += (framedelta-1);
-				    stats->isochstats.slipcnt++;
-				    data->isochstats.slipcnt++;
-				}
+		    }
+		    // perform client and server frame based accounting
+		    if ((framedelta = (packet->frameID - data->isochstats.frameID))) {
+			data->isochstats.framecnt++;
+			stats->isochstats.framecnt++;
+			if (framedelta > 1) {
+			    if (stats->mUDP == kMode_Server) {
+				int lost = framedelta - (packet->frameID - packet->prevframeID);
+				stats->isochstats.framelostcnt += lost;
+				data->isochstats.framelostcnt += lost;
+			    } else {
+				stats->isochstats.framelostcnt += (framedelta-1);
+				data->isochstats.framelostcnt += (framedelta-1);
+				stats->isochstats.slipcnt++;
+				data->isochstats.slipcnt++;
 			    }
 			}
-			// peform frame latency checks
-			if (stats->framelatency_histogram) {
-			    // first packet of a burst and not a duplicate
-			    if ((packet->burstsize == packet->remaining) && (matchframeid!=packet->frameID)) {
-				matchframeid=packet->frameID;
-			    }
-			    if ((packet->packetLen == packet->remaining) && (packet->frameID == matchframeid)) {
-				// last packet of a burst (or first-last in case of a duplicate) and frame id match
-				double frametransit = TimeDifference(packet->packetTime, packet->isochStartTime) \
-				    - ((packet->burstperiod * (packet->frameID - 1)) / 1000000.0);
-			        histogram_insert(stats->framelatency_histogram, frametransit);
-				matchframeid = 0;  // reset the matchid so any potential duplicate is ignored
-			    }
+		    }
+		    // peform frame latency checks
+		    if (stats->framelatency_histogram) {
+			static int matchframeid=0;
+			// first packet of a burst and not a duplicate
+			if ((packet->burstsize == packet->remaining) && (matchframeid!=packet->frameID)) {
+			    matchframeid=packet->frameID;
+			}
+			if ((packet->packetLen == packet->remaining) && (packet->frameID == matchframeid)) {
+			    // last packet of a burst (or first-last in case of a duplicate) and frame id match
+			    double frametransit = TimeDifference(packet->packetTime, packet->isochStartTime) \
+				- ((packet->burstperiod * (packet->frameID - 1)) / 1000000.0);
+			    histogram_insert(stats->framelatency_histogram, frametransit);
+			    matchframeid = 0;  // reset the matchid so any potential duplicate is ignored
 			}
 		    }
 		    data->isochstats.frameID = packet->frameID;
@@ -1254,7 +1259,7 @@ int reporter_condprintstats( ReporterData *stats, MultiHeader *multireport, int 
         if ( stats->info.cntError < 0 ) {
             stats->info.cntError = 0;
         }
-        stats->info.cntDatagrams = ((stats->info.mUDP == kMode_Server) ? stats->PacketID : stats->cntDatagrams);
+        stats->info.cntDatagrams = ((stats->info.mUDP == kMode_Server) ? stats->PacketID - INITIAL_PACKETID : stats->cntDatagrams);
         stats->info.TotalLen = stats->TotalLen;
         stats->info.startTime = 0;
         stats->info.endTime = TimeDifference( stats->packetTime, stats->startTime );

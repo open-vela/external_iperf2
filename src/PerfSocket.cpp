@@ -144,10 +144,11 @@ void SetSocketOptions( thread_Settings *inSettings ) {
     }
 
 #ifdef IP_TOS
-#if HAVE_DECL_IPV6_TCLASS
+#if HAVE_DECL_IPV6_TCLASS && ! defined HAVE_WINSOCK2_H
+    // IPV6_TCLASS is defined on Windows but not implemented.
     if (isIPV6(inSettings)) {
 	const int dscp = inSettings->mTOS;
-	int rc = setsockopt(inSettings->mSock, IPPROTO_IPV6, IPV6_TCLASS, &dscp, sizeof(dscp));
+	int rc = setsockopt(inSettings->mSock, IPPROTO_IPV6, IPV6_TCLASS, (char*) &dscp, sizeof(dscp));
         WARN_errno( rc == SOCKET_ERROR, "setsockopt IPV6_TCLASS" );
     } else
 #endif
