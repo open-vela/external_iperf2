@@ -130,6 +130,8 @@ void waitUntilQuit();
  * ------------------------------------------------------------------- */
 extern "C"
 int main(int argc, char **argv) {
+    // init Interupted
+    sInterupted = 0;
 
     // Set SIGTERM and SIGINT to call our user interrupt function
 #ifdef SIGTERM
