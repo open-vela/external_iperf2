@@ -96,6 +96,7 @@ static int burstipg = 0;
 static int burstsize = 0;
 static int burstperiodic = 0;
 static int isochronous = 0;
+static int setcport = 0;
 static int noudpfin = 0;
 static int numreportstructs = 0;
 static int sumonly = 0;
@@ -230,6 +231,7 @@ const struct gnu_option long_options[] =
 #ifdef WIN32
 {"reverse", no_argument, &reversetest, 1},
 #endif
+{"cport", required_argument, &setcport, 1},
 {0, 0, 0, 0}
 };
 
@@ -1110,6 +1112,10 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		fprintf (stderr, "ERRPORE: Invalid value of '%s' for --ipg\n", optarg);
 		exit(1);
 	    }
+	}
+	if (setcport) {
+	    setcport = 0;
+	    mExtSettings->mBindPort = atoi(optarg);
 	}
 	if (rxwinclamp) {
 	    rxwinclamp = 0;
