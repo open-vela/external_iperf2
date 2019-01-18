@@ -88,7 +88,7 @@ public:
     void InitiateServer();
 
 private:
-    void WritePacketID( intmax_t );
+    void WritePacketID(void);
     void InitTrafficLoop(void);
     void FinishTrafficActions(void);
     void FinalUDPHandshake(void);
@@ -97,7 +97,7 @@ private:
 
     ReportStruct *reportstruct;
     double delay_lower_bounds;
-    intmax_t totLen;
+    max_size_t totLen;
 
     // TCP plain
     void RunTCP( void );
