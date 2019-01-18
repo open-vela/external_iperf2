@@ -227,6 +227,31 @@ TCP window size:  340 KByte (default)
 .br
 [  3] 0.00-10.00 sec  1.25 GBytes  1.07 Gbits/sec  10251/0       1196       -1K/3170 us  42382.03
 .br
+.TP
+.B
+where (per -e,)
+.RS
+.B
+ct=
+TCP connect time (or three way handshake time 3WHS)
+.br
+.B
+Write/Err
+Total number of socket writes and non-fatal socket write errors
+.B
+.br
+Rtry
+Total number of TCP retries
+.br
+.B
+Cwnd/RTT (*nix only)
+TCP congestion window and round trip time (sampled)
+.br
+.B
+NetPwr (*nix only)
+Network power defined as (throughput / RTT)
+.br
+.RE
 .RE
 .RE
 .PP
@@ -273,6 +298,19 @@ TCP window size: 85.3 KByte (default)
 .br
 [  4] 0.00-10.02 sec  1.25 GBytes  1.07 Gbits/sec  227306    9316:22088:21792:7096:22893:17193:6138:120790
 .br
+.TP
+.B
+where (per -e,)
+.RS
+.B
+Reads
+Total number of socket reads
+.B
+.br
+Dist(bin=size)
+Read size histogram per bin width is size and bin counts are separated by colon
+.br
+.RE
 .RE
 .RE
 .PP
@@ -323,6 +361,19 @@ UDP buffer size:  208 KByte (default)
 .br
 [  3] 0.00-10.00 sec  11.9 MBytes  10.0 Mbits/sec   0.047 ms    0/ 8504 (0%)  0.537/ 0.392/23.657/ 0.497 ms  850 pps  2329.37
 .br
+.TP
+.B
+where (per -e,)
+.RS
+.B
+Write/Err
+Total number of socket writes and non-fatal socket write errors
+.B
+.br
+PPS
+Transmit packet rate in packets per second
+.br
+.RE
 .RE
 .RE
 .PP
@@ -368,6 +419,25 @@ UDP buffer size:  208 KByte (default)
 .br
 [  3] 0.00-10.00 sec  11.9 MBytes  10.0 Mbits/sec   0.047 ms    0/ 8504 (0%)  0.537/ 0.392/23.657/ 0.867 ms  850 pps  2329.37
 .br
+.TP
+.B
+where (per -e,)
+.RS
+.B
+Latency (requires clock synchronization)
+in mean, minimum, maximum, standard deviation format
+.br
+.B
+.br
+PPS
+Received packet rate in packets per second
+.br
+.br
+.B
+NetPwr
+Network power defined as (throughput / latency)
+.br
+.RE
 .RE
 .RE
 .SH ENVIRONMENT
