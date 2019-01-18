@@ -61,14 +61,11 @@ set server port to listen on/connect to to \fIn\fR (default 5001)
 .BR -u ", " --udp " "
 use UDP rather than TCP
 .TP
-.BR "    --udp-counters-64bit "
-use 64 bit UDP sequence numbers
-.TP
 .BR -w ", " --window " \fIn\fR[kmKM]"
 TCP window size (socket buffer size)
 .TP
 .BR -z ", " --realtime " "
-Request realtime scheduler, if supported.
+Request real-time scheduler, if supported.
 .TP
 .BR -B ", " --bind " \fIhost\fR"
 bind to \fIhost\fR, ip address or multicast address and optional port (see notes)
@@ -188,10 +185,197 @@ run server version detection prior to traffic.
 .TP
 .BR -Z ", " --linux-congestion " \fIalgo\fR"
 set TCP congestion control algorithm (Linux only)
+.SH EXAMPLES
+.RS
+.B TCP tests (client)
+.RS
+.B iperf -c <host> -e -i 1
+.br
+------------------------------------------------------------
+.br
+Client connecting to <host>, TCP port 5001 with pid 5149
+.br
+Write buffer size:  128 KByte
+.br
+TCP window size:  340 KByte (default)
+.br
+------------------------------------------------------------
+.br
+[  3] local 45.56.85.133 port 49960 connected with 45.33.58.123 port 5001 (ct=3.23 ms)
+.br
+[ ID] Interval        Transfer    Bandwidth       Write/Err  Rtry     Cwnd/RTT        NetPwr
+.br
+[  3] 0.00-1.00 sec   126 MBytes  1.05 Gbits/sec  1006/0          0       56K/626 us  210636.47
+.br
+[  3] 1.00-2.00 sec   138 MBytes  1.15 Gbits/sec  1100/0        299      483K/3884 us  37121.32
+.br
+[  3] 2.00-3.00 sec   137 MBytes  1.15 Gbits/sec  1093/0         24      657K/5087 us  28162.31
+.br
+[  3] 3.00-4.00 sec   126 MBytes  1.06 Gbits/sec  1010/0        284      294K/2528 us  52366.58
+.br
+[  3] 4.00-5.00 sec   117 MBytes   980 Mbits/sec  935/0        373      487K/2025 us  60519.66
+.br
+[  3] 5.00-6.00 sec   144 MBytes  1.20 Gbits/sec  1149/0          2      644K/3570 us  42185.36
+.br
+[  3] 6.00-7.00 sec   126 MBytes  1.06 Gbits/sec  1011/0        112      582K/5281 us  25092.56
+.br
+[  3] 7.00-8.00 sec   110 MBytes   922 Mbits/sec  879/0         56      279K/1957 us  58871.89
+.br
+[  3] 8.00-9.00 sec   127 MBytes  1.06 Gbits/sec  1014/0         46      483K/3372 us  39414.89
+.br
+[  3] 9.00-10.00 sec   132 MBytes  1.11 Gbits/sec  1054/0          0      654K/3380 us  40872.75
+.br
+[  3] 0.00-10.00 sec  1.25 GBytes  1.07 Gbits/sec  10251/0       1196       -1K/3170 us  42382.03
+.br
+.RE
+.RE
+.PP
+.RS
+.B
+TCP tests (server)
+.RS
+.B
+iperf -s -e -i 1 -l 8K
+.br
+------------------------------------------------------------
+.br
+Server listening on TCP port 5001 with pid 13430
+.br
+Read buffer size: 8.00 KByte
+.br
+TCP window size: 85.3 KByte (default)
+.br
+------------------------------------------------------------
+.br
+[  4] local 45.33.58.123 port 5001 connected with 45.56.85.133 port 49960
+.br
+[ ID] Interval        Transfer    Bandwidth       Reads   Dist(bin=1.0K)
+.br
+[  4] 0.00-1.00 sec   124 MBytes  1.04 Gbits/sec  22249    798:2637:2061:767:2165:1563:589:11669
+.br
+[  4] 1.00-2.00 sec   136 MBytes  1.14 Gbits/sec  24780    946:3227:2227:790:2427:1888:641:12634
+.br
+[  4] 2.00-3.00 sec   137 MBytes  1.15 Gbits/sec  24484    1047:2686:2218:810:2195:1819:728:12981
+.br
+[  4] 3.00-4.00 sec   126 MBytes  1.06 Gbits/sec  20812    863:1353:1546:614:1712:1298:547:12879
+.br
+[  4] 4.00-5.00 sec   117 MBytes   984 Mbits/sec  20266    769:1886:1828:589:1866:1350:476:11502
+.br
+[  4] 5.00-6.00 sec   143 MBytes  1.20 Gbits/sec  24603    1066:1925:2139:822:2237:1827:744:13843
+.br
+[  4] 6.00-7.00 sec   126 MBytes  1.06 Gbits/sec  22635    834:2464:2249:724:2269:1646:608:11841
+.br
+[  4] 7.00-8.00 sec   110 MBytes   921 Mbits/sec  21107    842:2437:2747:592:2871:1903:496:9219
+.br
+[  4] 8.00-9.00 sec   126 MBytes  1.06 Gbits/sec  22804    1038:1784:2639:656:2738:1927:573:11449
+.br
+[  4] 9.00-10.00 sec   133 MBytes  1.11 Gbits/sec  23091    1088:1654:2105:710:2333:1928:723:12550
+.br
+[  4] 0.00-10.02 sec  1.25 GBytes  1.07 Gbits/sec  227306    9316:22088:21792:7096:22893:17193:6138:120790
+.br
+.RE
+.RE
+.PP
+.RS
+.B
+UDP tests (client)
+.RS
+.B
+iperf -c <host> -e -i 1 -u -b 10m
+.br
+------------------------------------------------------------
+.br
+Client connecting to <host>, UDP port 5001 with pid 5169
+.br
+Sending 1470 byte datagrams, IPG target: 1176.00 us (kalman adjust)
+.br
+UDP buffer size:  208 KByte (default)
+.br
+------------------------------------------------------------
+.br
+[  3] local 45.56.85.133 port 32943 connected with 45.33.58.123 port 5001
+.br
+[ ID] Interval        Transfer     Bandwidth      Write/Err  PPS
+.br
+[  3] 0.00-1.00 sec  1.19 MBytes  10.0 Mbits/sec  852/0      851 pps
+.br
+[  3] 1.00-2.00 sec  1.19 MBytes  10.0 Mbits/sec  850/0      850 pps
+.br
+[  3] 2.00-3.00 sec  1.19 MBytes  10.0 Mbits/sec  850/0      850 pps
+.br
+[  3] 3.00-4.00 sec  1.19 MBytes  10.0 Mbits/sec  851/0      850 pps
+.br
+[  3] 4.00-5.00 sec  1.19 MBytes  10.0 Mbits/sec  850/0      850 pps
+.br
+[  3] 5.00-6.00 sec  1.19 MBytes  10.0 Mbits/sec  850/0      850 pps
+.br
+[  3] 6.00-7.00 sec  1.19 MBytes  10.0 Mbits/sec  851/0      850 pps
+.br
+[  3] 7.00-8.00 sec  1.19 MBytes  10.0 Mbits/sec  850/0      850 pps
+.br
+[  3] 8.00-9.00 sec  1.19 MBytes  10.0 Mbits/sec  851/0      850 pps
+.br
+[  3] 0.00-10.00 sec  11.9 MBytes  10.0 Mbits/sec  8504/0      850 pps
+.br
+[  3] Sent 8504 datagrams
+.br
+[  3] Server Report:
+.br
+[  3] 0.00-10.00 sec  11.9 MBytes  10.0 Mbits/sec   0.047 ms    0/ 8504 (0%)  0.537/ 0.392/23.657/ 0.497 ms  850 pps  2329.37
+.br
+.RE
+.RE
+.PP
+.RS
+.B
+UDP tests (server)
+.RS
+.B
+iperf -s -e -i 1 -u
+.br
+------------------------------------------------------------
+.br
+Server listening on UDP port 5001 with pid 13496
+.br
+Receiving 1470 byte datagrams
+.br
+UDP buffer size:  208 KByte (default)
+.br
+------------------------------------------------------------
+[  3] local 45.33.58.123 port 5001 connected with 45.56.85.133 port 32943
+.br
+[ ID] Interval        Transfer     Bandwidth        Jitter   Lost/Total  Latency avg/min/max/stdev PPS  NetPwr
+.br
+[  3] 0.00-1.00 sec  1.19 MBytes  10.0 Mbits/sec   0.057 ms    0/  851 (0%)  0.475/ 0.408/ 1.898/ 0.090 ms  851 pps  2633.56
+.br
+[  3] 1.00-2.00 sec  1.19 MBytes  10.0 Mbits/sec   0.039 ms    0/  851 (0%)  0.669/ 0.405/16.256/ 1.375 ms  850 pps  1869.32
+.br
+[  3] 2.00-3.00 sec  1.19 MBytes  10.0 Mbits/sec   0.038 ms    0/  850 (0%)  0.795/ 0.395/23.657/ 2.138 ms  850 pps  1572.05
+.br
+[  3] 3.00-4.00 sec  1.19 MBytes  10.0 Mbits/sec   0.045 ms    0/  850 (0%)  0.475/ 0.403/ 3.477/ 0.148 ms  850 pps  2628.58
+.br
+[  3] 4.00-5.00 sec  1.19 MBytes  10.0 Mbits/sec   0.043 ms    0/  851 (0%)  0.463/ 0.400/ 1.458/ 0.068 ms  850 pps  2699.88
+.br
+[  3] 5.00-6.00 sec  1.19 MBytes  10.0 Mbits/sec   0.032 ms    0/  850 (0%)  0.486/ 0.404/ 2.658/ 0.154 ms  850 pps  2572.21
+.br
+[  3] 6.00-7.00 sec  1.19 MBytes  10.0 Mbits/sec   0.055 ms    0/  850 (0%)  0.469/ 0.404/ 2.768/ 0.108 ms  850 pps  2664.82
+.br
+[  3] 7.00-8.00 sec  1.19 MBytes  10.0 Mbits/sec   0.039 ms    0/  851 (0%)  0.571/ 0.400/12.452/ 0.855 ms  850 pps  2192.68
+.br
+[  3] 8.00-9.00 sec  1.19 MBytes  10.0 Mbits/sec   0.083 ms    0/  850 (0%)  0.475/ 0.392/ 3.702/ 0.196 ms  850 pps  2628.29
+.br
+[  3] 9.00-10.00 sec  1.19 MBytes  10.0 Mbits/sec   0.047 ms    0/  850 (0%)  0.493/ 0.396/ 6.010/ 0.343 ms  850 pps  2534.89
+.br
+[  3] 0.00-10.00 sec  11.9 MBytes  10.0 Mbits/sec   0.047 ms    0/ 8504 (0%)  0.537/ 0.392/23.657/ 0.867 ms  850 pps  2329.37
+.br
+.RE
+.RE
 .SH ENVIRONMENT
 .TP
-.BR TCP_WINDOW_SIZE
-Controls the size of TCP buffers.
+.B
+Note:
+The environment variable option settings haven't been maintained well.  See the source code if these are of interest.
+.RE
 .SH NOTES
 Some numeric options support format characters per '<value>\fIc\fR' (e.g. 10M) where the \fIc\fR format characters are k,m,g,K,M,G.  Lowercase format characters are 10^3 based and uppercase are 2^n based, e.g. 1k = 1000, 1K = 1024, 1m = 1,000,000 and 1M = 1,048,576
 .TP
