@@ -180,9 +180,9 @@ typedef struct thread_Settings {
     ReportMode mReportMode;
     TestMode mMode;                 // -r or -d
     // Hopefully int64_t's
-    intmax_t mUDPRate;            // -b or -u
+    max_size_t mUDPRate;            // -b or -u
     RateUnits mUDPRateUnits;        // -b is either bw or pps
-    uintmax_t mAmount;             // -n or -t
+    umax_size_t mAmount;             // -n or -t
     // doubles
     double mInterval;               // -i
     // shorts
@@ -205,8 +205,8 @@ typedef struct thread_Settings {
     int mUDPbins;
     int mUDPbinsize;
     unsigned short mUDPunits;
-    double mUDPci_lower;
-    double mUDPci_upper;
+    unsigned short mUDPci_lower;
+    unsigned short mUDPci_upper;
 #if defined( HAVE_WIN32_THREAD )
     HANDLE mHandle;
 #endif
@@ -416,7 +416,6 @@ typedef struct thread_Settings {
 #define HEADER_EXTEND   0x40000000
 #define HEADER_UDPTESTS 0x20000000
 #define HEADER_TIMESTAMP 0x10000000
-#define HEADER_SEQNO64B  0x08000000
 
 // Below flags are used to pass test settings in *every* UDP packet
 // and not just during the header exchange
@@ -455,16 +454,32 @@ typedef enum MsgType {
 #pragma pack(push,4)
 typedef struct UDP_datagram {
 // used to reference the 4 byte ID number we place in UDP datagrams
+// use int32_t if possible, otherwise a 32 bit bitfield (e.g. on J90)
 // Support 64 bit seqno on machines that support them
-    uint32_t id;
-    uint32_t tv_sec;
-    uint32_t tv_usec;
-    uint32_t id2;
+#ifdef HAVE_INT32_T
+    u_int32_t id;
+    u_int32_t tv_sec;
+    u_int32_t tv_usec;
+#else
+    unsigned int id      : 32;
+    unsigned int tv_sec  : 32;
+    unsigned int tv_usec : 32;
+#endif //32
+#ifdef HAVE_INT32_T
+    u_int32_t id2;
+#else
+    unsigned int id2      : 32;
+#endif // 32
 } UDP_datagram;
 
 typedef struct hdr_typelen {
+#ifdef HAVE_INT32_T
     int32_t type;
     int32_t length;
+#else
+    signed int type     : 32;
+    signed int length    : 32;
+#endif
 } hdr_typelen;
 
 
@@ -476,6 +491,7 @@ typedef struct hdr_typelen {
  * 1.7 has flags, numThreads, mPort, and bufferlen
  */
 typedef struct client_hdr_v1 {
+#ifdef HAVE_INT32_T
     /*
      * flags is a bitmap for different options
      * the most significant bits are for determining
@@ -494,12 +510,21 @@ typedef struct client_hdr_v1 {
     int32_t bufferlen;
     int32_t mWinBand;
     int32_t mAmount;
+#else
+    signed int flags      : 32;
+    signed int numThreads : 32;
+    signed int mPort      : 32;
+    signed int bufferlen  : 32;
+    signed int mWinBand : 32;
+    signed int mAmount    : 32;
+#endif
 } client_hdr_v1;
 
 // This is used for tests that require
 // the initial handshake
 typedef struct client_hdrext {
     hdr_typelen typelen;
+#ifdef HAVE_INT32_T
     int32_t flags;
     int32_t version_u;
     int32_t version_l;
@@ -507,6 +532,15 @@ typedef struct client_hdrext {
     int32_t mRate;
     int32_t mUDPRateUnits;
     int32_t mRealtime;
+#else
+    signed int flags       : 32;
+    signed int version_u   : 32;
+    signed int version_l   : 32;
+    signed int reserved    : 32;
+    signed int mRate      : 32;
+    signed int mUDPRateUnits : 32;
+    signed int mRealtime  : 32;
+#endif
 } client_hdrext;
 
 
@@ -541,34 +575,57 @@ typedef struct client_hdrext {
  *                +--------+--------+--------+--------+
  *            13  |        iperf version minor        |
  *                +--------+--------+--------+--------+
- *            14  |        isoch burst period (us)    |
+ *            14  |        ref sync sample tv_sec     |
  *                +--------+--------+--------+--------+
- *            15  |        isoch start timestamp (s)  |
+ *            15  |        ref sync sample tv_used    |
  *                +--------+--------+--------+--------+
- *            16  |        isoch start timestamp (us) |
+ *            16  |        gps sync sample tv_sec     |
  *                +--------+--------+--------+--------+
- *            17  |        isoch prev frameid         |
+ *            17  |        gps sync sample tv_usec    |
  *                +--------+--------+--------+--------+
- *            18  |        isoch frameid              |
+ *            18  |        isoch burst period (us)    |
  *                +--------+--------+--------+--------+
- *            19  |        isoch burtsize             |
+ *            19  |        isoch start timestamp (s)  |
  *                +--------+--------+--------+--------+
- *            20  |        isoch bytes remaining      |
+ *            20  |        isoch start timestamp (us) |
  *                +--------+--------+--------+--------+
- *            21  |        isoch reserved             |
+ *            21  |        isoch prev frameid         |
+ *                +--------+--------+--------+--------+
+ *            22  |        isoch frameid              |
+ *                +--------+--------+--------+--------+
+ *            23  |        isoch burtsize             |
+ *                +--------+--------+--------+--------+
+ *            24  |        isoch bytes remaining      |
+ *                +--------+--------+--------+--------+
+ *            25  |        isoch reserved             |
+ *                +--------+--------+--------+--------+
+ *            26  |        hw timestamps ...          |
+ *                +--------+--------+--------+--------+
+ *            n   |        hw timestamps ...
  *                +--------+--------+--------+--------+
  *
  */
 
 typedef struct UDP_isoch_payload {
-    uint32_t burstperiod; //period units microseconds
-    uint32_t start_tv_sec;
-    uint32_t start_tv_usec;
-    uint32_t prevframeid;
-    uint32_t frameid;
-    uint32_t burstsize;
-    uint32_t remaining;
-    uint32_t reserved;
+#ifdef HAVE_INT32_T
+    u_int32_t burstperiod; //period units microseconds
+    u_int32_t start_tv_sec;
+    u_int32_t start_tv_usec;
+    u_int32_t prevframeid;
+    u_int32_t frameid;
+    u_int32_t burstsize;
+    u_int32_t remaining;
+    u_int32_t resevered;
+#else
+    unsigned int burstperiod : 32;
+    unsigned int start_tv_sec : 32;
+    unsigned int start_tv_usec : 32;
+    unsigned int prevframeid : 32;
+    unsigned int frameid : 32;
+    unsigned int burstsize : 32;
+    unsigned int remaining : 32;
+    unsigned int reserved : 32;
+#endif
 } UDP_isoch_payload;
 
 // This is used for UDP tests that don't
@@ -576,10 +633,17 @@ typedef struct UDP_isoch_payload {
 typedef struct client_hdr_udp_tests {
 // for 32 bit systems, skip over this field
 // so it remains interoperable with 64 bit peers
-    int16_t testflags;
-    int16_t tlvoffset;
-    uint32_t version_u;
-    uint32_t version_l;
+#ifdef HAVE_INT32_T
+    u_int16_t testflags;
+    u_int16_t tlvoffset;
+    u_int32_t version_u;
+    u_int32_t version_l;
+#else
+    unsigned short testflags   : 16;
+    unsigned short tlvoffset   : 16;
+    unsigned int version_u   : 32;
+    unsigned int version_l   : 32;
+#endif
 } client_hdr_udp_tests;
 
 
@@ -590,11 +654,17 @@ typedef struct client_hdr_udp_isoch_tests {
 
 typedef struct client_hdr_ack {
     hdr_typelen typelen;
+#ifdef HAVE_INT32_T
     int32_t flags;
     int32_t version_u;
     int32_t version_l;
-    int32_t reserved1;
-    int32_t reserved2;
+    int32_t reserved;
+#else
+    signed int flags    : 32;
+    signed int version_u   : 32;
+    signed int version_l   : 32;
+    signed int reserved    : 32;
+#endif
 } client_hdr_ack;
 
 typedef struct client_hdr {
@@ -612,6 +682,7 @@ typedef struct client_hdr {
  * packet.
  */
 typedef struct server_hdr_v1 {
+#ifdef HAVE_INT32_T
     /*
      * flags is a bitmap for different options
      * the most significant bits are for determining
@@ -629,11 +700,30 @@ typedef struct server_hdr_v1 {
     int32_t error_cnt;
     int32_t outorder_cnt;
     int32_t datagrams;
+#ifdef HAVE_SEQNO64b
+    int32_t datagrams2;
+#endif // SEQ
     int32_t jitter1;
     int32_t jitter2;
+#else // Int32
+    signed int flags        : 32;
+    signed int total_len1   : 32;
+    signed int total_len2   : 32;
+    signed int stop_sec     : 32;
+    signed int stop_usec    : 32;
+    signed int error_cnt    : 32;
+    signed int outorder_cnt : 32;
+    signed int datagrams    : 32;
+#ifdef HAVE_SEQNO64b
+    signed int datagrams2   : 32;
+#endif // SEQ
+    signed int jitter1      : 32;
+    signed int jitter2      : 32;
+#endif
 } server_hdr_v1;
 
 typedef struct server_hdr_extension {
+#ifdef HAVE_INT32_T
     int32_t minTransit1;
     int32_t minTransit2;
     int32_t maxTransit1;
@@ -649,19 +739,28 @@ typedef struct server_hdr_extension {
     int32_t cntTransit;
     int32_t IPGcnt;
     int32_t IPGsum;
+#else
+    signed int minTransit1  : 32;
+    signed int minTransit2  : 32;
+    signed int maxTransit1  : 32;
+    signed int maxTransit2  : 32;
+    signed int sumTransit1  : 32;
+    signed int sumTransit2  : 32;
+    signed int meanTransit1  : 32;
+    signed int meanTransit2  : 32;
+    signed int m2Transit1  : 32;
+    signed int m2Transit2  : 32;
+    signed int vdTransit1  : 32;
+    signed int vdTransit2  : 32;
+    signed int cntTransit   : 32;
+    signed int IPGcnt       : 32;
+    signed int IPGsum       : 32;
+#endif
 } server_hdr_extension;
-
-  // Extension for 64bit datagram counts
-typedef struct server_hdr_extension2 {
-    int32_t error_cnt2;
-    int32_t outorder_cnt2;
-    int32_t datagrams2;
-} server_hdr_extension2;
 
 typedef struct server_hdr {
     server_hdr_v1 base;
     server_hdr_extension extend;
-    server_hdr_extension2 extend2;
 } server_hdr;
 
 #pragma pack(pop)

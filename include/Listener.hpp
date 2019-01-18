@@ -76,9 +76,9 @@ public:
     void runAsDaemon( const char *, int );
 
     void Listen( );
-
+#ifdef HAVE_MULTICAST
     void McastJoin( );
-
+#endif
     void McastSetTTL( int val );
 
     void Accept( thread_Settings *server );
