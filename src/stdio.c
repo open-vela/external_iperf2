@@ -104,7 +104,7 @@ double byte_atof( const char *inString ) {
  * Gg, Mm, Kk are giga, mega, kilo respectively
  * ------------------------------------------------------------------- */
 
-max_size_t byte_atoi( const char *inString ) {
+intmax_t byte_atoi( const char *inString ) {
     double theNum;
     char suffix = '\0';
 
@@ -123,7 +123,7 @@ max_size_t byte_atoi( const char *inString ) {
         case 'k':  theNum *= kkilo_to_Unit;  break;
         default: break;
     }
-    return (max_size_t) theNum;
+    return (intmax_t) theNum;
 } /* end byte_atof */
 
 /* -------------------------------------------------------------------
