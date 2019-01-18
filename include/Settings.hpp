@@ -188,7 +188,7 @@ typedef struct thread_Settings {
     // shorts
     unsigned short mListenPort;     // -L
     unsigned short mPort;           // -p
-    unsigned short mBindPort;      // -B
+    unsigned short mBindPort;      // -B or --cport
     // chars
     char   mFormat;                 // -f
     int mTTL;                    // -T

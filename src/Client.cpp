@@ -207,7 +207,7 @@ double Client::Connect( ) {
 
     SockAddr_localAddr( mSettings );
 
-    if ( mSettings->mLocalhost != NULL ) {
+    if ( mSettings->mLocalhost != NULL || mSettings->mBindPort != 0) {
         // bind socket to local address
         rc = bind( mSettings->mSock, (sockaddr*) &mSettings->local,
                    SockAddr_get_sizeof_sockaddr( &mSettings->local ) );

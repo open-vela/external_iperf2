@@ -85,6 +85,7 @@ static int burstipg = 0;
 static int burstipg_set = 0;
 static int isochronous = 0;
 #endif
+static int setcport = 0;
 
 void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtSettings );
 // apply compound settings after the command line has been fully parsed
@@ -160,6 +161,7 @@ const struct option long_options[] =
 #ifdef WIN32
 {"reverse", no_argument, &reversetest, 1},
 #endif
+{"cport", required_argument, &setcport, 1},
 {0, 0, 0, 0}
 };
 
@@ -826,6 +828,10 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
 		}
 	    }
 #endif
+	    if (setcport) {
+		setcport = 0;
+		mExtSettings->mBindPort = atoi(optarg);
+	    }
 	    break;
         default: // ignore unknown
             break;
