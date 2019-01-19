@@ -958,6 +958,7 @@ int reporter_handle_packet( ReportHeader *reporthdr ) {
 		stats->IPGcnt++;
 		data->IPGstart = data->packetTime;
 #ifdef HAVE_ISOCHRONOUS
+		//printf("fid=%lu bs=%lu remain=%lu\n", packet->frameID, packet->burstsize, packet->remaining);
 		if (packet->frameID && packet->burstsize && packet->remaining) {
 		    int framedelta=0;
 		    // very first isochronous frame
