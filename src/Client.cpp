@@ -692,7 +692,6 @@ void Client::RunUDPIsochronous (void) {
 
 	while ((bytecnt > 0) && InProgress()) {
 	    t1.setnow();
-	    reportstruct->remaining=bytecnt;
 	    reportstruct->packetTime.tv_sec = t1.getSecs();
 	    reportstruct->packetTime.tv_usec = t1.getUsecs();
 	    mBuf_UDP->tv_sec  = htonl(reportstruct->packetTime.tv_sec);
@@ -734,9 +733,11 @@ void Client::RunUDPIsochronous (void) {
 	    // perform write
 	    if (!isModeTime(mSettings) && (mSettings->mAmount < (unsigned) mSettings->mBufLen)) {
 	        mBuf_isoch->remaining = htonl(mSettings->mAmount);
+		reportstruct->remaining=mSettings->mAmount;
 	        currLen = write(mSettings->mSock, mBuf, mSettings->mAmount);
 	    } else {
 	        mBuf_isoch->remaining = htonl(bytecnt);
+		reportstruct->remaining=bytecnt;
 	        currLen = write(mSettings->mSock, mBuf, (bytecnt < mSettings->mBufLen) ? bytecnt : mSettings->mBufLen);
 	    }
 
@@ -757,7 +758,6 @@ void Client::RunUDPIsochronous (void) {
 		if ((bytecnt > 0) && (bytecnt < bytecntmin)) {
 		    bytecnt = bytecntmin;
 		    mBuf_isoch->burstsize  = htonl(bytecnt);
-		    reportstruct->remaining=bytecnt;
 		    reportstruct->burstsize=bytecnt;
 		}
 	    }
