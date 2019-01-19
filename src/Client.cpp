@@ -680,6 +680,7 @@ void Client::RunUDPIsochronous (void) {
 	// printf("bits=%d\n", (int) (mSettings->mFPS * bytecnt * 8));
 	mBuf_isoch->burstsize  = htonl(bytecnt);
 	mBuf_isoch->prevframeid  = htonl(frameid);
+	reportstruct->burstsize=bytecnt;
 	frameid =  fc->wait_tick();
 	mBuf_isoch->frameid  = htonl(frameid);
 	lastPacketTime.setnow();
@@ -689,8 +690,9 @@ void Client::RunUDPIsochronous (void) {
 	    mBuf_isoch->start_tv_usec = htonl(fc->getUsecs());
 	}
 
-	while ((bytecnt > 0) && InProgress()) {				\
+	while ((bytecnt > 0) && InProgress()) {
 	    t1.setnow();
+	    reportstruct->remaining=bytecnt;
 	    reportstruct->packetTime.tv_sec = t1.getSecs();
 	    reportstruct->packetTime.tv_usec = t1.getUsecs();
 	    mBuf_UDP->tv_sec  = htonl(reportstruct->packetTime.tv_sec);
@@ -755,6 +757,8 @@ void Client::RunUDPIsochronous (void) {
 		if ((bytecnt > 0) && (bytecnt < bytecntmin)) {
 		    bytecnt = bytecntmin;
 		    mBuf_isoch->burstsize  = htonl(bytecnt);
+		    reportstruct->remaining=bytecnt;
+		    reportstruct->burstsize=bytecnt;
 		}
 	    }
 
