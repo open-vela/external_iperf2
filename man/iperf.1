@@ -440,6 +440,116 @@ Network power defined as (throughput / latency)
 .RE
 .RE
 .RE
+.PP
+.RS
+.B
+Isochronous UDP tests (client)
+.RS
+.B
+iperf -c 192.168.100.33 -u -e -i 1 --isochronous=60:100m,10m --realtime
+.br
+------------------------------------------------------------
+.br
+Client connecting to 192.168.100.33, UDP port 5001 with pid 14971
+.br
+UDP isochronous: 60 frames/sec mean= 100 Mbit/s, stddev=10.0 Mbit/s, Period/IPG=16.67/0.005 ms
+.br
+UDP buffer size:  208 KByte (default)
+.br
+------------------------------------------------------------
+.br
+[  3] local 192.168.100.76 port 42928 connected with 192.168.100.33 port 5001
+.br
+[ ID] Interval        Transfer     Bandwidth      Write/Err  PPS  frames:tx/missed/slips
+.br
+[  3] 0.00-1.00 sec  12.0 MBytes   101 Mbits/sec  8615/0     8493 pps   62/0/0
+.br
+[  3] 1.00-2.00 sec  12.0 MBytes   100 Mbits/sec  8556/0     8557 pps   60/0/0
+.br
+[  3] 2.00-3.00 sec  12.0 MBytes   101 Mbits/sec  8586/0     8586 pps   60/0/0
+.br
+[  3] 3.00-4.00 sec  12.1 MBytes   102 Mbits/sec  8687/0     8687 pps   60/0/0
+.br
+[  3] 4.00-5.00 sec  11.8 MBytes  99.2 Mbits/sec  8468/0     8468 pps   60/0/0
+.br
+[  3] 5.00-6.00 sec  11.9 MBytes  99.8 Mbits/sec  8519/0     8520 pps   60/0/0
+.br
+[  3] 6.00-7.00 sec  12.1 MBytes   102 Mbits/sec  8694/0     8694 pps   60/0/0
+.br
+[  3] 7.00-8.00 sec  12.1 MBytes   102 Mbits/sec  8692/0     8692 pps   60/0/0
+.br
+[  3] 8.00-9.00 sec  11.9 MBytes   100 Mbits/sec  8537/0     8537 pps   60/0/0
+.br
+[  3] 9.00-10.00 sec  11.8 MBytes  99.0 Mbits/sec  8450/0     8450 pps   60/0/0
+.br
+[  3] 0.00-10.01 sec   120 MBytes   100 Mbits/sec  85867/0     8574 pps  602/0/0
+.br
+[  3] Sent 85867 datagrams
+.br
+[  3] Server Report:
+.br
+[  3] 0.00-9.98 sec   120 MBytes   101 Mbits/sec   0.009 ms  196/85867 (0.23%)  0.665/ 0.083/ 1.318/ 0.174 ms 8605 pps  18903.85
+.br
+.TP
+.B
+where (per -e,)
+.RS
+.B
+frames:tx/missed/slips
+Total number of isochronous frames or bursts. Total number of frame ids not sent.  Total number of frame slips
+.br
+.RE
+.RE
+.RE
+.PP
+.RS
+.B
+Isochronous UDP tests (server)
+.RS
+.B
+iperf -s -e -u --udp-histogram=100u,2000 --realtime
+.br
+------------------------------------------------------------
+.br
+Server listening on UDP port 5001 with pid 5175
+.br
+Receiving 1470 byte datagrams
+.br
+UDP buffer size:  208 KByte (default)
+.br
+------------------------------------------------------------
+.br
+[  3] local 192.168.100.33 port 5001 connected with 192.168.100.76 port 42928 isoch (peer 2.0.13-alpha)
+.br
+[ ID] Interval        Transfer     Bandwidth        Jitter   Lost/Total  Latency avg/min/max/stdev PPS  NetPwr  Frames/Lost
+.br
+[  3] 0.00-9.98 sec   120 MBytes   101 Mbits/sec   0.010 ms  196/85867 (0.23%)  0.665/ 0.083/ 1.318/ 0.284 ms 8585 pps  18903.85  601/1
+.br
+[  3] 0.00-9.98 sec T8(f)-PDF: bin(w=100us):cnt(85671)=1:2,2:844,3:10034,4:8493,5:8967,6:8733,7:8823,8:9023,9:8901,10:8816,11:7730,12:4563,13:741,14:1 (5.00/95.00%=3/12,Outliers=0,obl/obu=0/0)
+.br
+[  3] 0.00-9.98 sec F8(f)-PDF: bin(w=100us):cnt(598)=15:2,16:1,17:27,18:68,19:125,20:136,21:103,22:83,23:22,24:23,25:5,26:3 (5.00/95.00%=17/24,Outliers=0,obl/obu=0/0)
+.br
+.TP
+.B
+where,
+.RS
+.B
+Frames/lost
+Total number of frames (or bursts) received.  Total number of bursts lost or errored
+.br
+.B
+.br
+T8-PDF(f)
+Latency histogram for packets
+.br
+.br
+.B
+F8-PDF(f)
+Latency histogram for frames
+.br
+.RE
+.RE
+.RE
 .SH ENVIRONMENT
 .TP
 .B
