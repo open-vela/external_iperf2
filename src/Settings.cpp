@@ -877,7 +877,8 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 
 
     // UDP histogram settings
-    if (isUDPHistogram(mExtSettings) && isUDP(mExtSettings) && mExtSettings->mThreadMode != kMode_Client) {
+    if (isUDPHistogram(mExtSettings) && isUDP(mExtSettings) && \
+	(mExtSettings->mThreadMode != kMode_Client) && mExtSettings->mUDPHistogramStr) {
 	if (((results = strtok(mExtSettings->mUDPHistogramStr, ",")) != NULL) && !strcmp(results,mExtSettings->mUDPHistogramStr)) {
 	    char *tmp = new char [strlen(results) + 1];
 	    strcpy(tmp, results);
