@@ -2,25 +2,14 @@
 .SH NAME
 iperf \- perform network throughput tests
 .SH SYNOPSIS
-.B iperf -s [
-.I options
-.B ]
+.BI "iperf -s [" options ]
 
-.B iperf -c
-.I server
-.B [
-.I options
-.B ]
+.BI "iperf -c " server " [" options ]
 
-.B iperf -u -s [
-.I options
-.B ]
+.BI "iperf -u -s [" options ]
 
-.B iperf -u -c
-.I server
-.B [
-.I options
-.B ]
+.BI "iperf -u -c "  server " [" options ]
+
 .SH DESCRIPTION
 iperf is a tool for performing network throughput measurements.  It can test
 either TCP or UDP throughput.  To perform an iperf test the user must
@@ -29,13 +18,16 @@ traffic).
 .SH "GENERAL OPTIONS"
 .TP
 .BR -b ", " --bandwidth " "
-set the target bandwidth and optional standard devation per \fI<mean>\fR,\fI[<stdev>]\fR (See NOTES for suffixes)
+set the target bandwidth and optional standard devation per
+\fI<mean>\fR,\fI[<stdev>]\fR (See NOTES for suffixes)
 .TP
 .BR -e ", " --enhanced " "
-Display enhanced output in reports otherwise use legacy report (ver 2.0.5) formatting (see notes)
+Display enhanced output in reports otherwise use legacy report (ver
+2.0.5) formatting (see notes)
 .TP
-.BR -f ", " --format " "
-[abkmgBKMG]   format to report: adaptive, bits, Bytes, Kbits, Mbits, Gbits, KBytes, MBytes, GBytes (see NOTES for more)
+.BR -f ", " --format " " [abkmgBKMG]
+format to report: adaptive, bits, Bytes, Kbits, Mbits, Gbits, KBytes,
+MBytes, GBytes (see NOTES for more)
 .TP
 .BR -h ", " --help " "
 print a help synopsis
@@ -102,7 +94,11 @@ output UDP latency histograms, bin width (default 1 millisecond, append u for mi
 bind src ip addr and optional src device for receiving
 .TP
 .BR -D ", " --daemon " "
-run the server as a daemon.  On Windows this will also install the IPerfService.
+run the server as a daemon.  On Windows this will run the specified
+command-line under the IPerfService, installing the service if
+necessary.  Note the service is not configured to auto-start or
+restart - if you need a self-starting service you will need to create
+an init script or use Windows "sc" commands.
 .TP
 .BR -H ", " --ssm-host " \fIhost\fR"
 Set the source host (ip addr) per SSM multicast, i.e. the S of the S,G
@@ -125,7 +121,7 @@ set target bandwidth to \fIn\fR bits/sec (default 1 Mbit/sec) or
 run in client mode, connecting to \fIhost\fR
 .TP
 .BR -d ", " --dualtest " "
-Do a bidirectional test simultaneously
+Do a bidirectional test simultaneously.
 .TP
 .BR "    --fq-rate n[kmgKMG]"
 Set a rate to be used with fair-queueing based socket-level pacing, in bytes or bits per second. Only available on platforms supporting the SO_MAX_PACING_RATE socket option. (Note: Here the suffixes indicate bytes/sec or bits/sec per use of uppercase or lowercase, respectively)
@@ -143,7 +139,8 @@ send isochronous traffic with frequency frames per second and load defined by me
 number of bytes to transmit (instead of -t)
 .TP
 .BR -r ", " --tradeoff " "
-Do a bidirectional test individually
+Do a bidirectional test individually - client-to-server, followed by
+a reversed test, server-to-client
 .TP
 .BR -t ", " --time " \fIn\fR"
 time in seconds to listen for new traffic connections, receive traffic or transmit traffic (Defaults: transmit is 10 secs while listen and receive are indefinite)
@@ -186,9 +183,9 @@ run server version detection prior to traffic.
 .BR -Z ", " --linux-congestion " \fIalgo\fR"
 set TCP congestion control algorithm (Linux only)
 .SH EXAMPLES
-.RS
+
 .B TCP tests (client)
-.RS
+
 .B iperf -c <host> -e -i 1
 .br
 ------------------------------------------------------------
@@ -226,39 +223,28 @@ TCP window size:  340 KByte (default)
 [  3] 9.00-10.00 sec   132 MBytes  1.11 Gbits/sec  1054/0          0      654K/3380 us  40872.75
 .br
 [  3] 0.00-10.00 sec  1.25 GBytes  1.07 Gbits/sec  10251/0       1196       -1K/3170 us  42382.03
-.br
+
 .TP
-.B
-where (per -e,)
-.RS
-.B
-ct=
+.B where (per -e,)
+.B ct=
 TCP connect time (or three way handshake time 3WHS)
 .br
-.B
-Write/Err
+.B Write/Err
 Total number of successful socket writes. Total number of non-fatal socket write errors
-.B
 .br
-Rtry
+.B Rtry
 Total number of TCP retries
 .br
-.B
-Cwnd/RTT (*nix only)
+.B Cwnd/RTT (*nix only)
 TCP congestion window and round trip time (sampled)
 .br
-.B
-NetPwr (*nix only)
+.B NetPwr (*nix only)
 Network power defined as (throughput / RTT)
-.br
-.RE
-.RE
-.RE
+
 .PP
-.RS
-.B
-TCP tests (server)
-.RS
+
+.B TCP tests (server)
+
 .B
 iperf -s -e -i 1 -l 8K
 .br
@@ -299,27 +285,20 @@ TCP window size: 85.3 KByte (default)
 [  4] 0.00-10.02 sec  1.25 GBytes  1.07 Gbits/sec  227306    9316:22088:21792:7096:22893:17193:6138:120790
 .br
 .TP
-.B
-where (per -e,)
-.RS
-.B
-Reads
+.B where (per -e,)
+.B Reads
 Total number of socket reads
-.B
 .br
-Dist(bin=size)
-Eight bin histogram of the socket reads returned byte count.  Bin width is set per size.  Bins are separated by a colon.  In the example, the bins are 0-1K, 1K-2K, .., 7K-8K.
-.br
-.RE
-.RE
-.RE
+.B Dist(bin=size)
+Eight bin histogram of the socket reads returned byte count.  Bin
+width is set per size.  Bins are separated by a colon.  In the
+example, the bins are 0-1K, 1K-2K, .., 7K-8K.
+
 .PP
-.RS
-.B
-UDP tests (client)
-.RS
-.B
-iperf -c <host> -e -i 1 -u -b 10m
+
+.B UDP tests (client)
+
+.B iperf -c <host> -e -i 1 -u -b 10m
 .br
 ------------------------------------------------------------
 .br
@@ -362,27 +341,18 @@ UDP buffer size:  208 KByte (default)
 [  3] 0.00-10.00 sec  11.9 MBytes  10.0 Mbits/sec   0.047 ms    0/ 8504 (0%)  0.537/ 0.392/23.657/ 0.497 ms  850 pps  2329.37
 .br
 .TP
-.B
-where (per -e,)
-.RS
-.B
-Write/Err
+.B where (per -e,)
+.B Write/Err
 Total number of successful socket writes. Total number of non-fatal socket write errors
-.B
 .br
-PPS
+.B PPS
 Transmit packet rate in packets per second
-.br
-.RE
-.RE
-.RE
+
 .PP
-.RS
-.B
-UDP tests (server)
-.RS
-.B
-iperf -s -e -i 1 -u
+
+.B UDP tests (server)
+
+.B iperf -s -e -i 1 -u
 .br
 ------------------------------------------------------------
 .br
@@ -418,35 +388,26 @@ UDP buffer size:  208 KByte (default)
 [  3] 9.00-10.00 sec  1.19 MBytes  10.0 Mbits/sec   0.047 ms    0/  850 (0%)  0.493/ 0.396/ 6.010/ 0.343 ms  850 pps  2534.89
 .br
 [  3] 0.00-10.00 sec  11.9 MBytes  10.0 Mbits/sec   0.047 ms    0/ 8504 (0%)  0.537/ 0.392/23.657/ 0.867 ms  850 pps  2329.37
-.br
+
 .TP
-.B
-where (per -e,)
-.RS
-.B
-Latency
-End to end latency in mean/minimum/maximum/standard deviation format (Note: requires the client's and server's system clocks to be synchronized to a common reference, e.g. using precision time protocol PTP.  A GPS disciplined OCXO is a recommended reference.)
+.B where (per -e,)
+.B Latency
+End to end latency in mean/minimum/maximum/standard deviation format
+(Note: requires the client's and server's system clocks to be
+synchronized to a common reference, e.g. using precision time protocol
+PTP.  A GPS disciplined OCXO is a recommended reference.)
 .br
-.B
-.br
-PPS
+.B PPS
 Received packet rate in packets per second
 .br
-.br
-.B
-NetPwr
+.B NetPwr
 Network power defined as (throughput / latency)
-.br
-.RE
-.RE
-.RE
+
 .PP
-.RS
-.B
-Isochronous UDP tests (client)
-.RS
-.B
-iperf -c 192.168.100.33 -u -e -i 1 --isochronous=60:100m,10m --realtime
+
+.B Isochronous UDP tests (client)
+
+.B iperf -c 192.168.100.33 -u -e -i 1 --isochronous=60:100m,10m --realtime
 .br
 ------------------------------------------------------------
 .br
@@ -491,23 +452,15 @@ UDP buffer size:  208 KByte (default)
 [  3] 0.00-9.98 sec   120 MBytes   101 Mbits/sec   0.009 ms  196/85867 (0.23%)  0.665/ 0.083/ 1.318/ 0.174 ms 8605 pps  18903.85
 .br
 .TP
-.B
-where (per -e,)
-.RS
-.B
-frames:tx/missed/slips
+.B where (per -e,)
+.B frames:tx/missed/slips
 Total number of isochronous frames or bursts. Total number of frame ids not sent.  Total number of frame slips
-.br
-.RE
-.RE
-.RE
+
 .PP
-.RS
-.B
-Isochronous UDP tests (server)
-.RS
-.B
-iperf -s -e -u --udp-histogram=100u,2000 --realtime
+
+.B Isochronous UDP tests (server)
+
+.B iperf -s -e -u --udp-histogram=100u,2000 --realtime
 .br
 ------------------------------------------------------------
 .br
@@ -528,59 +481,86 @@ UDP buffer size:  208 KByte (default)
 [  3] 0.00-9.98 sec T8(f)-PDF: bin(w=100us):cnt(85671)=1:2,2:844,3:10034,4:8493,5:8967,6:8733,7:8823,8:9023,9:8901,10:8816,11:7730,12:4563,13:741,14:1 (5.00/95.00%=3/12,Outliers=0,obl/obu=0/0)
 .br
 [  3] 0.00-9.98 sec F8(f)-PDF: bin(w=100us):cnt(598)=15:2,16:1,17:27,18:68,19:125,20:136,21:103,22:83,23:22,24:23,25:5,26:3 (5.00/95.00%=17/24,Outliers=0,obl/obu=0/0)
-.br
+
 .TP
-.B
-where,
-.RS
-.B
-Frames/lost
+.B where,
+.B Frames/lost
 Total number of frames (or bursts) received.  Total number of bursts lost or errored
 .br
 .B
-.br
 T8-PDF(f)
 Latency histogram for packets
 .br
-.br
-.B
-F8-PDF(f)
+.B F8-PDF(f)
 Latency histogram for frames
-.br
-.RE
-.RE
-.RE
+
+
 .SH ENVIRONMENT
 .TP
 .B
 Note:
-The environment variable option settings haven't been maintained well.  See the source code if these are of interest.
+The environment variable option settings haven't been maintained well.
+See the source code if these are of interest.
 .RE
 .SH NOTES
-Some numeric options support format characters per '<value>\fIc\fR' (e.g. 10M) where the \fIc\fR format characters are k,m,g,K,M,G.  Lowercase format characters are 10^3 based and uppercase are 2^n based, e.g. 1k = 1000, 1K = 1024, 1m = 1,000,000 and 1M = 1,048,576
-.TP
-The -b option supports variable offered loads through the <mean>,<standard deviation> format, e.g. -b 100m,10m on the client.  The distribution used is log normal.  Similar for the isochronous option.
-.TP
-The -e or --enhanced latency output on the UDP servers assumes the clients' and servers' system clocks are synchronized.  Network Time Protocol (NTP) or Precision Time Protocol (PTP) are commonly used for this.  The reference clock(s) or oscillator's error will also affect the accuracy of UDP latency measurements.
-.TP
-The -B option affects the bind() system call.  This is typically used to bind to a particular IP address. Only packets destined to that IP address will be received while any transmitted packets will carry that IP address as their source. The bind() does not control anything about the routing of transmitted packets. So, for example, if the IP address of eth0 is used for -B and the routing table for the destination IP address (per -c) resolves the ouput interface to be eth1, then the host will send the packet out device eth1 with the source IP address of eth0.  To affect the physical output interface (e.g. dual homed systems) the host's routing table(s) need to be configured, e.g. configure policy routing per each -B source address.
-.TP
-The TCP connect time (or three way handshake) can be seen on the iperf client when the -e (--enhancedreports) option is set. Look for the ct=<value> in the connected message, e.g.in '[  3] local 192.168.1.4 port 48736 connected with 192.168.1.1 port 5001 \fB(ct=1.84 ms)\fR' shows the 3WHS took 1.84 milliseconds.
-.TP
-The network power (NetPwr) metric is \fBexperimental\fR.  It's a convenience function defined as throughput/delay.  For TCP, the delay is the sampled RTT times.  For UDP the delay is the end/end latency.  Don't confuse this with the physics definition of power (delta energy/delta time) but more of a measure of a desireable property divided by an undesireable property.  Also note, one must use -i interval with TCP to get this as that's what sets the RTT sampling rate.  The metric is scaled to assist with human readability.  (Note: if this metric goes beyond the experimental state we'll consider a supporting and RTT sampling rate independent of the -i interval.)
+Some numeric options support format characters per '<value>\fIc\fR'
+(e.g. 10M) where the \fIc\fR format characters are k,m,g,K,M,G.
+Lowercase format characters are 10^3 based and uppercase are 2^n
+based, e.g. 1k = 1000, 1K = 1024, 1m = 1,000,000 and 1M = 1,048,576
+.P
+The -b option supports variable offered loads through the
+<mean>,<standard deviation> format, e.g. -b 100m,10m on the client.
+The distribution used is log normal.  Similar for the isochronous
+option.
+.P
+The -e or --enhanced latency output on the UDP servers assumes the
+clients' and servers' system clocks are synchronized.  Network Time
+Protocol (NTP) or Precision Time Protocol (PTP) are commonly used for
+this.  The reference clock(s) or oscillator's error will also affect
+the accuracy of UDP latency measurements.
+.P
+The -B option affects the bind() system call.  This is typically used
+to bind to a particular IP address. Only packets destined to that IP
+address will be received while any transmitted packets will carry that
+IP address as their source. The bind() does not control anything about
+the routing of transmitted packets. So, for example, if the IP address
+of eth0 is used for -B and the routing table for the destination IP
+address (per -c) resolves the ouput interface to be eth1, then the
+host will send the packet out device eth1 with the source IP address
+of eth0.  To affect the physical output interface (e.g. dual homed
+systems) the host's routing table(s) need to be configured,
+e.g. configure policy routing per each -B source address.
+.P
+The TCP connect time (or three way handshake) can be seen on the iperf
+client when the -e (--enhancedreports) option is set. Look for the
+ct=<value> in the connected message, e.g.in '[ 3] local 192.168.1.4
+port 48736 connected with 192.168.1.1 port 5001 \fB(ct=1.84 ms)\fR'
+shows the 3WHS took 1.84 milliseconds.
+.P
+The network power (NetPwr) metric is \fBexperimental\fR.  It's a
+convenience function defined as throughput/delay.  For TCP, the delay
+is the sampled RTT times.  For UDP the delay is the end/end latency.
+Don't confuse this with the physics definition of power (delta
+energy/delta time) but more of a measure of a desireable property
+divided by an undesireable property.  Also note, one must use -i
+interval with TCP to get this as that's what sets the RTT sampling
+rate.  The metric is scaled to assist with human readability.  (Note:
+if this metric goes beyond the experimental state we'll consider a
+supporting and RTT sampling rate independent of the -i interval.)
 .SH DIAGNOSTICS
 This section needs to be filled in.
 .SH BUGS
 See https://sourceforge.net/p/iperf2/tickets/
 .SH AUTHORS
-Iperf2, based from iperf (originally written by Mark Gates and Alex Warshavsky), has a goal of maintainence with some feature enhancement.
+Iperf2, based from iperf (originally written by Mark Gates and Alex
+Warshavsky), has a goal of maintainence with some feature enhancement.
 Other contributions from Ajay Tirumala, Jim Ferguson, Jon Dugan <jdugan at x1024 dot net>,
 Feng Qin,
 Kevin Gibbs,
 John Estabrook <jestabro at ncsa.uiuc.edu>,
 Andrew Gallatin <gallatin at gmail.com>,
 Stephen Hemminger <shemminger at linux-foundation.org>,
-Tim Auckland,
+Tim Auckland <tim.auckland at gmail.com>,
 Robert J. McMahon <rjmcmahon at rjmcmahon.com>
 .SH "SEE ALSO"
 http://sourceforge.net/projects/iperf2/
