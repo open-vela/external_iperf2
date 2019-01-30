@@ -151,7 +151,9 @@ MultiHeader* InitMulti( thread_Settings *agent, int inID) {
             memset( multihdr, 0, sizeof(MultiHeader) );
             Condition_Initialize( &multihdr->barrier );
             multihdr->groupID = inID;
-            multihdr->threads = agent->mThreads;
+	    if (agent->mThreadMode == kMode_Client) {
+		multihdr->threads = agent->mThreads;
+	    }
             if ( isMultipleReport( agent ) ) {
                 int i;
                 ReporterData *data = NULL;
