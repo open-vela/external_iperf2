@@ -73,6 +73,7 @@
 #include "Thread.h"
 #include "Locale.h"
 #include "util.h"
+#include "delay.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -96,6 +97,7 @@ Condition thread_sNum_cond;
  * level in solaris.
  * ------------------------------------------------------------------- */
 void thread_init( ) {
+    thread_sNum = 0;
     Condition_Initialize( &thread_sNum_cond );
 #if defined( sun )
     /* Solaris apparently doesn't default to timeslicing threads,
@@ -186,8 +188,10 @@ void thread_stop( struct thread_Settings* thread ) {
         // use cancel() if called from a different thread
         if ( thread_equalid( thread_getid(), thread->mTID ) ) {
 
+#ifndef HAVE_PTHREAD_CLEANUP_PUSH
             // Destroy the object
             Settings_Destroy( thread );
+#endif
 
             // Exit
 #if   defined( HAVE_POSIX_THREAD )
@@ -210,12 +214,25 @@ void thread_stop( struct thread_Settings* thread ) {
             TerminateThread( thread->mHandle, 0 );
 #endif
 
+#ifndef HAVE_PTHREAD_CLEANUP_PUSH
             // Destroy the object only after killing the thread
             Settings_Destroy( thread );
+#endif
         }
     }
 #endif
 } // end Stop
+
+
+/* -------------------------------------------------------------------
+ * This function is the callback function when thread canceled
+ * ------------------------------------------------------------------- */
+#ifdef HAVE_PTHREAD_CLEANUP_PUSH
+static void setting_clean(void *arg)
+{
+    Settings_Destroy((thread_Settings*)arg);
+}
+#endif
 
 /* -------------------------------------------------------------------
  * This function is the entry point for new threads created in
@@ -228,6 +245,10 @@ void*
 #endif
 thread_run_wrapper( void* paramPtr ) {
     struct thread_Settings* thread = (struct thread_Settings*) paramPtr;
+
+#ifdef HAVE_PTHREAD_CLEANUP_PUSH
+    pthread_cleanup_push(setting_clean, thread);
+#endif
 
     // which type of object are we
     switch ( thread->mThreadMode ) {
@@ -278,6 +299,10 @@ thread_run_wrapper( void* paramPtr ) {
     if ( thread->runNext != NULL ) {
         thread_start( thread->runNext );
     }
+
+#ifdef HAVE_PTHREAD_CLEANUP_PUSH
+    pthread_cleanup_pop(0);
+#endif
 
     // Destroy this thread object
     Settings_Destroy( thread );
@@ -405,6 +430,7 @@ int thread_numuserthreads( void ) {
 void thread_rest ( void ) {
 #if defined( HAVE_THREAD )
 #if defined( HAVE_POSIX_THREAD )
+    delay_nanosleep(1000);
 #else // Win32
     SwitchToThread( );
 #endif
