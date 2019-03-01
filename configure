@@ -8112,6 +8112,17 @@ fi
 cat >>confdefs.h <<_ACEOF
 #define HAVE_DECL_SO_DONTROUTE $ac_have_decl
 _ACEOF
+ac_fn_c_check_decl "$LINENO" "SO_REUSEADDR" "ac_cv_have_decl_SO_REUSEADDR" "$in_h
+"
+if test "x$ac_cv_have_decl_SO_REUSEADDR" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_SO_REUSEADDR $ac_have_decl
+_ACEOF
 ac_fn_c_check_decl "$LINENO" "IPV6_TCLASS" "ac_cv_have_decl_IPV6_TCLASS" "$in_h
 "
 if test "x$ac_cv_have_decl_IPV6_TCLASS" = xyes; then :
