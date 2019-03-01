@@ -300,7 +300,7 @@ void Sig_Interupt( int inSigno ) {
     // then that is the only thread that can supply the next interrupt
     if ( (inSigno == SIGINT) && thread_equalid( sThread, thread_zeroid() ) ) {
         sThread = thread_getid();
-    } else if ( thread_equalid( sThread, thread_getid() ) ) {
+    } else {
         sig_exit( inSigno );
     }
     // global variable used by threads to see if they were interrupted
