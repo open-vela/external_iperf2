@@ -339,7 +339,9 @@ void Settings_Initialize (struct thread_Settings *main) {
     //main->mListenPort   = 0;           // -L,  listen port
     //main->mMSS          = 0;           // -M,  ie. don't set MSS
     //main->mNodelay    = false;         // -N,  don't set nodelay
-    //main->mThreads      = 0;           // -P,
+#if !defined(WIN32) && !defined(HAVE_DECL_SO_REUSEADDR)
+    main->mThreads      = 1;             // -P,
+#endif
     //main->mRemoveService = false;      // -R,
     //main->mTOS          = 0;           // -S,  ie. don't set type of service
     main->mTTL          = -1;            // -T,  link-local TTL

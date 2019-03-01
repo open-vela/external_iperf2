@@ -180,7 +180,9 @@ void Listener::Run () {
 	}
 	if (isUDP(mSettings)) {
 	    // UDP needs a new listen per every new socket
+#if defined(WIN32) || defined( HAVE_DECL_SO_REUSEADDR)
 	    my_listen(); // This will set ListenSocket to a new sock fd
+#endif
 	}
 	// Use a select() with a timeout if -t is set or if this is a v1 -r or -d test
 	fd_set set;
