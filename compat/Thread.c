@@ -188,6 +188,7 @@ struct Condition thread_sNum_cond;
  * ------------------------------------------------------------------- */
 void thread_init() {
     thread_sNum = 0;
+    nonterminating_num = 0;
     Condition_Initialize(&thread_sNum_cond);
 #if defined(sun)
     /* Solaris apparently doesn't default to timeslicing threads,
@@ -408,7 +409,7 @@ thread_run_wrapper(void* paramPtr) {
     // detach Thread. If someone already joined it will not do anything
     // If none has then it will free resources upon return from this
     // function (Run_Wrapper)
-    pthread_detach(thread->mTID);
+    pthread_detach(thread_getid());
 #endif
 
     // decrement thread count and send condition signal
