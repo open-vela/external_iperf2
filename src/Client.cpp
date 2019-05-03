@@ -127,6 +127,12 @@ Client::Client( thread_Settings *inSettings ) {
 	    mSettings->txstart_epoch.tv_usec = now.getUsecs();
 	}
     }
+    if (isTxHoldback(inSettings)) {
+        Timestamp now;
+	now.add(inSettings->txholdbacktime);
+	inSettings->txholdback_ts.tv_sec = now.getSecs();
+        inSettings->txholdback_ts.tv_nsec = (1000 * now.getUsecs());
+    }
 #endif
 #endif
 
@@ -147,6 +153,11 @@ Client::Client( thread_Settings *inSettings ) {
     InitReport(mSettings);
     if (mSettings->reporthdr) {
 	mSettings->reporthdr->report.connection.connecttime = ct;
+	if (isTxHoldback(inSettings)) {
+	    mSettings->reporthdr->report.connection.txholdbacktime  = inSettings->txholdbacktime - ct;
+	    if (mSettings->reporthdr->report.connection.txholdbacktime  < 0.0)
+	        mSettings->reporthdr->report.connection.txholdbacktime  = 0.0;
+	}
     }
 
     reportstruct = new ReportStruct;
@@ -315,8 +326,34 @@ void Client::Run( void ) {
 
     // Post the very first report which will have connection, version and test information
     PostFirstReport(mSettings);
+
     // Peform common traffic setup
     InitTrafficLoop();
+
+#ifdef HAVE_CLOCK_NANOSLEEP
+    // Add delay between connect and the writes.  Use case is for multiple iperf sessions to
+    // holdback their data xfer phase so other iperf sessions can complete connects
+    if (isTxHoldback(mSettings)) {
+        int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &mSettings->txholdback_ts, NULL);
+        if (rc) {
+	  fprintf(stderr, "failed clock_nanosleep()=%d per --tx-holdback\n", rc);
+        } else {
+	    // This can become a race
+	    ReportHeader *reporthdr = mSettings->reporthdr;
+	    if (reporthdr) {
+	        gettimeofday( &(reporthdr->report.startTime), NULL );
+	        // set next report time
+	        reporthdr->report.nextTime = reporthdr->report.startTime;
+	        TimeAdd( reporthdr->report.nextTime, reporthdr->report.intervalTime );
+	        // push an empty packet thru
+	        reportstruct->packetLen = 0;
+	        reportstruct->packetTime = reporthdr->report.startTime;
+	        ReportPacket( mSettings->reporthdr, reportstruct );
+	    }
+	}
+    }
+#endif
+
     /*
      * UDP specific setup
      */

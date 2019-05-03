@@ -1318,29 +1318,52 @@ int reporter_condprintstats( ReporterData *stats, MultiHeader *multireport, int 
                    stats->intervalTime.tv_usec != 0) &&
                   TimeDifference( stats->nextTime,
                                   stats->packetTime ) < 0 ) {
-	    stats->info.cntOutofOrder = stats->cntOutofOrder - stats->lastOutofOrder;
-	    stats->lastOutofOrder = stats->cntOutofOrder;
-	    // assume most of the  time out-of-order packets are not
-	    // duplicate packets, so conditionally subtract them from the lost packets.
-	    stats->info.cntError = stats->cntError - stats->lastError;
-	    stats->info.cntError -= stats->info.cntOutofOrder;
-	    if ( stats->info.cntError < 0) {
-		stats->info.cntError = 0;
-	    }
-	    stats->lastError = stats->cntError;
-	    stats->info.cntDatagrams = ((stats->info.mUDP == kMode_Server) ? stats->PacketID - stats->lastDatagrams :
-					stats->cntDatagrams - stats->lastDatagrams);
-	    stats->lastDatagrams = ((stats->info.mUDP == kMode_Server) ? stats->PacketID : stats->cntDatagrams);
-	    stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
-	    stats->lastTotal = stats->TotalLen;
+	static int ignore_pktevent = 0;
 	    stats->info.startTime = stats->info.endTime;
 	    stats->info.endTime = TimeDifference( stats->nextTime, stats->startTime );
-	    TimeAdd( stats->nextTime, stats->intervalTime );
-	    stats->info.free = 0;
-	    reporter_print( stats, TRANSFER_REPORT, force );
-	    if ( isMultipleReport(stats) ) {
-		reporter_handle_multiple_reports( multireport, &stats->info, force );
+	    TimeAdd(stats->nextTime, stats->intervalTime);
+	    if (TimeDifference(stats->nextTime, stats->packetTime) < 0) {
+	        ReporterData emptystats;
+		memset(&emptystats, 0, sizeof(ReporterData));
+		emptystats.info.startTime = stats->info.startTime;
+		emptystats.info.endTime = stats->info.endTime;
+		emptystats.info.mFormat = stats->info.mFormat;
+		emptystats.info.mTCP = stats->info.mTCP;
+		emptystats.info.mUDP = stats->info.mUDP;
+		emptystats.info.mIsochronous = stats->info.mIsochronous;
+		emptystats.info.mEnhanced = stats->info.mEnhanced;
+		emptystats.info.transferID = stats->info.transferID;
+		emptystats.info.groupID = stats->info.groupID;
+		reporter_print( &emptystats, TRANSFER_REPORT, 0);
+		ignore_pktevent = 0;
+		continue;
+	    } else {
+	        if (ignore_pktevent) {
+		    ignore_pktevent = 0;
+		    return 0;
+	        }
+	        stats->info.cntOutofOrder = stats->cntOutofOrder - stats->lastOutofOrder;
+	        stats->lastOutofOrder = stats->cntOutofOrder;
+	        // assume most of the  time out-of-order packets are not
+	        // duplicate packets, so conditionally subtract them from the lost packets.
+	        stats->info.cntError = stats->cntError - stats->lastError;
+	        stats->info.cntError -= stats->info.cntOutofOrder;
+	        if (stats->info.cntError < 0) {
+		  stats->info.cntError = 0;
+	        }
+		stats->lastError = stats->cntError;
+		stats->info.cntDatagrams = ((stats->info.mUDP == kMode_Server) ? stats->PacketID - stats->lastDatagrams :
+					    stats->cntDatagrams - stats->lastDatagrams);
+		stats->lastDatagrams = ((stats->info.mUDP == kMode_Server) ? stats->PacketID : stats->cntDatagrams);
+		stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
+		stats->lastTotal = stats->TotalLen;
+		stats->info.free = 0;
+		reporter_print( stats, TRANSFER_REPORT, force );
 	    }
+	    if ( isMultipleReport(stats) ) {
+	        reporter_handle_multiple_reports( multireport, &stats->info, force );
+	    }
+
 	    /*
 	     * Reset transfer stats now that both the individual and SUM reports
 	     * have completed

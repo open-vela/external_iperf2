@@ -239,6 +239,7 @@ typedef struct Connection_Info {
     char *peerversion;
     int l2mode;
     double connecttime;
+    double txholdbacktime;
     struct timeval epochStartTime;
 } Connection_Info;
 
