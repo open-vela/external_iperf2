@@ -73,7 +73,6 @@
 #include "pdfs.h"
 #endif
 
-static int seqno64b = 0;
 static int reversetest = 0;
 static int udphistogram = 0;
 static int l2checks = 0;
@@ -87,7 +86,6 @@ static int burstipg = 0;
 static int burstipg_set = 0;
 static int isochronous = 0;
 #endif
-static int setcport = 0;
 
 void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtSettings );
 // apply compound settings after the command line has been fully parsed
@@ -102,7 +100,7 @@ void Settings_ModalOptions( thread_Settings *mExtSettings );
  * ------------------------------------------------------------------- */
 #define LONG_OPTIONS()
 
-const struct gnu_option long_options[] =
+const struct option long_options[] =
 {
 {"singleclient",     no_argument, NULL, '1'},
 {"bandwidth",  required_argument, NULL, 'b'},
@@ -150,7 +148,6 @@ const struct gnu_option long_options[] =
 {"suggest_win_size", no_argument, NULL, 'W'},
 {"peer-detect",      no_argument, NULL, 'X'},
 {"linux-congestion", required_argument, NULL, 'Z'},
-{"udp-counters-64bit", no_argument, &seqno64b, 1},
 {"udp-histogram", optional_argument, &udphistogram, 1},
 {"l2checks", no_argument, &l2checks, 1},
 {"incr-dstip", no_argument, &incrdstip, 1},
@@ -165,13 +162,12 @@ const struct gnu_option long_options[] =
 #ifdef WIN32
 {"reverse", no_argument, &reversetest, 1},
 #endif
-{"cport", required_argument, &setcport, 1},
 {0, 0, 0, 0}
 };
 
 #define ENV_OPTIONS()
 
-const struct gnu_option env_options[] =
+const struct option env_options[] =
 {
 {"IPERF_IPV6_DOMAIN",      no_argument, NULL, 'V'},
 {"IPERF_SINGLECLIENT",     no_argument, NULL, '1'},
@@ -228,7 +224,7 @@ const int  kDefault_UDPBufLen = 1470;      // -u  if set, read/write 1470 bytes
 // v4: 1470 bytes UDP payload will fill one and only one ethernet datagram (IPv4 overhead is 20 bytes)
 const int  kDefault_UDPBufLenV6 = 1450;      // -u  if set, read/write 1470 bytes
 // v6: 1450 bytes UDP payload will fill one and only one ethernet datagram (IPv6 overhead is 40 bytes)
-const int kDefault_TCPBufLen = 10 * 1024; // TCP default read/write size
+const int kDefault_TCPBufLen = 128 * 1024; // TCP default read/write size
 /* -------------------------------------------------------------------
  * Initialize all settings to defaults.
  * ------------------------------------------------------------------- */
@@ -274,9 +270,7 @@ void Settings_Initialize( thread_Settings *main ) {
     //main->mListenPort   = 0;           // -L,  listen port
     //main->mMSS          = 0;           // -M,  ie. don't set MSS
     //main->mNodelay    = false;         // -N,  don't set nodelay
-#if !defined(WIN32) && !defined(HAVE_DECL_SO_REUSEADDR)
-    main->mThreads      = 1;             // -P,
-#endif
+    //main->mThreads      = 0;           // -P,
     //main->mRemoveService = false;      // -R,
     //main->mTOS          = 0;           // -S,  ie. don't set type of service
     main->mTTL          = -1;            // -T,  link-local TTL
@@ -342,17 +336,10 @@ void Settings_Destroy( thread_Settings *mSettings) {
     DELETE_ARRAY( mSettings->mOutputFileName );
     DELETE_ARRAY( mSettings->mUDPHistogramStr );
     DELETE_ARRAY( mSettings->mSSMMulticastStr);
-    DELETE_ARRAY( mSettings->mIfrname);
+    FREE_ARRAY( mSettings->mIfrname);
 #ifdef HAVE_ISOCHRONOUS
     DELETE_ARRAY( mSettings->mIsochronousStr );
 #endif
-    if (mSettings->multihdr) {
-        mSettings->multihdr->referenceCount--;
-        if (mSettings->multihdr->referenceCount == 0) {
-            DELETE_PTR( mSettings->multihdr );
-        }
-    }
-
     DELETE_PTR( mSettings );
 } // end ~Settings
 
@@ -738,14 +725,6 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
 	    break;
 
         case 0:
-	    if (seqno64b) {
-		seqno64b = 0;
-#if (HAVE_SEQNO64b && (HAVE_QUAD_SUPPORT || HAVE_INT64_T))
-		setSeqNo64b(mExtSettings);
-#else
-		fprintf( stderr, "WARNING: 64 bit sequence numbers not supported\n");
-#endif
-	    }
 	    if (incrdstip) {
 		incrdstip = 0;
 		setIncrDstIP(mExtSettings);
@@ -865,10 +844,6 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
 		}
 	    }
 #endif
-	    if (setcport) {
-		setcport = 0;
-		mExtSettings->mBindPort = atoi(optarg);
-	    }
 	    break;
         default: // ignore unknown
             break;
@@ -920,7 +895,8 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 
 
     // UDP histogram settings
-    if (isUDPHistogram(mExtSettings) && isUDP(mExtSettings) && mExtSettings->mThreadMode != kMode_Client) {
+    if (isUDPHistogram(mExtSettings) && isUDP(mExtSettings) && \
+	(mExtSettings->mThreadMode != kMode_Client) && mExtSettings->mUDPHistogramStr) {
 	if (((results = strtok(mExtSettings->mUDPHistogramStr, ",")) != NULL) && !strcmp(results,mExtSettings->mUDPHistogramStr)) {
 	    char *tmp = new char [strlen(results) + 1];
 	    strcpy(tmp, results);
@@ -933,9 +909,9 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 	    if ((results = strtok(results+strlen(results)+1, ",")) != NULL) {
 		mExtSettings->mUDPbins = byte_atoi(results);
 		if ((results = strtok(NULL, ",")) != NULL) {
-		    mExtSettings->mUDPci_lower = atoi(results);
+		    mExtSettings->mUDPci_lower = atof(results);
 		    if ((results = strtok(NULL, ",")) != NULL) {
-			mExtSettings->mUDPci_upper = atoi(results);
+			mExtSettings->mUDPci_upper = atof(results);
 		    }
 		}
 	    }
@@ -1191,6 +1167,7 @@ int Settings_GenerateClientHdr( thread_Settings *client, client_hdr *hdr ) {
     if (isPeerVerDetect(client) || (client->mMode != kTest_Normal && isBWSet(client))) {
 	flags |= HEADER_EXTEND;
     }
+    flags |= HEADER_SEQNO64B;
     if ( client->mMode != kTest_Normal ) {
 	flags |= HEADER_VERSION1;
 	if ( isBuflenSet( client ) ) {
