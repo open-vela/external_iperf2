@@ -495,6 +495,10 @@ void *reporter_reportpeer( Connection_Info *stats, int ID ) {
 	}
 	if (stats->connecttime > 0) {
 	    snprintf(b, PEERBUFSIZE-strlen(b), " (ct=%4.2f ms)", stats->connecttime);;
+	    b += strlen(b);
+	}
+	if (stats->txholdbacktime > 0) {
+	    snprintf(b, PEERBUFSIZE-strlen(b), " (ht=%4.2f s)", stats->txholdbacktime);;
 	}
         if ( local->sa_family == AF_INET ) {
             inet_ntop( AF_INET, &((struct sockaddr_in*)local)->sin_addr,

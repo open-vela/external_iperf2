@@ -79,6 +79,7 @@ static int udphistogram = 0;
 static int l2checks = 0;
 static int incrdstip = 0;
 static int txstarttime = 0;
+static int txholdback = 0;
 static int fqrate = 0;
 static int triptime = 0;
 #ifdef HAVE_ISOCHRONOUS
@@ -154,6 +155,7 @@ const struct gnu_option long_options[] =
 {"l2checks", no_argument, &l2checks, 1},
 {"incr-dstip", no_argument, &incrdstip, 1},
 {"txstart-time", required_argument, &txstarttime, 1},
+{"txdelay-time", required_argument, &txholdback, 1},
 {"fq-rate", required_argument, &fqrate, 1},
 {"trip-time", no_argument, &triptime, 1},
 #ifdef HAVE_ISOCHRONOUS
@@ -780,10 +782,26 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
 		    mExtSettings->txstart.tv_sec = seconds;
 		    mExtSettings->txstart.tv_nsec = 0;
 		} else {
+		    unsetTxStartTime(mExtSettings);
 		    fprintf(stderr, "WARNING: invalid --txstart-time format\n");
 		}
 #else
 	        fprintf(stderr, "WARNING: --txstart-time not supported\n");
+#endif
+	    }
+	    if (txholdback) {
+		txholdback = 0;
+#ifdef HAVE_CLOCK_NANOSLEEP
+	        char *end;
+		mExtSettings->txholdbacktime = strtof( optarg, &end );
+		if (*end != '\0') {
+		    fprintf (stderr, "Invalid value of '%s' for --tcp-holdback time\n", optarg);
+		} else {
+		    setTxHoldback(mExtSettings);
+		    setEnhanced( mExtSettings );
+		}
+#else
+	        fprintf(stderr, "WARNING: --tcp-holdback not supported\n");
 #endif
 	    }
 	    if (triptime) {
