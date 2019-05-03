@@ -225,8 +225,8 @@ typedef struct thread_Settings {
 #ifdef HAVE_CLOCK_NANOSLEEP
     struct timespec txstart;
     struct timespec txholdback_ts;
-    double txholdbacktime;
 #endif
+    double txholdbacktime;
 } thread_Settings;
 
 /*
