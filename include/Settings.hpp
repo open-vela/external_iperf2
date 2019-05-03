@@ -224,6 +224,8 @@ typedef struct thread_Settings {
     struct timeval txstart_epoch;
 #ifdef HAVE_CLOCK_NANOSLEEP
     struct timespec txstart;
+    struct timespec txholdback_ts;
+    double txholdbacktime;
 #endif
 } thread_Settings;
 
@@ -283,7 +285,7 @@ typedef struct thread_Settings {
 #define FLAG_VARYLOAD       0x00000800
 #define FLAG_FQPACING       0x00001000
 #define FLAG_TRIPTIME       0x00002000
-
+#define FLAG_TXHOLDBACK      0x00004000
 
 #define isBuflenSet(settings)      ((settings->flags & FLAG_BUFLENSET) != 0)
 #define isCompat(settings)         ((settings->flags & FLAG_COMPAT) != 0)
@@ -323,6 +325,7 @@ typedef struct thread_Settings {
 #define isL2LengthCheck(settings)  ((settings->flags_extend & FLAG_L2LENGTHCHECK) != 0)
 #define isIncrDstIP(settings)      ((settings->flags_extend & FLAG_INCRDSTIP) != 0)
 #define isTxStartTime(settings)         ((settings->flags_extend & FLAG_TXSTARTTIME) != 0)
+#define isTxHoldback(settings)     ((settings->flags_extend & FLAG_TXHOLDBACK) != 0)
 #define isVaryLoad(settings)       ((settings->flags_extend & FLAG_VARYLOAD) != 0)
 #define isFQPacing(settings)       ((settings->flags_extend & FLAG_FQPACING) != 0)
 #define isTripTime(settings)       ((settings->flags_extend & FLAG_TRIPTIME) != 0)
@@ -363,6 +366,7 @@ typedef struct thread_Settings {
 #define setL2LengthCheck(settings)    settings->flags_extend |= FLAG_L2LENGTHCHECK
 #define setIncrDstIP(settings)     settings->flags_extend |= FLAG_INCRDSTIP
 #define setTxStartTime(settings)        settings->flags_extend |= FLAG_TXSTARTTIME
+#define setTxHoldback(settings)    settings->flags_extend |= FLAG_TXHOLDBACK
 #define setVaryLoad(settings)      settings->flags_extend |= FLAG_VARYLOAD
 #define setFQPacing(settings)      settings->flags_extend |= FLAG_FQPACING
 #define setTripTime(settings)      settings->flags_extend |= FLAG_TRIPTIME
@@ -403,6 +407,7 @@ typedef struct thread_Settings {
 #define unsetL2LengthCheck(settings)  settings->flags_extend &= ~FLAG_L2LENGTHCHECK
 #define unsetIncrDstIP(settings)   settings->flags_extend &= ~FLAG_INCRDSTIP
 #define unsetTxStartTime(settings)      settings->flags_extend &= ~FLAG_TXSTARTTIME
+#define unsetTxHoldback(settings)  settings->flags_extend &= ~FLAG_TXHOLDBACK
 #define unsetVaryLoad(settings)      settings->flags_extend &= ~FLAG_VARYLOAD
 #define unsetFQPacing(settings)     settings->flags_extend &= ~FLAG_FQPACING
 #define unsetTripTime(settings)     settings->flags_extend &= ~FLAG_TRIPTIME
