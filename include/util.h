@@ -170,7 +170,7 @@ void pattern( char *outBuf, int inBytes );
  * ------------------------------------------------------------------- */
 double byte_atof( const char *inString );
 double bitorbyte_atof( const char *inString );
-max_size_t byte_atoi( const char  *inString );
+intmax_t byte_atoi( const char  *inString );
 unsigned int bitorbyte_atoi( const char *inString );
 void byte_snprintf( char* outString, int inLen, double inNum, char inFormat );
 
@@ -195,6 +195,14 @@ void redirect(const char *inOutputFileName);
   do {                                          \
     if ( ptr != NULL ) {                        \
       delete [] ptr;                            \
+      ptr = NULL;                               \
+    }                                           \
+  } while( false )
+
+#define FREE_ARRAY( ptr )                     \
+  do {                                          \
+    if ( ptr != NULL ) {                        \
+      free(ptr); \
       ptr = NULL;                               \
     }                                           \
   } while( false )

@@ -70,7 +70,6 @@
 #include "Listener.hpp"
 #include "List.h"
 #include "util.h"
-#include "gnu_getopt.h"
 
 #ifdef WIN32
 #include "service.h"
@@ -120,28 +119,16 @@ void waitUntilQuit( void );
  * starts up server or client thread
  * waits for all threads to complete
  * ------------------------------------------------------------------- */
-extern "C"
-{
-#if defined(BUILD_MODULE)
 int main( int argc, char **argv ) {
-#else
-int iperf2_main(int argc, char **argv) {
-#endif
-    // init Interupted
-    sInterupted = 0;
 
     // Set SIGTERM and SIGINT to call our user interrupt function
-#ifdef SIGTERM
     my_signal( SIGTERM, Sig_Interupt );
-#endif
     my_signal( SIGINT,  Sig_Interupt );
 #ifndef WIN32
     my_signal( SIGALRM,  Sig_Interupt );
 
-#ifdef SIGPIPE
     // Ignore broken pipes
     signal(SIGPIPE,SIG_IGN);
-#endif
 #else
     // Start winsock
     WSADATA wsaData;
@@ -160,19 +147,14 @@ int iperf2_main(int argc, char **argv) {
     Mutex_Initialize( &groupCond );
     Mutex_Initialize( &clients_mutex );
 
-    // reset gnu
-    gnu_reset();
-
     // Initialize the thread subsystem
     thread_init( );
 
     // Initialize the interrupt handling thread to 0
     sThread = thread_zeroid();
 
-#ifdef HAVE_ATEXIT
     // perform any cleanup when quitting Iperf
     atexit( cleanup );
-#endif
 
     // Allocate the "global" settings
     thread_Settings* ext_gSettings = new thread_Settings;
@@ -185,47 +167,38 @@ int iperf2_main(int argc, char **argv) {
     Settings_ParseCommandLine( argc, argv, ext_gSettings );
 
     // Check for either having specified client or server
-    if ( ext_gSettings->mThreadMode == kMode_Client
-         || ext_gSettings->mThreadMode == kMode_Listener ) {
-#ifdef WIN32
-        // Start the server as a daemon
-        if ( isDaemon( ext_gSettings )) {
-	    if (ext_gSettings->mThreadMode == kMode_Listener) {
-		CmdInstallService(argc, argv);
-	    } else {
-		fprintf(stderr, "Client cannot be run as a daemon\n");
-	    }
-            return 0;
-        }
+    if ((ext_gSettings->mThreadMode != kMode_Client) && (ext_gSettings->mThreadMode != kMode_Listener)) {
+        // neither server nor client mode was specified
+        // print usage and exit
 
-        // Remove the Windows service if requested
-        if ( isRemoveService( ext_gSettings ) ) {
-            // remove the service
-            if ( CmdRemoveService() ) {
-                fprintf(stderr, "IPerf Service is removed.\n");
-                return 0;
-            }
-        }
-#else
-	if ( isDaemon( ext_gSettings ) ) {
-	    if (ext_gSettings->mThreadMode != kMode_Listener) {
-		fprintf(stderr, "Iperf client cannot be run as a daemon\n");
-		return 0;
-	    }
-	    if (daemon(1, 1) < 0) {
-	        perror("daemon");
-	    }
-	    fprintf( stderr, "Running Iperf Server as a daemon\n");
-	    fprintf( stderr, "The Iperf daemon process ID : %d\n",((int)getpid()));
-	    fclose(stdout);
-	    fclose(stderr);
-	    fclose(stdin);
-	}
+#ifdef WIN32
+        // In Win32 we also attempt to start a previously defined service
+        // Starting in 2.0 to restart a previously defined service
+        // you must call iperf with "iperf -D" or using the environment variable
+        SERVICE_TABLE_ENTRY dispatchTable[] =
+	    {
+		{ (LPSTR)TEXT(SZSERVICENAME), (LPSERVICE_MAIN_FUNCTION)service_main},
+		{ NULL, NULL}
+	    };
+
+	// starting the service by SCM, there is no arguments will be passed in.
+	// the arguments will pass into Service_Main entry.
+        if (!StartServiceCtrlDispatcher(dispatchTable) )
+            // If the service failed to start then print usage
 #endif
+	    fprintf( stderr, usage_short, argv[0], argv[0] );
+	return 0;
+    }
+
+
+    switch (ext_gSettings->mThreadMode) {
+    case kMode_Client :
+	if ( isDaemon( ext_gSettings ) ) {
+	    fprintf(stderr, "Iperf client cannot be run as a daemon\n");
+	    return 0;
+	}
         // initialize client(s)
-        if ( ext_gSettings->mThreadMode == kMode_Client ) {
-            client_init( ext_gSettings );
-        }
+        client_init( ext_gSettings );
 #ifdef HAVE_CLOCK_NANOSLEEP
 #ifdef HAVE_CLOCK_GETTIME
 	if (isEnhanced(ext_gSettings) && isTxStartTime(ext_gSettings)) {
@@ -235,50 +208,55 @@ int iperf2_main(int argc, char **argv) {
 	}
 #endif
 #endif
-
-
-
+	break;
+    case kMode_Listener :
+#ifdef WIN32
+     // Remove the Windows service if requested
+	if ( isRemoveService( ext_gSettings ) ) {
+	    // remove the service
+	    if ( CmdRemoveService() ) {
+		fprintf(stderr, "IPerf Service is removed.\n");
+	    }
+	}
+	if ( isDaemon( ext_gSettings ) ) {
+	    CmdInstallService(argc, argv);
+	} else if (isRemoveService(ext_gSettings)) {
+	    return 0;
+	}
+#else // *nix system
+	if ( isDaemon( ext_gSettings ) ) {
+	    fprintf( stderr, "Running Iperf Server as a daemon\n");
+	    // Start the server as a daemon
+	    fflush(stderr);
+	    // redirect stdin, stdout and sterr to /dev/null (see dameon and no close flag)
+	    if (daemon(1, 0) < 0) {
+	        perror("daemon");
+	    }
+	}
+#endif
+	break;
+    default :
+	fprintf( stderr, "unknown mode");
+	break;
+    }
 #ifdef HAVE_THREAD
         // start up the reporter and client(s) or listener
-        {
-            thread_Settings *into = NULL;
-            // Create the settings structure for the reporter thread
-            Settings_Copy( ext_gSettings, &into );
-            into->mThreadMode = kMode_Reporter;
+    {
+	thread_Settings *into = NULL;
+	// Create the settings structure for the reporter thread
+	Settings_Copy( ext_gSettings, &into );
+	into->mThreadMode = kMode_Reporter;
 
-            // Have the reporter launch the client or listener
-            into->runNow = ext_gSettings;
+	// Have the reporter launch the client or listener
+	into->runNow = ext_gSettings;
 
-            // Start all the threads that are ready to go
-            thread_start( into );
-        }
-#else
-        // No need to make a reporter thread because we don't have threads
-        thread_start( ext_gSettings );
-#endif
-    } else {
-        // neither server nor client mode was specified
-        // print usage and exit
-
-#ifdef WIN32
-        // In Win32 we also attempt to start a previously defined service
-        // Starting in 2.0 to restart a previously defined service
-        // you must call iperf with "iperf -D" or using the environment variable
-        SERVICE_TABLE_ENTRY dispatchTable[] =
-        {
-            { (LPSTR)TEXT(SZSERVICENAME), (LPSERVICE_MAIN_FUNCTION)service_main},
-            { NULL, NULL}
-        };
-
-	// starting the service by SCM, there is no arguments will be passed in.
-	// the arguments will pass into Service_Main entry.
-        if (!StartServiceCtrlDispatcher(dispatchTable) )
-            // If the service failed to start then print usage
-#endif
-        fprintf( stderr, usage_short, argv[0], argv[0] );
-
-        return 0;
+	// Start all the threads that are ready to go
+	thread_start( into );
     }
+#else
+    // No need to make a reporter thread because we don't have threads
+    thread_start( ext_gSettings );
+#endif
 
     // wait for other (client, server) threads to complete
     thread_joinall();
@@ -286,7 +264,6 @@ int iperf2_main(int argc, char **argv) {
     // all done!
     return 0;
 } // end main
-}
 
 /* -------------------------------------------------------------------
  * Signal handler sets the sInterupted flag, so the object can
@@ -300,7 +277,7 @@ void Sig_Interupt( int inSigno ) {
     // then that is the only thread that can supply the next interrupt
     if ( (inSigno == SIGINT) && thread_equalid( sThread, thread_zeroid() ) ) {
         sThread = thread_getid();
-    } else {
+    } else if ( thread_equalid( sThread, thread_getid() ) ) {
         sig_exit( inSigno );
     }
     // global variable used by threads to see if they were interrupted

@@ -49,7 +49,7 @@
 #include "histogram.h"
 
 histogram_t *histogram_init(unsigned int bincount, unsigned int binwidth, float offset, float units,\
-			    unsigned short ci_lower, unsigned short ci_upper, unsigned int id, char *name) {
+			    double ci_lower, double ci_upper, unsigned int id, char *name) {
     histogram_t *this = (histogram_t *) malloc(sizeof(histogram_t));
     this->mybins = (unsigned int *) malloc(sizeof(unsigned int) * bincount);
     this->myname = (char *) malloc(sizeof(strlen(name)));
@@ -175,5 +175,5 @@ void histogram_print(histogram_t *h, double start, double end, int final) {
     h->outbuf[strlen(h->outbuf)-1] = '\0';
     if (!upperci)
        upperci=h->bincount;
-    fprintf(stdout, "%s (%d/%d%%=%d/%d,Outliers=%d,obl/obu=%d/%d)\n", h->outbuf, h->ci_lower, h->ci_upper, lowerci, upperci, outliercnt, oob_l, oob_u);
+    fprintf(stdout, "%s (%.2f/%.2f%%=%d/%d,Outliers=%d,obl/obu=%d/%d)\n", h->outbuf, h->ci_lower, h->ci_upper, lowerci, upperci, outliercnt, oob_l, oob_u);
 }
