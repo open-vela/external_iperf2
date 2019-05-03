@@ -70,14 +70,14 @@ extern "C" {
  */
 void reporter_printstats( Transfer_Info *stats ) {
     static char header_printed = 0;
-    int bytesxfered;
+    double bytesxfered;
 
     byte_snprintf( buffer, sizeof(buffer)/2, (double) stats->TotalLen,
                    toupper( (int)stats->mFormat));
     if (!stats->TotalLen || (stats->endTime < SMALLEST_INTERVAL)) {
         bytesxfered = 0;
     } else {
-        bytesxfered = stats->TotalLen;
+        bytesxfered = (double) stats->TotalLen;
     }
     byte_snprintf( &buffer[sizeof(buffer)/2], sizeof(buffer)/2,
                    (bytesxfered / (stats->endTime - stats->startTime)),
@@ -302,7 +302,7 @@ void reporter_multistats( Transfer_Info *stats ) {
     byte_snprintf( buffer, sizeof(buffer)/2, (double) stats->TotalLen,
                    toupper( (int)stats->mFormat));
     byte_snprintf( &buffer[sizeof(buffer)/2], sizeof(buffer)/2,
-                   stats->TotalLen / (stats->endTime - stats->startTime),
+                   ((double) stats->TotalLen) / (stats->endTime - stats->startTime),
                    stats->mFormat);
 
     if (!stats->mEnhanced) {
@@ -320,7 +320,15 @@ void reporter_multistats( Transfer_Info *stats ) {
 		    buffer, &buffer[sizeof(buffer)/2]);
 	}
     } else {
-	if (stats->mUDP) {
+	if (stats->mUDP == (char)kMode_Server) {
+            // UDP Reporting
+	    printf( report_sum_bw_pps_enhanced_format,
+		    stats->startTime, stats->endTime,
+		    buffer, &buffer[sizeof(buffer)/2],
+		    stats->cntError, stats->cntDatagrams,
+		    (100.0 * stats->cntError) / stats->cntDatagrams,
+		    (stats->IPGcnt ? (stats->IPGcnt / stats->IPGsum) : 0.0));
+	} else if (stats->mUDP) {
 	    // UDP Enhanced Reporting
 	    printf( report_sum_bw_pps_enhanced_format,
 		    stats->startTime, stats->endTime,
@@ -416,6 +424,9 @@ void reporter_reportsettings( ReporterData *data ) {
 	byte_snprintf(meanbuf, sizeof(meanbuf), data->isochstats.mMean, 'a');
 	byte_snprintf(variancebuf, sizeof(variancebuf), data->isochstats.mVariance, 'a');
 	printf(client_udp_isochronous, data->isochstats.mFPS, meanbuf, variancebuf, (data->isochstats.mBurstInterval/1000.0), (data->isochstats.mBurstIPG/1000.0));
+	if ((data->isochstats.mMean / data->isochstats.mFPS) < ((double) (sizeof(UDP_datagram) + sizeof(client_hdr_v1) + sizeof(struct client_hdr_udp_isoch_tests)))) {
+	    fprintf(stderr, "Warning: Requested mean too small to carry isoch payload, code will auto adjust payload sizes\n");
+	}
 #else
 	fprintf(stderr, "--isochronous not supportted, try --enable-isochronous during config and remake\n");
 #endif

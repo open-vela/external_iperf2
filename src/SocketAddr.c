@@ -140,17 +140,11 @@ void SockAddr_localAddr( thread_Settings *inSettings ) {
       */
      if (inSettings->mLocalhost == NULL) {
 	 if (inSettings->mThreadMode == kMode_Client) {
-	     if (inSettings->mBindPort) {
-		   /*
-		    * User specified port so use it
-		    */
-		    SockAddr_setPort( &inSettings->local, inSettings->mBindPort );
-	     } else {
-		   /*
-		    * No user specified port, let OS assign a free one
-		    */
-		    SockAddr_setPortAny (&inSettings->local);
-	     }
+	     /*
+	      * Client thread, -p and no -B,
+	      * OS will auto assign a free local port
+	      */
+	     SockAddr_setPortAny (&inSettings->local);
 	 } else {
 	     /* Server or Listener thread, -p and no -B */
 	     SockAddr_setPort( &inSettings->local, inSettings->mPort );
