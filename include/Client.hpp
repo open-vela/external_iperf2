@@ -89,6 +89,7 @@ public:
 
 private:
     void WritePacketID( intmax_t );
+    void WriteTcpID( intmax_t, int length );
     void InitTrafficLoop(void);
     void FinishTrafficActions(void);
     void FinalUDPHandshake(void);

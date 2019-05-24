@@ -142,8 +142,14 @@ number of bytes to transmit (instead of -t)
 Do a bidirectional test individually - client-to-server, followed by
 a reversed test, server-to-client
 .TP
+.BR "    --tcpwrite-time "
+enable tcp write timestamps and measusre tcp latencies per the write's -l length (client/server clocks must be synchronized)
+.TP
 .BR -t ", " --time " \fIn\fR"
 time in seconds to listen for new traffic connections, receive traffic or transmit traffic (Defaults: transmit is 10 secs while listen and receive are indefinite)
+.TP
+.BR "    --trip-time "
+enable measurement of the trip time (or data transer phase) with a TCP test (client/server clocks must be synchronized)
 .TP
 .BR "    --txdelay-time "
 time in seconds to hold back or delay after the TCP connect and prior to the socket writes.  For UDP it's the delay between the traffic thread starting and the first write.

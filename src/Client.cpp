@@ -412,14 +412,20 @@ void Client::Run( void ) {
 
 void Client::RunTCP( void ) {
     int currLen = 0;
+    struct TCP_datagram* mBuf_TCP = (struct TCP_datagram*) mBuf;
 
     while (InProgress()) {
-        // perform write
-        if (!isModeTime(mSettings)) {
-	    currLen = write( mSettings->mSock, mBuf, (mSettings->mAmount < (unsigned) mSettings->mBufLen) ? mSettings->mAmount : mSettings->mBufLen);
-	} else {
-	    currLen = write( mSettings->mSock, mBuf, mSettings->mBufLen);
+	int payload_len = mSettings->mBufLen;
+	if (!isModeTime(mSettings)) {
+	    payload_len = ((mSettings->mAmount < (unsigned) mSettings->mBufLen) ? mSettings->mAmount : mSettings->mBufLen);
 	}
+	if (!isTCPWriteTime(mSettings)) {
+	    WriteTcpID(reportstruct->packetID++, mSettings->mBufLen);
+	    mBuf_TCP->tv_sec  = htonl(reportstruct->packetTime.tv_sec);
+	    mBuf_TCP->tv_usec = htonl(reportstruct->packetTime.tv_usec);
+	}
+	// perform write
+	currLen = write( mSettings->mSock, mBuf, payload_len);
         if ( currLen < 0 ) {
 	    if (NONFATALTCPWRITERR(errno)) {
 	        reportstruct->errwrite=WriteErrAccount;
@@ -469,6 +475,7 @@ void Client::RunTCP( void ) {
  * A version of the transmit loop that supports TCP rate limiting using a token bucket
  */
 void Client::RunRateLimitedTCP ( void ) {
+    struct TCP_datagram* mBuf_TCP = (struct TCP_datagram*) mBuf;
     int currLen = 0;
     double tokens = 0;
     Timestamp time1, time2;
@@ -492,12 +499,17 @@ void Client::RunRateLimitedTCP ( void ) {
 	tokens += time2.subSec(time1) * (var_rate / 8.0);
 	time1 = time2;
 	if (tokens >= 0.0) {
-	    // perform write
+	    int payload_len = mSettings->mBufLen;
 	    if (!isModeTime(mSettings)) {
-	        currLen = write( mSettings->mSock, mBuf, (mSettings->mAmount < (unsigned) mSettings->mBufLen) ? mSettings->mAmount : mSettings->mBufLen);
-	    } else {
-	        currLen = write( mSettings->mSock, mBuf, mSettings->mBufLen);
+	      payload_len = ((mSettings->mAmount < (unsigned) mSettings->mBufLen) ? mSettings->mAmount : mSettings->mBufLen);
 	    }
+	    if (!isTCPWriteTime(mSettings)) {
+	        WriteTcpID(reportstruct->packetID++, mSettings->mBufLen);
+	        mBuf_TCP->tv_sec  = htonl(reportstruct->packetTime.tv_sec);
+	        mBuf_TCP->tv_usec = htonl(reportstruct->packetTime.tv_usec);
+	    }
+	    // perform write
+	    currLen = write( mSettings->mSock, mBuf, payload_len);
 	    if ( currLen < 0 ) {
 	        if (NONFATALTCPWRITERR(errno)) {
 		    reportstruct->errwrite=WriteErrAccount;
@@ -853,6 +865,34 @@ void Client::WritePacketID (intmax_t packetID) {
 #else
     mBuf_UDP->id = htonl((reportstruct->packetID));
 #endif
+}
+
+void Client::WriteTcpID (intmax_t packetID, int length) {
+    struct TCP_datagram * mBuf_TCP = (struct TCP_datagram *) mBuf;
+    // store packet ID into buffer
+#ifdef HAVE_INT64_T
+    // Pack signed 64bit packetID into unsigned 32bit id1 + unsigned
+    // 32bit id2.  A legacy server reading only id1 will still be able
+    // to reconstruct a valid signed packet ID number up to 2^31.
+    uint32_t id1, id2;
+    id1 = packetID & 0xFFFFFFFFLL;
+    id2 = (packetID  & 0xFFFFFFFF00000000LL) >> 32;
+
+    mBuf_TCP->id = htonl(id1);
+    mBuf_TCP->id2 = htonl(id2);
+
+#ifdef SHOW_PACKETID
+    printf("id %" PRIdMAX " (0x%" PRIxMAX ") -> 0x%x, 0x%x\n",
+	   packetID, packetID, id1, id2);
+#endif
+#else
+    mBuf_TCP->id = htonl((reportstruct->packetID));
+    mBuf_TCP->id2 = htonl(0x0);
+#endif
+    mBuf_TCP->reserved1 = htonl(0x0);
+    mBuf_TCP->reserved2 = htonl(0x0);
+    mBuf_TCP->typelen.type = htonl(0x1);
+    mBuf_TCP->typelen.length = htonl(length);
 }
 
 bool Client::InProgress (void) {
