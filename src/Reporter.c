@@ -343,20 +343,20 @@ void InitDataReport(thread_Settings *mSettings) {
 	if (data->mThreadMode == kMode_Server) {
 	    if (isUDPHistogram(mSettings)) {
 		char name[] = "T8";
-		data->info.latency_histogram =  histogram_init(mSettings->mUDPbins,mSettings->mUDPbinsize,0,\
-							       (mSettings->mUDPunits ? 1e6 : 1e3), \
-							       mSettings->mUDPci_lower, mSettings->mUDPci_upper, data->info.transferID, name);
+		data->info.latency_histogram =  histogram_init(mSettings->mRXbins,mSettings->mRXbinsize,0,\
+							       (mSettings->mRXunits ? 1e6 : 1e3), \
+							       mSettings->mRXci_lower, mSettings->mRXci_upper, data->info.transferID, name);
 	    }
 #ifdef HAVE_ISOCHRONOUS
 	    if (isUDPHistogram(mSettings) && isIsochronous(mSettings)) {
 		char name[] = "F8";
 		// make sure frame bin size min is 100 microsecond
-		if (mSettings->mUDPunits && (mSettings->mUDPbinsize < 100))
-		    mSettings->mUDPbinsize = 100;
-		mSettings->mUDPunits = 1;
-		data->info.framelatency_histogram =  histogram_init(mSettings->mUDPbins,mSettings->mUDPbinsize,0, \
-								    (mSettings->mUDPunits ? 1e6 : 1e3), mSettings->mUDPci_lower, \
-								    mSettings->mUDPci_upper, data->info.transferID, name);
+		if (mSettings->mRXunits && (mSettings->mRXbinsize < 100))
+		    mSettings->mRXbinsize = 100;
+		mSettings->mRXunits = 1;
+		data->info.framelatency_histogram =  histogram_init(mSettings->mRXbins,mSettings->mRXbinsize,0, \
+								    (mSettings->mRXunits ? 1e6 : 1e3), mSettings->mRXci_lower, \
+								    mSettings->mRXci_upper, data->info.transferID, name);
 	    }
 #endif
 	}
