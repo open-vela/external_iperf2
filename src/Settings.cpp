@@ -74,14 +74,13 @@
 #endif
 
 static int reversetest = 0;
-static int udphistogram = 0;
+static int rxhistogram = 0;
 static int l2checks = 0;
 static int incrdstip = 0;
 static int txstarttime = 0;
 static int txholdback = 0;
 static int fqrate = 0;
 static int triptime = 0;
-static int tcpwritetime = 0;
 #ifdef HAVE_ISOCHRONOUS
 static int burstipg = 0;
 static int burstipg_set = 0;
@@ -149,14 +148,14 @@ const struct option long_options[] =
 {"suggest_win_size", no_argument, NULL, 'W'},
 {"peer-detect",      no_argument, NULL, 'X'},
 {"linux-congestion", required_argument, NULL, 'Z'},
-{"udp-histogram", optional_argument, &udphistogram, 1},
+{"udp-histogram", optional_argument, &rxhistogram, 1},
+{"rx-histogram", optional_argument, &rxhistogram, 1},
 {"l2checks", no_argument, &l2checks, 1},
 {"incr-dstip", no_argument, &incrdstip, 1},
 {"txstart-time", required_argument, &txstarttime, 1},
 {"txdelay-time", required_argument, &txholdback, 1},
 {"fq-rate", required_argument, &fqrate, 1},
 {"trip-time", no_argument, &triptime, 1},
-{"tcpwrite-time", no_argument, &tcpwritetime, 1},
 #ifdef HAVE_ISOCHRONOUS
 {"ipg", required_argument, &burstipg, 1},
 {"isochronous", optional_argument, &isochronous, 1},
@@ -300,9 +299,9 @@ void Settings_Copy( thread_Settings *from, thread_Settings **into ) {
         (*into)->mFileName = new char[ strlen(from->mFileName) + 1];
         strcpy( (*into)->mFileName, from->mFileName );
     }
-    if ( from->mUDPHistogramStr != NULL ) {
-	(*into)->mUDPHistogramStr = new char[ strlen(from->mUDPHistogramStr) + 1];
-        strcpy( (*into)->mUDPHistogramStr, from->mUDPHistogramStr );
+    if ( from->mRxHistogramStr != NULL ) {
+	(*into)->mRxHistogramStr = new char[ strlen(from->mRxHistogramStr) + 1];
+        strcpy( (*into)->mRxHistogramStr, from->mRxHistogramStr );
     }
     if ( from->mSSMMulticastStr != NULL ) {
 	(*into)->mSSMMulticastStr = new char[ strlen(from->mSSMMulticastStr) + 1];
@@ -336,7 +335,7 @@ void Settings_Destroy( thread_Settings *mSettings) {
     DELETE_ARRAY( mSettings->mLocalhost );
     DELETE_ARRAY( mSettings->mFileName  );
     DELETE_ARRAY( mSettings->mOutputFileName );
-    DELETE_ARRAY( mSettings->mUDPHistogramStr );
+    DELETE_ARRAY( mSettings->mRxHistogramStr );
     DELETE_ARRAY( mSettings->mSSMMulticastStr);
     FREE_ARRAY( mSettings->mIfrname);
 #ifdef HAVE_ISOCHRONOUS
@@ -789,23 +788,19 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
 		triptime = 0;
 		setTripTime(mExtSettings);
 	    }
-	    if (tcpwritetime) {
-		tcpwritetime = 0;
-		setTCPWriteTime(mExtSettings);
-	    }
-	    if (udphistogram) {
-		udphistogram = 0;
-		setUDPHistogram( mExtSettings );
+	    if (rxhistogram) {
+		rxhistogram = 0;
+		setRxHistogram( mExtSettings );
 		setEnhanced( mExtSettings );
 		// The following are default values which
-		mExtSettings->mUDPbins = 1000;
-		mExtSettings->mUDPbinsize = 1;
-		mExtSettings->mUDPunits = 0;
-		mExtSettings->mUDPci_lower = 5;
-		mExtSettings->mUDPci_upper = 95;
+		mExtSettings->mRXbins = 1000;
+		mExtSettings->mRXbinsize = 1;
+		mExtSettings->mRXunits = 0;
+		mExtSettings->mRXci_lower = 5;
+		mExtSettings->mRXci_upper = 95;
 		if (optarg) {
-		    mExtSettings->mUDPHistogramStr = new char[ strlen( optarg ) + 1 ];
-		    strcpy(mExtSettings->mUDPHistogramStr, optarg);
+		    mExtSettings->mRxHistogramStr = new char[ strlen( optarg ) + 1 ];
+		    strcpy(mExtSettings->mRxHistogramStr, optarg);
 		}
 	    }
 	    if (reversetest) {
@@ -901,23 +896,23 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 
 
     // UDP histogram settings
-    if (isUDPHistogram(mExtSettings) && isUDP(mExtSettings) && \
-	(mExtSettings->mThreadMode != kMode_Client) && mExtSettings->mUDPHistogramStr) {
-	if (((results = strtok(mExtSettings->mUDPHistogramStr, ",")) != NULL) && !strcmp(results,mExtSettings->mUDPHistogramStr)) {
+    if (isRxHistogram(mExtSettings) && isUDP(mExtSettings) && \
+	(mExtSettings->mThreadMode != kMode_Client) && mExtSettings->mRxHistogramStr) {
+	if (((results = strtok(mExtSettings->mRxHistogramStr, ",")) != NULL) && !strcmp(results,mExtSettings->mRxHistogramStr)) {
 	    char *tmp = new char [strlen(results) + 1];
 	    strcpy(tmp, results);
 	    // scan for microseconds as units
 	    if ((strtok(tmp, "u") != NULL) && strcmp(results,tmp)) {
-		mExtSettings->mUDPunits = 1;
+		mExtSettings->mRXunits = 1;
 	    }
-	    mExtSettings->mUDPbinsize = atoi(tmp);
+	    mExtSettings->mRXbinsize = atoi(tmp);
 	    delete [] tmp;
 	    if ((results = strtok(results+strlen(results)+1, ",")) != NULL) {
-		mExtSettings->mUDPbins = byte_atoi(results);
+		mExtSettings->mRXbins = byte_atoi(results);
 		if ((results = strtok(NULL, ",")) != NULL) {
-		    mExtSettings->mUDPci_lower = atof(results);
+		    mExtSettings->mRXci_lower = atof(results);
 		    if ((results = strtok(NULL, ",")) != NULL) {
-			mExtSettings->mUDPci_upper = atof(results);
+			mExtSettings->mRXci_upper = atof(results);
 		    }
 		}
 	    }

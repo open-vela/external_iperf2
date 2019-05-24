@@ -130,7 +130,7 @@ typedef struct thread_Settings {
     char*  mIfrname;                 // %<device> name
     char*  mSSMMulticastStr;        // --ssm-host
     char*  mIsochronousStr;         // --isochronous
-    char*  mUDPHistogramStr;        // --udp-histogram
+    char*  mRxHistogramStr;           // --udp-histogram
     FILE*  Extractor_file;
     ReportHeader*  reporthdr;
     MultiHeader*   multihdr;
@@ -202,11 +202,11 @@ typedef struct thread_Settings {
     int incrdstip;
     char* mCongestion;
     char peerversion[PEERBUFSIZE];
-    int mUDPbins;
-    int mUDPbinsize;
-    unsigned short mUDPunits;
-    double mUDPci_lower;
-    double mUDPci_upper;
+    int mRXbins;
+    int mRXbinsize;
+    unsigned short mRXunits;
+    double mRXci_lower;
+    double mRXci_upper;
 #if defined( HAVE_WIN32_THREAD )
     HANDLE mHandle;
 #endif
@@ -278,7 +278,7 @@ typedef struct thread_Settings {
 #define FLAG_REVERSE        0x00000004
 #define FLAG_ISOCHRONOUS    0x00000008
 #define FLAG_UDPUNUSED      0x00000010
-#define FLAG_UDPHISTOGRAM   0x00000020
+#define FLAG_RXHISTOGRAM    0x00000020
 #define FLAG_L2LENGTHCHECK  0x00000100
 #define FLAG_TXSTARTTIME    0x00000200
 #define FLAG_INCRDSTIP      0x00000400
@@ -322,7 +322,7 @@ typedef struct thread_Settings {
 #define isSeqNo64b(settings)       ((settings->flags_extend & FLAG_SEQNO64) != 0)
 #define isReverse(settings)        ((settings->flags_extend & FLAG_REVERSE) != 0)
 #define isIsochronous(settings)    ((settings->flags_extend & FLAG_ISOCHRONOUS) != 0)
-#define isUDPHistogram(settings)   ((settings->flags_extend & FLAG_UDPHISTOGRAM) != 0)
+#define isRxHistogram(settings)   ((settings->flags_extend & FLAG_RXHISTOGRAM) != 0)
 #define isL2LengthCheck(settings)  ((settings->flags_extend & FLAG_L2LENGTHCHECK) != 0)
 #define isIncrDstIP(settings)      ((settings->flags_extend & FLAG_INCRDSTIP) != 0)
 #define isTxStartTime(settings)         ((settings->flags_extend & FLAG_TXSTARTTIME) != 0)
@@ -330,7 +330,6 @@ typedef struct thread_Settings {
 #define isVaryLoad(settings)       ((settings->flags_extend & FLAG_VARYLOAD) != 0)
 #define isFQPacing(settings)       ((settings->flags_extend & FLAG_FQPACING) != 0)
 #define isTripTime(settings)       ((settings->flags_extend & FLAG_TRIPTIME) != 0)
-#define isTCPWriteTime(settings)       ((settings->flags_extend & FLAG_TCPWRITETIME) != 0)
 
 #define setBuflenSet(settings)     settings->flags |= FLAG_BUFLENSET
 #define setCompat(settings)        settings->flags |= FLAG_COMPAT
@@ -364,7 +363,7 @@ typedef struct thread_Settings {
 #define setSeqNo64b(settings)      settings->flags_extend |= FLAG_SEQNO64
 #define setReverse(settings)       settings->flags_extend |= FLAG_REVERSE
 #define setIsochronous(settings)   settings->flags_extend |= FLAG_ISOCHRONOUS
-#define setUDPHistogram(settings)  settings->flags_extend |= FLAG_UDPHISTOGRAM
+#define setRxHistogram(settings)  settings->flags_extend |= FLAG_RXHISTOGRAM
 #define setL2LengthCheck(settings)    settings->flags_extend |= FLAG_L2LENGTHCHECK
 #define setIncrDstIP(settings)     settings->flags_extend |= FLAG_INCRDSTIP
 #define setTxStartTime(settings)        settings->flags_extend |= FLAG_TXSTARTTIME
@@ -372,7 +371,6 @@ typedef struct thread_Settings {
 #define setVaryLoad(settings)      settings->flags_extend |= FLAG_VARYLOAD
 #define setFQPacing(settings)      settings->flags_extend |= FLAG_FQPACING
 #define setTripTime(settings)      settings->flags_extend |= FLAG_TRIPTIME
-#define setTCPWriteTime(settings)      settings->flags_extend |= FLAG_TCPWRITETIME
 
 #define unsetBuflenSet(settings)   settings->flags &= ~FLAG_BUFLENSET
 #define unsetCompat(settings)      settings->flags &= ~FLAG_COMPAT
@@ -406,15 +404,13 @@ typedef struct thread_Settings {
 #define unsetSeqNo64b(settings)    settings->flags_extend &= ~FLAG_SEQNO64
 #define unsetReverse(settings)     settings->flags_extend &= ~FLAG_REVERSE
 #define unsetIsochronous(settings) settings->flags_extend &= ~FLAG_ISOCHRONOUS
-#define unsetUDPHistogram(settings)    settings->flags_extend &= ~FLAG_UDPHISTOGRAM
+#define unsetRxHistogram(settings)    settings->flags_extend &= ~FLAG_RXHISTOGRAM
 #define unsetL2LengthCheck(settings)  settings->flags_extend &= ~FLAG_L2LENGTHCHECK
 #define unsetIncrDstIP(settings)   settings->flags_extend &= ~FLAG_INCRDSTIP
 #define unsetTxStartTime(settings)      settings->flags_extend &= ~FLAG_TXSTARTTIME
 #define unsetTxHoldback(settings)  settings->flags_extend &= ~FLAG_TXHOLDBACK
 #define unsetVaryLoad(settings)      settings->flags_extend &= ~FLAG_VARYLOAD
 #define unsetFQPacing(settings)     settings->flags_extend &= ~FLAG_FQPACING
-#define unsetTripTime(settings)     settings->flags_extend &= ~FLAG_TRIPTIME
-#define unsetTCPWriteTime(settings) settings->flags_extend &= ~FLAG_TCPWRITETIME
 
 /*
  * Message header flags
