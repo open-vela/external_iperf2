@@ -412,7 +412,6 @@ void Client::Run( void ) {
 
 void Client::RunTCP( void ) {
     int currLen = 0;
-    struct TCP_datagram* mBuf_TCP = (struct TCP_datagram*) mBuf;
 
     while (InProgress()) {
 	int payload_len;
@@ -421,10 +420,8 @@ void Client::RunTCP( void ) {
 	} else {
 	    payload_len = mSettings->mBufLen;
 	}
-	if (!isTCPWriteTime(mSettings)) {
-	    WriteTcpID(reportstruct->packetID++, mSettings->mBufLen);
-	    mBuf_TCP->tv_sec  = htonl(reportstruct->packetTime.tv_sec);
-	    mBuf_TCP->tv_usec = htonl(reportstruct->packetTime.tv_usec);
+	if (!isTripTime(mSettings)) {
+	    WriteTcpHdr(reportstruct->packetID++, mSettings->mBufLen, 0);
 	}
 	// perform write
 	currLen = write( mSettings->mSock, mBuf, payload_len);
@@ -477,7 +474,6 @@ void Client::RunTCP( void ) {
  * A version of the transmit loop that supports TCP rate limiting using a token bucket
  */
 void Client::RunRateLimitedTCP ( void ) {
-    struct TCP_datagram* mBuf_TCP = (struct TCP_datagram*) mBuf;
     int currLen = 0;
     double tokens = 0;
     Timestamp time1, time2;
@@ -503,14 +499,12 @@ void Client::RunRateLimitedTCP ( void ) {
 	if (tokens >= 0.0) {
 	    int payload_len;
 	    if (!isModeTime(mSettings)) {
-	      payload_len = ((mSettings->mAmount < (unsigned) mSettings->mBufLen) ? mSettings->mAmount : mSettings->mBufLen);
+	        payload_len = ((mSettings->mAmount < (unsigned) mSettings->mBufLen) ? mSettings->mAmount : mSettings->mBufLen);
 	    } else {
 	        payload_len = mSettings->mBufLen;
 	    }
-	    if (!isTCPWriteTime(mSettings)) {
-	        WriteTcpID(reportstruct->packetID++, mSettings->mBufLen);
-	        mBuf_TCP->tv_sec  = htonl(reportstruct->packetTime.tv_sec);
-	        mBuf_TCP->tv_usec = htonl(reportstruct->packetTime.tv_usec);
+	    if (!isTripTime(mSettings)) {
+	        WriteTcpHdr(reportstruct->packetID++, mSettings->mBufLen, &time2);
 	    }
 	    // perform write
 	    currLen = write( mSettings->mSock, mBuf, payload_len);
@@ -871,7 +865,7 @@ void Client::WritePacketID (intmax_t packetID) {
 #endif
 }
 
-void Client::WriteTcpID (intmax_t packetID, int length) {
+void Client::WriteTcpHdr (intmax_t packetID, int length, Timestamp *ts) {
     struct TCP_datagram * mBuf_TCP = (struct TCP_datagram *) mBuf;
     // store packet ID into buffer
 #ifdef HAVE_INT64_T
@@ -895,8 +889,16 @@ void Client::WriteTcpID (intmax_t packetID, int length) {
 #endif
     mBuf_TCP->reserved1 = htonl(0x0);
     mBuf_TCP->reserved2 = htonl(0x0);
-    mBuf_TCP->typelen.type = htonl(0x1);
+    mBuf_TCP->typelen.type = htonl(HEADER_TIMESTAMP);
     mBuf_TCP->typelen.length = htonl(length);
+    if (!ts) {
+	Timestamp now;
+	mBuf_TCP->tv_sec  = htonl(now.tv_sec);
+	mBuf_TCP->tv_sec  = htonl(now.tv_usec);
+    } else {
+	mBuf_TCP->tv_sec  = htonl(ts->tv_sec);
+	mBuf_TCP->tv_sec  = htonl(ts->tv_usec);
+    }
 }
 
 bool Client::InProgress (void) {
@@ -1049,16 +1051,10 @@ void Client::InitiateServer() {
 	    //  between the client and server/listener
 	    HdrXchange(flags);
 	}
-	if (!isUDP(mSettings) && isTripTime(mSettings)) {
-	    int inLen = (3 * sizeof(uint32_t));
-	    char buf[inLen];
-	    uint32_t *timers = (uint32_t *) buf;
-	    Timestamp t1;
-	    *timers++ = htonl(HEADER_TIMESTAMP);
-	    *timers++ = htonl(t1.getSecs());
-	    *timers++ = htonl(t1.getUsecs());
-	    int currLen = send( mSettings->mSock, buf, inLen, 0 );
-	    WARN_errno( currLen < 0, "send connect timestamps" );
+	if (isTripTime(mSettings)) {
+	      WriteTcpHdr(reportstruct->packetID++, mSettings->mBufLen, 0);
+	      int currLen = send( mSettings->mSock, buf, inLen, 0 );
+	      WARN_errno( currLen < 0, "send connect/tcp timestamps" );
 	}
     }
 }
