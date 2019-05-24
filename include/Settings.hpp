@@ -477,8 +477,7 @@ typedef struct hdr_typelen {
 } hdr_typelen;
 
 typedef struct TCP_datagram {
-// used to reference the 4 byte ID number we place in UDP datagrams
-// Support 64 bit seqno on machines that support them
+// used to reference write ids and timestamps in TCP payloads
     hdr_typelen typelen;
     uint32_t id;
     uint32_t id2;
