@@ -415,9 +415,11 @@ void Client::RunTCP( void ) {
     struct TCP_datagram* mBuf_TCP = (struct TCP_datagram*) mBuf;
 
     while (InProgress()) {
-	int payload_len = mSettings->mBufLen;
+	int payload_len;
 	if (!isModeTime(mSettings)) {
 	    payload_len = ((mSettings->mAmount < (unsigned) mSettings->mBufLen) ? mSettings->mAmount : mSettings->mBufLen);
+	} else {
+	    payload_len = mSettings->mBufLen;
 	}
 	if (!isTCPWriteTime(mSettings)) {
 	    WriteTcpID(reportstruct->packetID++, mSettings->mBufLen);
@@ -499,9 +501,11 @@ void Client::RunRateLimitedTCP ( void ) {
 	tokens += time2.subSec(time1) * (var_rate / 8.0);
 	time1 = time2;
 	if (tokens >= 0.0) {
-	    int payload_len = mSettings->mBufLen;
+	    int payload_len;
 	    if (!isModeTime(mSettings)) {
 	      payload_len = ((mSettings->mAmount < (unsigned) mSettings->mBufLen) ? mSettings->mAmount : mSettings->mBufLen);
+	    } else {
+	        payload_len = mSettings->mBufLen;
 	    }
 	    if (!isTCPWriteTime(mSettings)) {
 	        WriteTcpID(reportstruct->packetID++, mSettings->mBufLen);
