@@ -285,7 +285,8 @@ typedef struct thread_Settings {
 #define FLAG_VARYLOAD       0x00000800
 #define FLAG_FQPACING       0x00001000
 #define FLAG_TRIPTIME       0x00002000
-#define FLAG_TXHOLDBACK      0x00004000
+#define FLAG_TXHOLDBACK     0x00004000
+#define FLAG_TCPWRITETIME    0x00008000
 
 #define isBuflenSet(settings)      ((settings->flags & FLAG_BUFLENSET) != 0)
 #define isCompat(settings)         ((settings->flags & FLAG_COMPAT) != 0)
@@ -329,6 +330,7 @@ typedef struct thread_Settings {
 #define isVaryLoad(settings)       ((settings->flags_extend & FLAG_VARYLOAD) != 0)
 #define isFQPacing(settings)       ((settings->flags_extend & FLAG_FQPACING) != 0)
 #define isTripTime(settings)       ((settings->flags_extend & FLAG_TRIPTIME) != 0)
+#define isTCPWriteTime(settings)       ((settings->flags_extend & FLAG_TCPWRITETIME) != 0)
 
 #define setBuflenSet(settings)     settings->flags |= FLAG_BUFLENSET
 #define setCompat(settings)        settings->flags |= FLAG_COMPAT
@@ -370,6 +372,7 @@ typedef struct thread_Settings {
 #define setVaryLoad(settings)      settings->flags_extend |= FLAG_VARYLOAD
 #define setFQPacing(settings)      settings->flags_extend |= FLAG_FQPACING
 #define setTripTime(settings)      settings->flags_extend |= FLAG_TRIPTIME
+#define setTCPWriteTime(settings)      settings->flags_extend |= FLAG_TCPWRITETIME
 
 #define unsetBuflenSet(settings)   settings->flags &= ~FLAG_BUFLENSET
 #define unsetCompat(settings)      settings->flags &= ~FLAG_COMPAT
@@ -411,6 +414,7 @@ typedef struct thread_Settings {
 #define unsetVaryLoad(settings)      settings->flags_extend &= ~FLAG_VARYLOAD
 #define unsetFQPacing(settings)     settings->flags_extend &= ~FLAG_FQPACING
 #define unsetTripTime(settings)     settings->flags_extend &= ~FLAG_TRIPTIME
+#define unsetTCPWriteTime(settings) settings->flags_extend &= ~FLAG_TCPWRITETIME
 
 /*
  * Message header flags
@@ -471,6 +475,18 @@ typedef struct hdr_typelen {
     int32_t type;
     int32_t length;
 } hdr_typelen;
+
+typedef struct TCP_datagram {
+// used to reference the 4 byte ID number we place in UDP datagrams
+// Support 64 bit seqno on machines that support them
+    hdr_typelen typelen;
+    uint32_t id;
+    uint32_t id2;
+    uint32_t tv_sec;
+    uint32_t tv_usec;
+    uint32_t reserved1;
+    uint32_t reserved2;
+} TCP_datagram;
 
 
 /*

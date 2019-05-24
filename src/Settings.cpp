@@ -81,6 +81,7 @@ static int txstarttime = 0;
 static int txholdback = 0;
 static int fqrate = 0;
 static int triptime = 0;
+static int tcpwritetime = 0;
 #ifdef HAVE_ISOCHRONOUS
 static int burstipg = 0;
 static int burstipg_set = 0;
@@ -155,6 +156,7 @@ const struct option long_options[] =
 {"txdelay-time", required_argument, &txholdback, 1},
 {"fq-rate", required_argument, &fqrate, 1},
 {"trip-time", no_argument, &triptime, 1},
+{"tcpwrite-time", no_argument, &tcpwritetime, 1},
 #ifdef HAVE_ISOCHRONOUS
 {"ipg", required_argument, &burstipg, 1},
 {"isochronous", optional_argument, &isochronous, 1},
@@ -786,6 +788,10 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
 	    if (triptime) {
 		triptime = 0;
 		setTripTime(mExtSettings);
+	    }
+	    if (tcpwritetime) {
+		tcpwritetime = 0;
+		setTCPWriteTime(mExtSettings);
 	    }
 	    if (udphistogram) {
 		udphistogram = 0;
