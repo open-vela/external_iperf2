@@ -411,6 +411,7 @@ typedef struct thread_Settings {
 #define unsetTxHoldback(settings)  settings->flags_extend &= ~FLAG_TXHOLDBACK
 #define unsetVaryLoad(settings)      settings->flags_extend &= ~FLAG_VARYLOAD
 #define unsetFQPacing(settings)     settings->flags_extend &= ~FLAG_FQPACING
+#define unsetTripTime(settings)     settings->flags_extend &= ~FLAG_TRIPTIME
 
 /*
  * Message header flags
