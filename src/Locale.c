@@ -433,7 +433,7 @@ const char warn_implied_compatibility[] =
 "WARNING: option -%c has implied compatibility mode\n";
 
 const char warn_buffer_too_small[] =
-"WARNING: %s UDP buffer size (-l value) increased to %d bytes for proper operation\n";
+"WARNING: %s socket buffer size (-l value) increased to %d bytes for proper operation\n";
 
 const char warn_invalid_single_threaded[] =
 "WARNING: option -%c is not valid in single threaded versions\n";

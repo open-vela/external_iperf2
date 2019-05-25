@@ -884,6 +884,12 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 	mExtSettings->mUDPRate = kDefault_UDPRate;
     }
 
+    if (isTripTime(mExtSettings) && ((isUDP(mExtSettings)) || (mExtSettings->mThreadMode != kMode_Client)))  {
+        unsetTripTime(mExtSettings);
+        fprintf(stderr, "option of --trip-time tcp (not udp) and only supported on the client (not on the server)\n");
+        exit(1);
+    }
+
     if (mExtSettings->mThreadMode != kMode_Client) {
 	if (isVaryLoad(mExtSettings)) {
 	    fprintf(stderr, "option of variance ignored as not supported on the server\n");
