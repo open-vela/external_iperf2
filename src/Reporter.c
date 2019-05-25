@@ -341,14 +341,14 @@ void InitDataReport(thread_Settings *mSettings) {
 	    data->info.mEnhanced = 0;
 	}
 	if (data->mThreadMode == kMode_Server) {
-	    if (isUDPHistogram(mSettings)) {
+	    if (isRxHistogram(mSettings)) {
 		char name[] = "T8";
 		data->info.latency_histogram =  histogram_init(mSettings->mRXbins,mSettings->mRXbinsize,0,\
 							       (mSettings->mRXunits ? 1e6 : 1e3), \
 							       mSettings->mRXci_lower, mSettings->mRXci_upper, data->info.transferID, name);
 	    }
 #ifdef HAVE_ISOCHRONOUS
-	    if (isUDPHistogram(mSettings) && isIsochronous(mSettings)) {
+	    if (isRxHistogram(mSettings) && isIsochronous(mSettings)) {
 		char name[] = "F8";
 		// make sure frame bin size min is 100 microsecond
 		if (mSettings->mRXunits && (mSettings->mRXbinsize < 100))

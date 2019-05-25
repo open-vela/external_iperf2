@@ -89,7 +89,7 @@ public:
 
 private:
     void WritePacketID( intmax_t );
-    void WriteTcpHdr( intmax_t, int length, Timestamp *ts);
+    void WriteTcpHdr( ReportStruct *);
     void InitTrafficLoop(void);
     void FinishTrafficActions(void);
     void FinalUDPHandshake(void);
