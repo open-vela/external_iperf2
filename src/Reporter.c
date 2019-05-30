@@ -714,15 +714,53 @@ void reporter_spawn( thread_Settings *thread ) {
             thread_unsetignore();
         }
         Condition_Unlock ( ReportCond );
+	if ( !isRealtime( thread ) ) {
+	    /*
+	     * Suspend the reporter thread for 10 milliseconds
+	     *
+	     * This allows the thread to receive client or server threads'
+	     * packet events in "aggregates."  This can reduce context
+	     * switching allowing for better CPU utilization,
+	     * which is very noticble on CPU constrained systems.
+	     *
+	     * If the realtime flag is set, then don't invoke the
+	     * suspend.  This should give better reporter timing on
+	     * higher end systems, where a busy-loop thread can be
+	     * scheduled without impacting other threads.
+	     *
+	     * Note that if the reporter thread is signficantly slower
+	     * than the Client or Server (traffic) threads this suspend
+	     * will still be called even though the traffic threads can be
+	     * blocked on the shared memory being full.  Probably should
+	     * detect those and avoid the suspend under such conditions.
+	     * It's not a big deal though because the traffic threads under
+	     * normal conditions are much slower than the reporter thread.
+	     * The exception is when there are things like sustained
+	     * write errors. Hence, such an optimization is deferred
+	     * for a later date.
+	     *
+	     * Also note, a possible better implementation is for the
+	     * reporter thread to block on a traffic thread's signal
+	     * instead of a 10 ms suspend.  That implementation
+	     * would have to be profiled against this one to make sure
+	     * it indeed gave better performance.  Again, deferred.
+	     *
+	     * Final note, usleep() is being deprecated for nanosleep(),
+	     * so use nanosleep if available
+	     */
+#ifdef HAVE_NANOSLEEP
+	    {
+		struct timespec requested;
+		requested.tv_sec  = 0;
+		requested.tv_nsec = 10000000L;
+		nanosleep(&requested, NULL);
+	    }
+#else
+	    usleep(10000);
+#endif
+	}
 
-again:
-		{
-		    struct timespec requested;
-		    requested.tv_sec  = 0;
-		    requested.tv_nsec = 10000000L;
-		    nanosleep(&requested, NULL);
-		}
-
+      again:
         if ( ReportRoot != NULL ) {
             ReportHeader *temp = ReportRoot;
             //Condition_Unlock ( ReportCond );
@@ -758,51 +796,6 @@ again:
                     goto again;
             }
             Condition_Signal( &ReportDoneCond );
-	    /*
-	     * Suspend the reporter thread for 10 milliseconds
-	     *
-	     * This allows the thread to receive client or server threads'
-	     * packet events in "aggregates."  This can reduce context
-	     * switching allowing for better CPU utilization,
-	     * which is very noticble on CPU constrained systems.
-	     *
-	     * If the realtime flag is set, then don't invoke the
-	     * suspend.  This should give better reporter timing on
-	     * higher end systems, where a busy-loop thread can be
-	     * scheduled without impacting other threads.
-	     *
-	     * Note that if the reporter thread is signficantly slower
-	     * than the Client or Server (traffic) threads this suspend
-	     * will still be called even though the traffic threads can be
-	     * blocked on the shared memory being full.  Probably should
-	     * detect those and avoid the suspend under such conditions.
-	     * It's not a big deal though because the traffic threads under
-	     * normal conditions are much slower than the reporter thread.
-	     * The exception is when there are things like sustained
-	     * write errors. Hence, such an optimization is deferred
-	     * for a later date.
-	     *
-	     * Also note, a possible better implementation is for the
-	     * reporter thread to block on a traffic thread's signal
-	     * instead of a 10 ms suspend.  That implementation
-	     * would have to be profiled against this one to make sure
-	     * it indeed gave better performance.  Again, deferred.
-	     *
-	     * Final note, usleep() is being deprecated for nanosleep(),
-	     * so use nanosleep if available
-	     */
-	    if ( !isRealtime( thread ) ) {
-#ifdef HAVE_NANOSLEEP
-		{
-		    struct timespec requested;
-		    requested.tv_sec  = 0;
-		    requested.tv_nsec = 10000000L;
-		    nanosleep(&requested, NULL);
-		}
-#else
-		usleep(10000);
-#endif
-	    }
         }
     } while ( 1 );
 }
