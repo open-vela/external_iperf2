@@ -449,7 +449,8 @@ typedef enum MsgType {
     CLIENTHDR = 0x1,
     CLIENTHDRACK,
     SERVERHDR,
-    SERVERHDRACK
+    SERVERHDRACK,
+    TXACK
 } MsgType;
 
 /*
