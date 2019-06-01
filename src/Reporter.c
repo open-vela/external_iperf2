@@ -780,15 +780,6 @@ void reporter_spawn( thread_Settings *thread ) {
                     }
                     itr->next = temp->next;
                 }
-                // finished with report so free it
-		if (temp->report.info.latency_histogram) {
-		    histogram_delete(temp->report.info.latency_histogram);
-		}
-#ifdef HAVE_ISOCHRONOUS
-		if (temp->report.info.framelatency_histogram) {
-		    histogram_delete(temp->report.info.framelatency_histogram);
-		}
-#endif
                 free( temp );
                 Condition_Unlock ( ReportCond );
                 Condition_Signal( &ReportDoneCond );
@@ -831,14 +822,17 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
             // If we are done with this report then free it
             ReportHeader *temp = reporthdr->next;
             reporthdr->next = reporthdr->next->next;
-	    if (temp->report.info.latency_histogram) {
-		histogram_delete(temp->report.info.latency_histogram);
-	    }
+	    // Free histograms in transfer reporst
+	    if ( (reporthdr->report.type & TRANSFER_REPORT) != 0 ) {
+	        if (temp->report.info.latency_histogram) {
+		    histogram_delete(temp->report.info.latency_histogram);
+		}
 #ifdef HAVE_ISOCHRONOUS
-	    if (temp->report.info.framelatency_histogram) {
-		histogram_delete(temp->report.info.framelatency_histogram);
-	    }
+		if (temp->report.info.framelatency_histogram) {
+		    histogram_delete(temp->report.info.framelatency_histogram);
+		}
 #endif
+	    }
             free( temp );
         }
     }
@@ -884,7 +878,17 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
         }
         // If the agent is done with the report then free it
         if ( reporthdr->agentindex == -1 ) {
-            need_free = 1;
+	    // finished with report so free it
+	    // Free any histograms
+	    if (reporthdr->report.info.latency_histogram) {
+	        histogram_delete(reporthdr->report.info.latency_histogram);
+	    }
+#ifdef HAVE_ISOCHRONOUS
+	    if (reporthdr->report.info.framelatency_histogram) {
+	        histogram_delete(reporthdr->report.info.framelatency_histogram);
+	    }
+#endif
+	  need_free = 1;
         }
     }
     return need_free;
