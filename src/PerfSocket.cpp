@@ -206,6 +206,12 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
 #endif
 
     if (!isUDP(inSettings)) {
+	// set so linger
+	struct linger ling;
+	ling.l_onoff  = 1;
+	ling.l_linger = 5;     /* timeout is seconds */
+	setsockopt( inSettings->mSock, SOL_SOCKET, SO_LINGER, (char *)&ling, sizeof(struct linger) );
+
 	if (isTCPMSS(inSettings)) {
 	    // set the TCP maximum segment size
 	    setsock_tcp_mss(inSettings->mSock, inSettings->mMSS);
