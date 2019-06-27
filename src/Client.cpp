@@ -417,7 +417,7 @@ void Client::Run( void ) {
 
 void Client::RunTCP( void ) {
     while (InProgress()) {
-	if (!isModeTime(mSettings)) {
+        if (isModeAmount(mSettings)) {
 	    reportstruct->packetLen = ((mSettings->mAmount < (unsigned) mSettings->mBufLen) ? mSettings->mAmount : mSettings->mBufLen);
 	} else {
 	    reportstruct->packetLen = mSettings->mBufLen;
@@ -458,7 +458,7 @@ void Client::RunTCP( void ) {
             ReportPacket( mSettings->reporthdr, reportstruct );
         }
 
-        if (!isModeTime(mSettings)) {
+        if (isModeAmount(mSettings)) {
             /* mAmount may be unsigned, so don't let it underflow! */
 	    if( mSettings->mAmount >= (unsigned long) (reportstruct->packetLen) ) {
                 mSettings->mAmount -= (unsigned long) (reportstruct->packetLen);
@@ -497,7 +497,7 @@ void Client::RunRateLimitedTCP ( void ) {
 	tokens += time2.subSec(time1) * (var_rate / 8.0);
 	time1 = time2;
 	if (tokens >= 0.0) {
-	    if (!isModeTime(mSettings)) {
+	    if (isModeAmount(mSettings)) {
 	        reportstruct->packetLen = ((mSettings->mAmount < (unsigned) mSettings->mBufLen) ? mSettings->mAmount : mSettings->mBufLen);
 	    } else {
 	        reportstruct->packetLen = mSettings->mBufLen;
@@ -533,7 +533,7 @@ void Client::RunRateLimitedTCP ( void ) {
 		ReportPacket( mSettings->reporthdr, reportstruct );
 	    }
 
-	    if (!isModeTime(mSettings)) {
+	    if (isModeAmount(mSettings)) {
 		/* mAmount may be unsigned, so don't let it underflow! */
 		if( mSettings->mAmount >= (unsigned long) reportstruct->packetLen ) {
 		    mSettings->mAmount -= (unsigned long) reportstruct->packetLen;
@@ -641,7 +641,7 @@ void Client::RunUDP( void ) {
 	reportstruct->emptyreport = 0;
 
 	// perform write
-	if (!isModeTime(mSettings)) {
+	if (isModeAmount(mSettings)) {
 	    currLen = write( mSettings->mSock, mBuf, (mSettings->mAmount < (unsigned) mSettings->mBufLen) ? mSettings->mAmount : mSettings->mBufLen);
 	} else {
 	    currLen = write( mSettings->mSock, mBuf, mSettings->mBufLen);
@@ -659,7 +659,7 @@ void Client::RunUDP( void ) {
 	  reportstruct->emptyreport = 1;
 	}
 
-	if (!isModeTime(mSettings)) {
+	if (isModeAmount(mSettings)) {
 	    /* mAmount may be unsigned, so don't let it underflow! */
 	    if( mSettings->mAmount >= (unsigned long) currLen ) {
 	        mSettings->mAmount -= (unsigned long) currLen;
@@ -776,7 +776,7 @@ void Client::RunUDPIsochronous (void) {
 	    reportstruct->emptyreport = 0;
 
 	    // perform write
-	    if (!isModeTime(mSettings) && (mSettings->mAmount < (unsigned) mSettings->mBufLen)) {
+	    if (isModeAmount(mSettings) && (mSettings->mAmount < (unsigned) mSettings->mBufLen)) {
 	        mBuf_isoch->remaining = htonl(mSettings->mAmount);
 		reportstruct->remaining=mSettings->mAmount;
 	        currLen = write(mSettings->mSock, mBuf, mSettings->mAmount);
@@ -807,7 +807,7 @@ void Client::RunUDPIsochronous (void) {
 		}
 	    }
 
-	    if (!isModeTime(mSettings)) {
+	    if (isModeAmount(mSettings)) {
 	        /* mAmount may be unsigned, so don't let it underflow! */
 	        if( mSettings->mAmount >= (unsigned long) currLen ) {
 		    mSettings->mAmount -= (unsigned long) currLen;
@@ -908,7 +908,7 @@ bool Client::InProgress (void) {
 
     if (sInterupted ||
 	(isModeTime(mSettings) &&  mEndTime.before(reportstruct->packetTime))  ||
-	(!isModeTime(mSettings) && (mSettings->mAmount <= 0)))
+	(isModeAmount(mSettings) && (mSettings->mAmount <= 0)))
 	return false;
 
     return true;

@@ -81,6 +81,7 @@ static int txstarttime = 0;
 static int txholdback = 0;
 static int fqrate = 0;
 static int triptime = 0;
+static int infinitetime = 0;
 #ifdef HAVE_ISOCHRONOUS
 static int burstipg = 0;
 static int burstipg_set = 0;
@@ -520,7 +521,10 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
             // time mode (instead of amount mode), units is 10 ms
             setModeTime( mExtSettings );
             setServerModeTime( mExtSettings );
-            mExtSettings->mAmount = (int) (atof( optarg ) * 100.0);
+	    if (atoi(optarg) > 0)
+                mExtSettings->mAmount = (int) (atof( optarg ) * 100.0);
+	    else
+	        infinitetime = 1;
             break;
 
         case 'u': // UDP instead of TCP
@@ -886,20 +890,24 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 
     if (isTripTime(mExtSettings) && ((isUDP(mExtSettings)) || (mExtSettings->mThreadMode != kMode_Client)))  {
         unsetTripTime(mExtSettings);
-        fprintf(stderr, "option of --trip-time tcp (not udp) and only supported on the client (not on the server)\n");
-        exit(1);
+        fprintf(stderr, "WARNING: option of --trip-time tcp (not udp) and only supported on the client (not on the server)\n");
     }
 
     if (mExtSettings->mThreadMode != kMode_Client) {
 	if (isVaryLoad(mExtSettings)) {
-	    fprintf(stderr, "option of variance ignored as not supported on the server\n");
+	    fprintf(stderr, "WARNING: option of variance ignored as not supported on the server\n");
 	}
 	if (isTxStartTime(mExtSettings)) {
 	    unsetTxStartTime(mExtSettings);
-	    fprintf(stderr, "option of --txstart-time ignored as not supported on the server\n");
+	    fprintf(stderr, "WARNING: option of --txstart-time ignored as not supported on the server\n");
 	}
+    } else {
+        if (isModeTime(mExtSettings) && infinitetime) {
+	    unsetModeTime(mExtSettings);
+	    setModeInfinite(mExtSettings);
+	    fprintf(stderr, "WARNING: client will send traffic forever or until an external signal (e.g. SIGINT or SIGTERM) occurs to stop it\n");
+        }
     }
-
 
     // UDP histogram settings
     if (isRxHistogram(mExtSettings) && isUDP(mExtSettings) && \
@@ -936,7 +944,7 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 	  // Request server to do length checks
 	  setL2LengthCheck(mExtSettings);
 #else
-	  fprintf(stderr, "--l2checks not supported on this platform\n");
+	  fprintf(stderr, "WARNING: option --l2checks not supported on this platform\n");
 #endif
 	}
     }
@@ -945,12 +953,10 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 #ifdef HAVE_ISOCHRONOUS
     if (mExtSettings->mBurstIPG > 0.0) {
 	if (!isIsochronous(mExtSettings)) {
-	    fprintf(stderr, "option --ipg requires the --isochronous option\n");
-	    exit(1);
+	    fprintf(stderr, "WARNING: option --ipg requires the --isochronous option\n");
 	}
 	if (mExtSettings->mThreadMode != kMode_Client) {
-	    fprintf(stderr, "option --ipg only supported on clients\n");
-	    exit(1);
+	    fprintf(stderr, "WARNING: option --ipg only supported on clients\n");
 	}
     }
     if (isIsochronous(mExtSettings) && mExtSettings->mIsochronousStr) {
@@ -971,7 +977,7 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 		    mExtSettings->mVariance = 0.0;
 		}
 	    } else {
-		fprintf(stderr, "Invalid --isochronous value, format is <fps>:<mean>,<variance> (e.g. 60:18M,1m)\n");
+		fprintf(stderr, "WARNING: Invalid --isochronous value, format is <fps>:<mean>,<variance> (e.g. 60:18M,1m)\n");
 	    }
 	}
     }
