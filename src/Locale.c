@@ -456,10 +456,6 @@ const char warn_len_too_small_peer_exchange[] =
 const char warn_compat_and_peer_exchange[] =
 "WARNING: Options of '-C' '--compatibility' AND '-X' '--peerdetect' are mutually exclusive, --peerdetect ignored\n";
 
-const char warn_seqno_wrap[] =
-"WARNING: Client UDP sequence number wrapped, suggest --udp-counters-64bit on both client and server\n";
-
-
 #ifdef __cplusplus
 } /* end extern "C" */
 #endif
