@@ -220,7 +220,7 @@ typedef struct Transfer_Info {
     u_char mTTL;                    // -T
     char   mUDP;
     char   mTCP;
-    char   free;
+    int    free;  // A  misnomer - used by summing for a traffic thread counter
     histogram_t *latency_histogram;
     L2Stats l2counts;
 #ifdef HAVE_ISOCHRONOUS
