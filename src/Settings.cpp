@@ -82,6 +82,7 @@ static int txholdback = 0;
 static int fqrate = 0;
 static int triptime = 0;
 static int infinitetime = 0;
+static int connectonly = 0;
 #ifdef HAVE_ISOCHRONOUS
 static int burstipg = 0;
 static int burstipg_set = 0;
@@ -157,6 +158,7 @@ const struct option long_options[] =
 {"txdelay-time", required_argument, &txholdback, 1},
 {"fq-rate", required_argument, &fqrate, 1},
 {"trip-time", no_argument, &triptime, 1},
+{"connect-only", no_argument, &connectonly, 1},
 #ifdef HAVE_ISOCHRONOUS
 {"ipg", required_argument, &burstipg, 1},
 {"isochronous", optional_argument, &isochronous, 1},
@@ -792,6 +794,11 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
 		triptime = 0;
 		setTripTime(mExtSettings);
 	    }
+	    if (connectonly) {
+		connectonly = 0;
+		setConnectOnly(mExtSettings);
+		setEnhanced(mExtSettings);
+	    }
 	    if (rxhistogram) {
 		rxhistogram = 0;
 		setRxHistogram( mExtSettings );
@@ -888,9 +895,16 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 	mExtSettings->mUDPRate = kDefault_UDPRate;
     }
 
-    if (isTripTime(mExtSettings) && ((isUDP(mExtSettings)) || (mExtSettings->mThreadMode != kMode_Client)))  {
-        unsetTripTime(mExtSettings);
-        fprintf(stderr, "WARNING: option of --trip-time tcp (not udp) and only supported on the client (not on the server)\n");
+    if (isUDP(mExtSettings) || (mExtSettings->mThreadMode != kMode_Client))  {
+        if (isTripTime(mExtSettings)) {
+            unsetTripTime(mExtSettings);
+            fprintf(stderr, "WARNING: option of --trip-time requires tcp (not udp) and is only supported on the client and not on the server\n");
+	}
+        if (isConnectOnly(mExtSettings)) {
+            unsetConnectOnly(mExtSettings);
+            fprintf(stderr, "ERROR: option of --connect-only requires tcp (not udp) and is only supported on the client and not on the server\n");
+	    exit(1);
+	}
     }
 
     if (mExtSettings->mThreadMode != kMode_Client) {

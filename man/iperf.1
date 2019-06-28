@@ -120,6 +120,9 @@ set target bandwidth to \fIn\fR bits/sec (default 1 Mbit/sec) or
 .BR -c ", " --client " \fIhost\fR"
 run in client mode, connecting to \fIhost\fR
 .TP
+.BR "    --connect-only"
+only perform a TCP connect without any data transfer - useful to measure TCP connect() times
+.TP
 .BR -d ", " --dualtest " "
 Do a bidirectional test simultaneously.
 .TP
