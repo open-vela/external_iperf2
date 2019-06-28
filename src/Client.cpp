@@ -342,8 +342,14 @@ void Client::Run( void ) {
     // Post the very first report which will have connection, version and test information
     PostFirstReport(mSettings);
 
+
     // Peform common traffic setup
     InitTrafficLoop();
+    //  If this is a connect only test, end the report and return now
+    if (isConnectOnly(mSettings)) {
+        FinishTrafficActions();
+        return;
+    }
 
 #ifdef HAVE_CLOCK_NANOSLEEP
     // Add delay between connect and the writes.  Use case is for multiple iperf sessions to

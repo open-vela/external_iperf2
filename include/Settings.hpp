@@ -287,7 +287,8 @@ typedef struct thread_Settings {
 #define FLAG_TRIPTIME       0x00002000
 #define FLAG_TXHOLDBACK     0x00004000
 #define FLAG_TCPWRITETIME   0x00008000
-#define FLAG_MODEINFINITE     0x00010000
+#define FLAG_MODEINFINITE   0x00010000
+#define FLAG_CONNECTONLY    0x00020000
 
 #define isBuflenSet(settings)      ((settings->flags & FLAG_BUFLENSET) != 0)
 #define isCompat(settings)         ((settings->flags & FLAG_COMPAT) != 0)
@@ -333,6 +334,7 @@ typedef struct thread_Settings {
 #define isTripTime(settings)       ((settings->flags_extend & FLAG_TRIPTIME) != 0)
 #define isModeInfinite(settings)     ((settings->flags_extend & FLAG_MODEINFINITE) != 0)
 #define isModeAmount(settings)     (!isModeTime(settings) && !isModeInfinite(settings))
+#define isConnectOnly(settings) ((settings->flags_extend & FLAG_CONNECTONLY) != 0)
 
 #define setBuflenSet(settings)     settings->flags |= FLAG_BUFLENSET
 #define setCompat(settings)        settings->flags |= FLAG_COMPAT
@@ -374,7 +376,8 @@ typedef struct thread_Settings {
 #define setVaryLoad(settings)      settings->flags_extend |= FLAG_VARYLOAD
 #define setFQPacing(settings)      settings->flags_extend |= FLAG_FQPACING
 #define setTripTime(settings)      settings->flags_extend |= FLAG_TRIPTIME
-#define setModeInfinite(settings)    settings->flags_extend |= FLAG_MODEINFINITE
+#define setModeInfinite(settings)  settings->flags_extend |= FLAG_MODEINFINITE
+#define setConnectOnly(settings)   settings->flags_extend |= FLAG_CONNECTONLY
 
 #define unsetBuflenSet(settings)   settings->flags &= ~FLAG_BUFLENSET
 #define unsetCompat(settings)      settings->flags &= ~FLAG_COMPAT
@@ -411,12 +414,13 @@ typedef struct thread_Settings {
 #define unsetRxHistogram(settings)    settings->flags_extend &= ~FLAG_RXHISTOGRAM
 #define unsetL2LengthCheck(settings)  settings->flags_extend &= ~FLAG_L2LENGTHCHECK
 #define unsetIncrDstIP(settings)   settings->flags_extend &= ~FLAG_INCRDSTIP
-#define unsetTxStartTime(settings)      settings->flags_extend &= ~FLAG_TXSTARTTIME
+#define unsetTxStartTime(settings) settings->flags_extend &= ~FLAG_TXSTARTTIME
 #define unsetTxHoldback(settings)  settings->flags_extend &= ~FLAG_TXHOLDBACK
-#define unsetVaryLoad(settings)      settings->flags_extend &= ~FLAG_VARYLOAD
+#define unsetVaryLoad(settings)     settings->flags_extend &= ~FLAG_VARYLOAD
 #define unsetFQPacing(settings)     settings->flags_extend &= ~FLAG_FQPACING
 #define unsetTripTime(settings)     settings->flags_extend &= ~FLAG_TRIPTIME
-#define unsetModeInfinite(settings)   settings->flags_extend &= ~FLAG_MODEINFINITE
+#define unsetModeInfinite(settings) settings->flags_extend &= ~FLAG_MODEINFINITE
+#define unsetConnectOnly(settings)  settings->flags_extend &= ~FLAG_CONNECTONLY
 
 /*
  * Message header flags
