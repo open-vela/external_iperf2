@@ -261,7 +261,7 @@ void InitReport(thread_Settings *mSettings) {
 #ifdef HAVE_THREAD
 	// In the case of parellel clients synchronize them after the connect(),
 	// i.e. before their traffic run loops
-	if ((reporthdr->report.mThreadMode == kMode_Client) && (reporthdr->multireport != NULL)) {
+        if ((reporthdr->report.mThreadMode == kMode_Client) && (reporthdr->multireport != NULL) &&  !isConnectOnly(mSettings)) {
 	    // syncronize watches on my mark......
 	    BarrierClient(reporthdr);
 	} else {
