@@ -150,6 +150,8 @@ MultiHeader* InitMulti( thread_Settings *agent, int inID) {
         if ( multihdr != NULL ) {
             memset( multihdr, 0, sizeof(MultiHeader) );
             Condition_Initialize( &multihdr->barrier );
+            Condition_Initialize( &multihdr->await_reporter );
+	    multihdr->reporter_running = 0;
             multihdr->groupID = inID;
 	    if (agent->mThreadMode == kMode_Client) {
 		multihdr->threads = agent->mThreads;
@@ -703,6 +705,17 @@ void ReportServerUDP( thread_Settings *agent, server_hdr *server ) {
  * This function is the loop that the reporter thread processes
  */
 void reporter_spawn( thread_Settings *thread ) {
+    // Signal to other (client) threads that the
+    // reporter is now running.  This is needed because
+    // the client's traffic thread has a connect() within
+    // it's constructor and that connect gets reported via
+    // via this thread so let this thread go first
+    if (thread->multihdr != NULL ) {
+	Condition_Lock(thread->multihdr->await_reporter);
+	thread->multihdr->reporter_running = 1;
+	Condition_Unlock(thread->multihdr->await_reporter);
+	Condition_Broadcast(&thread->multihdr->await_reporter);
+    }
     do {
         // This section allows for safe exiting with Ctrl-C
         Condition_Lock ( ReportCond );

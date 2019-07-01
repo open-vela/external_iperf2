@@ -144,6 +144,15 @@ Client::Client( thread_Settings *inSettings ) {
 #endif
 #endif
 
+    // let the reporter thread go first in the case of -P greater than 1
+    if (mSettings->multihdr) {
+        Condition_Lock(mSettings->multihdr->await_reporter);
+	while (!mSettings->multihdr->reporter_running) {
+	    Condition_Wait(&mSettings->multihdr->await_reporter);
+	}
+        Condition_Unlock(mSettings->multihdr->await_reporter);
+    }
+
     ct = Connect( );
 
     if ( isReport( inSettings ) ) {
