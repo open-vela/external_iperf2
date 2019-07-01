@@ -219,21 +219,19 @@ MultiHeader* InitMulti( thread_Settings *agent, int inID) {
 /*
  * BarrierClient allows for multiple stream clients to be syncronized
  */
-void BarrierClient( ReportHeader *agent ) {
-    Condition_Lock(agent->multireport->barrier);
-    agent->multireport->threads--;
-    if ( agent->multireport->threads == 0 ) {
-        // last one set time and wake up everyone
-        gettimeofday( &(agent->multireport->startTime), NULL );
-        Condition_Broadcast( &agent->multireport->barrier );
+void BarrierClient( MultiHeader *multihdr ) {
+    Condition_Lock(multihdr->barrier);
+    multihdr->threads--;
+    if ( multihdr->threads == 0 ) {
+        // store the wake up or start time in the shared multihdr
+        gettimeofday( &(multihdr->startTime), NULL );
+        // last one wake's up everyone else
+        Condition_Broadcast( &multihdr->barrier );
     } else {
-        Condition_Wait( &agent->multireport->barrier );
+        Condition_Wait( &multihdr->barrier );
     }
-    agent->multireport->threads++;
-    Condition_Unlock( agent->multireport->barrier );
-    agent->report.startTime = agent->multireport->startTime;
-    agent->report.nextTime = agent->report.startTime;
-    TimeAdd( agent->report.nextTime, agent->report.intervalTime );
+    multihdr->threads++;
+    Condition_Unlock(multihdr->barrier );
 }
 
 /*
@@ -264,7 +262,10 @@ void InitReport(thread_Settings *mSettings) {
 	// i.e. before their traffic run loops
         if ((reporthdr->report.mThreadMode == kMode_Client) && (reporthdr->multireport != NULL) &&  !isConnectOnly(mSettings)) {
 	    // syncronize watches on my mark......
-	    BarrierClient(reporthdr);
+	    BarrierClient(mSettings->multihdr);
+	    reporthdr->report.startTime = mSettings->multihdr->startTime;
+	    reporthdr->report.nextTime = mSettings->multihdr->startTime;
+	    TimeAdd( reporthdr->report.nextTime, reporthdr->report.intervalTime );
 	} else {
 	    if ( reporthdr->multireport != NULL && isMultipleReport( mSettings )) {
 		reporthdr->multireport->threads++;
@@ -717,18 +718,12 @@ void reporter_spawn( thread_Settings *thread ) {
 	Condition_Broadcast(&thread->multihdr->await_reporter);
     }
     do {
-        // This section allows for safe exiting with Ctrl-C
         Condition_Lock ( ReportCond );
         if ( ReportRoot == NULL ) {
-            // Thread set ignore is a gimmicky way to ignore
-	    // the reporter thread in the joinall loop
-	    // It just decrements the thread counter by one
-	    // and assumes all other threads are traffic threds
-	    // (old comment: Allow main thread to exit if Ctrl-C is received)
-            thread_setignore();
-	    Condition_Wait ( &ReportCond );
-            // Stop main thread from exiting until done with all reports
-            thread_unsetignore();
+	    //  Use a timed wait because the traffic threads
+	    //  that signal this condition may have already
+	    //  completed
+	    Condition_TimedWait ( &ReportCond, 1);
         }
         Condition_Unlock ( ReportCond );
 	if ( !isRealtime( thread ) ) {
@@ -805,6 +800,7 @@ void reporter_spawn( thread_Settings *thread ) {
             }
             Condition_Signal( &ReportDoneCond );
         }
+	// Compare against 1 for the reporter thread
     } while ((thread_numuserthreads() > 1) || ReportRoot);
 }
 
@@ -859,8 +855,8 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
         return reporter_print( &reporthdr->report, SETTINGS_REPORT, 1 );
     } else if ( (reporthdr->report.type & CONNECTION_REPORT) != 0 ) {
         reporthdr->report.type &= ~CONNECTION_REPORT;
-        reporter_print( &reporthdr->report, CONNECTION_REPORT,
-                               (reporthdr->report.type == 0 ? 1 : 0) );
+	need_free = (reporthdr->report.type == 0 ? 1 : 0);
+        reporter_print( &reporthdr->report, CONNECTION_REPORT, need_free);
         if ( reporthdr->multireport != NULL && isMultipleReport( (&reporthdr->report) )) {
             if ( (reporthdr->multireport->report->type & CONNECTION_REPORT) != 0 ) {
                 reporthdr->multireport->report->type &= ~CONNECTION_REPORT;
