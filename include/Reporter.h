@@ -312,6 +312,8 @@ typedef struct MultiHeader {
     ReporterData *report;
     Transfer_Info *data;
     Condition barrier;
+    Condition await_reporter;
+    int reporter_running;
     struct timeval startTime;
 } MultiHeader;
 

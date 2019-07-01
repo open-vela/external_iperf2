@@ -323,6 +323,7 @@ void Settings_Copy( thread_Settings *from, thread_Settings **into ) {
 #ifdef HAVE_CLOCK_NANOSLEEP
     (*into)->txstart = from->txstart;
 #endif
+    (*into)->multihdr = from->multihdr;
     // Zero out certain entries
     (*into)->mTID = thread_zeroid();
     (*into)->runNext = NULL;
