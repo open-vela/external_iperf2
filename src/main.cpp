@@ -199,15 +199,6 @@ int main( int argc, char **argv ) {
 	}
         // initialize client(s)
         client_init( ext_gSettings );
-#ifdef HAVE_CLOCK_NANOSLEEP
-#ifdef HAVE_CLOCK_GETTIME
-	if (isEnhanced(ext_gSettings) && isTxStartTime(ext_gSettings)) {
-	    struct timespec t1;
-	    clock_gettime(CLOCK_REALTIME, &t1);
-	    fprintf(stdout, "Client thread(s) traffic start time %ld.%.9ld current time is %ld.%.9ld (epoch/unix format)\n",ext_gSettings->txstart.tv_sec, ext_gSettings->txstart.tv_nsec, t1.tv_sec, t1.tv_nsec);
-	}
-#endif
-#endif
 	break;
     case kMode_Listener :
 #ifdef WIN32
