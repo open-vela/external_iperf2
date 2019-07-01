@@ -805,7 +805,7 @@ void reporter_spawn( thread_Settings *thread ) {
             }
             Condition_Signal( &ReportDoneCond );
         }
-    } while ((thread_numuserthreads() > 1) && ReportRoot);
+    } while ((thread_numuserthreads() > 1) || ReportRoot);
 }
 
 /*
