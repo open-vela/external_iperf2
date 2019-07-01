@@ -155,36 +155,49 @@ Client::Client( thread_Settings *inSettings ) {
 
     ct = Connect( );
 
-    if ( isReport( inSettings ) ) {
-        ReportSettings( inSettings );
-        if ( mSettings->multihdr && isMultipleReport( inSettings ) ) {
-            mSettings->multihdr->report->connection.peer = mSettings->peer;
-            mSettings->multihdr->report->connection.size_peer = mSettings->size_peer;
-            mSettings->multihdr->report->connection.local = mSettings->local;
-            SockAddr_setPortAny( &mSettings->multihdr->report->connection.local );
-            mSettings->multihdr->report->connection.size_local = mSettings->size_local;
-        }
-    }
-
-    // InitDataReport handles Barrier for multiple Streams
-    InitReport(mSettings);
-    if (mSettings->reporthdr) {
-	mSettings->reporthdr->report.connection.connecttime = ct;
-	if (isTxHoldback(inSettings)) {
-	    mSettings->reporthdr->report.connection.txholdbacktime  = inSettings->txholdbacktime - ct;
-	    if (mSettings->reporthdr->report.connection.txholdbacktime  < 0.0)
-	        mSettings->reporthdr->report.connection.txholdbacktime  = 0.0;
+    //  A connect only test doesn't need to setup data stuff
+    //  but merely pass the connection reports
+    if (isConnectOnly(mSettings)) {
+        InitConnectionReport(mSettings);
+	ReportHeader *reporthdr = mSettings->reporthdr;
+	if (reporthdr) {
+	    reporthdr->report.connection.connecttime = ct;
+	    PostFirstReport(mSettings);
+	    if (reporthdr->multireport)
+	        BarrierClient(reporthdr);
 	}
+    } else {
+        if ( isReport( inSettings ) ) {
+            ReportSettings( inSettings );
+                if ( mSettings->multihdr && isMultipleReport( inSettings ) ) {
+		    mSettings->multihdr->report->connection.peer = mSettings->peer;
+		    mSettings->multihdr->report->connection.size_peer = mSettings->size_peer;
+		    mSettings->multihdr->report->connection.local = mSettings->local;
+		    SockAddr_setPortAny( &mSettings->multihdr->report->connection.local );
+		    mSettings->multihdr->report->connection.size_local = mSettings->size_local;
+		}
+	}
+
+        // InitDataReport handles Barrier for multiple Streams
+	InitReport(mSettings);
+	if (mSettings->reporthdr) {
+	    mSettings->reporthdr->report.connection.connecttime = ct;
+	    if (isTxHoldback(inSettings)) {
+	        mSettings->reporthdr->report.connection.txholdbacktime  = inSettings->txholdbacktime - ct;
+		if (mSettings->reporthdr->report.connection.txholdbacktime  < 0.0)
+		    mSettings->reporthdr->report.connection.txholdbacktime  = 0.0;
+	    }
+	}
+
+	// Create the Report structure that's used to pass packet metadata to the reporter thread
+	reportstruct = new ReportStruct();
+	FAIL_errno( reportstruct == NULL, "No memory for report structure\n", mSettings );
+	reportstruct->packetID = (isPeerVerDetect(mSettings)) ? 1 : INITIAL_PACKETID;
+	reportstruct->errwrite=WriteNoErr;
+	reportstruct->emptyreport=0;
+	reportstruct->socket = mSettings->mSock;
+	reportstruct->packetLen = 0;
     }
-
-    reportstruct = new ReportStruct();
-    FAIL_errno( reportstruct == NULL, "No memory for report structure\n", mSettings );
-    reportstruct->packetID = (isPeerVerDetect(mSettings)) ? 1 : INITIAL_PACKETID;
-    reportstruct->errwrite=WriteNoErr;
-    reportstruct->emptyreport=0;
-    reportstruct->socket = mSettings->mSock;
-    reportstruct->packetLen = 0;
-
 } // end Client
 
 /* -------------------------------------------------------------------
@@ -348,17 +361,14 @@ void Client::InitTrafficLoop (void) {
  * ------------------------------------------------------------------- */
 void Client::Run( void ) {
 
+    if (isConnectOnly(mSettings))
+        return;
     // Post the very first report which will have connection, version and test information
     PostFirstReport(mSettings);
 
 
     // Peform common traffic setup
     InitTrafficLoop();
-    //  If this is a connect only test, end the report and return now
-    if (isConnectOnly(mSettings)) {
-        FinishTrafficActions();
-        return;
-    }
 
 #ifdef HAVE_CLOCK_NANOSLEEP
     // Add delay between connect and the writes.  Use case is for multiple iperf sessions to
@@ -1042,7 +1052,7 @@ void Client::write_UDP_FIN (void) {
 
 
 void Client::InitiateServer() {
-    if ( !isCompat( mSettings ) ) {
+    if (!isCompat(mSettings) && !isConnectOnly(mSettings)) {
 	int flags = 0;
         client_hdr* temp_hdr;
         if ( isUDP( mSettings ) ) {

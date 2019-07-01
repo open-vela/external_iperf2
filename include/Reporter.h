@@ -333,6 +333,8 @@ typedef void (* report_serverstatistics)( Connection_Info*, Transfer_Info* );
 
 MultiHeader* InitMulti( struct thread_Settings *agent, int inID );
 void InitReport( struct thread_Settings *agent );
+void InitConnectionReport( struct thread_Settings *agent );
+void BarrierClient(ReportHeader *agent);
 void PostFirstReport(struct thread_Settings *mSettings);
 void ReportPacket( ReportHeader *agent, ReportStruct *packet );
 void CloseReport( ReportHeader *agent, ReportStruct *packet );
