@@ -158,7 +158,7 @@ const struct option long_options[] =
 {"txdelay-time", required_argument, &txholdback, 1},
 {"fq-rate", required_argument, &fqrate, 1},
 {"trip-time", no_argument, &triptime, 1},
-{"connect-only", no_argument, &connectonly, 1},
+{"connect-only", optional_argument, &connectonly, 1},
 #ifdef HAVE_ISOCHRONOUS
 {"ipg", required_argument, &burstipg, 1},
 {"isochronous", optional_argument, &isochronous, 1},
@@ -802,6 +802,11 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
 		connectonly = 0;
 		setConnectOnly(mExtSettings);
 		setEnhanced(mExtSettings);
+		if (optarg) {
+		  mExtSettings->connectonly_count = atoi(optarg);
+		} else {
+		  mExtSettings->connectonly_count = 1;
+		}
 	    }
 	    if (rxhistogram) {
 		rxhistogram = 0;

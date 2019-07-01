@@ -200,6 +200,7 @@ typedef struct thread_Settings {
     Socklen_t size_local;
     nthread_t mTID;
     int incrdstip;
+    int connectonly_count;
     char* mCongestion;
     char peerversion[PEERBUFSIZE];
     int mRXbins;
