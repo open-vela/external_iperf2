@@ -127,7 +127,6 @@ int reporter_print( ReporterData *stats, int type, int end );
 void PrintMSS( ReporterData *stats );
 
 static void InitDataReport(struct thread_Settings *mSettings);
-static void InitConnectionReport(struct thread_Settings *mSettings);
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 static void gettcpistats(ReporterData *stats, int final);
 #endif
@@ -388,6 +387,7 @@ void InitConnectionReport (thread_Settings *mSettings) {
 	    FAIL(1, "Out of Memory!!\n", mSettings);
 	}
 	mSettings->reporthdr = reporthdr;
+	reporthdr->multireport = mSettings->multihdr;
     }
     // Fill out known fields for the connection report
     data = &reporthdr->report;
@@ -720,9 +720,13 @@ void reporter_spawn( thread_Settings *thread ) {
         // This section allows for safe exiting with Ctrl-C
         Condition_Lock ( ReportCond );
         if ( ReportRoot == NULL ) {
-            // Allow main thread to exit if Ctrl-C is received
+            // Thread set ignore is a gimmicky way to ignore
+	    // the reporter thread in the joinall loop
+	    // It just decrements the thread counter by one
+	    // and assumes all other threads are traffic threds
+	    // (old comment: Allow main thread to exit if Ctrl-C is received)
             thread_setignore();
-            Condition_Wait ( &ReportCond );
+	    Condition_Wait ( &ReportCond );
             // Stop main thread from exiting until done with all reports
             thread_unsetignore();
         }
@@ -801,7 +805,7 @@ void reporter_spawn( thread_Settings *thread ) {
             }
             Condition_Signal( &ReportDoneCond );
         }
-    } while ( 1 );
+    } while ((thread_numuserthreads() > 1) && ReportRoot);
 }
 
 /*
