@@ -158,6 +158,16 @@ void client_init( thread_Settings *clients ) {
     // Set the first thread to report Settings
     setReport( clients );
     itr = clients;
+#ifdef HAVE_CLOCK_NANOSLEEP
+#ifdef HAVE_CLOCK_GETTIME
+    if (isTxStartTime(clients)) {
+        struct timespec t1;
+	clock_gettime(CLOCK_REALTIME, &t1);
+	fprintf(stdout, "Client thread(s) traffic start time %ld.%.9ld current time is %ld.%.9ld (epoch/unix format)\n",clients->txstart.tv_sec, clients->txstart.tv_nsec, t1.tv_sec, t1.tv_nsec);
+	fflush(stdout);
+    }
+#endif
+#endif
 
     // See if we need to start a listener as well
     Settings_GenerateListenerSettings( clients, &next );

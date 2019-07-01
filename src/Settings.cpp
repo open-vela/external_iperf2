@@ -320,6 +320,9 @@ void Settings_Copy( thread_Settings *from, thread_Settings **into ) {
         strcpy( (*into)->mIsochronousStr, from->mIsochronousStr );
     }
 #endif
+#ifdef HAVE_CLOCK_NANOSLEEP
+    (*into)->txstart = from->txstart;
+#endif
     // Zero out certain entries
     (*into)->mTID = thread_zeroid();
     (*into)->runNext = NULL;
