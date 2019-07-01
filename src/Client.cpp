@@ -163,11 +163,11 @@ Client::Client( thread_Settings *inSettings ) {
 	if (reporthdr) {
 	    reporthdr->report.connection.connecttime = ct;
 	    PostFirstReport(mSettings);
-	    if (reporthdr->multireport)
+	    if (mSettings->multihdr)
 	        // For the case multilple clients wait on all
 	        // completing the connect() w/o going to close()
 	        // by leveraging this barrier
-	        BarrierClient(reporthdr);
+	        BarrierClient(mSettings->multihdr);
 	}
     } else {
         if ( isReport( inSettings ) ) {
