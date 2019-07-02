@@ -158,7 +158,9 @@ int main( int argc, char **argv ) {
 
     // Allocate the "global" settings
     thread_Settings* ext_gSettings = new thread_Settings;
-
+    // Default reporting mode here to avoid unitialized warnings
+    // this won't be the actual mode
+    ThreadMode ReporterThreadMode = kMode_Reporter;
     // Initialize settings to defaults
     Settings_Initialize( ext_gSettings );
     // read settings from environment variables
@@ -190,7 +192,7 @@ int main( int argc, char **argv ) {
 	return 0;
     }
 
-
+    unsetReport(ext_gSettings);
     switch (ext_gSettings->mThreadMode) {
     case kMode_Client :
 	if ( isDaemon( ext_gSettings ) ) {
@@ -199,8 +201,10 @@ int main( int argc, char **argv ) {
 	}
         // initialize client(s)
         client_init( ext_gSettings );
+	ReporterThreadMode = kMode_ReporterClient;
 	break;
     case kMode_Listener :
+	ReporterThreadMode = kMode_ReporterServer;
 #ifdef WIN32
      // Remove the Windows service if requested
 	if ( isRemoveService( ext_gSettings ) ) {
@@ -231,13 +235,13 @@ int main( int argc, char **argv ) {
 	break;
     }
 #ifdef HAVE_THREAD
-        // start up the reporter and client(s) or listener
+    // Last step is to initialize the reporter then start all threads
     {
 	thread_Settings *into = NULL;
 	// Create the settings structure for the reporter thread
 	Settings_Copy( ext_gSettings, &into );
-	into->mThreadMode = kMode_Reporter;
-
+	into->mThreadMode = ReporterThreadMode;
+	setReport(into);
 	// Have the reporter launch the client or listener
 	into->runNow = ext_gSettings;
 

@@ -401,15 +401,19 @@ void reporter_reportsettings( ReporterData *data ) {
                   (data->mThreadMode == kMode_Listener ? 0 : 1) );
     win_requested = data->mTCPWin;
     printf( "%s", separator_line );
-    if ( data->mThreadMode == kMode_Listener ) {
+    switch (data->mThreadMode) {
+    case kMode_Listener:
+    case kMode_ReporterServer:
         printf(isEnhanced(data) ? server_pid_port : server_port,
                 (isUDP( data ) ? "UDP" : "TCP"),
                 data->mPort, pid );
-    } else {
+	break;
+    default:
         printf(isEnhanced(data) ? client_pid_port : client_port,
                 data->mHost,
                 (isUDP( data ) ? "UDP" : "TCP"),
                 data->mPort, pid);
+	break;
     }
 
     if ( data->mLocalhost != NULL ) {

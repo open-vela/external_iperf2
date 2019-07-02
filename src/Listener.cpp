@@ -125,8 +125,8 @@ Listener::Listener( thread_Settings *inSettings ) {
     }
     // Now hang the listening on the socket
     Listen( );
-
-    ReportSettings( inSettings );
+    if (isReport(inSettings))
+        ReportSettings( inSettings );
 } // end Listener
 
 /* -------------------------------------------------------------------
@@ -1096,7 +1096,7 @@ void Listener::UDPSingleServer( ) {
             }
         }
         InitReport(server);
-        PostReport(server);
+        PostReport(server, server->reporthdr);
 
         // Prep for next connection
         if ( !isSingleClient( mSettings ) ) {

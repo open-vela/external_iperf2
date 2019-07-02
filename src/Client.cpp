@@ -162,7 +162,7 @@ Client::Client( thread_Settings *inSettings ) {
 	ReportHeader *reporthdr = mSettings->reporthdr;
 	if (reporthdr) {
 	    reporthdr->report.connection.connecttime = ct;
-	    PostReport(mSettings);
+	    PostReport(mSettings, reporthdr);
 	    if (mSettings->multihdr)
 	        // For the case multilple clients wait on all
 	        // completing the connect() w/o going to close()
@@ -200,6 +200,8 @@ Client::Client( thread_Settings *inSettings ) {
 	reportstruct->emptyreport=0;
 	reportstruct->socket = mSettings->mSock;
 	reportstruct->packetLen = 0;
+	// Post the very first report which will have connection, version and test information
+	PostReport(mSettings, mSettings->reporthdr);
     }
 } // end Client
 
@@ -366,9 +368,6 @@ void Client::Run( void ) {
 
     if (isConnectOnly(mSettings))
         return;
-    // Post the very first report which will have connection, version and test information
-    PostReport(mSettings);
-
 
     // Peform common traffic setup
     InitTrafficLoop();

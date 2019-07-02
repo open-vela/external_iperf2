@@ -218,7 +218,7 @@ void Server::InitTimeStamping (void) {
 
 void Server::InitTrafficLoop (void) {
     InitReport(mSettings);
-    PostReport(mSettings);
+    PostReport(mSettings, mSettings->reporthdr);
     reportstruct = new ReportStruct();
     FAIL(reportstruct == NULL, "Out of memory! Closing server thread\n", mSettings);
     reportstruct->packetID = 0;
