@@ -156,6 +156,8 @@ extern const char report_bw_write_enhanced_header[];
 
 extern const char report_bw_write_enhanced_format[];
 
+extern const char report_bw_write_enhanced_nocwnd_format[];
+
 extern const char report_sum_bw_write_enhanced_format[];
 
 extern const char report_bw_pps_enhanced_header[];

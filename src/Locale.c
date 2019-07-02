@@ -285,6 +285,9 @@ const char report_bw_write_enhanced_header[] =
 const char report_bw_write_enhanced_format[] =
 "[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %10d %8dK/%u us  %4.2f\n";
 
+const char report_bw_write_enhanced_nocwnd_format[] =
+"[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %10d       NA/%u us  %4.2f\n";
+
 const char report_sum_bw_write_enhanced_format[] =
 "[SUM] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d%10d\n";
 
