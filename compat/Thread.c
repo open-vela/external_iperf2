@@ -242,6 +242,10 @@ thread_run_wrapper( void* paramPtr ) {
                 client_spawn( thread );
             } break;
         case kMode_Reporter:
+        case kMode_ReporterClient:
+        case kMode_ReporterServer:
+        case kMode_ReporterClientFullDuplex:
+        case kMode_ReporterServerFullDuplex:
             {
                 /* Spawn a Reporter thread with these settings */
                 reporter_spawn( thread );
@@ -414,4 +418,3 @@ void thread_rest ( void ) {
 #ifdef __cplusplus
 } /* end extern "C" */
 #endif
-
