@@ -410,9 +410,8 @@ void InitConnectionReport (thread_Settings *mSettings) {
     }
 }
 
-void PostReport (thread_Settings *mSettings) {
-    if (mSettings->reporthdr) {
-	ReportHeader *reporthdr = mSettings->reporthdr;
+void PostReport (thread_Settings *mSettings, ReportHeader *reporthdr) {
+    if (reporthdr) {
 #ifdef HAVE_THREAD
 	/*
 	 * Update the ReportRoot to include this report.
@@ -587,11 +586,7 @@ void ReportSettings( thread_Settings *agent ) {
             /*
              * Update the ReportRoot to include this report.
              */
-            Condition_Lock( ReportCond );
-            reporthdr->next = ReportRoot;
-            ReportRoot = reporthdr;
-            Condition_Signal( &ReportCond );
-            Condition_Unlock( ReportCond );
+	    PostReport(agent, reporthdr);
     #else
             /*
              * Process the report in this thread
@@ -682,14 +677,7 @@ void ReportServerUDP( thread_Settings *agent, server_hdr *server ) {
 	reporthdr->report.connection.size_local = agent->size_peer;
 
 #ifdef HAVE_THREAD
-	/*
-	 * Update the ReportRoot to include this report.
-	 */
-	Condition_Lock( ReportCond );
-	reporthdr->next = ReportRoot;
-	ReportRoot = reporthdr;
-	Condition_Signal( &ReportCond );
-	Condition_Unlock( ReportCond );
+	PostReport(agent, reporthdr);
 #else
 	/*
 	 * Process the report in this thread
@@ -706,6 +694,9 @@ void ReportServerUDP( thread_Settings *agent, server_hdr *server ) {
  * This function is the loop that the reporter thread processes
  */
 void reporter_spawn( thread_Settings *thread ) {
+    // Post the settings report
+    ReportSettings(thread);
+    //
     // Signal to other (client) threads that the
     // reporter is now running.  This is needed because
     // the client's traffic thread has a connect() within

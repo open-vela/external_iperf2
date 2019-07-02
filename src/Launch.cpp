@@ -155,8 +155,6 @@ void client_init( thread_Settings *clients ) {
     thread_Settings *itr = NULL;
     thread_Settings *next = NULL;
 
-    // Set the first thread to report Settings
-    setReport( clients );
     itr = clients;
 #ifdef HAVE_CLOCK_NANOSLEEP
 #ifdef HAVE_CLOCK_GETTIME
@@ -194,7 +192,7 @@ void client_init( thread_Settings *clients ) {
         Settings_Copy( clients, &next );
 	if (isIncrDstIP(clients))
 	    next->incrdstip = i;
-        unsetReport( next );
+
         itr->runNow = next;
         itr = next;
     }
