@@ -124,15 +124,26 @@ void reporter_printstats( Transfer_Info *stats ) {
 		  netpower = NETPOWERCONSTANT * (((double) bytesxfered / (double) (stats->endTime - stats->startTime)) / (1e-6 * stats->sock_callstats.write.rtt));
 	        }
 #endif
-	        printf(report_bw_write_enhanced_format,
-		       stats->transferID, stats->startTime, stats->endTime,
-		       buffer, &buffer[sizeof(buffer)/2],
-		       stats->sock_callstats.write.WriteCnt,
-		       stats->sock_callstats.write.WriteErr,
-		       stats->sock_callstats.write.TCPretry,
-		       stats->sock_callstats.write.cwnd,
-		       stats->sock_callstats.write.rtt,
-		       netpower);
+	        if (stats->sock_callstats.write.cwnd > 0) {
+		  printf(report_bw_write_enhanced_format,
+			 stats->transferID, stats->startTime, stats->endTime,
+			 buffer, &buffer[sizeof(buffer)/2],
+			 stats->sock_callstats.write.WriteCnt,
+			 stats->sock_callstats.write.WriteErr,
+			 stats->sock_callstats.write.TCPretry,
+			 stats->sock_callstats.write.cwnd,
+			 stats->sock_callstats.write.rtt,
+			 netpower);
+		} else {
+		  printf(report_bw_write_enhanced_nocwnd_format,
+			 stats->transferID, stats->startTime, stats->endTime,
+			 buffer, &buffer[sizeof(buffer)/2],
+			 stats->sock_callstats.write.WriteCnt,
+			 stats->sock_callstats.write.WriteErr,
+			 stats->sock_callstats.write.TCPretry,
+			 stats->sock_callstats.write.rtt,
+			 netpower);
+		}
 	    }
 	}
     } else if ( stats->mUDP == (char)kMode_Client ) {
