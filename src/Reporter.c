@@ -410,7 +410,7 @@ void InitConnectionReport (thread_Settings *mSettings) {
     }
 }
 
-void PostFirstReport (thread_Settings *mSettings) {
+void PostReport (thread_Settings *mSettings) {
     if (mSettings->reporthdr) {
 	ReportHeader *reporthdr = mSettings->reporthdr;
 #ifdef HAVE_THREAD

@@ -1096,7 +1096,7 @@ void Listener::UDPSingleServer( ) {
             }
         }
         InitReport(server);
-        PostFirstReport(server);
+        PostReport(server);
 
         // Prep for next connection
         if ( !isSingleClient( mSettings ) ) {
