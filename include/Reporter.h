@@ -317,6 +317,50 @@ typedef struct MultiHeader {
     struct timeval startTime;
 } MultiHeader;
 
+typedef struct PacketRing {
+  // producer and consumer
+  // must be an atomic type, e.g. int
+  // otherwise reads/write can be torn
+  int producer;
+  int consumer;
+  int maxcount;
+  // Use a condition variable to wake up
+  // the producer
+  Condition await_consumer;
+  Condition *awake_consumer;
+} PacketRing;
+
+static inline void init_packetring (PacketRing *pr, Condition *consumer_wakeup) {
+  pr->producer = 0;
+  pr->consumer = 0;
+  pr->maxcount = NUM_REPORT_STRUCTS;
+  Condition_Initialize(&pr->await_consumer);
+  pr->awake_consumer = consumer_wakeup;
+}
+
+static inline int enqueue_packetring(PacketRing *pr) {
+  while (((pr->producer == pr->maxcount) && (pr->consumer == 0)) || \
+	 ((pr->producer + 1) == pr->consumer)) {
+    // Signal the consumer thread to process a full queue
+    Condition_Signal(pr->awake_consumer);
+    // Wait for the consumer to create some queue space
+    Condition_Lock(pr->await_consumer);
+    Condition_Wait(&pr->await_consumer);
+    Condition_Unlock(pr->await_consumer);
+  }
+  if (++pr->producer == pr->maxcount)
+    pr->producer = 0;
+  return (pr->producer);
+}
+
+static inline int dequeue_packetring(PacketRing *pr) {
+  if (pr->producer == pr->consumer)
+    return -1;
+  if (++pr->consumer == pr->maxcount)
+    pr->consumer = 0;
+  return pr->consumer;
+}
+
 typedef struct ReportHeader {
     int reporterindex;
     int agentindex;
