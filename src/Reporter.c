@@ -791,7 +791,14 @@ void reporter_spawn( thread_Settings *thread ) {
             }
             Condition_Signal( &ReportDoneCond );
         }
-	// Compare against 1 for the reporter thread
+	/*
+         * Keep the reporter thread alive under the following conditions
+         *
+         * o) There are more reports to ouput, ReportRoot has a report
+         * o) The number of threads is greater than one which indicates
+         *    either traffic threads are still running or a Listener thread
+         *    is running. If equal to 1 then only the reporter thread is alive
+         */
     } while ((thread_numuserthreads() > 1) || ReportRoot);
 }
 
