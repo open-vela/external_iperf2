@@ -61,14 +61,14 @@
 #include "Server.hpp"
 #include "PerfSocket.hpp"
 
-#ifdef HAVE_SCHED_SETSCHEDULER
+#if HAVE_SCHED_SETSCHEDULER
 #include <sched.h>
 #endif
 #ifdef HAVE_MLOCKALL
 #include <sys/mman.h>
 #endif
 static void set_scheduler(thread_Settings *thread) {
-#ifdef HAVE_SCHED_SETSCHEDULER
+#if HAVE_SCHED_SETSCHEDULER
     if ( isRealtime( thread ) ) {
 	struct sched_param sp;
 	sp.sched_priority = sched_get_priority_max(SCHED_RR);
