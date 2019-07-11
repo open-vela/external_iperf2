@@ -409,6 +409,9 @@ int thread_numuserthreads( void ) {
 void thread_rest ( void ) {
 #if defined( HAVE_THREAD )
 #if defined( HAVE_POSIX_THREAD )
+  #if HAVE_SCHED_YIELD
+     sched_yield();
+  #endif
 #else // Win32
     SwitchToThread( );
 #endif

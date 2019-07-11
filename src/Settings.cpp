@@ -579,7 +579,7 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
                 optarg++;
             }
             break;
-#ifdef HAVE_SCHED_SETSCHEDULER
+#if HAVE_SCHED_SETSCHEDULER
         case 'z': // Use realtime scheduling
 	    setRealtime( mExtSettings );
             break;
