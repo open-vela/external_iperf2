@@ -109,6 +109,7 @@ Server::~Server() {
     }
 #endif
     DELETE_ARRAY( mBuf );
+    FreeReport(mSettings);
 }
 
 bool Server::InProgress (void) {
@@ -196,7 +197,7 @@ void Server::RunTCP( void ) {
     EndReport( mSettings->reporthdr );
 }
 
-void Server::InitTimeStamping (void) {
+void Server::InitKernelTimeStamping (void) {
 #if HAVE_DECL_SO_TIMESTAMP
     iov[0].iov_base=mBuf;
     iov[0].iov_len=mSettings->mBufLen;
@@ -218,7 +219,18 @@ void Server::InitTimeStamping (void) {
 
 void Server::InitTrafficLoop (void) {
     InitReport(mSettings);
-    PostReport(mSettings, mSettings->reporthdr);
+    if (mSettings->reporthdr) {
+        ReportHeader *reporthdr = mSettings->reporthdr;
+	//
+	// Set the report start times and next report times
+	//
+	Timestamp now;
+	reporthdr->report.startTime.tv_sec = now.getSecs();
+	reporthdr->report.startTime.tv_usec = now.getUsecs();
+	reporthdr->report.nextTime = reporthdr->report.startTime;
+	TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
+    }
+
     reportstruct = new ReportStruct();
     FAIL(reportstruct == NULL, "Out of memory! Closing server thread\n", mSettings);
     reportstruct->packetID = 0;
@@ -229,7 +241,11 @@ void Server::InitTrafficLoop (void) {
 	fprintf( stderr, warn_buffer_too_small, mSettings->mBufLen );
     }
 
-    InitTimeStamping();
+    // This will only have the connection report
+    PostReport(mSettings, mSettings->reporthdr);
+
+    // Enable kernel level timestamping if available
+    InitKernelTimeStamping();
 
     int sorcvtimer = 0;
     // sorcvtimer units microseconds convert to that

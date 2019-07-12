@@ -118,10 +118,9 @@ char buffer[SNBUFFERSIZE]; // Buffer for printing
 ReportHeader *ReportRoot = NULL;
 static int num_multi_slots = 0;
 extern Condition ReportCond;
-extern Condition ReportDoneCond;
 int reporter_process_report ( ReportHeader *report );
 void process_report ( ReportHeader *report );
-int reporter_handle_packet( ReportHeader *report );
+int reporter_handle_packet( ReportHeader *report, ReportStruct *packet);
 int reporter_condprintstats( ReporterData *stats, MultiHeader *multireport, int force );
 int reporter_print( ReporterData *stats, int type, int end );
 void PrintMSS( ReporterData *stats );
@@ -130,6 +129,7 @@ static void InitDataReport(struct thread_Settings *mSettings);
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 static void gettcpistats(ReporterData *stats, int final);
 #endif
+static PacketRing * init_packetring(int count);
 
 MultiHeader* InitMulti( thread_Settings *agent, int inID) {
     MultiHeader *multihdr = NULL;
@@ -252,59 +252,51 @@ void InitReport(thread_Settings *mSettings) {
     if (isConnectionReport(mSettings)) {
 	InitConnectionReport(mSettings);
     }
-    ReportHeader *reporthdr = mSettings->reporthdr;
-    if (reporthdr && (isDataReport(mSettings) || isConnectionReport(mSettings))) {
-	//
-	// Set the report start times and next report times
-	//
-#ifdef HAVE_THREAD
-	// In the case of parellel clients synchronize them after the connect(),
-	// i.e. before their traffic run loops
-        if ((reporthdr->report.mThreadMode == kMode_Client) && (reporthdr->multireport != NULL) &&  !isConnectOnly(mSettings)) {
-	    // syncronize watches on my mark......
-	    BarrierClient(mSettings->multihdr);
-	    reporthdr->report.startTime = mSettings->multihdr->startTime;
-	    reporthdr->report.nextTime = mSettings->multihdr->startTime;
-	    TimeAdd( reporthdr->report.nextTime, reporthdr->report.intervalTime );
-	} else {
-	    if ( reporthdr->multireport != NULL && isMultipleReport( mSettings )) {
-		reporthdr->multireport->threads++;
-		if ( reporthdr->multireport->report->startTime.tv_sec == 0 ) {
-		    gettimeofday( &(reporthdr->multireport->report->startTime), NULL );
-		}
-		reporthdr->report.startTime = reporthdr->multireport->report->startTime;
-	    } else {
-		// set start time
-		gettimeofday( &(reporthdr->report.startTime), NULL );
-	    }
-	    reporthdr->report.nextTime = reporthdr->report.startTime;
-	    TimeAdd( reporthdr->report.nextTime, reporthdr->report.intervalTime );
-	}
-#else
-	// set start time
-	gettimeofday( &(reporthdr->report.startTime), NULL );
-	// set next report time
-	reporthdr->report.nextTime = reporthdr->report.startTime;
-	TimeAdd( reporthdr->report.nextTime, reporthdr->report.intervalTime );
+}
+
+static void free_packetring(PacketRing *pr) {
+#ifdef HAVE_ADVANCED_DEBUG
+  printf("DEBUG: Free packet ring %p & condition variable await consumer %p\n", (void *)pr, (void *)&pr->await_consumer);
 #endif
+  if (pr->awaitcounter) fprintf(stderr, "WARN: Reporter thread too slow, await counter=%d, " \
+                                "consider increasing NUM_REPORT_STRUCTS\n", pr->awaitcounter);
+  Condition_Destroy(&pr->await_consumer);
+  if (pr->data) free(pr->data);
+}
+
+void FreeReport(thread_Settings *mSettings) {
+    ReportHeader *reporthdr = mSettings->reporthdr;
+    if (reporthdr) {
+      free_packetring(reporthdr->packetring);
+      if (reporthdr->report.info.latency_histogram) {
+        histogram_delete(reporthdr->report.info.latency_histogram);
+      }
+#ifdef HAVE_ISOCHRONOUS
+      if (reporthdr->report.info.framelatency_histogram) {
+        histogram_delete(reporthdr->report.info.framelatency_histogram);
+      }
+#endif
+#ifdef HAVE_ADVANCED_DEBUG
+      printf("DEBUG: Free report hdr %p\n", (void *)reporthdr);
+#endif
+      free(reporthdr);
     }
 }
 
 void InitDataReport(thread_Settings *mSettings) {
-    ReportHeader *reporthdr = NULL;
-    ReporterData *data = NULL;
     /*
      * Create in one big chunk
      */
-    reporthdr = calloc( sizeof(ReportHeader) +
-			NUM_REPORT_STRUCTS * sizeof(ReportStruct), sizeof(char*));
-
+    ReportHeader *reporthdr = (ReportHeader *) calloc(1, sizeof(ReportHeader));
+    ReporterData *data = NULL;
     if ( reporthdr != NULL ) {
 	mSettings->reporthdr = reporthdr;
-	reporthdr->data = (ReportStruct*)(reporthdr+1);
 	reporthdr->multireport = mSettings->multihdr;
 	data = &reporthdr->report;
-	reporthdr->reporterindex = NUM_REPORT_STRUCTS - 1;
+	reporthdr->packetring = init_packetring(NUM_REPORT_STRUCTS);
+#ifdef HAVE_ADVANCED_DEBUG
+	printf("DEBUG: Init data report %p size %ld using packetring %p\n", (void *)reporthdr, sizeof(ReportHeader), (void *)(reporthdr->packetring));
+#endif
 	data->lastError = INITIAL_PACKETID;
 	data->lastDatagrams = INITIAL_PACKETID;
 	data->PacketID = INITIAL_PACKETID;
@@ -431,6 +423,75 @@ void PostReport (thread_Settings *mSettings, ReportHeader *reporthdr) {
     }
 }
 
+// Work in progress
+
+static PacketRing * init_packetring (int count) {
+  PacketRing *pr = NULL;
+  if ((pr = (PacketRing *) calloc(1, sizeof(PacketRing)))) {
+      pr->data = (ReportStruct *) calloc(count, sizeof(ReportStruct));
+#ifdef HAVE_ADVANCED_DEBUG
+      printf("DEBUG: Init %d element packet ring %p\n", count, (void *)pr);
+#endif
+  }
+  if (!pr || !pr->data) {
+    fprintf(stderr, "ERROR: no memory for packet ring\n");
+    exit(1);
+  }
+  pr->producer = 0;
+  pr->consumer = 0;
+  pr->maxcount = count;
+  pr->awake_consumer = &ReportCond;
+  Condition_Initialize(&pr->await_consumer);
+  pr->consumerdone = 0;
+  pr->awaitcounter = 0;
+  return (pr);
+}
+
+static inline void enqueue_packetring(ReportHeader* agent, ReportStruct *packet) {
+  PacketRing *pr = agent->packetring;
+  while (((pr->producer == pr->maxcount) && (pr->consumer == 0)) || \
+	 ((pr->producer + 1) == pr->consumer)) {
+    // Signal the consumer thread to process a full queue
+    Condition_Signal(pr->awake_consumer);
+    // Wait for the consumer to create some queue space
+    Condition_Lock(pr->await_consumer);
+    pr->awaitcounter++;
+    Condition_TimedWait(&pr->await_consumer, 1);
+    Condition_Unlock(pr->await_consumer);
+  }
+  int writeindex;
+  if ((pr->producer + 1) == pr->maxcount)
+    writeindex = 0;
+  else
+    writeindex = (pr->producer  + 1);
+
+  /* Next two lines must be maintained as is */
+  memcpy((agent->packetring->data + writeindex), packet, sizeof(ReportStruct));
+  pr->producer = writeindex;
+}
+
+static inline ReportStruct *dequeue_packetring(ReportHeader* agent) {
+  PacketRing *pr = agent->packetring;
+  ReportStruct *packet = NULL;
+  if (pr->producer == pr->consumer)
+    return NULL;
+
+  int readindex;
+  if ((pr->consumer + 1) == pr->maxcount)
+    readindex = 0;
+  else
+    readindex = (pr->consumer + 1);
+  packet = (agent->packetring->data + readindex);
+  // advance the consumer pointer last
+  pr->consumer = readindex;
+  // Signal the traffic thread assigned to this ring
+  // when the ring goes from having something to empty
+  if (pr->producer == pr->consumer)
+    Condition_Signal(&pr->await_consumer);
+  return packet;
+}
+
+
 /*
  * ReportPacket is called by a transfer agent to record
  * the arrival or departure of a "packet" (for TCP it
@@ -440,36 +501,7 @@ void PostReport (thread_Settings *mSettings, ReportHeader *reporthdr) {
  */
 void ReportPacket( ReportHeader* agent, ReportStruct *packet ) {
     if ( agent != NULL ) {
-        int index = agent->reporterindex;
-        /*
-         * First find the appropriate place to put the information
-         */
-        if ( agent->agentindex == NUM_REPORT_STRUCTS ) {
-            // Just need to make sure that reporter is not on the first
-            // item
-            while ( index == 0 ) {
-                Condition_Signal( &ReportCond );
-                Condition_Lock( ReportDoneCond );
-                Condition_Wait( &ReportDoneCond );
-                Condition_Unlock( ReportDoneCond );
-                index = agent->reporterindex;
-            }
-            agent->agentindex = 0;
-        }
-        // Need to make sure that reporter is not about to be "lapped"
-        while ( index - 1 == agent->agentindex ) {
-            Condition_Signal( &ReportCond );
-            Condition_Lock( ReportDoneCond );
-            Condition_Wait( &ReportDoneCond );
-            Condition_Unlock( ReportDoneCond );
-            index = agent->reporterindex;
-        }
-
-        // Put the information there
-        memcpy( agent->data + agent->agentindex, packet, sizeof(ReportStruct) );
-
-        // Updating agentindex MUST be the last thing done
-        agent->agentindex++;
+        enqueue_packetring(agent, packet);
 #ifndef HAVE_THREAD
         /*
          * Process the report in this thread
@@ -486,9 +518,12 @@ void ReportPacket( ReportHeader* agent, ReportStruct *packet ) {
 void CloseReport( ReportHeader *agent, ReportStruct *packet ) {
     int currpktid;
     if ( agent != NULL) {
-
         /*
          * Using PacketID of -1 ends reporting
+         * It pushes a "special packet" through
+         * the packet ring whic will be detected
+         * by the reporter thread as and end of traffic
+         * event
          */
 	currpktid = packet->packetID;
         packet->packetID = -1;
@@ -505,12 +540,14 @@ void CloseReport( ReportHeader *agent, ReportStruct *packet ) {
  */
 void EndReport( ReportHeader *agent ) {
     if ( agent != NULL ) {
-        int index = agent->reporterindex;
-        while ( index != -1 ) {
-            thread_rest();
-            index = agent->reporterindex;
-        }
-        agent->agentindex = -1;
+        Condition_Lock (agent->packetring->await_consumer);
+	while (!agent->packetring->consumerdone) {
+	    Condition_TimedWait(&agent->packetring->await_consumer, 1);
+	}
+        Condition_Unlock (agent->packetring->await_consumer);
+#ifdef HAVE_ADVANCED_DEBUG
+	printf("DEBUG: Thread %p thinks reporter is done with it\n", (void *)agent);
+#endif
 #ifndef HAVE_THREAD
         /*
          * Process the report in this thread
@@ -522,16 +559,16 @@ void EndReport( ReportHeader *agent ) {
 
 /*
  * GetReport is called by the agent after a CloseReport
- * but before an EndReport to get the stats generated
- * by the reporter thread.
+ * to get the final stats generated by the reporterthread
+ * so make sure the reporter thread is indeed done
  */
 Transfer_Info *GetReport( ReportHeader *agent ) {
-    int index = agent->reporterindex;
-    while ( index != -1 ) {
-        thread_rest();
-        index = agent->reporterindex;
+    Transfer_Info *final = NULL;
+    if ( agent != NULL ) {
+        EndReport(agent);
+        final = &agent->report.info;
     }
-    return &agent->report.info;
+    return final;
 }
 
 /*
@@ -548,9 +585,6 @@ void ReportSettings( thread_Settings *agent ) {
             ReporterData *data = &reporthdr->report;
             data->info.transferID = agent->mSock;
             data->info.groupID = -1;
-            reporthdr->agentindex = -1;
-            reporthdr->reporterindex = -1;
-
             data->mHost = agent->mHost;
             data->mLocalhost = agent->mLocalhost;
 	    data->mSSMMulticastStr = agent->mSSMMulticastStr;
@@ -618,12 +652,13 @@ void ReportServerUDP( thread_Settings *agent, server_hdr *server ) {
 	if ( !reporthdr ) {
 	    FAIL(1, "Out of Memory!!\n", agent);
 	}
+#ifdef HAVE_ADVANCED_DEBUG
+	printf("DEBUG: Init server relay report %p size %ld\n", (void *)reporthdr, sizeof(ReportHeader));
+#endif
 
 	stats->transferID = agent->mSock;
 	stats->groupID = (agent->multihdr != NULL ? agent->multihdr->groupID \
 			  : -1);
-	reporthdr->agentindex = -1;
-	reporthdr->reporterindex = -1;
 
 	reporthdr->report.type = SERVER_RELAY_REPORT;
 	reporthdr->report.mode = agent->mReportMode;
@@ -765,31 +800,37 @@ void reporter_spawn( thread_Settings *thread ) {
 
       again:
         if ( ReportRoot != NULL ) {
-            ReportHeader *temp = ReportRoot;
-            //Condition_Unlock ( ReportCond );
-            if ( reporter_process_report ( temp ) ) {
+            ReportHeader *tmp = ReportRoot;
+            if ( reporter_process_report ( tmp ) ) {
                 // This section allows for more reports to be added while
                 // the reporter is processing reports without needing to
                 // stop the reporter or immediately notify it
                 Condition_Lock ( ReportCond );
-                if ( temp == ReportRoot ) {
+                if ( tmp == ReportRoot ) {
                     // no new reports
-                    ReportRoot = temp->next;
+                    ReportRoot = tmp->next;
                 } else {
                     // new reports added
                     ReportHeader *itr = ReportRoot;
-                    while ( itr->next != temp ) {
+                    while ( itr->next != tmp ) {
                         itr = itr->next;
                     }
-                    itr->next = temp->next;
+                    itr->next = tmp->next;
                 }
-                free( temp );
+		// See notes if reporter_process_report
+#ifdef HAVE_ADVANCED_DEBUG
+		printf("DEBUG: remove %p from reporter job queue in rs\n", (void *) tmp);
+#endif
+		if ((tmp->report.type & TRANSFER_REPORT) == 0) {
+#ifdef HAVE_ADVANCED_DEBUG
+		  printf("DEBUG: free %p in rs\n", (void *) tmp);
+#endif
+		    free(tmp);
+		}
                 Condition_Unlock ( ReportCond );
-                Condition_Signal( &ReportDoneCond );
                 if (ReportRoot)
                     goto again;
             }
-            Condition_Signal( &ReportDoneCond );
         }
 	/*
          * Keep the reporter thread alive under the following conditions
@@ -829,25 +870,38 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 
     // Recursively process reports
     if ( reporthdr->next != NULL ) {
-        if ( reporter_process_report( reporthdr->next ) ) {
-            // If we are done with this report then free it
-            ReportHeader *temp = reporthdr->next;
+        if (reporter_process_report(reporthdr->next)) {
+            // Remove the report from the reporter job
+	    // list.  Note: This structure is poorly
+	    // implemented.  There are two types of jobs,
+	    // persistent ones such as transfer reports
+	    // and one shot ones such as connection and
+	    // settings reports. Clean all of this up
+	    // with a c++ based reporter implementation
+	    // and live with it for now
+            ReportHeader *tmp = reporthdr->next;
             reporthdr->next = reporthdr->next->next;
-	    // Free histograms in transfer reporst
-	    if ( (reporthdr->report.type & TRANSFER_REPORT) != 0 ) {
-	        if (temp->report.info.latency_histogram) {
-		    histogram_delete(temp->report.info.latency_histogram);
-		}
-#ifdef HAVE_ISOCHRONOUS
-		if (temp->report.info.framelatency_histogram) {
-		    histogram_delete(temp->report.info.framelatency_histogram);
-		}
+#ifdef HAVE_ADVANCED_DEBUG
+	    printf("DEBUG: remove %p from reporter job queue in rpr\n", (void *) tmp);
 #endif
+	    // Free reports that are one-shot. Note that
+	    // Transfer Reports get freed by its calling thread,
+	    // e.g. client or server. This is because those threads
+	    // may need final reporter stats and freeing it in the
+	    // reporter thread context makes for a race and locking
+	    // to prevent it.  Better is to let the thread that
+	    // allocated also free it which can be done in the thread's
+	    // destructor
+	    if ((tmp->report.type & TRANSFER_REPORT) == 0) {
+#ifdef HAVE_ADVANCED_DEBUG
+	      printf("DEBUG: free %p in rpr\n", (void *) tmp);
+#endif
+	      free(tmp);
 	    }
-            free( temp );
         }
     }
-
+    // This code works but is a joke - fix this and use a proper dispatcher
+    // for updating reports and for outputing them
     if ( (reporthdr->report.type & SETTINGS_REPORT) != 0 ) {
         reporthdr->report.type &= ~SETTINGS_REPORT;
         return reporter_print( &reporthdr->report, SETTINGS_REPORT, 1 );
@@ -868,40 +922,21 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
     }
     if ( (reporthdr->report.type & TRANSFER_REPORT) != 0 ) {
         // If there are more packets to process then handle them
-        if ( reporthdr->reporterindex >= 0 ) {
-            // Need to make sure we do not pass the "agent"
-            while ( reporthdr->reporterindex != reporthdr->agentindex - 1 ) {
-                if ( reporthdr->reporterindex == NUM_REPORT_STRUCTS - 1 ) {
-                    if ( reporthdr->agentindex == 0 ) {
-                        break;
-                    } else {
-                        reporthdr->reporterindex = 0;
-                    }
-                } else {
-                    reporthdr->reporterindex++;
-                }
-                if ( reporter_handle_packet( reporthdr ) ) {
-                    // No more packets to process
-                    reporthdr->reporterindex = -1;
-                    break;
-                }
-            }
-        }
-        // If the agent is done with the report then free it
-        if ( reporthdr->agentindex == -1 ) {
-	    // finished with report so free it
-	    // Free any histograms
-	    if (reporthdr->report.info.latency_histogram) {
-	        histogram_delete(reporthdr->report.info.latency_histogram);
+        ReportStruct *packet;
+        while ((packet = dequeue_packetring(reporthdr))) {
+	    int event_lastpacket = reporter_handle_packet(reporthdr, packet);
+	    if (event_lastpacket) {
+	        reporthdr->packetring->consumerdone = 1;
+		need_free = 1;
 	    }
-#ifdef HAVE_ISOCHRONOUS
-	    if (reporthdr->report.info.framelatency_histogram) {
-	        histogram_delete(reporthdr->report.info.framelatency_histogram);
-	    }
-#endif
-	  need_free = 1;
-        }
+	}
     }
+    // need_free is a poor implementation.  It's done this way
+    // because of the recursion.  It also signals two things,
+    // one is remove from the reporter's job queue and the second
+    // is to free the report's memory which was dynamically allocated
+    // by another thread.  This is a good thing to fix with a c++
+    // version of the reporter
     return need_free;
 }
 
@@ -909,8 +944,7 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
  * Updates connection stats
  */
 #define L2DROPFILTERCOUNTER 100
-int reporter_handle_packet( ReportHeader *reporthdr ) {
-    ReportStruct *packet = &reporthdr->data[reporthdr->reporterindex];
+int reporter_handle_packet( ReportHeader *reporthdr, ReportStruct *packet) {
     ReporterData *data = &reporthdr->report;
     Transfer_Info *stats = &reporthdr->report.info;
     int finished = 0;
@@ -1490,6 +1524,7 @@ void PrintMSS( ReporterData *stats ) {
     }
 }
 // end ReportMSS
+
 
 #ifdef __cplusplus
 } /* end extern "C" */

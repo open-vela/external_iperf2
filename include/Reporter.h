@@ -1,4 +1,4 @@
-/*---------------------------------------------------------------
+ /*---------------------------------------------------------------
  * Copyright (c) 1999,2000,2001,2002,2003
  * The Board of Trustees of the University of Illinois
  * All Rights Reserved.
@@ -62,7 +62,7 @@ struct server_hdr;
 
 #include "Settings.hpp"
 
-#define NUM_REPORT_STRUCTS 10000
+#define NUM_REPORT_STRUCTS 5000
 #define NUM_MULTI_SLOTS    5
 // If the minimum latency exceeds the boundaries below
 // assume the clocks are not synched and suppress the
@@ -305,8 +305,6 @@ typedef struct ReporterData {
 } ReporterData;
 
 typedef struct MultiHeader {
-    int reporterindex;
-    int agentindex;
     int groupID;
     int threads;
     ReporterData *report;
@@ -315,6 +313,7 @@ typedef struct MultiHeader {
     Condition await_reporter;
     int reporter_running;
     struct timeval startTime;
+    struct timeval nextTime;
 } MultiHeader;
 
 typedef struct PacketRing {
@@ -324,50 +323,24 @@ typedef struct PacketRing {
   int producer;
   int consumer;
   int maxcount;
-  // Use a condition variable to wake up
-  // the producer
+  int consumerdone;
+  int awaitcounter;
+
+  // Use a condition variables
+  // o) await_consumer - producer waits for the consumer thread to
+  //    make space or end (signaled by the consumer)
+  // o) awake_consumer - signal the consumer thread to to run
+  //    (signaled by the producer)
   Condition await_consumer;
   Condition *awake_consumer;
+  ReportStruct *data;
 } PacketRing;
 
-static inline void init_packetring (PacketRing *pr, Condition *consumer_wakeup) {
-  pr->producer = 0;
-  pr->consumer = 0;
-  pr->maxcount = NUM_REPORT_STRUCTS;
-  Condition_Initialize(&pr->await_consumer);
-  pr->awake_consumer = consumer_wakeup;
-}
-
-static inline int enqueue_packetring(PacketRing *pr) {
-  while (((pr->producer == pr->maxcount) && (pr->consumer == 0)) || \
-	 ((pr->producer + 1) == pr->consumer)) {
-    // Signal the consumer thread to process a full queue
-    Condition_Signal(pr->awake_consumer);
-    // Wait for the consumer to create some queue space
-    Condition_Lock(pr->await_consumer);
-    Condition_Wait(&pr->await_consumer);
-    Condition_Unlock(pr->await_consumer);
-  }
-  if (++pr->producer == pr->maxcount)
-    pr->producer = 0;
-  return (pr->producer);
-}
-
-static inline int dequeue_packetring(PacketRing *pr) {
-  if (pr->producer == pr->consumer)
-    return -1;
-  if (++pr->consumer == pr->maxcount)
-    pr->consumer = 0;
-  return pr->consumer;
-}
-
 typedef struct ReportHeader {
-    int reporterindex;
-    int agentindex;
     ReporterData report;
-    ReportStruct *data;
     MultiHeader *multireport;
     struct ReportHeader *next;
+    PacketRing *packetring;
 } ReportHeader;
 
 typedef void* (* report_connection)( Connection_Info*, int );
@@ -383,6 +356,7 @@ void PostReport(struct thread_Settings *mSettings, ReportHeader *agent);
 void ReportPacket( ReportHeader *agent, ReportStruct *packet );
 void CloseReport( ReportHeader *agent, ReportStruct *packet );
 void EndReport( ReportHeader *agent );
+void FreeReport(struct thread_Settings *mSettings);
 Transfer_Info* GetReport( ReportHeader *agent );
 void ReportServerUDP( struct thread_Settings *agent, struct server_hdr *server );
 void ReportSettings( struct thread_Settings *agent );

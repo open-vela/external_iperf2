@@ -49,6 +49,10 @@ AC_ARG_ENABLE(fastsampling, AC_HELP_STRING([--enable-fastsampling],
 	    [enable support for 100 microsecond report intervals (default is disable)]))
 AM_CONDITIONAL([FASTSAMPLING], [test "x$enable_fastsampling" = "xyes"])
 
+AC_ARG_ENABLE(advanced_debug, AC_HELP_STRING([--enable-advanced-debug],
+	    [enable support for advanced debugging (default is disable)]))
+AM_CONDITIONAL([ADVANCED_DEBUG], [test "x$enable_advanced_debug" = "xyes"])
+
 AC_ARG_ENABLE(checkprograms, AC_HELP_STRING([--enable-checkprograms],
 	    [enable support for building support programs such as checkdelay, checkpdfs, etc. (default is disable)]))
 AM_CONDITIONAL([CHECKPROGRAMS], [test "x$enable_checkprograms" = "xyes"])
@@ -298,6 +302,10 @@ fi
 
 if test "$enable_fastsampling" = yes; then
 AC_DEFINE([HAVE_FASTSAMPLING], 1, [Define if fast sampling for report intervals is desired])
+fi
+
+if test "$enable_advanced_debug" = yes; then
+AC_DEFINE([HAVE_ADVANCED_DEBUG], 1, [Define for advanced level debugging of the code])
 fi
 
 case "$ac_cv_host" in
