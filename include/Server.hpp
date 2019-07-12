@@ -85,7 +85,7 @@ private:
     Timestamp now;
     ReportStruct *reportstruct;
 
-    void InitTimeStamping (void);
+    void InitKernelTimeStamping (void);
     void InitTrafficLoop (void);
     int ReadWithRxTimestamp (int *readerr);
     bool ReadPacketID (void);

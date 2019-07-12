@@ -6,6 +6,9 @@
 /* Define if debugging info is desired */
 #undef DBG_MJZ
 
+/* Define for advanced level debugging of the code */
+#undef HAVE_ADVANCED_DEBUG
+
 /* AF_PACKET support is available */
 #undef HAVE_AF_PACKET
 
