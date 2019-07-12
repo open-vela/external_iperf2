@@ -132,7 +132,7 @@ void thread_start( struct thread_Settings* thread ) {
         // increment thread count
         Condition_Lock( thread_sNum_cond );
         thread_sNum++;
-	if ((thread->mThreadMode == kMode_Server) || (thread->mThreadMode == kMode_Server)) {
+	if ((thread->mThreadMode == kMode_Client) || (thread->mThreadMode == kMode_Server)) {
 	    thread_trfc_sNum++;
 	}
         Condition_Unlock( thread_sNum_cond );
@@ -146,7 +146,7 @@ void thread_start( struct thread_Settings* thread ) {
             // decrement thread count
             Condition_Lock( thread_sNum_cond );
             thread_sNum--;
-	    if ((thread->mThreadMode == kMode_Server) || (thread->mThreadMode == kMode_Server)) {
+	    if ((thread->mThreadMode == kMode_Client) || (thread->mThreadMode == kMode_Server)) {
 	      thread_trfc_sNum--;
 	    }
             Condition_Unlock( thread_sNum_cond );
@@ -163,7 +163,7 @@ void thread_start( struct thread_Settings* thread ) {
             // decrement thread count
             Condition_Lock( thread_sNum_cond );
             thread_sNum--;
-	    if ((thread->mThreadMode == kMode_Server) || (thread->mThreadMode == kMode_Server)) {
+	    if ((thread->mThreadMode == kMode_Client) || (thread->mThreadMode == kMode_Server)) {
 	      thread_trfc_sNum--;
 	    }
             Condition_Unlock( thread_sNum_cond );
@@ -190,7 +190,7 @@ void thread_stop( struct thread_Settings* thread ) {
         // decrement thread count
         Condition_Lock( thread_sNum_cond );
         thread_sNum--;
-	if ((thread->mThreadMode == kMode_Server) || (thread->mThreadMode == kMode_Server)) {
+	if ((thread->mThreadMode == kMode_Client) || (thread->mThreadMode == kMode_Server)) {
 	    thread_trfc_sNum--;
 	}
         Condition_Signal( &thread_sNum_cond );

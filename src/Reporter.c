@@ -59,6 +59,7 @@
 #include "PerfSocket.hpp"
 #include "SocketAddr.h"
 #include "histogram.h"
+#include "delay.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -130,6 +131,11 @@ static void InitDataReport(struct thread_Settings *mSettings);
 static void gettcpistats(ReporterData *stats, int final);
 #endif
 static PacketRing * init_packetring(int count);
+
+// This is used to determine the packet load into the reporter thread
+static int accounted_packets;
+static int accounted_packet_threads;
+#define REPORTERDELAY_DURATION 4000 // units is microseconds
 
 MultiHeader* InitMulti( thread_Settings *agent, int inID) {
     MultiHeader *multihdr = NULL;
@@ -470,6 +476,23 @@ static inline void enqueue_packetring(ReportHeader* agent, ReportStruct *packet)
   pr->producer = writeindex;
 }
 
+/*
+ * This is an estimate can can be incorrect as these counters
+ * are not thread safe.  Use with care as there is no
+ * guarantee the value is accurate
+ */
+static inline int getcount_packetring(ReportHeader *agent) {
+    PacketRing *pr = agent->packetring;
+    int depth = 0;
+    if (pr->producer != pr->consumer) {
+        depth = (pr->producer > pr->consumer) ? \
+	        (pr->producer - pr->consumer) :  \
+	        ((pr->maxcount - pr->consumer) + pr->producer);
+        printf("DEBUG: Depth=%d for packet ring %p\n", depth, (void *)pr);
+    }
+    return depth;
+}
+
 static inline ReportStruct *dequeue_packetring(ReportHeader* agent) {
   PacketRing *pr = agent->packetring;
   ReportStruct *packet = NULL;
@@ -723,7 +746,6 @@ void ReportServerUDP( thread_Settings *agent, server_hdr *server ) {
     }
 }
 
-
 /*
  * This function is called only when the reporter thread
  * This function is the loop that the reporter thread processes
@@ -752,52 +774,12 @@ void reporter_spawn( thread_Settings *thread ) {
 	    Condition_TimedWait ( &ReportCond, 1);
         }
         Condition_Unlock ( ReportCond );
-	if ( !isRealtime( thread ) ) {
-	    /*
-	     * Suspend the reporter thread for 10 milliseconds
-	     *
-	     * This allows the thread to receive client or server threads'
-	     * packet events in "aggregates."  This can reduce context
-	     * switching allowing for better CPU utilization,
-	     * which is very noticble on CPU constrained systems.
-	     *
-	     * If the realtime flag is set, then don't invoke the
-	     * suspend.  This should give better reporter timing on
-	     * higher end systems, where a busy-loop thread can be
-	     * scheduled without impacting other threads.
-	     *
-	     * Note that if the reporter thread is signficantly slower
-	     * than the Client or Server (traffic) threads this suspend
-	     * will still be called even though the traffic threads can be
-	     * blocked on the shared memory being full.  Probably should
-	     * detect those and avoid the suspend under such conditions.
-	     * It's not a big deal though because the traffic threads under
-	     * normal conditions are much slower than the reporter thread.
-	     * The exception is when there are things like sustained
-	     * write errors. Hence, such an optimization is deferred
-	     * for a later date.
-	     *
-	     * Also note, a possible better implementation is for the
-	     * reporter thread to block on a traffic thread's signal
-	     * instead of a 10 ms suspend.  That implementation
-	     * would have to be profiled against this one to make sure
-	     * it indeed gave better performance.  Again, deferred.
-	     *
-	     * Final note, usleep() is being deprecated for nanosleep(),
-	     * so use nanosleep if available
-	     */
-#ifdef HAVE_NANOSLEEP
-	    {
-		struct timespec requested;
-		requested.tv_sec  = 0;
-		requested.tv_nsec = 10000000L;
-		nanosleep(&requested, NULL);
-	    }
-#else
-	    usleep(10000);
-#endif
-	}
+        // The reporter is starting from an empty state
+	// so set the load detect to trigger an initial delay
+	accounted_packets = 0 ;
+	accounted_packet_threads = 0;
 
+      // This do/goto again stays alive while any traffic threads exist
       again:
         if ( ReportRoot != NULL ) {
             ReportHeader *tmp = ReportRoot;
@@ -923,7 +905,30 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
     if ( (reporthdr->report.type & TRANSFER_REPORT) != 0 ) {
         // If there are more packets to process then handle them
         ReportStruct *packet;
+	//  If the overall reporter load is too low, add some yield
+	//  or delay so the traffic threads can fill the packet rings
+	if (--accounted_packet_threads <= 0) {
+	    if (accounted_packets <= 0) {
+	        accounted_packets = thread_numtrafficthreads() * (NUM_REPORT_STRUCTS % 5);
+		/*
+		 * Suspend the reporter thread for some (e.g. 4) milliseconds
+		 *
+		 * This allows the thread to receive client or server threads'
+		 * packet events in "aggregates."  This can reduce context
+		 * switching allowing for better CPU utilization,
+		 * which is very noticble on CPU constrained systems.
+		 */
+		delay_loop(REPORTERDELAY_DURATION);
+		// printf("DEBUG: forced reporter suspend, queueue depth after = %d\n", getcount_packetring(reporthdr));
+	    }
+	    accounted_packet_threads = thread_numtrafficthreads();
+	}
         while ((packet = dequeue_packetring(reporthdr))) {
+	    // Increment the total packet count processed by this thread
+	    // this will be used to make decisions on if the reporter
+	    // thread should add some delay to eliminate cpu thread
+	    // thrashing,
+	    accounted_packets--;
 	    int event_lastpacket = reporter_handle_packet(reporthdr, packet);
 	    if (event_lastpacket) {
 	        reporthdr->packetring->consumerdone = 1;
