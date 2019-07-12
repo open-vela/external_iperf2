@@ -111,6 +111,7 @@ void thread_stop( struct thread_Settings* thread );
 void thread_joinall( void );
 
 int thread_numuserthreads( void );
+int thread_numtrafficthreads( void );
 
 // set a thread to be ignorable, so joinall won't wait on it
 void thread_setignore( void );
