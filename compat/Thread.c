@@ -84,6 +84,8 @@ extern "C" {
 
 // number of currently running threads
 int thread_sNum = 0;
+// number of currently running traffic threads
+int thread_trfc_sNum = 0;
 // number of non-terminating running threads (ie listener thread)
 int nonterminating_num = 0;
 // condition to protect updating the above and alerting on
@@ -130,6 +132,9 @@ void thread_start( struct thread_Settings* thread ) {
         // increment thread count
         Condition_Lock( thread_sNum_cond );
         thread_sNum++;
+	if ((thread->mThreadMode == kMode_Server) || (thread->mThreadMode == kMode_Server)) {
+	    thread_trfc_sNum++;
+	}
         Condition_Unlock( thread_sNum_cond );
 
 #if   defined( HAVE_POSIX_THREAD )
@@ -141,6 +146,9 @@ void thread_start( struct thread_Settings* thread ) {
             // decrement thread count
             Condition_Lock( thread_sNum_cond );
             thread_sNum--;
+	    if ((thread->mThreadMode == kMode_Server) || (thread->mThreadMode == kMode_Server)) {
+	      thread_trfc_sNum--;
+	    }
             Condition_Unlock( thread_sNum_cond );
         }
 
@@ -155,6 +163,9 @@ void thread_start( struct thread_Settings* thread ) {
             // decrement thread count
             Condition_Lock( thread_sNum_cond );
             thread_sNum--;
+	    if ((thread->mThreadMode == kMode_Server) || (thread->mThreadMode == kMode_Server)) {
+	      thread_trfc_sNum--;
+	    }
             Condition_Unlock( thread_sNum_cond );
         }
 
@@ -179,6 +190,9 @@ void thread_stop( struct thread_Settings* thread ) {
         // decrement thread count
         Condition_Lock( thread_sNum_cond );
         thread_sNum--;
+	if ((thread->mThreadMode == kMode_Server) || (thread->mThreadMode == kMode_Server)) {
+	    thread_trfc_sNum--;
+	}
         Condition_Signal( &thread_sNum_cond );
         Condition_Unlock( thread_sNum_cond );
 
@@ -275,6 +289,9 @@ thread_run_wrapper( void* paramPtr ) {
     // decrement thread count and send condition signal
     Condition_Lock( thread_sNum_cond );
     thread_sNum--;
+    if ((thread->mThreadMode == kMode_Server) || (thread->mThreadMode == kMode_Server)) {
+       thread_trfc_sNum--;
+    }
     Condition_Signal( &thread_sNum_cond );
     Condition_Unlock( thread_sNum_cond );
 
@@ -399,6 +416,13 @@ int thread_release_nonterm( int interrupt ) {
  * ------------------------------------------------------------------- */
 int thread_numuserthreads( void ) {
     return thread_sNum;
+}
+
+/* -------------------------------------------------------------------
+ * Return the number of taffic threads currently running
+ * ------------------------------------------------------------------- */
+int thread_numtrafficthreads( void ) {
+    return thread_trfc_sNum;
 }
 
 /*
