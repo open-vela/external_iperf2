@@ -670,6 +670,8 @@ CFLAGS
 CC
 CHECKPROGRAMS_FALSE
 CHECKPROGRAMS_TRUE
+ADVANCED_DEBUG_FALSE
+ADVANCED_DEBUG_TRUE
 FASTSAMPLING_FALSE
 FASTSAMPLING_TRUE
 ISOCHRONOUS_FALSE
@@ -757,6 +759,7 @@ enable_kalman
 enable_seqno64b
 enable_isochronous
 enable_fastsampling
+enable_advanced_debug
 enable_checkprograms
 enable_af_packet
 enable_dependency_tracking
@@ -1407,6 +1410,8 @@ Optional Features:
   --disable-isochronous   disable isochronous support (default is enable)
   --enable-fastsampling   enable support for 100 microsecond report intervals
                           (default is disable)
+  --enable-advanced-debug enable support for advanced debugging (default is
+                          disable)
   --enable-checkprograms  enable support for building support programs such as
                           checkdelay, checkpdfs, etc. (default is disable)
   --enable-af-packet      Enable AF_PACKET support [default=yes]
@@ -3322,6 +3327,20 @@ fi
 else
   FASTSAMPLING_TRUE='#'
   FASTSAMPLING_FALSE=
+fi
+
+
+# Check whether --enable-advanced_debug was given.
+if test "${enable_advanced_debug+set}" = set; then :
+  enableval=$enable_advanced_debug;
+fi
+
+ if test "x$enable_advanced_debug" = "xyes"; then
+  ADVANCED_DEBUG_TRUE=
+  ADVANCED_DEBUG_FALSE='#'
+else
+  ADVANCED_DEBUG_TRUE='#'
+  ADVANCED_DEBUG_FALSE=
 fi
 
 
@@ -8266,6 +8285,12 @@ $as_echo "#define HAVE_FASTSAMPLING 1" >>confdefs.h
 
 fi
 
+if test "$enable_advanced_debug" = yes; then
+
+$as_echo "#define HAVE_ADVANCED_DEBUG 1" >>confdefs.h
+
+fi
+
 case "$ac_cv_host" in
 *-mingw32)
         LIBS="$LIBS -static-libstdc++ -static";;
@@ -8430,6 +8455,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${FASTSAMPLING_TRUE}" && test -z "${FASTSAMPLING_FALSE}"; then
   as_fn_error $? "conditional \"FASTSAMPLING\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${ADVANCED_DEBUG_TRUE}" && test -z "${ADVANCED_DEBUG_FALSE}"; then
+  as_fn_error $? "conditional \"ADVANCED_DEBUG\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${CHECKPROGRAMS_TRUE}" && test -z "${CHECKPROGRAMS_FALSE}"; then

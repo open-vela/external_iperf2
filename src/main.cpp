@@ -92,11 +92,10 @@ extern "C" {
     int groupID = 0;
     // Mutex to protect access to the above ID
     Mutex groupCond;
-    // Condition used to signify advances of the current
-    // records being accessed in a report and also to
-    // serialize modification of the report list
+    // Condition used to signal the reporter thread
+    // when a packet ring is full.  Shouldn't really
+    // be needed but is "belts and suspeners"
     Condition ReportCond;
-    Condition ReportDoneCond;
 }
 
 // global variables only accessed within this file
@@ -143,7 +142,6 @@ int main( int argc, char **argv ) {
 
     // Initialize global mutexes and conditions
     Condition_Initialize ( &ReportCond );
-    Condition_Initialize ( &ReportDoneCond );
     Mutex_Initialize( &groupCond );
     Mutex_Initialize( &clients_mutex );
 

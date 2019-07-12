@@ -181,16 +181,7 @@ Client::Client( thread_Settings *inSettings ) {
 		}
 	}
 
-        // InitDataReport handles Barrier for multiple Streams
 	InitReport(mSettings);
-	if (mSettings->reporthdr) {
-	    mSettings->reporthdr->report.connection.connecttime = ct;
-	    if (isTxHoldback(inSettings)) {
-	        mSettings->reporthdr->report.connection.txholdbacktime  = inSettings->txholdbacktime - ct;
-		if (mSettings->reporthdr->report.connection.txholdbacktime  < 0.0)
-		    mSettings->reporthdr->report.connection.txholdbacktime  = 0.0;
-	    }
-	}
 
 	// Create the Report structure that's used to pass packet metadata to the reporter thread
 	reportstruct = new ReportStruct();
@@ -200,6 +191,40 @@ Client::Client( thread_Settings *inSettings ) {
 	reportstruct->emptyreport=0;
 	reportstruct->socket = mSettings->mSock;
 	reportstruct->packetLen = 0;
+
+	if (mSettings->reporthdr && (isDataReport(mSettings) || isConnectionReport(mSettings))) {
+	    ReportHeader *reporthdr = mSettings->reporthdr;
+	    //
+	    // Set the report start times and next report times
+	    //
+	    Timestamp now;
+#ifdef HAVE_THREAD
+	    // In the case of parellel clients synchronize them after the connect(),
+	    // i.e. before their traffic run loops
+            if (reporthdr->multireport) {
+	        // syncronize watches on my mark......
+	        BarrierClient(mSettings->multihdr);
+		now.setnow();
+	    }
+#endif
+	    reporthdr->report.startTime.tv_sec = now.getSecs();
+	    reporthdr->report.startTime.tv_usec = now.getUsecs();
+	    reporthdr->report.nextTime = reporthdr->report.startTime;
+	    TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
+	    if (reporthdr->multireport) {
+	        reporthdr->multireport->startTime = reporthdr->report.startTime;
+	        reporthdr->multireport->nextTime = reporthdr->report.nextTime;
+	    }
+	}
+	if (mSettings->reporthdr) {
+	    mSettings->reporthdr->report.connection.connecttime = ct;
+	    if (isTxHoldback(inSettings)) {
+	        mSettings->reporthdr->report.connection.txholdbacktime  = inSettings->txholdbacktime - ct;
+		if (mSettings->reporthdr->report.connection.txholdbacktime  < 0.0)
+		    mSettings->reporthdr->report.connection.txholdbacktime  = 0.0;
+	    }
+	}
+
 	// Post the very first report which will have connection, version and test information
 	PostReport(mSettings, mSettings->reporthdr);
     }
@@ -215,7 +240,10 @@ Client::~Client() {
         mSettings->mSock = INVALID_SOCKET;
     }
     DELETE_ARRAY( mBuf );
-    DELETE_PTR(reportstruct);
+    if (!isConnectOnly(mSettings)) {
+      DELETE_PTR(reportstruct);
+      FreeReport(mSettings);
+    }
 } // end ~Client
 
 
@@ -965,11 +993,6 @@ void Client::FinishTrafficActions(void) {
 	ReportPacket( mSettings->reporthdr, reportstruct );
     }
     CloseReport( mSettings->reporthdr, reportstruct );
-    if (isEnhanced(mSettings) && mSettings->mSock != INVALID_SOCKET ) {
-        int rc = close( mSettings->mSock );
-        WARN_errno( rc == SOCKET_ERROR, "close" );
-        mSettings->mSock = INVALID_SOCKET;
-    }
     EndReport( mSettings->reporthdr );
 }
 
