@@ -774,8 +774,10 @@ void reporter_spawn( thread_Settings *thread ) {
 	    Condition_TimedWait ( &ReportCond, 1);
 	    // The reporter is starting from an empty state
 	    // so set the load detect to trigger an initial delay
-	    accounted_packets = 10;
-	    accounted_packet_threads = 0;
+	    accounted_packet_threads = thread_numtrafficthreads();
+	    if ((accounted_packets = thread_numtrafficthreads() * 20) <= 0 ) {
+	        accounted_packets = 10;
+	    }
         }
         Condition_Unlock ( ReportCond );
 
