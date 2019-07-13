@@ -133,8 +133,8 @@ static void gettcpistats(ReporterData *stats, int final);
 static PacketRing * init_packetring(int count);
 
 // This is used to determine the packet load into the reporter thread
-static int accounted_packets;
-static int accounted_packet_threads;
+static int accounted_packets = 0;
+static int accounted_packet_threads = 0;
 #define REPORTERDELAY_DURATION 4000 // units is microseconds
 
 MultiHeader* InitMulti( thread_Settings *agent, int inID) {
@@ -477,9 +477,9 @@ static inline void enqueue_packetring(ReportHeader* agent, ReportStruct *packet)
 }
 
 /*
- * This is an estimate can can be incorrect as these counters
- * are not thread safe.  Use with care as there is no
- * guarantee the value is accurate
+ * This is an estimate and can be incorrect as these counters
+ * done like this is not thread safe.  Use with care as there
+ * is no guarantee the return value is accurate
  */
 static inline int getcount_packetring(ReportHeader *agent) {
     PacketRing *pr = agent->packetring;
@@ -488,7 +488,7 @@ static inline int getcount_packetring(ReportHeader *agent) {
         depth = (pr->producer > pr->consumer) ? \
 	        (pr->producer - pr->consumer) :  \
 	        ((pr->maxcount - pr->consumer) + pr->producer);
-        printf("DEBUG: Depth=%d for packet ring %p\n", depth, (void *)pr);
+        // printf("DEBUG: Depth=%d for packet ring %p\n", depth, (void *)pr);
     }
     return depth;
 }
@@ -772,14 +772,13 @@ void reporter_spawn( thread_Settings *thread ) {
 	    //  that signal this condition may have already
 	    //  completed
 	    Condition_TimedWait ( &ReportCond, 1);
+	    // The reporter is starting from an empty state
+	    // so set the load detect to trigger an initial delay
+	    accounted_packets = 10;
+	    accounted_packet_threads = 0;
         }
         Condition_Unlock ( ReportCond );
-        // The reporter is starting from an empty state
-	// so set the load detect to trigger an initial delay
-	accounted_packets = 0 ;
-	accounted_packet_threads = 0;
 
-      // This do/goto again stays alive while any traffic threads exist
       again:
         if ( ReportRoot != NULL ) {
             ReportHeader *tmp = ReportRoot;
@@ -908,8 +907,12 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 	//  If the overall reporter load is too low, add some yield
 	//  or delay so the traffic threads can fill the packet rings
 	if (--accounted_packet_threads <= 0) {
-	    if (accounted_packets <= 0) {
-	        accounted_packets = thread_numtrafficthreads() * (NUM_REPORT_STRUCTS % 5);
+	    // All active threads have been processed for the loop,
+	    // reset the thread counter and check the consumption rate
+	    // If the rate is too low add some delay to the reporter
+	    accounted_packet_threads = thread_numtrafficthreads();
+	    // Check to see if we need to suspend the reporter
+	    if (accounted_packets > 0) {
 		/*
 		 * Suspend the reporter thread for some (e.g. 4) milliseconds
 		 *
@@ -919,10 +922,16 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 		 * which is very noticble on CPU constrained systems.
 		 */
 		delay_loop(REPORTERDELAY_DURATION);
-		// printf("DEBUG: forced reporter suspend, queueue depth after = %d\n", getcount_packetring(reporthdr));
+		// printf("DEBUG: forced reporter suspend, accounted=%d,  queueue depth after = %d\n", accounted_packets, getcount_packetring(reporthdr));
+	    } else {
+	      // printf("DEBUG: no suspend, accounted=%d,  queueue depth after = %d\n", accounted_packets, getcount_packetring(reporthdr));
 	    }
-	    accounted_packet_threads = thread_numtrafficthreads();
+	    // Reset the accounted packets which is a count down counter, can't be reset to zero
+	    if ((accounted_packets = thread_numtrafficthreads() * 20) <= 0 ) {
+	        accounted_packets = 10;
+	    }
 	}
+
         while ((packet = dequeue_packetring(reporthdr))) {
 	    // Increment the total packet count processed by this thread
 	    // this will be used to make decisions on if the reporter
