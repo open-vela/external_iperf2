@@ -264,7 +264,7 @@ static void free_packetring(PacketRing *pr) {
 #ifdef HAVE_ADVANCED_DEBUG
   printf("DEBUG: Free packet ring %p & condition variable await consumer %p\n", (void *)pr, (void *)&pr->await_consumer);
 #endif
-  if (pr->awaitcounter) fprintf(stderr, "WARN: Reporter thread too slow, await counter=%d, " \
+  if (pr->awaitcounter > 1000) fprintf(stderr, "WARN: Reporter thread may be too slow, await counter=%d, " \
                                 "consider increasing NUM_REPORT_STRUCTS\n", pr->awaitcounter);
   Condition_Destroy(&pr->await_consumer);
   if (pr->data) free(pr->data);
@@ -476,23 +476,6 @@ static inline void enqueue_packetring(ReportHeader* agent, ReportStruct *packet)
   pr->producer = writeindex;
 }
 
-/*
- * This is an estimate and can be incorrect as these counters
- * done like this is not thread safe.  Use with care as there
- * is no guarantee the return value is accurate
- */
-static inline int getcount_packetring(ReportHeader *agent) {
-    PacketRing *pr = agent->packetring;
-    int depth = 0;
-    if (pr->producer != pr->consumer) {
-        depth = (pr->producer > pr->consumer) ? \
-	        (pr->producer - pr->consumer) :  \
-	        ((pr->maxcount - pr->consumer) + pr->producer);
-        // printf("DEBUG: Depth=%d for packet ring %p\n", depth, (void *)pr);
-    }
-    return depth;
-}
-
 static inline ReportStruct *dequeue_packetring(ReportHeader* agent) {
   PacketRing *pr = agent->packetring;
   ReportStruct *packet = NULL;
@@ -514,6 +497,22 @@ static inline ReportStruct *dequeue_packetring(ReportHeader* agent) {
   return packet;
 }
 
+/*
+ * This is an estimate and can be incorrect as these counters
+ * done like this is not thread safe.  Use with care as there
+ * is no guarantee the return value is accurate
+ */
+static inline int getcount_packetring(ReportHeader *agent) {
+    PacketRing *pr = agent->packetring;
+    int depth = 0;
+    if (pr->producer != pr->consumer) {
+        depth = (pr->producer > pr->consumer) ? \
+	        (pr->producer - pr->consumer) :  \
+	        ((pr->maxcount - pr->consumer) + pr->producer);
+        // printf("DEBUG: Depth=%d for packet ring %p\n", depth, (void *)pr);
+    }
+    return depth;
+}
 
 /*
  * ReportPacket is called by a transfer agent to record
