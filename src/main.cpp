@@ -202,7 +202,6 @@ int main( int argc, char **argv ) {
 	ReporterThreadMode = kMode_ReporterClient;
 	break;
     case kMode_Listener :
-	ReporterThreadMode = kMode_ReporterServer;
 #ifdef WIN32
      // Remove the Windows service if requested
 	if ( isRemoveService( ext_gSettings ) ) {
@@ -239,7 +238,6 @@ int main( int argc, char **argv ) {
 	// Create the settings structure for the reporter thread
 	Settings_Copy( ext_gSettings, &into );
 	into->mThreadMode = ReporterThreadMode;
-	setReport(into);
 	// Have the reporter launch the client or listener
 	into->runNow = ext_gSettings;
 

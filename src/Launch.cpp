@@ -92,7 +92,8 @@ static void set_scheduler(thread_Settings *thread) {
  */
 void listener_spawn( thread_Settings *thread ) {
     Listener *theListener = NULL;
-
+    // the Listener need to trigger a settings report
+    setReport(thread);
     // start up a listener
     theListener = new Listener( thread );
 
@@ -166,7 +167,7 @@ void client_init( thread_Settings *clients ) {
     }
 #endif
 #endif
-
+    setReport(clients);
     // See if we need to start a listener as well
     Settings_GenerateListenerSettings( clients, &next );
 
@@ -190,6 +191,7 @@ void client_init( thread_Settings *clients ) {
     // to the list of threads to start
     for (int i = 1; i < clients->mThreads; i++) {
         Settings_Copy( clients, &next );
+	unsetReport(clients);
 	if (isIncrDstIP(clients))
 	    next->incrdstip = i;
 
@@ -204,4 +206,3 @@ void client_init( thread_Settings *clients ) {
     }
 #endif
 }
-

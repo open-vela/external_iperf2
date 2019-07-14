@@ -372,6 +372,26 @@ void InitDataReport(thread_Settings *mSettings) {
     }
 }
 
+
+/*
+ * This init/update and print/finish (in the ReportDefault.c)
+ * is poor.  It has to be done this way to preserve the
+ * interface to older versions where the reporter settings
+ * were delayed until a Transfer report came through.
+ * This transfer report has all the reports bound to it.
+ *
+ * The better implmementation is to treat all reports
+ * as independent objects that can be updated, processed,
+ * and output independlty per the Reporter threads job queue
+ * without shared state or copied state variables between these
+ * reports.  The shared state, is really reporter state, that
+ * should be maintained in and by the reporter object/thread.
+ *
+ * For now, just fix it good enough.  Later, write a c++
+ * reporter object and use standard c++ design techniques
+ * to achieve this.  Such code will be easier to maintain
+ * and to extend.
+ */
 void InitConnectionReport (thread_Settings *mSettings) {
     ReportHeader *reporthdr = mSettings->reporthdr;
     ReporterData *data = NULL;
@@ -406,9 +426,39 @@ void InitConnectionReport (thread_Settings *mSettings) {
 	data->connection.epochStartTime.tv_sec = mSettings->txstart_epoch.tv_sec;
 	data->connection.epochStartTime.tv_usec = mSettings->txstart_epoch.tv_usec;
     }
+    if (isFQPacing(data) && (data->mThreadMode == kMode_Client)) {
+	char tmpbuf[40];
+	byte_snprintf(tmpbuf, sizeof(tmpbuf), data->FQPacingRate, 'a');
+	tmpbuf[39]='\0';
+        printf(client_fq_pacing,tmpbuf);
+    }
+    //  Copy state from the data report into the connection report
+    //  See notes about how a proper C++ implmentation can fix this
+    data->connection.flags = data->flags;
+    data->connection.flags_extended = data->flags_extend;
+    data->connection.mFormat = data->info.mFormat;
+}
+
+// Read the actual socket window size data
+void UpdateConnectionReport(thread_Settings *mSettings) {
+#ifdef HAVE_ADVANCED_DEBUG
+    printf("DEBUG: update connection report %p\n", mSettings->reporthdr);
+#endif
+  ReportHeader *reporthdr = mSettings->reporthdr;
+    if (reporthdr != NULL) {
+        ReporterData *data = &reporthdr->report;
+	if (mSettings->mSock > 0) {
+	    data->connection.winsize = getsock_tcp_windowsize(mSettings->mSock, \
+                  (data->mThreadMode != kMode_Client ? 0 : 1) );
+	}
+	data->connection.winsize_requested = data->mTCPWin;
+    }
 }
 
 void PostReport (thread_Settings *mSettings, ReportHeader *reporthdr) {
+#ifdef HAVE_ADVANCED_DEBUG
+    printf("DEBUG: post report %p\n", reporthdr);
+#endif
     if (reporthdr) {
 #ifdef HAVE_THREAD
 	/*
@@ -604,6 +654,7 @@ void ReportSettings( thread_Settings *agent ) {
          */
         ReportHeader *reporthdr = calloc( sizeof(ReportHeader), sizeof(char*));
         if ( reporthdr != NULL ) {
+	    agent->reporthdr = reporthdr;
             ReporterData *data = &reporthdr->report;
             data->info.transferID = agent->mSock;
             data->info.groupID = -1;
@@ -638,18 +689,6 @@ void ReportSettings( thread_Settings *agent ) {
 		data->isochstats.mBurstInterval = (unsigned int) (1 / agent->mFPS * 1000000);
 	    }
 #endif
-    #ifdef HAVE_THREAD
-            /*
-             * Update the ReportRoot to include this report.
-             */
-	    PostReport(agent, reporthdr);
-    #else
-            /*
-             * Process the report in this thread
-             */
-            reporthdr->next = NULL;
-            process_report ( reporthdr );
-    #endif
         } else {
             FAIL(1, "Out of Memory!!\n", agent);
         }
@@ -750,8 +789,9 @@ void ReportServerUDP( thread_Settings *agent, server_hdr *server ) {
  * This function is the loop that the reporter thread processes
  */
 void reporter_spawn( thread_Settings *thread ) {
-    // Post the settings report
-    ReportSettings(thread);
+#ifdef HAVE_ADVANCED_DEBUG
+    printf("DEBUG: reporter thread started\n");
+#endif
     //
     // Signal to other (client) threads that the
     // reporter is now running.  This is needed because
