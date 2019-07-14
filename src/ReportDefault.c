@@ -394,12 +394,8 @@ void reporter_serverstats( Connection_Info *nused, Transfer_Info *stats ) {
  * Report the client or listener Settings in default style
  */
 void reporter_reportsettings( ReporterData *data ) {
-    int win, win_requested;
     int pid =  (int)  getpid();
 
-    win = getsock_tcp_windowsize( data->info.transferID,
-                  (data->mThreadMode == kMode_Listener ? 0 : 1) );
-    win_requested = data->mTCPWin;
     printf( "%s", separator_line );
     switch (data->mThreadMode) {
     case kMode_Listener:
@@ -472,26 +468,26 @@ void reporter_reportsettings( ReporterData *data ) {
 				client_write_size : server_read_size), buffer);
 	}
     }
-    byte_snprintf( buffer, sizeof(buffer), win,
-                   toupper( (int)data->info.mFormat));
     if (isFQPacing(data) && (data->mThreadMode == kMode_Client)) {
 	char tmpbuf[40];
 	byte_snprintf(tmpbuf, sizeof(tmpbuf), data->FQPacingRate, 'a');
 	tmpbuf[39]='\0';
         printf(client_fq_pacing,tmpbuf);
     }
+    byte_snprintf( buffer, sizeof(buffer), data->connection.winsize,	\
+                   toupper( (int)data->info.mFormat));
     printf( "%s: %s", (isUDP( data ) ?
                                 udp_buffer_size : tcp_window_size), buffer );
-    if ( win_requested == 0 ) {
+    if (data->connection.winsize_requested == 0 ) {
         printf( " %s", window_default );
-    } else if ( win != win_requested ) {
-        byte_snprintf( buffer, sizeof(buffer), win_requested,
+    } else if ( data->connection.winsize != data->connection.winsize_requested ) {
+        byte_snprintf( buffer, sizeof(buffer), data->connection.winsize_requested,
                        toupper( (int)data->info.mFormat));
-        printf( warn_window_requested, buffer );
+	printf( warn_window_requested, buffer );
     }
-
     printf( "\n%s", separator_line );
- }
+}
+
 
 /*
  * Report a socket's peer IP address in default style
@@ -511,8 +507,25 @@ void *reporter_reportpeer( Connection_Info *stats, int ID ) {
 	extbuf[(2*PEERBUFSIZE)-1] = '\0';
 	char *b = &extbuf[0];
 	extbuf[0]= '\0';
+	if (stats->winsize) {
+	  if (!stats->winsize_requested) {
+	      char tmpbuf[PEERBUFSIZE/4];
+	      tmpbuf[PEERBUFSIZE/4-1]='\0';
+	      byte_snprintf(tmpbuf, sizeof(tmpbuf), stats->winsize, 'A');
+	      snprintf(b, PEERBUFSIZE, " (winsize=%s)", tmpbuf);
+	  } else if (stats->winsize != stats->winsize_requested) {
+	      char tmpbuf[PEERBUFSIZE/4];
+	      char tmpbuf2[PEERBUFSIZE/4];
+	      tmpbuf2[PEERBUFSIZE/4-1]='\0';
+	      tmpbuf[PEERBUFSIZE/4-1]='\0';
+	      byte_snprintf(tmpbuf, sizeof(tmpbuf), stats->winsize, 'A');
+	      byte_snprintf(tmpbuf2, sizeof(tmpbuf2), stats->winsize_requested, 'A');
+	      snprintf(b, PEERBUFSIZE, " (WARN: winsize=%s req=%s)", tmpbuf, tmpbuf2);
+	  }
+	}
+	b += strlen(b);
 	if (stats->l2mode) {
-	    snprintf(b, PEERBUFSIZE, " (%s=0x%X)", "l2mode", stats->l2mode);
+	    snprintf(b, PEERBUFSIZE-strlen(b), " (%s=0x%X)", "l2mode", stats->l2mode);
 	    b += strlen(b);
 	}
 	if (stats->peerversion) {

@@ -241,6 +241,11 @@ typedef struct Connection_Info {
     double connecttime;
     double txholdbacktime;
     struct timeval epochStartTime;
+    int winsize;
+    int winsize_requested;
+    int flags;
+    int flags_extended;
+    char mFormat;
 } Connection_Info;
 
 typedef struct ReporterData {
@@ -351,6 +356,7 @@ typedef void (* report_serverstatistics)( Connection_Info*, Transfer_Info* );
 MultiHeader* InitMulti( struct thread_Settings *agent, int inID );
 void InitReport( struct thread_Settings *agent );
 void InitConnectionReport( struct thread_Settings *agent );
+void UpdateConnectionReport( struct thread_Settings *agent );
 void BarrierClient(MultiHeader *agent);
 void PostReport(struct thread_Settings *mSettings, ReportHeader *agent);
 void ReportPacket( ReportHeader *agent, ReportStruct *packet );

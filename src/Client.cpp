@@ -154,6 +154,18 @@ Client::Client( thread_Settings *inSettings ) {
     }
 
     ct = Connect( );
+    if ( isReport( inSettings ) ) {
+      ReportSettings( inSettings );
+      UpdateConnectionReport( inSettings);
+      PostReport(inSettings, inSettings->reporthdr);
+      if ( mSettings->multihdr && isMultipleReport( inSettings ) ) {
+	mSettings->multihdr->report->connection.peer = mSettings->peer;
+	mSettings->multihdr->report->connection.size_peer = mSettings->size_peer;
+	mSettings->multihdr->report->connection.local = mSettings->local;
+	SockAddr_setPortAny( &mSettings->multihdr->report->connection.local );
+	mSettings->multihdr->report->connection.size_local = mSettings->size_local;
+      }
+    }
 
     //  A connect only test doesn't need to setup data stuff
     //  but merely pass the connection reports
@@ -170,16 +182,6 @@ Client::Client( thread_Settings *inSettings ) {
 	        BarrierClient(mSettings->multihdr);
 	}
     } else {
-        if ( isReport( inSettings ) ) {
-            ReportSettings( inSettings );
-                if ( mSettings->multihdr && isMultipleReport( inSettings ) ) {
-		    mSettings->multihdr->report->connection.peer = mSettings->peer;
-		    mSettings->multihdr->report->connection.size_peer = mSettings->size_peer;
-		    mSettings->multihdr->report->connection.local = mSettings->local;
-		    SockAddr_setPortAny( &mSettings->multihdr->report->connection.local );
-		    mSettings->multihdr->report->connection.size_local = mSettings->size_local;
-		}
-	}
 
 	InitReport(mSettings);
 
