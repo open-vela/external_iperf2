@@ -526,7 +526,7 @@ static inline void enqueue_packetring(ReportHeader* agent, ReportStruct *packet)
     pr->awaitcounter++;
 #ifdef HAVE_THREAD_DEBUG
     char buf[200];
-    snprintf(buf, sizeof(buf), "Not good, traffic thread ring %p is awaiting the reporter thread per %p", (void *)pr, (void *)&pr->await_consumer);
+    snprintf(buf, sizeof(buf), "Not good, traffic's packet ring %p stalled per %p", (void *)pr, (void *)&pr->await_consumer);
     thread_debug(buf);
 #endif
     
