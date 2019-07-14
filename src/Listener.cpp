@@ -125,8 +125,6 @@ Listener::Listener( thread_Settings *inSettings ) {
     }
     // Now hang the listening on the socket
     Listen( );
-    if (isReport(inSettings))
-        ReportSettings( inSettings );
 } // end Listener
 
 /* -------------------------------------------------------------------
@@ -387,6 +385,18 @@ void Listener::Listen( ) {
 	    rc = bind( mSettings->mSock, (sockaddr*) &mSettings->local, mSettings->size_local );
 	    FAIL_errno( rc == SOCKET_ERROR, "bind", mSettings );
 	}
+
+    // update the reporter thread
+    if (isReport(mSettings)) {
+	ReportSettings( mSettings );
+	UpdateConnectionReport( mSettings);
+	PostReport(mSettings, mSettings->reporthdr);
+    }
+
+#ifdef HAVE_ADVANCED_DEBUG
+    printf("DEBUG: listener listening\n");
+#endif
+
     // listen for connections (TCP only).
     // use large (INT_MAX) backlog allowing multiple simultaneous connections
     if ( !isUDP( mSettings ) ) {
