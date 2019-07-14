@@ -507,13 +507,7 @@ void *reporter_reportpeer( Connection_Info *stats, int ID ) {
 	extbuf[(2*PEERBUFSIZE)-1] = '\0';
 	char *b = &extbuf[0];
 	extbuf[0]= '\0';
-	if (stats->winsize) {
-	  if (!stats->winsize_requested) {
-	      char tmpbuf[PEERBUFSIZE/4];
-	      tmpbuf[PEERBUFSIZE/4-1]='\0';
-	      byte_snprintf(tmpbuf, sizeof(tmpbuf), stats->winsize, 'A');
-	      snprintf(b, PEERBUFSIZE, " (winsize=%s)", tmpbuf);
-	  } else if (stats->winsize != stats->winsize_requested) {
+	if ((stats->winsize_requested) && (stats->winsize != stats->winsize_requested)) {
 	      char tmpbuf[PEERBUFSIZE/4];
 	      char tmpbuf2[PEERBUFSIZE/4];
 	      tmpbuf2[PEERBUFSIZE/4-1]='\0';
@@ -521,7 +515,6 @@ void *reporter_reportpeer( Connection_Info *stats, int ID ) {
 	      byte_snprintf(tmpbuf, sizeof(tmpbuf), stats->winsize, 'A');
 	      byte_snprintf(tmpbuf2, sizeof(tmpbuf2), stats->winsize_requested, 'A');
 	      snprintf(b, PEERBUFSIZE, " (WARN: winsize=%s req=%s)", tmpbuf, tmpbuf2);
-	  }
 	}
 	b += strlen(b);
 	if (stats->l2mode) {

@@ -77,26 +77,50 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 #if HAVE_THREAD_DEBUG
 #include <time.h>
 #include <unistd.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
-void thread_debug(char *buf) {
+#include <stdarg.h>
+static void __gettimestamp(char *timestr) {
     struct timespec t1;
     clock_gettime(CLOCK_REALTIME, &t1);
     struct tm *t;
-    char timestr[200];
     t=localtime(&t1.tv_sec);
     if (t) {
-        strftime(timestr, sizeof(timestr), "%T", t);
+        strftime(timestr, 200, "%T", t);
         // strftime(buf, len, "%F %T", &t);
 	snprintf(&timestr[strlen(timestr)], strlen(timestr), ".%09ld", t1.tv_nsec);
     } else {
-        timestr[0]='\0';
+        *timestr='\0';
     }
+}
+static int __log(const char *level, const char *format, va_list args) {
+    int len;
+    char *newformat;
+    char timestamp[200];
+    char *logformat="%s(%ld):[%s] %s\n";
+
+    __gettimestamp(timestamp);
     unsigned long tid = syscall(SYS_gettid);
-    printf("THREAD(%ld): %s at %s\n", tid, buf, timestr);
+    len = snprintf(NULL, 0, logformat, level, tid, timestamp, format);
+    len++;  // Trailing null byte + extra
+    newformat = malloc(len);
+    len = snprintf(newformat, len, logformat, level, tid, timestamp, format);
+    if (len > 0) {
+      len = vprintf(newformat, args);
+    }
+    free(newformat);
+    return len;
+}
+
+void thread_debug(const char *format, ...) {
+    va_list ap;
+    va_start(ap, format);
+    __log("THREAD", format, ap);
+    va_end(ap);
 }
 #endif
 

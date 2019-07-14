@@ -223,7 +223,7 @@ void Server::InitKernelTimeStamping (void) {
 void Server::InitTrafficLoop (void) {
     InitReport(mSettings);
     if (mSettings->reporthdr) {
-        UpdateConnectionReport(mSettings);
+        UpdateConnectionReport(mSettings, mSettings->reporthdr);
         ReportHeader *reporthdr = mSettings->reporthdr;
 	//
 	// Set the report start times and next report times
@@ -246,7 +246,7 @@ void Server::InitTrafficLoop (void) {
     }
 
     // This will only have the connection report
-    PostReport(mSettings, mSettings->reporthdr);
+    PostReport(mSettings->reporthdr);
 
     // Enable kernel level timestamping if available
     InitKernelTimeStamping();
