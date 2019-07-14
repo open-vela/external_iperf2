@@ -631,7 +631,7 @@ void EndReport( ReportHeader *agent ) {
         Condition_Unlock (agent->packetring->await_consumer);
 #ifdef HAVE_THREAD_DEBUG
 	char buf[200];
-	snprintf(buf, sizeof(buf), "Thread %p thinks reporter is done with it", (void *)agent);
+	snprintf(buf, sizeof(buf), "Traffic thread thinks reporter is done with %p", (void *)agent);
 	thread_debug(buf);
 #endif
 #ifndef HAVE_THREAD
