@@ -393,8 +393,8 @@ void Listener::Listen( ) {
 	PostReport(mSettings, mSettings->reporthdr);
     }
 
-#ifdef HAVE_ADVANCED_DEBUG
-    printf("DEBUG: listener listening\n");
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Listener thread listening");
 #endif
 
     // listen for connections (TCP only).

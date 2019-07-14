@@ -77,6 +77,10 @@ const int    kBytes_to_Bits = 8;
 #endif
 
 Client::Client( thread_Settings *inSettings ) {
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Client thread started");
+#endif
+
     mSettings = inSettings;
     mBuf = NULL;
     double ct = -1.0;
@@ -154,32 +158,34 @@ Client::Client( thread_Settings *inSettings ) {
     }
 
     ct = Connect( );
-    if ( isReport( inSettings ) ) {
-      ReportSettings( inSettings );
-      UpdateConnectionReport( inSettings);
-      PostReport(inSettings, inSettings->reporthdr);
-      if ( mSettings->multihdr && isMultipleReport( inSettings ) ) {
-	mSettings->multihdr->report->connection.peer = mSettings->peer;
-	mSettings->multihdr->report->connection.size_peer = mSettings->size_peer;
-	mSettings->multihdr->report->connection.local = mSettings->local;
-	SockAddr_setPortAny( &mSettings->multihdr->report->connection.local );
-	mSettings->multihdr->report->connection.size_local = mSettings->size_local;
-      }
-    }
 
     //  A connect only test doesn't need to setup data stuff
     //  but merely pass the connection reports
     if (isConnectOnly(mSettings)) {
-        InitConnectionReport(mSettings);
+        if ( isReport( mSettings ) ) {
+	    ReportSettings( mSettings );
+	}
 	ReportHeader *reporthdr = mSettings->reporthdr;
 	if (reporthdr) {
+	    InitConnectionReport(mSettings);
+	    UpdateConnectionReport(mSettings);
 	    reporthdr->report.connection.connecttime = ct;
 	    PostReport(mSettings, reporthdr);
-	    if (mSettings->multihdr)
+	    if (mSettings->multihdr) {
 	        // For the case multilple clients wait on all
 	        // completing the connect() w/o going to close()
 	        // by leveraging this barrier
+#ifdef HAVE_THREAD_DEBUG
+	        char buf[200];
+	        snprintf(buf, sizeof(buf), "Barrier client on condition %p", (void *)mSettings->multihdr);
+	        thread_debug(buf);
+#endif
 	        BarrierClient(mSettings->multihdr);
+#ifdef HAVE_THREAD_DEBUG
+	        snprintf(buf, sizeof(buf), "Barrier done on condition %p", (void *)mSettings->multihdr);
+	        thread_debug(buf);
+#endif
+	    }
 	}
     } else {
 

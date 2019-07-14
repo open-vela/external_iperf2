@@ -99,6 +99,9 @@ struct thread_Settings;
 #include "Condition.h"
 #include "Settings.hpp"
 
+#if HAVE_THREAD_DEBUG
+void thread_debug(char *buf);
+#endif
 // initialize or destroy the thread subsystem
 void thread_init( );
 void thread_destroy( );
@@ -109,7 +112,6 @@ void thread_stop( struct thread_Settings* thread );
 
 /* wait for this or all threads to complete */
 void thread_joinall( void );
-
 int thread_numuserthreads( void );
 int thread_numtrafficthreads( void );
 
