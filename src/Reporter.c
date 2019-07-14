@@ -524,6 +524,12 @@ static inline void enqueue_packetring(ReportHeader* agent, ReportStruct *packet)
     // Wait for the consumer to create some queue space
     Condition_Lock(pr->await_consumer);
     pr->awaitcounter++;
+#ifdef HAVE_THREAD_DEBUG
+    char buf[200];
+    snprintf(buf, sizeof(buf), "Not good, traffic thread ring %p is awaiting the reporter thread per %p", (void *)pr, (void *)&pr->await_consumer);
+    thread_debug(buf);
+#endif
+    
     Condition_TimedWait(&pr->await_consumer, 1);
     Condition_Unlock(pr->await_consumer);
   }
