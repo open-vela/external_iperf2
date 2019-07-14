@@ -77,6 +77,28 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+#if HAVE_THREAD_DEBUG
+#include <time.h>
+#include <unistd.h>
+#include <sys/syscall.h>
+#include <sys/types.h>
+void thread_debug(char *buf) {
+    struct timespec t1;
+    clock_gettime(CLOCK_REALTIME, &t1);
+    struct tm *t;
+    char timestr[200];
+    t=localtime(&t1.tv_sec);
+    if (t) {
+        strftime(timestr, sizeof(timestr), "%T", t);
+        // strftime(buf, len, "%F %T", &t);
+	snprintf(&timestr[strlen(timestr)], strlen(timestr), ".%09ld", t1.tv_nsec);
+    } else {
+        timestr[0]='\0';
+    }
+    unsigned long tid = syscall(SYS_gettid);
+    printf("THREAD(%ld): %s at %s\n", tid, buf, timestr);
+}
+#endif
 
 /* -------------------------------------------------------------------
  * define static variables.

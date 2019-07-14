@@ -261,8 +261,10 @@ void InitReport(thread_Settings *mSettings) {
 }
 
 static void free_packetring(PacketRing *pr) {
-#ifdef HAVE_ADVANCED_DEBUG
-  printf("DEBUG: Free packet ring %p & condition variable await consumer %p\n", (void *)pr, (void *)&pr->await_consumer);
+#ifdef HAVE_THREAD_DEBUG
+  char buf[200];
+  snprintf(buf, sizeof(buf), "Free packet ring %p & condition variable await consumer %p", (void *)pr, (void *)&pr->await_consumer);
+  thread_debug(buf);
 #endif
   if (pr->awaitcounter > 1000) fprintf(stderr, "WARN: Reporter thread may be too slow, await counter=%d, " \
                                 "consider increasing NUM_REPORT_STRUCTS\n", pr->awaitcounter);
@@ -282,8 +284,10 @@ void FreeReport(thread_Settings *mSettings) {
         histogram_delete(reporthdr->report.info.framelatency_histogram);
       }
 #endif
-#ifdef HAVE_ADVANCED_DEBUG
-      printf("DEBUG: Free report hdr %p\n", (void *)reporthdr);
+#ifdef HAVE_THREAD_DEBUG
+      char buf[200];
+      snprintf(buf, sizeof(buf), "Free report hdr %p", (void *)reporthdr);
+      thread_debug(buf);
 #endif
       free(reporthdr);
     }
@@ -300,8 +304,10 @@ void InitDataReport(thread_Settings *mSettings) {
 	reporthdr->multireport = mSettings->multihdr;
 	data = &reporthdr->report;
 	reporthdr->packetring = init_packetring(NUM_REPORT_STRUCTS);
-#ifdef HAVE_ADVANCED_DEBUG
-	printf("DEBUG: Init data report %p size %ld using packetring %p\n", (void *)reporthdr, sizeof(ReportHeader), (void *)(reporthdr->packetring));
+#ifdef HAVE_THREAD_DEBUG
+	char buf[200];
+	snprintf(buf, sizeof(buf), "Init data report %p size %ld using packetring %p", (void *)reporthdr, sizeof(ReportHeader), (void *)(reporthdr->packetring));
+	thread_debug(buf);
 #endif
 	data->lastError = INITIAL_PACKETID;
 	data->lastDatagrams = INITIAL_PACKETID;
@@ -441,8 +447,10 @@ void InitConnectionReport (thread_Settings *mSettings) {
 
 // Read the actual socket window size data
 void UpdateConnectionReport(thread_Settings *mSettings) {
-#ifdef HAVE_ADVANCED_DEBUG
-    printf("DEBUG: update connection report %p\n", mSettings->reporthdr);
+#ifdef HAVE_THREAD_DEBUG
+    char buf[200];
+    snprintf(buf,sizeof(buf),"Update connection report %p", mSettings->reporthdr);
+    thread_debug(buf);
 #endif
   ReportHeader *reporthdr = mSettings->reporthdr;
     if (reporthdr != NULL) {
@@ -456,8 +464,10 @@ void UpdateConnectionReport(thread_Settings *mSettings) {
 }
 
 void PostReport (thread_Settings *mSettings, ReportHeader *reporthdr) {
-#ifdef HAVE_ADVANCED_DEBUG
-    printf("DEBUG: post report %p\n", reporthdr);
+#ifdef HAVE_THREAD_DEBUG
+    char buf[200];
+    snprintf(buf, sizeof(buf), "Post report %p", reporthdr);
+    thread_debug(buf);
 #endif
     if (reporthdr) {
 #ifdef HAVE_THREAD
@@ -485,8 +495,10 @@ static PacketRing * init_packetring (int count) {
   PacketRing *pr = NULL;
   if ((pr = (PacketRing *) calloc(1, sizeof(PacketRing)))) {
       pr->data = (ReportStruct *) calloc(count, sizeof(ReportStruct));
-#ifdef HAVE_ADVANCED_DEBUG
-      printf("DEBUG: Init %d element packet ring %p\n", count, (void *)pr);
+#ifdef HAVE_THREAD_DEBUG
+      char buf[200];
+      snprintf(buf,sizeof(buf),"Init %d element packet ring %p", count, (void *)pr);
+      thread_debug(buf);
 #endif
   }
   if (!pr || !pr->data) {
@@ -617,8 +629,10 @@ void EndReport( ReportHeader *agent ) {
 	    Condition_TimedWait(&agent->packetring->await_consumer, 1);
 	}
         Condition_Unlock (agent->packetring->await_consumer);
-#ifdef HAVE_ADVANCED_DEBUG
-	printf("DEBUG: Thread %p thinks reporter is done with it\n", (void *)agent);
+#ifdef HAVE_THREAD_DEBUG
+	char buf[200];
+	snprintf(buf, sizeof(buf), "Thread %p thinks reporter is done with it", (void *)agent);
+	thread_debug(buf);
 #endif
 #ifndef HAVE_THREAD
         /*
@@ -713,8 +727,10 @@ void ReportServerUDP( thread_Settings *agent, server_hdr *server ) {
 	if ( !reporthdr ) {
 	    FAIL(1, "Out of Memory!!\n", agent);
 	}
-#ifdef HAVE_ADVANCED_DEBUG
-	printf("DEBUG: Init server relay report %p size %ld\n", (void *)reporthdr, sizeof(ReportHeader));
+#ifdef HAVE_THREAD_DEBUG
+	char buf[200];
+	snprintf(buf, sizeof(buf),"Init server relay report %p size %ld\n", (void *)reporthdr, sizeof(ReportHeader));
+	thread_debug(buf);
 #endif
 
 	stats->transferID = agent->mSock;
@@ -789,8 +805,10 @@ void ReportServerUDP( thread_Settings *agent, server_hdr *server ) {
  * This function is the loop that the reporter thread processes
  */
 void reporter_spawn( thread_Settings *thread ) {
-#ifdef HAVE_ADVANCED_DEBUG
-    printf("DEBUG: reporter thread started\n");
+#ifdef HAVE_THREAD_DEBUG
+    char buf[200];
+    snprintf(buf, sizeof(buf), "Reporter thread started");
+    thread_debug(buf);
 #endif
     //
     // Signal to other (client) threads that the
@@ -840,12 +858,16 @@ void reporter_spawn( thread_Settings *thread ) {
                     itr->next = tmp->next;
                 }
 		// See notes if reporter_process_report
-#ifdef HAVE_ADVANCED_DEBUG
-		printf("DEBUG: remove %p from reporter job queue in rs\n", (void *) tmp);
+#ifdef HAVE_THREAD_DEBUG
+		char buf[200];
+		snprintf(buf, sizeof(buf),"Remove %p from reporter job queue in rs", (void *) tmp);
+		thread_debug(buf);
 #endif
 		if ((tmp->report.type & TRANSFER_REPORT) == 0) {
-#ifdef HAVE_ADVANCED_DEBUG
-		  printf("DEBUG: free %p in rs\n", (void *) tmp);
+#ifdef HAVE_THREAD_DEBUG
+		  char buf[200];
+		  snprintf(buf,sizeof(buf),"Free %p in rs", (void *) tmp);
+		  thread_debug(buf);
 #endif
 		    free(tmp);
 		}
@@ -903,8 +925,10 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 	    // and live with it for now
             ReportHeader *tmp = reporthdr->next;
             reporthdr->next = reporthdr->next->next;
-#ifdef HAVE_ADVANCED_DEBUG
-	    printf("DEBUG: remove %p from reporter job queue in rpr\n", (void *) tmp);
+#ifdef HAVE_THREAD_DEBUG
+	    char buf[200];
+	    snprintf(buf,sizeof(buf), "Remove %p from reporter job queue in rpr", (void *) tmp);
+	    thread_debug(buf);
 #endif
 	    // Free reports that are one-shot. Note that
 	    // Transfer Reports get freed by its calling thread,
@@ -915,8 +939,10 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 	    // allocated also free it which can be done in the thread's
 	    // destructor
 	    if ((tmp->report.type & TRANSFER_REPORT) == 0) {
-#ifdef HAVE_ADVANCED_DEBUG
-	      printf("DEBUG: free %p in rpr\n", (void *) tmp);
+#ifdef HAVE_THREAD_DEBUG
+	      char buf[200];
+	      snprintf(buf, sizeof(buf), "Free %p in rpr", (void *) tmp);
+	      thread_debug(buf);
 #endif
 	      free(tmp);
 	    }
