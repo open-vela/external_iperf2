@@ -221,7 +221,6 @@ void Server::InitKernelTimeStamping (void) {
 }
 
 void Server::InitTrafficLoop (void) {
-    setsock_tcp_windowsize(mSettings->mSock, mSettings->mTCPWin, 0);
     InitReport(mSettings);
     if (mSettings->reporthdr) {
         UpdateConnectionReport(mSettings);
