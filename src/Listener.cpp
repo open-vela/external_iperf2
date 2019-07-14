@@ -388,9 +388,9 @@ void Listener::Listen( ) {
 
     // update the reporter thread
     if (isReport(mSettings)) {
-	ReportSettings( mSettings );
-	UpdateConnectionReport( mSettings);
-	PostReport(mSettings, mSettings->reporthdr);
+        mSettings->reporthdr = ReportSettings(mSettings);
+	UpdateConnectionReport(mSettings, mSettings->reporthdr);
+	PostReport(mSettings->reporthdr);
     }
 
 #ifdef HAVE_THREAD_DEBUG
@@ -1106,7 +1106,7 @@ void Listener::UDPSingleServer( ) {
             }
         }
         InitReport(server);
-        PostReport(server, server->reporthdr);
+        PostReport(server->reporthdr);
 
         // Prep for next connection
         if ( !isSingleClient( mSettings ) ) {

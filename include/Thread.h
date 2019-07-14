@@ -100,7 +100,7 @@ struct thread_Settings;
 #include "Settings.hpp"
 
 #if HAVE_THREAD_DEBUG
-void thread_debug(char *buf);
+void thread_debug(const char *format, ...);
 #endif
 // initialize or destroy the thread subsystem
 void thread_init( );

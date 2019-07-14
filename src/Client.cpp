@@ -158,39 +158,40 @@ Client::Client( thread_Settings *inSettings ) {
     }
 
     ct = Connect( );
+    if (isReport(mSettings)) {
+        ReportHeader *tmp = ReportSettings(mSettings);
+	UpdateConnectionReport(mSettings, tmp);
+	PostReport(tmp);
+    }
 
     //  A connect only test doesn't need to setup data stuff
     //  but merely pass the connection reports
     if (isConnectOnly(mSettings)) {
-        if ( isReport( mSettings ) ) {
-	    ReportSettings( mSettings );
-	}
-	ReportHeader *reporthdr = mSettings->reporthdr;
-	if (reporthdr) {
+	if (!mSettings->reporthdr) {
 	    InitConnectionReport(mSettings);
-	    UpdateConnectionReport(mSettings);
-	    reporthdr->report.connection.connecttime = ct;
-	    PostReport(mSettings, reporthdr);
+	    if (mSettings->reporthdr) {
+	        mSettings->reporthdr->report.connection.connecttime = ct;
+	        PostReport(mSettings->reporthdr);
+	    }
 	    if (mSettings->multihdr) {
 	        // For the case multilple clients wait on all
 	        // completing the connect() w/o going to close()
 	        // by leveraging this barrier
 #ifdef HAVE_THREAD_DEBUG
-	        char buf[200];
-	        snprintf(buf, sizeof(buf), "Barrier client on condition %p", (void *)mSettings->multihdr);
-	        thread_debug(buf);
+	        thread_debug("Barrier client on condition %p", (void *)mSettings->multihdr);
 #endif
 	        BarrierClient(mSettings->multihdr);
 #ifdef HAVE_THREAD_DEBUG
-	        snprintf(buf, sizeof(buf), "Barrier done on condition %p", (void *)mSettings->multihdr);
-	        thread_debug(buf);
+	        thread_debug("Barrier done on condition %p", (void *)mSettings->multihdr);
 #endif
 	    }
 	}
     } else {
-
 	InitReport(mSettings);
-
+	if (mSettings->reporthdr) {
+	  mSettings->reporthdr->report.connection.connecttime = ct;
+	  PostReport(mSettings->reporthdr);
+	}
 	// Create the Report structure that's used to pass packet metadata to the reporter thread
 	reportstruct = new ReportStruct();
 	FAIL_errno( reportstruct == NULL, "No memory for report structure\n", mSettings );
@@ -233,8 +234,6 @@ Client::Client( thread_Settings *inSettings ) {
 	    }
 	}
 
-	// Post the very first report which will have connection, version and test information
-	PostReport(mSettings, mSettings->reporthdr);
     }
 } // end Client
 
