@@ -6,9 +6,6 @@
 /* Define if debugging info is desired */
 #undef DBG_MJZ
 
-/* Define for advanced level debugging of the code */
-#undef HAVE_ADVANCED_DEBUG
-
 /* AF_PACKET support is available */
 #undef HAVE_AF_PACKET
 
@@ -273,6 +270,9 @@
 
 /* Define to 1 if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H
+
+/* Define for thread level debugging of the code */
+#undef HAVE_THREAD_DEBUG
 
 /* Define if udp triggers option is desired and available */
 #undef HAVE_UDPTRIGGERS

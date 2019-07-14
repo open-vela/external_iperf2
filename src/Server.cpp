@@ -73,6 +73,9 @@
  * ------------------------------------------------------------------- */
 
 Server::Server( thread_Settings *inSettings ) {
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Server thread started");
+#endif
     mSettings = inSettings;
     mBuf = NULL;
 
