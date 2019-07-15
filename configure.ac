@@ -160,9 +160,10 @@ AC_FUNC_SELECT_ARGTYPES
 AC_TYPE_SIGNAL
 AC_FUNC_STRFTIME
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([atexit memset pthread_cancel select strchr strerror strtol strtoll usleep clock_gettime sched_setscheduler sched_yield mlockall setitimer nanosleep clock_nanosleep])
+AC_CHECK_FUNCS([atexit memset select strchr strerror strtol strtoll usleep clock_gettime sched_setscheduler sched_yield mlockall setitimer nanosleep clock_nanosleep])
 AC_REPLACE_FUNCS(snprintf inet_pton inet_ntop gettimeofday)
 AC_CHECK_DECLS([ENOBUFS, EWOULDBLOCK],[],[],[#include <errno.h>])
+AC_CHECK_DECLS([pthread_cancel],[],[],[#include <pthread.h>])
 AC_CHECK_DECLS([CPU_SET],[],[],[
 	#define _GNU_SOURCE
 	#include <sched.h>
