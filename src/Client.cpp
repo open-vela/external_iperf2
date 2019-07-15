@@ -158,6 +158,18 @@ Client::Client( thread_Settings *inSettings ) {
     }
 
     ct = Connect( );
+    // Spawn threads for reverse mode
+    if (isReverse(mSettings)) {
+        thread_Settings *reverse_client=NULL;
+        Settings_Copy(mSettings, &reverse_client);
+	if ((reverse_client) &&  (mSettings->mSock > 0)) {
+	    reverse_client->mSock = mSettings->mSock;
+	    unsetReport(reverse_client);
+	    reverse_client->mThreadMode = kMode_Server;
+	    thread_start(reverse_client);
+	}
+    }
+
     if (isReport(mSettings)) {
         ReportHeader *tmp = ReportSettings(mSettings);
 	UpdateConnectionReport(mSettings, tmp);
@@ -403,6 +415,12 @@ void Client::Run( void ) {
 
     if (isConnectOnly(mSettings))
         return;
+
+    if (isReverse(mSettings)) {
+      while (InProgress()) {};
+      FinishTrafficActions();
+      return;
+    }
 
     // Peform common traffic setup
     InitTrafficLoop();
