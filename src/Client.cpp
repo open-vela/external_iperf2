@@ -83,6 +83,8 @@ Client::Client( thread_Settings *inSettings ) {
 
     mSettings = inSettings;
     mBuf = NULL;
+    myJob = NULL;
+    mySocket = INVALID_SOCKET;
     double ct = -1.0;
 
     if (isCompat(inSettings) && isPeerVerDetect(inSettings)) {
@@ -200,6 +202,9 @@ Client::Client( thread_Settings *inSettings ) {
 	}
     } else {
 	InitReport(mSettings);
+	// Squirrel this away so the destructor can free the memory
+	// even when mSettings has already destroyed
+	myJob = mSettings->reporthdr;
 	if (mSettings->reporthdr) {
 	  mSettings->reporthdr->report.connection.connecttime = ct;
 	  PostReport(mSettings->reporthdr);
@@ -254,17 +259,16 @@ Client::Client( thread_Settings *inSettings ) {
  * ------------------------------------------------------------------- */
 Client::~Client() {
 #if THREAD_DEBUG
-  thread_debug("Client destructor sock=%d", mSettings->mSock);
+  thread_debug("Client destructor sock=%d", mySocket);
 #endif
-    if ( mSettings->mSock != INVALID_SOCKET ) {
-        int rc = close( mSettings->mSock );
+    if ( mySocket != INVALID_SOCKET ) {
+        int rc = close( mySocket );
         WARN_errno( rc == SOCKET_ERROR, "close" );
-        mSettings->mSock = INVALID_SOCKET;
     }
     DELETE_ARRAY( mBuf );
     if (!isConnectOnly(mSettings)) {
       DELETE_PTR(reportstruct);
-      FreeReport(mSettings);
+      FreeReport(myJob);
     }
 } // end ~Client
 
@@ -295,7 +299,8 @@ double Client::Connect( ) {
 
     mSettings->mSock = socket( domain, type, 0 );
     WARN_errno( mSettings->mSock == INVALID_SOCKET, "socket" );
-
+    // Socket is carried both by the object and the thread
+    mySocket=mSettings->mSock;
     SetSocketOptions( mSettings );
 
     SockAddr_localAddr( mSettings );

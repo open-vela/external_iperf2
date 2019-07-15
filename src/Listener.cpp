@@ -95,6 +95,7 @@ Listener::Listener( thread_Settings *inSettings ) {
 
     mClients = inSettings->mThreads;
     mBuf = NULL;
+    mySocket = INVALID_SOCKET;
     /*
      * These thread settings are stored in three places
      *
@@ -131,10 +132,12 @@ Listener::Listener( thread_Settings *inSettings ) {
  * Delete memory (buffer).
  * ------------------------------------------------------------------- */
 Listener::~Listener() {
-    if ( mSettings->mSock != INVALID_SOCKET ) {
-        int rc = close( mSettings->mSock );
+#if THREAD_DEBUG
+    thread_debug("Listener destructor sock=%d", mySocket);
+#endif
+    if ( mySocket != INVALID_SOCKET ) {
+        int rc = close( mySocket );
         WARN_errno( rc == SOCKET_ERROR, "listener close" );
-        mSettings->mSock = INVALID_SOCKET;
     }
     DELETE_ARRAY( mBuf );
 } // end ~Listener
@@ -364,6 +367,7 @@ void Listener::Listen( ) {
 #endif
 	{
 	    mSettings->mSock = socket( domain, type, 0 );
+	    mySocket=mSettings->mSock;
 	    WARN_errno( mSettings->mSock == INVALID_SOCKET, "socket" );
 	}
     SetSocketOptions( mSettings );
@@ -421,7 +425,7 @@ void Listener::Listen( ) {
  *
  * taken from: https://www.ibm.com/support/knowledgecenter/en/SSLTBW_2.1.0/com.ibm.zos.v2r1.hale001/ipv6d0141001708.htm
  *
- * Multicast function	                                        IPv4	                   IPv6	                Protocol-independent
+ * Multicast function	             `<                           IPv4	                   IPv6	                Protocol-independent
  * ==================                                           ====                       ====                 ====================
  * Level of specified option on setsockopt()/getsockopt()	IPPROTO_IP	           IPPROTO_IPV6	IPPROTO_IP or IPPROTO_IPV6
  * Join a multicast group	                                IP_ADD_MEMBERSHIP          IPV6_JOIN_GROUP	MCAST_JOIN_GROUP
