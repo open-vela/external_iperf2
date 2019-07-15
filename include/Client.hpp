@@ -113,6 +113,12 @@ private:
     void HdrXchange(int flags);
 
     thread_Settings *mSettings;
+#if WIN32
+    SOCKET mySocket;
+#else
+    int mySocket;
+#endif
+    ReportHeader *myJob;
     char* mBuf;
     Timestamp mEndTime;
     Timestamp lastPacketTime;

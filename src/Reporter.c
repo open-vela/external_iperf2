@@ -270,8 +270,7 @@ static void free_packetring(PacketRing *pr) {
   if (pr->data) free(pr->data);
 }
 
-void FreeReport(thread_Settings *mSettings) {
-    ReportHeader *reporthdr = mSettings->reporthdr;
+void FreeReport(ReportHeader *reporthdr) {
     if (reporthdr) {
       free_packetring(reporthdr->packetring);
       if (reporthdr->report.info.latency_histogram) {

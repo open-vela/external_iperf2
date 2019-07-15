@@ -363,7 +363,7 @@ void PostReport(ReportHeader *agent);
 void ReportPacket( ReportHeader *agent, ReportStruct *packet );
 void CloseReport( ReportHeader *agent, ReportStruct *packet );
 void EndReport( ReportHeader *agent );
-void FreeReport(struct thread_Settings *mSettings);
+void FreeReport(ReportHeader *agent);
 Transfer_Info* GetReport( ReportHeader *agent );
 void ReportServerUDP( struct thread_Settings *agent, struct server_hdr *server );
 ReportHeader *ReportSettings( struct thread_Settings *agent );
