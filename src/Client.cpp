@@ -167,6 +167,7 @@ Client::Client( thread_Settings *inSettings ) {
 	    unsetReport(reverse_client);
 	    reverse_client->mThreadMode = kMode_Server;
 	    thread_start(reverse_client);
+	    thread_stop(mSettings);
 	}
     }
 
