@@ -65,6 +65,10 @@
    to 0 if you don't. */
 #undef HAVE_DECL_MCAST_JOIN_SOURCE_GROUP
 
+/* Define to 1 if you have the declaration of `pthread_cancel', and to 0 if
+   you don't. */
+#undef HAVE_DECL_PTHREAD_CANCEL
+
 /* Define to 1 if you have the declaration of `SIGALRM', and to 0 if you
    don't. */
 #undef HAVE_DECL_SIGALRM
@@ -167,9 +171,6 @@
 
 /* Define if you have POSIX threads libraries and header files. */
 #undef HAVE_PTHREAD
-
-/* Define to 1 if you have the `pthread_cancel' function. */
-#undef HAVE_PTHREAD_CANCEL
 
 /* Define to 1 if you have the `sched_setscheduler' function. */
 #undef HAVE_SCHED_SETSCHEDULER
