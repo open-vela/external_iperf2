@@ -78,7 +78,8 @@ Server::Server( thread_Settings *inSettings ) {
 #endif
     mSettings = inSettings;
     mBuf = NULL;
-
+    myJob = NULL;
+    mySocket = inSettings->mSock;
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
     if (isL2LengthCheck(mSettings)) {
 	// For L2 UDP make sure we can receive a full ethernet packet plus a bit more
@@ -98,21 +99,25 @@ Server::Server( thread_Settings *inSettings ) {
  * ------------------------------------------------------------------- */
 
 Server::~Server() {
-    if ( mSettings->mSock != INVALID_SOCKET ) {
-        int rc = close( mSettings->mSock );
+#if THREAD_DEBUG
+    thread_debug("Server destructor sock=%d drop-sock=%d", mySocket, myDropSocket);
+#endif
+
+    if ( mySocket != INVALID_SOCKET ) {
+        int rc = close( mySocket );
         WARN_errno( rc == SOCKET_ERROR, "server close" );
-        mSettings->mSock = INVALID_SOCKET;
+        mySocket = INVALID_SOCKET;
     }
 
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
-    if ( mSettings->mSockDrop != INVALID_SOCKET ) {
-	int rc = close( mSettings->mSockDrop );
+    if ( myDropSocket != INVALID_SOCKET ) {
+	int rc = close( myDropSocket );
         WARN_errno( rc == SOCKET_ERROR, "server close drop" );
-        mSettings->mSockDrop = INVALID_SOCKET;
+        myDropSocket = INVALID_SOCKET;
     }
 #endif
     DELETE_ARRAY( mBuf );
-    FreeReport(mSettings);
+    FreeReport(myJob);
 }
 
 bool Server::InProgress (void) {
@@ -221,6 +226,10 @@ void Server::InitKernelTimeStamping (void) {
 }
 
 void Server::InitTrafficLoop (void) {
+    //  copy the thread drop socket to this object such
+    //  that the destructor can close it if needed
+    if (mSettings->mSockDrop > 0)
+        myDropSocket = mSettings->mSockDrop;
     InitReport(mSettings);
     if (mSettings->reporthdr) {
         ReportHeader *reporthdr = mSettings->reporthdr;
@@ -233,6 +242,9 @@ void Server::InitTrafficLoop (void) {
 	reporthdr->report.nextTime = reporthdr->report.startTime;
 	TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
     }
+    // Squirrel this away so the destructor can free the memory
+    // even when mSettings has already destroyed
+    myJob = mSettings->reporthdr;
 
     reportstruct = new ReportStruct();
     FAIL(reportstruct == NULL, "Out of memory! Closing server thread\n", mSettings);

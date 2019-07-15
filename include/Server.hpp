@@ -94,6 +94,14 @@ private:
     void Isoch_processing (int);
     bool InProgress(void);
     Timestamp connect_done;
+#if WIN32
+    SOCKET mySocket;
+    SOCKET myDropSocket;
+#else
+    int mySocket;
+    int myDropSocket;
+#endif
+    ReportHeader *myJob;
 
 #if HAVE_DECL_SO_TIMESTAMP
     // Structures needed for recvmsg

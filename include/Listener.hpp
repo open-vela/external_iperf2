@@ -100,6 +100,12 @@ private:
     int ReadClientHeader(client_hdr *hdr);
     int ClientHeaderAck(void);
     int L2_setup(void);
+#if WIN32
+    SOCKET mySocket;
+#else
+    int mySocket;
+#endif
+
 }; // end class Listener
 
 #endif // LISTENER_H
