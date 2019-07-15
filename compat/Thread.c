@@ -230,6 +230,9 @@ void thread_start( struct thread_Settings* thread ) {
 void thread_stop( struct thread_Settings* thread ) {
 
 #ifdef HAVE_THREAD
+  #ifdef HAVE_THREAD_DEBUG
+      thread_debug("Thread stop invoked");
+  #endif
     // Make sure we have been started
     if ( ! thread_equalid( thread->mTID, thread_zeroid() ) ) {
 
@@ -262,9 +265,6 @@ void thread_stop( struct thread_Settings* thread ) {
 #if   defined( HAVE_POSIX_THREAD )
             // Cray J90 doesn't have pthread_cancel; Iperf works okay without
 #ifdef HAVE_PTHREAD_CANCEL
-  #ifdef HAVE_THREAD_DEBUG
-	    thread_debug("Thread canceled");
-  #endif
             pthread_cancel( thread->mTID );
 #endif
 #else // Win32
