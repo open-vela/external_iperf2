@@ -159,7 +159,8 @@ Client::Client( thread_Settings *inSettings ) {
         Condition_Unlock(mSettings->multihdr->await_reporter);
     }
 
-    ct = Connect( );
+    if (!isServerReverse(mSettings))
+        ct = Connect( );
     // Spawn threads for reverse mode
     if (isReverse(mSettings)) {
         thread_Settings *reverse_client=NULL;

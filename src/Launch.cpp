@@ -112,31 +112,19 @@ void server_spawn( thread_Settings *thread) {
 
     // Start up the server
     theServer = new Server( thread );
-    // set traffic thread to realtime if needed
-    set_scheduler(thread);
-    // Run the test
-    if ( isUDP( thread ) ) {
-	theServer->RunUDP();
+    if (isServerReverse(thread)) {
+        //  There is a client running so don't
+        //  need this thread anymore
+        thread_stop(thread);
     } else {
-	theServer->RunTCP();
-    }
-    DELETE_PTR( theServer);
-}
-
-/*
- */
-void client_reverse_spawn( thread_Settings *thread) {
-    Server *theServer = NULL;
-
-    // Start up the server
-    theServer = new Server( thread );
-    // set traffic thread to realtime if needed
-    set_scheduler(thread);
-    // Run the test
-    if ( isUDP( thread ) ) {
-	theServer->RunUDP();
-    } else {
-	theServer->RunTCP();
+        // set traffic thread to realtime if needed
+        set_scheduler(thread);
+	// Run the test
+	if ( isUDP( thread ) ) {
+	    theServer->RunUDP();
+	} else {
+	    theServer->RunTCP();
+	}
     }
     DELETE_PTR( theServer);
 }
@@ -158,12 +146,16 @@ void client_spawn( thread_Settings *thread ) {
     // set traffic thread to realtime if needed
     set_scheduler(thread);
 
-    // Let the server know about our settings
-    if (theClient->InitiateServer()) {
-        // Run the test
+    if (isServerReverse(thread)) {
         theClient->Run();
     } else {
-        thread_stop(thread);
+        // Let the server know about our settings
+        if (theClient->InitiateServer()) {
+            // Run the test
+            theClient->Run();
+        } else {
+            thread_stop(thread);
+        }
     }
     DELETE_PTR( theClient );
 }

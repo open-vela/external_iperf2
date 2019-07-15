@@ -517,6 +517,10 @@ void *reporter_reportpeer( Connection_Info *stats, int ID ) {
 	      snprintf(b, PEERBUFSIZE, " (WARN: winsize=%s req=%s)", tmpbuf, tmpbuf2);
 	}
 	b += strlen(b);
+	if (isServerReverse(stats)) {
+	    snprintf(b, PEERBUFSIZE-strlen(b), "(reverse)");
+	    b += strlen(b);
+	}
 	if (stats->l2mode) {
 	    snprintf(b, PEERBUFSIZE-strlen(b), " (%s=0x%X)", "l2mode", stats->l2mode);
 	    b += strlen(b);

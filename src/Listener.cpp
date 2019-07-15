@@ -243,11 +243,14 @@ sInterupted == SIGALRM
 		// The following will set the tempSettings to NULL if
 		// there is no need for the Listener to start a client
                 Settings_GenerateClientSettings( server, &tempSettings, hdr );
+		if isServerReverse(server) {
+		    client_spawn(server);
+		}
             } else {
 	        tempSettings = NULL;
 	    }
             if ( tempSettings != NULL ) {
-                client_init( tempSettings );
+	        client_init( tempSettings );
                 if ( tempSettings->mMode == kTest_DualTest ) {
 #ifdef HAVE_THREAD
                     server->runNow =  tempSettings;
