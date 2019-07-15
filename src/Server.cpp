@@ -223,7 +223,6 @@ void Server::InitKernelTimeStamping (void) {
 void Server::InitTrafficLoop (void) {
     InitReport(mSettings);
     if (mSettings->reporthdr) {
-        UpdateConnectionReport(mSettings, mSettings->reporthdr);
         ReportHeader *reporthdr = mSettings->reporthdr;
 	//
 	// Set the report start times and next report times
