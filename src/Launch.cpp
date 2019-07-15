@@ -150,16 +150,21 @@ void client_spawn( thread_Settings *thread ) {
     Client *theClient = NULL;
 
     //start up the client
+    // Note: socket connect() happens here in the constructor
+    // Also, for reverse cases the server thread will get started
+    // in the Clients constructor
     theClient = new Client( thread );
 
     // set traffic thread to realtime if needed
     set_scheduler(thread);
 
     // Let the server know about our settings
-    theClient->InitiateServer();
-
-    // Run the test
-    theClient->Run();
+    if (theClient->InitiateServer()) {
+        // Run the test
+        theClient->Run();
+    } else {
+        thread_stop(thread);
+    }
     DELETE_PTR( theClient );
 }
 

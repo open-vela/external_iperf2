@@ -78,7 +78,7 @@ const int    kBytes_to_Bits = 8;
 
 Client::Client( thread_Settings *inSettings ) {
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Client thread started");
+    thread_debug("Client thread started in constructor");
 #endif
 
     mSettings = inSettings;
@@ -167,7 +167,6 @@ Client::Client( thread_Settings *inSettings ) {
 	    unsetReport(reverse_client);
 	    reverse_client->mThreadMode = kMode_Server;
 	    thread_start(reverse_client);
-	    thread_stop(mSettings);
 	}
     }
 
@@ -179,7 +178,7 @@ Client::Client( thread_Settings *inSettings ) {
 
     //  A connect only test doesn't need to setup data stuff
     //  but merely pass the connection reports
-    if (isConnectOnly(mSettings)) {
+    if (isConnectOnly(mSettings) || isReverse(mSettings)) {
 	if (!mSettings->reporthdr) {
 	    InitConnectionReport(mSettings);
 	    if (mSettings->reporthdr) {
@@ -254,6 +253,9 @@ Client::Client( thread_Settings *inSettings ) {
  * Destructor
  * ------------------------------------------------------------------- */
 Client::~Client() {
+#if THREAD_DEBUG
+  thread_debug("Client destructor sock=%d", mSettings->mSock);
+#endif
     if ( mSettings->mSock != INVALID_SOCKET ) {
         int rc = close( mSettings->mSock );
         WARN_errno( rc == SOCKET_ERROR, "close" );
@@ -1102,7 +1104,7 @@ void Client::write_UDP_FIN (void) {
 // end write_UDP_FIN
 
 
-void Client::InitiateServer() {
+int Client::InitiateServer() {
     if (!isCompat(mSettings) && !isConnectOnly(mSettings)) {
 	int flags = 0;
         client_hdr* temp_hdr;
@@ -1126,6 +1128,11 @@ void Client::InitiateServer() {
 	      int currLen = send( mSettings->mSock, mBuf, (sizeof(struct TCP_datagram)), 0 );
 	      WARN_errno( currLen < 0, "send connect/tcp timestamps" );
 	}
+    }
+    if (!isReverse(mSettings) && (mSettings->mSock > 0)) {
+        return 1;
+    } else {
+        return 0;
     }
 }
 
