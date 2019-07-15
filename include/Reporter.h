@@ -244,7 +244,7 @@ typedef struct Connection_Info {
     int winsize;
     int winsize_requested;
     int flags;
-    int flags_extended;
+    int flags_extend;
     char mFormat;
 } Connection_Info;
 

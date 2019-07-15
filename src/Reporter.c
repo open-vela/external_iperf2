@@ -439,11 +439,11 @@ void InitConnectionReport (thread_Settings *mSettings) {
 	tmpbuf[39]='\0';
         printf(client_fq_pacing,tmpbuf);
     }
-    //  Copy state from the data report into the connection report
+    //  Copy state from the settings object into the connection report
     //  See notes about how a proper C++ implmentation can fix this
-    data->connection.flags = data->flags;
-    data->connection.flags_extended = data->flags_extend;
-    data->connection.mFormat = data->info.mFormat;
+    data->connection.flags = mSettings->flags;
+    data->connection.flags_extend = mSettings->flags_extend;
+    data->connection.mFormat = mSettings->mFormat;
     if (mSettings->mSock > 0)
       UpdateConnectionReport(mSettings, reporthdr);
 }
