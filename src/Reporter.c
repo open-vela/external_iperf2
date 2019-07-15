@@ -300,8 +300,11 @@ void InitDataReport(thread_Settings *mSettings) {
 	mSettings->reporthdr = reporthdr;
 	reporthdr->multireport = mSettings->multihdr;
 	data = &reporthdr->report;
-	if (!isConnectOnly(mSettings))
+	reporthdr->packet_handler = NULL;
+	if (!isConnectOnly(mSettings)) {
 	    reporthdr->packetring = init_packetring(NUM_REPORT_STRUCTS);
+	    reporthdr->packet_handler = reporter_handle_packet;
+	}
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug("Init data report %p size %ld using packetring %p", (void *)reporthdr, sizeof(ReportHeader), (void *)(reporthdr->packetring));
 #endif
@@ -994,10 +997,12 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 	    // thread should add some delay to eliminate cpu thread
 	    // thrashing,
 	    accounted_packets--;
-	    int event_lastpacket = reporter_handle_packet(reporthdr, packet);
-	    if (event_lastpacket) {
-	        reporthdr->packetring->consumerdone = 1;
-		need_free = 1;
+	    if (reporthdr->packet_handler) {
+	        int event_lastpacket = (*reporthdr->packet_handler)(reporthdr, packet);
+		if (event_lastpacket) {
+		    reporthdr->packetring->consumerdone = 1;
+		    need_free = 1;
+		}
 	    }
 	}
     }

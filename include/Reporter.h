@@ -253,7 +253,6 @@ typedef struct ReporterData {
     char*  mLocalhost;              // -B
     char*  mIfrname;
     char*  mSSMMulticastStr;
-
     // int's
     int type;
     intmax_t cntError;
@@ -343,6 +342,8 @@ typedef struct PacketRing {
 
 typedef struct ReportHeader {
     ReporterData report;
+    // function pointer for per packet processing
+    int (*packet_handler) (struct ReportHeader *report, ReportStruct *packet);
     MultiHeader *multireport;
     struct ReportHeader *next;
     PacketRing *packetring;
