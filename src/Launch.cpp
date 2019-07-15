@@ -124,6 +124,24 @@ void server_spawn( thread_Settings *thread) {
 }
 
 /*
+ */
+void client_reverse_spawn( thread_Settings *thread) {
+    Server *theServer = NULL;
+
+    // Start up the server
+    theServer = new Server( thread );
+    // set traffic thread to realtime if needed
+    set_scheduler(thread);
+    // Run the test
+    if ( isUDP( thread ) ) {
+	theServer->RunUDP();
+    } else {
+	theServer->RunTCP();
+    }
+    DELETE_PTR( theServer);
+}
+
+/*
  * client_spawn is responsible for creating a Client class
  * and launching the client. It is provided as a means for
  * the C thread subsystem to launch the client C++ object.
@@ -198,6 +216,7 @@ void client_init( thread_Settings *clients ) {
         itr->runNow = next;
         itr = next;
     }
+
 #ifndef HAVE_THREAD
     if ( next != NULL ) {
         // We don't have threads and we need to start a listener so

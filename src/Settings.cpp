@@ -686,8 +686,6 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
             break;
 #else
         case 'R':
-	    fprintf( stderr, "The --reverse option is currently not supported\n");
-	    exit(1);
 	    setReverse(mExtSettings);
             break;
 #endif
@@ -825,8 +823,6 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
 	    }
 	    if (reversetest) {
 		reversetest = 0;
-		fprintf( stderr, "WARNING: The --reverse option is currently not supported\n");
-		exit(1);
 		setReverse(mExtSettings);
 	    }
 	    if (fqrate) {
