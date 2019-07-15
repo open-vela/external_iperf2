@@ -149,9 +149,7 @@ void thread_rest ( void );
 
 // defined in launch.cpp
 void server_spawn( struct thread_Settings* thread );
-void server_reverse_spawn( struct thread_Settings* thread );
 void client_spawn( struct thread_Settings* thread );
-void client_reverse_spawn( struct thread_Settings* thread );
 void client_init( struct thread_Settings* clients );
 void listener_spawn( struct thread_Settings* thread );
 

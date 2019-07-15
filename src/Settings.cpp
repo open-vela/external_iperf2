@@ -1123,6 +1123,10 @@ void Settings_GenerateClientSettings( thread_Settings *server,
     int flags = ntohl(hdr->base.flags);
     if ((flags & HEADER_EXTEND) != 0 ) {
 	extendflags = ntohl(hdr->extend.flags);
+	if ((extendflags & REVERSE) == REVERSE) {
+	    setServerReverse(server);
+	    unsetReport(server);
+	}
     }
     if ( (flags & HEADER_VERSION1) != 0 ) {
         *client = new thread_Settings;
@@ -1200,7 +1204,7 @@ int Settings_GenerateClientHdr( thread_Settings *client, client_hdr *hdr ) {
 	flags |= HEADER_EXTEND;
     }
     flags |= HEADER_SEQNO64B;
-    if ( client->mMode != kTest_Normal ) {
+    if (client->mMode != kTest_Normal) {
 	flags |= HEADER_VERSION1;
 	if ( isBuflenSet( client ) ) {
 	    hdr->base.bufferlen = htonl(client->mBufLen);
@@ -1219,7 +1223,7 @@ int Settings_GenerateClientHdr( thread_Settings *client, client_hdr *hdr ) {
 	    hdr->base.mAmount = htonl((long)client->mAmount);
 	    hdr->base.mAmount &= htonl( 0x7FFFFFFF );
 	}
-	if ( client->mMode == kTest_DualTest ) {
+	if ((client->mMode == kTest_DualTest) || isReverse(client)) {
 	    flags |= RUN_NOW;
 	}
     }
@@ -1249,9 +1253,13 @@ int Settings_GenerateClientHdr( thread_Settings *client, client_hdr *hdr ) {
 	}
     }
     /*
-     * Finally, update the header flags (to be passed to the remote server)
+     * Done with base flags (to be passed to the remote server)
      */
     hdr->base.flags = htonl(flags);
+    if (isReverse(client)) {
+	flags |= HEADER_EXTEND;
+        extendflags |= REVERSE;
+    }
     if (flags & HEADER_EXTEND) {
 	if (isBWSet(client)) {
 	    hdr->extend.mRate = htonl(client->mUDPRate);
