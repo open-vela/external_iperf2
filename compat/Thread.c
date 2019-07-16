@@ -183,7 +183,7 @@ void thread_start( struct thread_Settings* thread ) {
 	}
         Condition_Unlock( thread_sNum_cond );
 
-#if   defined( HAVE_POSIX_THREAD )
+#if defined( HAVE_POSIX_THREAD )
 
         // pthreads -- spawn new thread
         if ( pthread_create( &thread->mTID, NULL, thread_run_wrapper, thread ) != 0 ) {
@@ -197,6 +197,9 @@ void thread_start( struct thread_Settings* thread ) {
 	    }
             Condition_Unlock( thread_sNum_cond );
         }
+#if HAVE_THREAD_DEBUG
+	thread_debug("Thread_run_wrapper(%p mode=%x) thread counts tot/trfc=%d/%d", (void *)thread,thread->mThreadMode, thread_sNum, thread_trfc_sNum);
+#endif
 
 #elif defined( HAVE_WIN32_THREAD )
 
@@ -226,12 +229,17 @@ void thread_start( struct thread_Settings* thread ) {
 /* -------------------------------------------------------------------
  * Stop the specified object's thread execution (if any) immediately.
  * Decrements thread count and resets the thread ID.
+ *
+ * Note: This does not free any objects and calling it without
+ * lots of conideration will likely cause memory leaks. Better to let
+ * thread_start's thread_run_wrapper run to completion and not
+ * preemptively stop a thread.
  * ------------------------------------------------------------------- */
 void thread_stop( struct thread_Settings* thread ) {
 
 #ifdef HAVE_THREAD
   #ifdef HAVE_THREAD_DEBUG
-      thread_debug("Thread stop invoked");
+  thread_debug("Thread stop invoked %p", (void *)thread);
   #endif
     // Make sure we have been started
     if ( ! thread_equalid( thread->mTID, thread_zeroid() ) ) {

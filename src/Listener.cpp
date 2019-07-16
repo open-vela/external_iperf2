@@ -32,7 +32,7 @@
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE CONTIBUTORS OR COPYRIGHT
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE CONTRIBUTORS OR COPYRIGHT
  * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE
@@ -95,7 +95,7 @@ Listener::Listener( thread_Settings *inSettings ) {
 
     mClients = inSettings->mThreads;
     mBuf = NULL;
-    mySocket = INVALID_SOCKET;
+    ListenSocket = INVALID_SOCKET;
     /*
      * These thread settings are stored in three places
      *
@@ -132,11 +132,11 @@ Listener::Listener( thread_Settings *inSettings ) {
  * Delete memory (buffer).
  * ------------------------------------------------------------------- */
 Listener::~Listener() {
-#if THREAD_DEBUG
-    thread_debug("Listener destructor sock=%d", mySocket);
+#if HAVE_THREAD_DEBUG
+    thread_debug("Listener destructor close sock=%d", ListenSocket);
 #endif
-    if ( mySocket != INVALID_SOCKET ) {
-        int rc = close( mySocket );
+    if ( ListenSocket != INVALID_SOCKET ) {
+        int rc = close( ListenSocket );
         WARN_errno( rc == SOCKET_ERROR, "listener close" );
     }
     DELETE_ARRAY( mBuf );
@@ -181,13 +181,14 @@ void Listener::Run( void ) {
         Settings_Copy( mSettings, &server );
         server->mThreadMode = kMode_Server;
 
-        // Accept each packet,
+        // accept each packet,
         // If there is no existing client, then start
         // a new thread to service the new client
         // The listener runs in a single thread
         // Thread per client model is followed
         do {
             // Get a new socket
+	    server->mSock = -1;
             Accept( server );
             if ( server->mSock == INVALID_SOCKET ) {
                 break;
@@ -243,8 +244,9 @@ sInterupted == SIGALRM
 		// The following will set the tempSettings to NULL if
 		// there is no need for the Listener to start a client
                 Settings_GenerateClientSettings( server, &tempSettings, hdr );
-		if isServerReverse(server) {
-		    client_spawn(server);
+		if (isServerReverse(server)) {
+		    server->mThreadMode=kMode_Client;
+		    thread_start( server );
 		}
             } else {
 	        tempSettings = NULL;
@@ -319,7 +321,7 @@ sInterupted == SIGALRM
 	    // create a new socket for the Listener thread now that server thread
 	    // is handling the current one
             if ( UDP ) {
-                mSettings->mSock = -1;
+                ListenSocket = -1;
                 Listen( );
             }
 
@@ -363,51 +365,50 @@ void Listener::Listen( ) {
 #ifdef WIN32
     if ( SockAddr_isMulticast( &mSettings->local ) ) {
 	// Multicast on Win32 requires special handling
-	mSettings->mSock = WSASocket( domain, type, 0, 0, 0, WSA_FLAG_MULTIPOINT_C_LEAF | WSA_FLAG_MULTIPOINT_D_LEAF );
-	WARN_errno( mSettings->mSock == INVALID_SOCKET, "socket" );
+	ListenSocket = WSASocket( domain, type, 0, 0, 0, WSA_FLAG_MULTIPOINT_C_LEAF | WSA_FLAG_MULTIPOINT_D_LEAF );
+	WARN_errno( ListenSocket == INVALID_SOCKET, "socket" );
 
     } else
 #endif
 	{
-	    mSettings->mSock = socket( domain, type, 0 );
-	    mySocket=mSettings->mSock;
-	    WARN_errno( mSettings->mSock == INVALID_SOCKET, "socket" );
+	    ListenSocket = socket( domain, type, 0 );
+	    WARN_errno( ListenSocket == INVALID_SOCKET, "socket" );
 	}
+    mSettings->mSock = ListenSocket;
     SetSocketOptions( mSettings );
 
     // reuse the address, so we can run if a former server was killed off
     int boolean = 1;
     Socklen_t len = sizeof(boolean);
-    setsockopt( mSettings->mSock, SOL_SOCKET, SO_REUSEADDR, (char*) &boolean, len );
+    setsockopt( ListenSocket, SOL_SOCKET, SO_REUSEADDR, (char*) &boolean, len );
 
     // bind socket to server address
 #ifdef WIN32
     if ( SockAddr_isMulticast( &mSettings->local ) ) {
 	// Multicast on Win32 requires special handling
-	rc = WSAJoinLeaf( mSettings->mSock, (sockaddr*) &mSettings->local, mSettings->size_local,0,0,0,0,JL_BOTH);
+	rc = WSAJoinLeaf( ListenSocket, (sockaddr*) &mSettings->local, mSettings->size_local,0,0,0,0,JL_BOTH);
 	WARN_errno( rc == SOCKET_ERROR, "WSAJoinLeaf (aka bind)" );
     } else
 #endif
 	{
-	    rc = bind( mSettings->mSock, (sockaddr*) &mSettings->local, mSettings->size_local );
+	    rc = bind( ListenSocket, (sockaddr*) &mSettings->local, mSettings->size_local );
 	    FAIL_errno( rc == SOCKET_ERROR, "bind", mSettings );
 	}
 
     // update the reporter thread
     if (isReport(mSettings)) {
         mSettings->reporthdr = ReportSettings(mSettings);
+	// disable future settings reports, listener should only do it once
+	unsetReport(mSettings);
 	UpdateConnectionReport(mSettings, mSettings->reporthdr);
 	PostReport(mSettings->reporthdr);
     }
 
-#ifdef HAVE_THREAD_DEBUG
-    thread_debug("Listener thread listening");
-#endif
 
     // listen for connections (TCP only).
     // use large (INT_MAX) backlog allowing multiple simultaneous connections
     if ( !isUDP( mSettings ) ) {
-	rc = listen( mSettings->mSock, INT_MAX );
+	rc = listen( ListenSocket, INT_MAX );
 	WARN_errno( rc == SOCKET_ERROR, "listen" );
     }
 
@@ -473,7 +474,7 @@ void Listener::McastJoin( ) {
 
 	    mreq.imr_interface.s_addr = htonl( INADDR_ANY );
 
-	    int rc = setsockopt( mSettings->mSock, IPPROTO_IP, IP_ADD_MEMBERSHIP,
+	    int rc = setsockopt( ListenSocket, IPPROTO_IP, IP_ADD_MEMBERSHIP,
 				 (char*) &mreq, sizeof(mreq));
 	    WARN_errno( rc == SOCKET_ERROR, "multicast join" );
 
@@ -486,7 +487,7 @@ void Listener::McastJoin( ) {
 
 	    mreq.ipv6mr_interface = 0;
 
-	    int rc = setsockopt( mSettings->mSock, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP,
+	    int rc = setsockopt( ListenSocket, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP,
 				 (char*) &mreq, sizeof(mreq));
 	    WARN_errno( rc == SOCKET_ERROR, "multicast v6 join" );
 #else
@@ -526,7 +527,7 @@ void Listener::McastJoin( ) {
 		source->sin6_family = AF_INET6;
 		group->sin6_family = AF_INET6;
 		/* Set the group */
-		rc=getsockname(mSettings->mSock,(struct sockaddr *)group, &socklen);
+		rc=getsockname(ListenSocket,(struct sockaddr *)group, &socklen);
 		FAIL_errno( rc == SOCKET_ERROR, "mcast join source group getsockname",mSettings );
 		group->sin6_port = 0;    /* Ignored */
 
@@ -539,7 +540,7 @@ void Listener::McastJoin( ) {
 #endif
 		rc = -1;
 #if HAVE_DECL_MCAST_JOIN_SOURCE_GROUP
-		rc = setsockopt(mSettings->mSock,IPPROTO_IPV6,MCAST_JOIN_SOURCE_GROUP, &group_source_req,
+		rc = setsockopt(ListenSocket,IPPROTO_IPV6,MCAST_JOIN_SOURCE_GROUP, &group_source_req,
 			    sizeof(group_source_req));
 #endif
 		FAIL_errno( rc == SOCKET_ERROR, "mcast v6 join source group",mSettings);
@@ -553,12 +554,12 @@ void Listener::McastJoin( ) {
 		group=(struct sockaddr_in6*)&group_req.gr_group;
 		group->sin6_family = AF_INET6;
 		/* Set the group */
-		rc=getsockname(mSettings->mSock,(struct sockaddr *)group, &socklen);
+		rc=getsockname(ListenSocket,(struct sockaddr *)group, &socklen);
 		FAIL_errno( rc == SOCKET_ERROR, "mcast v6 join group getsockname",mSettings );
 		group->sin6_port = 0;    /* Ignored */
 		rc = -1;
 #if HAVE_DECL_MCAST_JOIN_GROUP
-		rc = setsockopt(mSettings->mSock,IPPROTO_IPV6,MCAST_JOIN_GROUP, &group_req,
+		rc = setsockopt(ListenSocket,IPPROTO_IPV6,MCAST_JOIN_GROUP, &group_req,
 				sizeof(group_source_req));
 #endif
 		FAIL_errno( rc == SOCKET_ERROR, "mcast v6 join group",mSettings);
@@ -592,7 +593,7 @@ void Listener::McastJoin( ) {
 		source->sin_family = AF_INET;
 		group->sin_family = AF_INET;
 		/* Set the group */
-		rc=getsockname(mSettings->mSock,(struct sockaddr *)group, &socklen);
+		rc=getsockname(ListenSocket,(struct sockaddr *)group, &socklen);
 		FAIL_errno( rc == SOCKET_ERROR, "mcast join source group getsockname",mSettings );
 		group->sin_port = 0;    /* Ignored */
 
@@ -606,7 +607,7 @@ void Listener::McastJoin( ) {
 		rc = -1;
 
 #if HAVE_DECL_MCAST_JOIN_SOURCE_GROUP
-		rc = setsockopt(mSettings->mSock,IPPROTO_IP,MCAST_JOIN_SOURCE_GROUP, &group_source_req,
+		rc = setsockopt(ListenSocket,IPPROTO_IP,MCAST_JOIN_SOURCE_GROUP, &group_source_req,
 				sizeof(group_source_req));
 #endif
 
@@ -623,7 +624,7 @@ void Listener::McastJoin( ) {
 		    imr.imr_multiaddr = ((const struct sockaddr_in *)group)->sin_addr.s_addr;
 		    imr.imr_sourceaddr = ((const struct sockaddr_in *)source)->sin_addr.s_addr;
 #endif
-		    rc = setsockopt (mSettings->mSock, IPPROTO_IP, IP_ADD_SOURCE_MEMBERSHIP, (char*)(&imr), sizeof (imr));
+		    rc = setsockopt (ListenSocket, IPPROTO_IP, IP_ADD_SOURCE_MEMBERSHIP, (char*)(&imr), sizeof (imr));
 		}
 #endif
 #endif
@@ -638,12 +639,12 @@ void Listener::McastJoin( ) {
 		group=(struct sockaddr_in*)&group_req.gr_group;
 		group->sin_family = AF_INET;
 		/* Set the group */
-		rc=getsockname(mSettings->mSock,(struct sockaddr *)group, &socklen);
+		rc=getsockname(ListenSocket,(struct sockaddr *)group, &socklen);
 		FAIL_errno( rc == SOCKET_ERROR, "mcast join group getsockname",mSettings );
 		group->sin_port = 0;    /* Ignored */
 		rc = -1;
 #if HAVE_DECL_MCAST_JOIN_GROUP
-		rc = setsockopt(mSettings->mSock,IPPROTO_IP,MCAST_JOIN_GROUP, &group_req,
+		rc = setsockopt(ListenSocket,IPPROTO_IP,MCAST_JOIN_GROUP, &group_req,
 				sizeof(group_source_req));
 #endif
 		FAIL_errno( rc == SOCKET_ERROR, "mcast join group",mSettings);
@@ -807,7 +808,7 @@ void Listener::Accept( thread_Settings *server ) {
     if ( mMode_Time ) {
 	mEndTime.setnow();
 	mEndTime.add( mSettings->mAmount / 100.0 );
-	if (!setsock_blocking(mSettings->mSock, 0)) {
+	if (!setsock_blocking(ListenSocket, 0)) {
 	    WARN(1, "Failed setting socket to non-blocking mode");
 	}
     }
@@ -824,12 +825,16 @@ void Listener::Accept( thread_Settings *server ) {
 	    timeout.tv_usec = (mSettings->mAmount % 100) * 10000;
 	    fd_set set;
 	    FD_ZERO(&set);
-	    FD_SET(mSettings->mSock, &set);
-	    if (select( mSettings->mSock + 1, &set, NULL, NULL, &timeout) <= 0) {
+	    FD_SET(ListenSocket, &set);
+	    if (select( ListenSocket + 1, &set, NULL, NULL, &timeout) <= 0) {
 		break;
 	    }
 	}
 	if ( isUDP( server ) ) {
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Listener thread listening for UDP (sock=%d)", ListenSocket);
+#endif
+
 	    int rc;
 	    /* ------------------------------------------------------------------------
 	     * Do the equivalent of an accept() call for UDP sockets. This waits
@@ -839,7 +844,7 @@ void Listener::Accept( thread_Settings *server ) {
 	    // Preset the server socket to INVALID, hang recvfrom on the Listener's socket
 	    // The INVALID socket is used to keep the while loop going
 	    server->mSock = INVALID_SOCKET;
-	    rc = recvfrom( mSettings->mSock, mBuf, mSettings->mBufLen, 0,
+	    rc = recvfrom( ListenSocket, mBuf, mSettings->mBufLen, 0,
 			       (struct sockaddr*) &server->peer, &server->size_peer );
 	    FAIL_errno( rc == SOCKET_ERROR, "recvfrom", mSettings );
 	    if (sInterupted != 0) {
@@ -851,7 +856,7 @@ void Listener::Accept( thread_Settings *server ) {
 		if ( exist == NULL ) {
 		    // We have a new UDP flow so let's start the
 		    // process to handle it and in a new server thread (yet to be created)
-		    server->mSock = mSettings->mSock;
+		    server->mSock = ListenSocket;
 		    // This connect() will allow the OS to only
 		    // send packets with the ip quintuple up to the server
 		    // socket and, hence, to the server thread (yet to be created)
@@ -864,14 +869,17 @@ void Listener::Accept( thread_Settings *server ) {
 		} else {
 		    // This isn't a new flow so just ignore the packet
 		    // and continue with the while loop
-		    // printf("Debug: drop packet on sock %d\n",mSettings->mSock);
+		    // printf("Debug: drop packet on sock %d\n",ListenSocket);
 		    server->mSock = INVALID_SOCKET;
 		}
 		Mutex_Unlock( &clients_mutex );
 	    }
 	} else {
+#ifdef HAVE_THREAD_DEBUG
+	  thread_debug("Listener thread accepting for TCP (sock=%d)", ListenSocket);
+#endif
 	    // accept a TCP  connection
-	    server->mSock = accept( mSettings->mSock,  (sockaddr*) &server->peer, &server->size_peer );
+	    server->mSock = accept( ListenSocket,  (sockaddr*) &server->peer, &server->size_peer );
 	    if ( server->mSock == INVALID_SOCKET &&
 #if WIN32
 		 WSAGetLastError() == WSAEINTR
@@ -940,14 +948,14 @@ void Listener::UDPSingleServer( ) {
 		timeout.tv_usec = (mSettings->mAmount % 100) * 10000;
 		fd_set set;
 		FD_ZERO(&set);
-		FD_SET(mSettings->mSock, &set);
-		if (select( mSettings->mSock + 1, &set, NULL, NULL, &timeout) <= 0) {
+		FD_SET(ListenSocket, &set);
+		if (select( ListenSocket + 1, &set, NULL, NULL, &timeout) <= 0) {
 		    sInterupted = 1;
 		    break;
 		}
 	    }
 
-            rc = recvfrom( mSettings->mSock, mBuf, mSettings->mBufLen, 0,
+            rc = recvfrom( ListenSocket, mBuf, mSettings->mBufLen, 0,
                            (struct sockaddr*) &server->peer, &server->size_peer );
             WARN_errno( rc == SOCKET_ERROR, "recvfrom" );
             if ( rc == SOCKET_ERROR ) {
@@ -975,7 +983,7 @@ void Listener::UDPSingleServer( ) {
                     server->mSock = -groupID;
                     Mutex_Unlock( &groupCond );
                     server->size_local = sizeof(iperf_sockaddr);
-                    getsockname( mSettings->mSock, (sockaddr*) &server->local, \
+                    getsockname( ListenSocket, (sockaddr*) &server->local, \
                                  &server->size_local );
                     break;
                 }
@@ -1030,7 +1038,7 @@ void Listener::UDPSingleServer( ) {
                     hdr = (server_hdr*) (UDP_Hdr+1);
                     hdr->base.flags = htonl( 0 );
                 }
-                sendto( mSettings->mSock, mBuf, mSettings->mBufLen, 0, \
+                sendto( ListenSocket, mBuf, mSettings->mBufLen, 0, \
                         (struct sockaddr*) &server->peer, server->size_peer);
             }
         }
@@ -1059,11 +1067,11 @@ void Listener::UDPSingleServer( ) {
             if ( !SockAddr_Hostare_Equal( (sockaddr*) &mSettings->peer, \
                                           (sockaddr*) &server->peer ) ) {
                 // Not allowed try again
-                connect( mSettings->mSock,
+                connect( ListenSocket,
                          (sockaddr*) &server->peer,
                          server->size_peer );
-                close( mSettings->mSock );
-                mSettings->mSock = -1;
+                close( ListenSocket );
+                ListenSocket = -1;
                 Listen( );
                 continue;
             }
@@ -1176,8 +1184,8 @@ int Listener::ReadClientHeader(client_hdr *hdr ) {
 	    timeout.tv_sec = sorcvtimer / 1000000;
 	    timeout.tv_usec = sorcvtimer % 1000000;
 #endif // WIN32
-	    if (setsockopt( mSettings->mSock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0 ) {
-		WARN_errno( mSettings->mSock == SO_RCVTIMEO, "socket" );
+	    if (setsockopt( server->mSock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0 ) {
+		WARN_errno( server->mSock == SO_RCVTIMEO, "socket" );
 	    }
 	}
 	// Read the headers but don't pull them from the queue in order to

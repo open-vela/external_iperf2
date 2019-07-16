@@ -161,13 +161,12 @@ Client::Client( thread_Settings *inSettings ) {
 
     if (!isServerReverse(mSettings))
         ct = Connect( );
-    // Spawn threads for reverse mode
+    // start a server thread for reverse mode
     if (isReverse(mSettings)) {
         thread_Settings *reverse_client=NULL;
         Settings_Copy(mSettings, &reverse_client);
 	if ((reverse_client) &&  (mSettings->mSock > 0)) {
 	    reverse_client->mSock = mSettings->mSock;
-	    unsetReport(reverse_client);
 	    reverse_client->mThreadMode = kMode_Server;
 	    thread_start(reverse_client);
 	}
@@ -259,8 +258,8 @@ Client::Client( thread_Settings *inSettings ) {
  * Destructor
  * ------------------------------------------------------------------- */
 Client::~Client() {
-#if THREAD_DEBUG
-  thread_debug("Client destructor sock=%d", mySocket);
+#if HAVE_THREAD_DEBUG
+  thread_debug("Client destructor close sock=%d", mySocket);
 #endif
     if ( mySocket != INVALID_SOCKET ) {
         int rc = close( mySocket );
@@ -279,7 +278,7 @@ Client::~Client() {
  * If inLocalhost is not null, bind to that address, specifying
  * which outgoing interface to use.
  * ------------------------------------------------------------------- */
-double Client::Connect( ) {
+double Client::Connect() {
     int rc;
     double connecttime = -1.0;
 
