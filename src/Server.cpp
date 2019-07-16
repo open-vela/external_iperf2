@@ -74,12 +74,13 @@
 
 Server::Server( thread_Settings *inSettings ) {
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Server thread started");
+  thread_debug("Server thread started (sock=%d)", inSettings->mSock);
 #endif
     mSettings = inSettings;
     mBuf = NULL;
     myJob = NULL;
     mySocket = inSettings->mSock;
+    myDropSocket = inSettings->mSockDrop;
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
     if (isL2LengthCheck(mSettings)) {
 	// For L2 UDP make sure we can receive a full ethernet packet plus a bit more
@@ -99,8 +100,8 @@ Server::Server( thread_Settings *inSettings ) {
  * ------------------------------------------------------------------- */
 
 Server::~Server() {
-#if THREAD_DEBUG
-    thread_debug("Server destructor sock=%d drop-sock=%d", mySocket, myDropSocket);
+#if HAVE_THREAD_DEBUG
+    thread_debug("Server destructor close sock=%d drop-sock=%d", mySocket, myDropSocket);
 #endif
 
     if ( mySocket != INVALID_SOCKET ) {

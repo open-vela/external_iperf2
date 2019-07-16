@@ -132,11 +132,6 @@ static void gettcpistats(ReporterData *stats, int final);
 #endif
 static PacketRing * init_packetring(int count);
 
-// This is used to determine the packet load into the reporter thread
-static int accounted_packets = 0;
-static int accounted_packet_threads = 0;
-#define REPORTERDELAY_DURATION 4000 // units is microseconds
-
 MultiHeader* InitMulti( thread_Settings *agent, int inID) {
     MultiHeader *multihdr = NULL;
     if ( agent->mThreads > 1 || agent->mThreadMode == kMode_Server ) {
@@ -271,6 +266,9 @@ static void free_packetring(PacketRing *pr) {
 }
 
 void FreeReport(ReportHeader *reporthdr) {
+    if (reporthdr->delaycounter < 3) {
+      fprintf(stdout, "WARN: this test was likley CPU bound which may not detecting the underlying network devices\n");
+    }
     if (reporthdr) {
       free_packetring(reporthdr->packetring);
       if (reporthdr->report.info.latency_histogram) {
@@ -282,7 +280,7 @@ void FreeReport(ReportHeader *reporthdr) {
       }
 #endif
 #ifdef HAVE_THREAD_DEBUG
-      thread_debug("Free report hdr %p", (void *)reporthdr);
+      thread_debug("Free report hdr %p delay counter=%d", (void *)reporthdr, reporthdr->delaycounter);
 #endif
       free(reporthdr);
     }
@@ -661,13 +659,14 @@ Transfer_Info *GetReport( ReportHeader *agent ) {
  * settings being used with Listeners or Clients
  */
 ReportHeader *ReportSettings( thread_Settings *agent ) {
-    ReportHeader *reporthdr = NULL;
-    if ( isSettingsReport( agent ) ) {
+  ReportHeader *reporthdr = agent->reporthdr;
+  if ( isSettingsReport( agent ) ) {
         /*
-         * Create in one big chunk
+         * Populate and optionally create a new settings report
          */
-        reporthdr = calloc( sizeof(ReportHeader), sizeof(char*));
-        if ( reporthdr != NULL ) {
+	 if (!reporthdr)
+	    reporthdr = calloc(sizeof(ReportHeader), sizeof(char*));
+	 if (reporthdr) {
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Init settings report %p", reporthdr);
 #endif
@@ -801,6 +800,51 @@ void ReportServerUDP( thread_Settings *agent, server_hdr *server ) {
     }
 }
 
+//  This is used to determine the packet/cpu load into the reporter thread
+//  If the overall reporter load is too low, add some yield
+//  or delay so the traffic threads can fill the packet rings
+#define MINPACKETDEPTH 10
+#define MINPERQUEUEDEPTH 20
+#define REPORTERDELAY_DURATION 4000 // units is microseconds
+typedef struct ConsumptionDetectorType {
+    int accounted_packets;
+    int accounted_packet_threads;
+    int delay_counter ;
+} ConsumptionDetectorType;
+ConsumptionDetectorType consumption_detector = \
+  {.accounted_packets = 0, .accounted_packet_threads = 0, .delay_counter = 0};
+
+static inline void reset_consumption_detector(void) {
+  consumption_detector.accounted_packet_threads = thread_numtrafficthreads();
+  if ((consumption_detector.accounted_packets = thread_numtrafficthreads() * MINPERQUEUEDEPTH) <= MINPACKETDEPTH) {
+    consumption_detector.accounted_packets = MINPACKETDEPTH;
+  }
+}
+static inline void apply_consumption_detector(void) {
+  if (--consumption_detector.accounted_packet_threads <= 0) {
+    // All active threads have been processed for the loop,
+    // reset the thread counter and check the consumption rate
+    // If the rate is too low add some delay to the reporter
+    consumption_detector.accounted_packet_threads = thread_numtrafficthreads();
+    // Check to see if we need to suspend the reporter
+    if (consumption_detector.accounted_packets > 0) {
+      /*
+       * Suspend the reporter thread for some (e.g. 4) milliseconds
+       *
+       * This allows the thread to receive client or server threads'
+       * packet events in "aggregates."  This can reduce context
+       * switching allowing for better CPU utilization,
+       * which is very noticble on CPU constrained systems.
+       */
+      delay_loop(REPORTERDELAY_DURATION);
+      consumption_detector.delay_counter++;
+      // printf("DEBUG: forced reporter suspend, accounted=%d,  queueue depth after = %d\n", accounted_packets, getcount_packetring(reporthdr));
+    } else {
+      // printf("DEBUG: no suspend, accounted=%d,  queueue depth after = %d\n", accounted_packets, getcount_packetring(reporthdr));
+    }
+    reset_consumption_detector();
+  }
+}
 /*
  * This function is called only when the reporter thread
  * This function is the loop that the reporter thread processes
@@ -830,10 +874,7 @@ void reporter_spawn( thread_Settings *thread ) {
 	    Condition_TimedWait ( &ReportCond, 1);
 	    // The reporter is starting from an empty state
 	    // so set the load detect to trigger an initial delay
-	    accounted_packet_threads = thread_numtrafficthreads();
-	    if ((accounted_packets = thread_numtrafficthreads() * 20) <= 0 ) {
-	        accounted_packets = 10;
-	    }
+	    reset_consumption_detector();
         }
         Condition_Unlock ( ReportCond );
 
@@ -960,46 +1001,31 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
         return reporter_print( &reporthdr->report, SERVER_RELAY_REPORT, 1 );
     }
     if ( (reporthdr->report.type & TRANSFER_REPORT) != 0 ) {
+        // The consumption detector applies delay to the reporter
+        // thread when its consumption rate is too low.   This allows
+        // the traffic threads to send aggregates vs thrash
+        // the packet rings.  The dissimilarity between the thread
+        // speads is due to the speed differences between i/o
+        // bound threads vs cpu bound ones, and it's expected
+        // that reporter thread being CPU limited should be much
+        // faster than the traffic threads, even in aggregate.
+        // Note: If this detection is not going off it means
+        // the system is likely CPU bound and iperf is now likely
+        // becoming a CPU test vs a network i/o test
+	apply_consumption_detector();
         // If there are more packets to process then handle them
-        ReportStruct *packet;
-	//  If the overall reporter load is too low, add some yield
-	//  or delay so the traffic threads can fill the packet rings
-	if (--accounted_packet_threads <= 0) {
-	    // All active threads have been processed for the loop,
-	    // reset the thread counter and check the consumption rate
-	    // If the rate is too low add some delay to the reporter
-	    accounted_packet_threads = thread_numtrafficthreads();
-	    // Check to see if we need to suspend the reporter
-	    if (accounted_packets > 0) {
-		/*
-		 * Suspend the reporter thread for some (e.g. 4) milliseconds
-		 *
-		 * This allows the thread to receive client or server threads'
-		 * packet events in "aggregates."  This can reduce context
-		 * switching allowing for better CPU utilization,
-		 * which is very noticble on CPU constrained systems.
-		 */
-		delay_loop(REPORTERDELAY_DURATION);
-		// printf("DEBUG: forced reporter suspend, accounted=%d,  queueue depth after = %d\n", accounted_packets, getcount_packetring(reporthdr));
-	    } else {
-	      // printf("DEBUG: no suspend, accounted=%d,  queueue depth after = %d\n", accounted_packets, getcount_packetring(reporthdr));
-	    }
-	    // Reset the accounted packets which is a count down counter, can't be reset to zero
-	    if ((accounted_packets = thread_numtrafficthreads() * 20) <= 0 ) {
-	        accounted_packets = 10;
-	    }
-	}
-
+	ReportStruct *packet = NULL;
         while ((packet = dequeue_packetring(reporthdr))) {
 	    // Increment the total packet count processed by this thread
 	    // this will be used to make decisions on if the reporter
 	    // thread should add some delay to eliminate cpu thread
 	    // thrashing,
-	    accounted_packets--;
+	    consumption_detector.accounted_packets--;
 	    if (reporthdr->packet_handler) {
 	        int event_lastpacket = (*reporthdr->packet_handler)(reporthdr, packet);
 		if (event_lastpacket) {
 		    reporthdr->packetring->consumerdone = 1;
+		    reporthdr->delaycounter = consumption_detector.delay_counter;
 		    need_free = 1;
 		}
 	    }

@@ -150,11 +150,10 @@ void client_spawn( thread_Settings *thread ) {
         theClient->Run();
     } else {
         // Let the server know about our settings
+        // Bypass the run if this is a reverse test
         if (theClient->InitiateServer()) {
             // Run the test
             theClient->Run();
-        } else {
-            thread_stop(thread);
         }
     }
     DELETE_PTR( theClient );
@@ -206,7 +205,6 @@ void client_init( thread_Settings *clients ) {
     // to the list of threads to start
     for (int i = 1; i < clients->mThreads; i++) {
         Settings_Copy( clients, &next );
-	unsetReport(clients);
 	if (isIncrDstIP(clients))
 	    next->incrdstip = i;
 
