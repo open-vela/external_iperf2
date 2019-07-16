@@ -101,9 +101,9 @@ private:
     int ClientHeaderAck(void);
     int L2_setup(void);
 #if WIN32
-    SOCKET mySocket;
+    SOCKET ListenSocket;
 #else
-    int mySocket;
+    int ListenSocket;
 #endif
 
 }; // end class Listener

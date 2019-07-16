@@ -285,6 +285,10 @@ void Settings_Initialize( thread_Settings *main ) {
 
 void Settings_Copy( thread_Settings *from, thread_Settings **into ) {
     *into = new thread_Settings;
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Thread settings copy (malloc) from/to=%p/%p", (void *)from, (void *)*into);
+#endif
+
     memcpy( *into, from, sizeof(thread_Settings) );
     if ( from->mHost != NULL ) {
         (*into)->mHost = new char[ strlen(from->mHost) + 1];
@@ -331,6 +335,8 @@ void Settings_Copy( thread_Settings *from, thread_Settings **into ) {
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
     (*into)->mSockDrop = INVALID_SOCKET;
 #endif
+    // default copied settings to no reporter reporting
+    unsetReport((*into));
 }
 
 /* -------------------------------------------------------------------
@@ -338,6 +344,9 @@ void Settings_Copy( thread_Settings *from, thread_Settings **into ) {
  * ------------------------------------------------------------------- */
 
 void Settings_Destroy( thread_Settings *mSettings) {
+#if HAVE_THREAD_DEBUG
+    thread_debug("Thread settings free=%p", mSettings);
+#endif
     DELETE_ARRAY( mSettings->mHost      );
     DELETE_ARRAY( mSettings->mLocalhost );
     DELETE_ARRAY( mSettings->mFileName  );
@@ -1104,6 +1113,7 @@ void Settings_GenerateListenerSettings( thread_Settings *client, thread_Settings
             strcpy( (*listener)->mLocalhost, client->mLocalhost );
         }
 	(*listener)->mBufLen   = kDefault_UDPBufLen;
+	setReport((*listener));
     } else {
         *listener = NULL;
     }

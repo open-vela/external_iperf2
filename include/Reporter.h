@@ -346,6 +346,7 @@ typedef struct ReportHeader {
     int (*packet_handler) (struct ReportHeader *report, ReportStruct *packet);
     MultiHeader *multireport;
     struct ReportHeader *next;
+    int delaycounter; // used to detect CPU bound systems
     PacketRing *packetring;
 } ReportHeader;
 
