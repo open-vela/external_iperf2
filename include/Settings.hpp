@@ -131,10 +131,11 @@ typedef struct thread_Settings {
     char*  mHost;                   // -c
     char*  mLocalhost;              // -B
     char*  mOutputFileName;         // -o
-    char*  mIfrname;                 // %<device> name
+    char*  mIfrname;                // %<device> name (for rx)
+    char*  mIfrnametx;              // %<device> name (for tx)
     char*  mSSMMulticastStr;        // --ssm-host
     char*  mIsochronousStr;         // --isochronous
-    char*  mRxHistogramStr;           // --udp-histogram
+    char*  mRxHistogramStr;         // --udp-histogram
     FILE*  Extractor_file;
     ReportHeader*  reporthdr;
     MultiHeader*   multihdr;
