@@ -1016,28 +1016,6 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 	}
     }
 #endif
-    // Check for a client's bind to device, i.e. <dst>%<dev>
-    if (mExtSettings->mThreadMode == kMode_Client) {
-      if (((results = strtok(mExtSettings->mHost, "%")) != NULL) && ((results = strtok(NULL, "%")) != NULL)) {
-	mExtSettings->mIfrnametx = new char[ strlen(results) + 1 ];
-	strcpy(mExtSettings->mIfrnametx, results);
-	if (mExtSettings->mHost[0] ==  '[') {
-	    if ((results = strtok(mExtSettings->mHost, "]")) != NULL) {
-	      int len = strlen(mExtSettings->mHost);
-	      for (int jx = 0; jx < len; jx++) {
-		 mExtSettings->mHost[jx] = mExtSettings->mHost[jx + 1];
-	      }
-	    }
-	}
-#ifndef HAVE_DECL_SO_BINDTODEVICE
-	if (mExtSettings->mIframetx) {
-	    fprintf(stderr, "bind to device will be ignored because not supported\n");
-	    free(mExtSettings->mIframetx);
-	    mExtSettings->mIframetx=NULL;
-	}
-#endif
-      }
-    }
     // Check for further mLocalhost (-B) parsing:
     if ( mExtSettings->mLocalhost) {
 	// Check for -B device
@@ -1064,13 +1042,35 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 	    }
 	}
     }
-    //  Check for a multicast
+    //  Check for a multicast, link-local and bind to device
     if ( mExtSettings->mThreadMode == kMode_Client ) {
-	// For client, check the destination host for multicast
 	iperf_sockaddr tmp;
 	SockAddr_setHostname( mExtSettings->mHost, &tmp,
 			      (isIPV6( mExtSettings ) ? 1 : 0 ));
-	if ( SockAddr_isMulticast( &tmp ) ) {
+	// v6 link local doesn't need special binding so ignore it
+	if (!(isIPV6(mExtSettings) && SockAddr_isLinklocal(&tmp))) {
+	    if (((results = strtok(mExtSettings->mHost, "%")) != NULL) && \
+		((results = strtok(NULL, "%")) != NULL)) {
+	      mExtSettings->mIfrnametx = new char[ strlen(results) + 1 ];
+	      strcpy(mExtSettings->mIfrnametx, results);
+	      if (mExtSettings->mHost[0] ==  '[') {
+		if ((results = strtok(mExtSettings->mHost, "]")) != NULL) {
+		  int len = strlen(mExtSettings->mHost);
+		  for (int jx = 0; jx < len; jx++) {
+		    mExtSettings->mHost[jx] = mExtSettings->mHost[jx + 1];
+		  }
+		}
+	      }
+#ifndef HAVE_DECL_SO_BINDTODEVICE
+	      if (mExtSettings->mIframetx) {
+		fprintf(stderr, "bind to device will be ignored because not supported\n");
+		free(mExtSettings->mIframetx);
+		mExtSettings->mIframetx=NULL;
+	      }
+#endif
+	    }
+	}
+	if (SockAddr_isMulticast(&tmp) && !(isIPV6(mExtSettings) && SockAddr_isLinklocal(&tmp))) {
 	    setMulticast( mExtSettings );
 	}
     } else if (mExtSettings->mLocalhost != NULL) {
