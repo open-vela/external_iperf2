@@ -1010,6 +1010,28 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 	}
     }
 #endif
+    // Check for a client's bind to device, i.e. <dst>%<dev>
+    if (mExtSettings->mThreadMode == kMode_Client) {
+      if (((results = strtok(mExtSettings->mHost, "%")) != NULL) && ((results = strtok(NULL, "%")) != NULL)) {
+	mExtSettings->mIfrname = new char[ strlen(results) + 1 ];
+	strcpy(mExtSettings->mIfrname, results);
+	if (mExtSettings->mHost[0] ==  '[') {
+	    if ((results = strtok(mExtSettings->mHost, "]")) != NULL) {
+	      int len = strlen(mExtSettings->mHost);
+	      for (int jx = 0; jx < len; jx++) {
+		 mExtSettings->mHost[jx] = mExtSettings->mHost[jx + 1];
+	      }
+	    }
+	}
+#ifndef HAVE_DECL_SO_BINDTODEVICE
+	if (mExtSettings->mIfrname) {
+	    fprintf(stderr, "bind to device will be ignored because not supported\n");
+	    free(mExtSettings->mIfrname);
+	    mExtSettings->mIfrname=NULL;
+	}
+#endif
+      }
+    }
     // Check for further mLocalhost (-B) parsing:
     if ( mExtSettings->mLocalhost) {
 	// Check for -B device
@@ -1018,7 +1040,7 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 	    strcpy( mExtSettings->mIfrname, results );
 	}
 	// Client local host parsing
-	if (mExtSettings->mThreadMode == kMode_Client ) {
+	if (mExtSettings->mThreadMode == kMode_Client) {
 	    // v4 uses a colon as the delimeter for the local bind port, e.g. 192.168.1.1:6001
 	    if (!isIPV6(mExtSettings)) {
 		if (((results = strtok(mExtSettings->mLocalhost, ":")) != NULL) && ((results = strtok(NULL, ":")) != NULL)) {

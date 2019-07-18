@@ -434,7 +434,8 @@ int SockAddr_isMulticast( iperf_sockaddr *inSockAddr ) {
 
 #if defined(HAVE_IPV6)
     if ( ((struct sockaddr*)inSockAddr)->sa_family == AF_INET6 ) {
-        return( IN6_IS_ADDR_MULTICAST(&(((struct sockaddr_in6*) inSockAddr)->sin6_addr) ));
+        return(IN6_IS_ADDR_MULTICAST(&(((struct sockaddr_in6*) inSockAddr)->sin6_addr)) &&\
+	       !IN6_IS_ADDR_LINKLOCAL(&(((struct sockaddr_in6*) inSockAddr)->sin6_addr)));
     } else
 #endif
     {
