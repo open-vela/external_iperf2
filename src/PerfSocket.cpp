@@ -77,7 +77,9 @@
 #include "PerfSocket.hpp"
 #include "SocketAddr.h"
 #include "util.h"
-
+#if HAVE_DECL_SO_BINDTODEVICE
+#include <net/if.h>
+#endif
 /* -------------------------------------------------------------------
  * Set socket options before the listen() or connect() calls.
  * These are optional performance tuning factors.
@@ -104,6 +106,23 @@ void SetSocketOptions( thread_Settings *inSettings ) {
 	fprintf( stderr, "The -Z option is not available on this operating system\n");
 #endif
     }
+
+#if HAVE_DECL_SO_BINDTODEVICE
+    if ((inSettings->mThreadMode == kMode_Client) && inSettings->mIfrname) {
+        struct ifreq ifr;
+	memset(&ifr, 0, sizeof(ifr));
+	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), inSettings->mIfrname);
+	if (setsockopt(inSettings->mSock, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
+	    char *buf;
+	    int len = snprintf(NULL, 0, "%s %s", "bind to device", inSettings->mIfrname);
+	    len++;  // Trailing null byte + extra
+	    buf = (char *) malloc(len);
+	    len = snprintf(buf, len, "%s %s", "bind to device", inSettings->mIfrname);
+	    WARN_errno(1, buf );
+	    free(buf);
+	}
+    }
+#endif
 
     // check if we're sending multicast
     if (isMulticast(inSettings)) {

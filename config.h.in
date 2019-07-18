@@ -73,6 +73,10 @@
    don't. */
 #undef HAVE_DECL_SIGALRM
 
+/* Define to 1 if you have the declaration of `SO_BINDTODEVICE', and to 0 if
+   you don't. */
+#undef HAVE_DECL_SO_BINDTODEVICE
+
 /* Define to 1 if you have the declaration of `SO_MAX_PACING_RATE', and to 0
    if you don't. */
 #undef HAVE_DECL_SO_MAX_PACING_RATE
