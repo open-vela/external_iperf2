@@ -89,6 +89,7 @@ extern "C" {
     Socklen_t SockAddr_get_sizeof_sockaddr( iperf_sockaddr *inSockAddr );
 
     int SockAddr_isMulticast( iperf_sockaddr *inSockAddr );
+    int SockAddr_isLinklocal( iperf_sockaddr *inSockAddr );
 
     int SockAddr_isIPv6( iperf_sockaddr *inSockAddr );
 
