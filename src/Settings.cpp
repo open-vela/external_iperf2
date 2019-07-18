@@ -318,6 +318,11 @@ void Settings_Copy( thread_Settings *from, thread_Settings **into ) {
 	(*into)->mIfrname = new char[ strlen(from->mIfrname) + 1];
         strcpy( (*into)->mIfrname, from->mIfrname );
     }
+    if ( from->mIfrnametx != NULL ) {
+	(*into)->mIfrnametx = new char[ strlen(from->mIfrnametx) + 1];
+        strcpy( (*into)->mIfrnametx, from->mIfrnametx );
+    }
+
 #ifdef HAVE_ISOCHRONOUS
     if ( from->mIsochronousStr != NULL ) {
 	(*into)->mIsochronousStr = new char[ strlen(from->mIsochronousStr) + 1];
@@ -354,6 +359,7 @@ void Settings_Destroy( thread_Settings *mSettings) {
     DELETE_ARRAY( mSettings->mRxHistogramStr );
     DELETE_ARRAY( mSettings->mSSMMulticastStr);
     FREE_ARRAY( mSettings->mIfrname);
+    FREE_ARRAY( mSettings->mIfrnametx);
 #ifdef HAVE_ISOCHRONOUS
     DELETE_ARRAY( mSettings->mIsochronousStr );
 #endif
@@ -1013,8 +1019,8 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
     // Check for a client's bind to device, i.e. <dst>%<dev>
     if (mExtSettings->mThreadMode == kMode_Client) {
       if (((results = strtok(mExtSettings->mHost, "%")) != NULL) && ((results = strtok(NULL, "%")) != NULL)) {
-	mExtSettings->mIfrname = new char[ strlen(results) + 1 ];
-	strcpy(mExtSettings->mIfrname, results);
+	mExtSettings->mIfrnametx = new char[ strlen(results) + 1 ];
+	strcpy(mExtSettings->mIfrnametx, results);
 	if (mExtSettings->mHost[0] ==  '[') {
 	    if ((results = strtok(mExtSettings->mHost, "]")) != NULL) {
 	      int len = strlen(mExtSettings->mHost);
@@ -1024,10 +1030,10 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 	    }
 	}
 #ifndef HAVE_DECL_SO_BINDTODEVICE
-	if (mExtSettings->mIfrname) {
+	if (mExtSettings->mIframetx) {
 	    fprintf(stderr, "bind to device will be ignored because not supported\n");
-	    free(mExtSettings->mIfrname);
-	    mExtSettings->mIfrname=NULL;
+	    free(mExtSettings->mIframetx);
+	    mExtSettings->mIframetx=NULL;
 	}
 #endif
       }
