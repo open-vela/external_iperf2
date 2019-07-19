@@ -1095,6 +1095,7 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 	    // link-local doesn't use SO_BINDTODEVICE but includes it in the host string
 	    // so stitch things back together and null the bind to name
 	    if (mExtSettings->mIfrnametx) {
+		strcat(mExtSettings->mHost, "%");
 		strcat(mExtSettings->mHost, mExtSettings->mIfrnametx);
 		free(mExtSettings->mIfrnametx);
 		mExtSettings->mIfrnametx = NULL;
