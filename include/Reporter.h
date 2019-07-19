@@ -252,6 +252,7 @@ typedef struct ReporterData {
     char*  mHost;                   // -c
     char*  mLocalhost;              // -B
     char*  mIfrname;
+    char*  mIfrnametx;
     char*  mSSMMulticastStr;
     // int's
     int type;
