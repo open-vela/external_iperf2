@@ -320,6 +320,7 @@ void InitDataReport(thread_Settings *mSettings) {
 	data->mLocalhost = mSettings->mLocalhost;
 	data->mSSMMulticastStr = mSettings->mSSMMulticastStr;
 	data->mIfrname = mSettings->mIfrname;
+	data->mIfrnametx = mSettings->mIfrnametx;
 	data->mBufLen = mSettings->mBufLen;
 	data->mMSS = mSettings->mMSS;
 	data->mTCPWin = mSettings->mTCPWin;
@@ -677,6 +678,7 @@ ReportHeader *ReportSettings( thread_Settings *agent ) {
             data->mLocalhost = agent->mLocalhost;
 	    data->mSSMMulticastStr = agent->mSSMMulticastStr;
 	    data->mIfrname = agent->mIfrname;
+	    data->mIfrnametx = agent->mIfrnametx;
             data->mode = agent->mReportMode;
             data->type = SETTINGS_REPORT;
             data->mBufLen = agent->mBufLen;
