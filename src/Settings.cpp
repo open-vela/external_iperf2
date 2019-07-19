@@ -882,6 +882,34 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
     }
 } // end Interpret
 
+static void strip_v6_brackets(char *v6addr) {
+    char * results;
+    if (v6addr && (*v6addr ==  '[') && ((results = strtok(v6addr, "]")) != NULL)) {
+	int len = strlen(v6addr);
+	for (int jx = 0; jx < len; jx++) {
+	    v6addr[jx]= v6addr[jx + 1];
+	}
+    }
+}
+
+static char * isv6_bracketed_port(char *v6addr) {
+    char *results = NULL;
+    if (v6addr && (*v6addr ==  '[') && ((results = strtok(v6addr, "]")) != NULL)) {
+	strip_v6_brackets(v6addr);
+	if (results[0]==':') {
+	    return ++results;
+	}
+    }
+    return NULL;
+}
+static char * isv4_port(char *v4addr) {
+    char *results = NULL;
+    if (((results = strtok(v4addr, ":")) != NULL) && ((results = strtok(NULL, ":")) != NULL)) {
+	return results;
+    }
+    return NULL;
+}
+
 
 //  The commmand line options are position independent and hence some settings become "modal"
 //  i.e. two passes are required to get all the final settings correct.
@@ -1016,73 +1044,77 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 	}
     }
 #endif
-    // Check for further mLocalhost (-B) parsing:
-    if ( mExtSettings->mLocalhost) {
-	// Check for -B device
+    // Check for further mLocalhost (-B) and <dev> requests
+    // full addresses look like 192.168.1.1:6001%eth0 or [2001:e30:1401:2:d46e:b891:3082:b939]:6001%eth0
+    iperf_sockaddr tmp;
+    // Parse -B addresses
+    if (mExtSettings->mLocalhost) {
 	if (((results = strtok(mExtSettings->mLocalhost, "%")) != NULL) && ((results = strtok(NULL, "%")) != NULL)) {
 	    mExtSettings->mIfrname = new char[ strlen(results) + 1 ];
-	    strcpy( mExtSettings->mIfrname, results );
+	    strcpy(mExtSettings->mIfrname, results);
 	}
-	// Client local host parsing
-	if (mExtSettings->mThreadMode == kMode_Client) {
-	    // v4 uses a colon as the delimeter for the local bind port, e.g. 192.168.1.1:6001
-	    if (!isIPV6(mExtSettings)) {
-		if (((results = strtok(mExtSettings->mLocalhost, ":")) != NULL) && ((results = strtok(NULL, ":")) != NULL)) {
-		    mExtSettings->mBindPort = atoi(results);
-		}
-		// v6 uses bracket notation, e.g. [2001:e30:1401:2:d46e:b891:3082:b939]:6001
-	    } else if (mExtSettings->mLocalhost[0] ==  '[') {
-		if ((results = strtok(mExtSettings->mLocalhost, "]")) != NULL) {
-		    results++;
-		    strcpy(mExtSettings->mLocalhost, results);
-		    if ((results = strtok(NULL, ":")) != NULL) {
-			mExtSettings->mBindPort = atoi(results);
-		    }
-		}
+	if (isIPV6(mExtSettings)) {
+	    results = isv6_bracketed_port(mExtSettings->mLocalhost);
+	} else {
+	    results = isv4_port(mExtSettings->mLocalhost);
+	}
+	if (results) {
+	    if (mExtSettings->mThreadMode == kMode_Client) {
+		mExtSettings->mBindPort = atoi(results);
+	    } else {
+		fprintf(stderr, "WARNING: port %s ignored - set receive port on server via -p or -L\n", results);
 	    }
+	}
+	// Check for multicast per the -B
+	SockAddr_setHostname(mExtSettings->mLocalhost, &tmp,
+			      (isIPV6(mExtSettings) ? 1 : 0 ));
+	if ((mExtSettings->mThreadMode != kMode_Client) && SockAddr_isMulticast(&tmp)) {
+	    setMulticast(mExtSettings);
+	} else if (SockAddr_isMulticast(&tmp)) {
+	    if (mExtSettings->mIfrname) {
+		free(mExtSettings->mIfrname);
+		mExtSettings->mIfrname = NULL;
+	    }
+	    fprintf(stderr, "WARNING: Client src addr (per -B) must be ip unicast\n");
 	}
     }
-    //  Check for a multicast, link-local and bind to device
-    if ( mExtSettings->mThreadMode == kMode_Client ) {
+    // Parse client (-c) addresses for multicast, link-local and bind to device
+    if (mExtSettings->mThreadMode == kMode_Client) {
 	iperf_sockaddr tmp;
+	mExtSettings->mIfrnametx = NULL; // default off SO_BINDTODEVICE
+	if (((results = strtok(mExtSettings->mHost, "%")) != NULL) && ((results = strtok(NULL, "%")) != NULL)) {
+	    mExtSettings->mIfrnametx = new char[ strlen(results) + 1 ];
+	    strcpy(mExtSettings->mIfrnametx, results);
+	}
+	if (isIPV6(mExtSettings))
+	    strip_v6_brackets(mExtSettings->mHost);
+	// get the socket address settings from the host, needed for link-local and multicast tests
 	SockAddr_setHostname( mExtSettings->mHost, &tmp,
-			      (isIPV6( mExtSettings ) ? 1 : 0 ));
-	// v6 link local doesn't need special binding so ignore it
-	if (!(isIPV6(mExtSettings) && SockAddr_isLinklocal(&tmp))) {
-	    if (((results = strtok(mExtSettings->mHost, "%")) != NULL) && \
-		((results = strtok(NULL, "%")) != NULL)) {
-	      mExtSettings->mIfrnametx = new char[ strlen(results) + 1 ];
-	      strcpy(mExtSettings->mIfrnametx, results);
-	      if (mExtSettings->mHost[0] ==  '[') {
-		if ((results = strtok(mExtSettings->mHost, "]")) != NULL) {
-		  int len = strlen(mExtSettings->mHost);
-		  for (int jx = 0; jx < len; jx++) {
-		    mExtSettings->mHost[jx] = mExtSettings->mHost[jx + 1];
-		  }
-		}
-	      }
-#ifndef HAVE_DECL_SO_BINDTODEVICE
-	      if (mExtSettings->mIframetx) {
-		fprintf(stderr, "bind to device will be ignored because not supported\n");
-		free(mExtSettings->mIframetx);
-		mExtSettings->mIframetx=NULL;
-	      }
-#endif
+			      (isIPV6(mExtSettings) ? 1 : 0 ));
+	if (isIPV6(mExtSettings) && SockAddr_isLinklocal(&tmp)) {
+	    // link-local doesn't use SO_BINDTODEVICE but includes it in the host string
+	    // so stitch things back together and null the bind to name
+	    if (mExtSettings->mIfrnametx) {
+		strcat(mExtSettings->mHost, mExtSettings->mIfrnametx);
+		free(mExtSettings->mIfrnametx);
+		mExtSettings->mIfrnametx = NULL;
+	    } else {
+		fprintf(stderr, "WARNING: usage of ipv6 link-local requires a device specifier, e.g. %s%%eth0\n", mExtSettings->mHost);
 	    }
 	}
-	if (SockAddr_isMulticast(&tmp) && !(isIPV6(mExtSettings) && SockAddr_isLinklocal(&tmp))) {
-	    setMulticast( mExtSettings );
+	if (SockAddr_isMulticast(&tmp)) {
+	    setMulticast(mExtSettings);
 	}
-    } else if (mExtSettings->mLocalhost != NULL) {
-	// For listener or server, check if a -B bind interface is set and for multicast
-	iperf_sockaddr tmp;
-	SockAddr_setHostname( mExtSettings->mLocalhost, &tmp,
-			      (isIPV6( mExtSettings ) ? 1 : 0 ));
-	if ( SockAddr_isMulticast( &tmp ) ) {
-	    setMulticast( mExtSettings );
+#ifndef HAVE_DECL_SO_BINDTODEVICE
+	if (mExtSettings->mIfrnametx) {
+	    fprintf(stderr, "bind to device will be ignored because not supported\n");
+	    free(mExtSettings->mIfrnametx);
+	    mExtSettings->mIfrnametx=NULL;
 	}
+#endif
     }
 }
+
 
 void Settings_GetUpperCaseArg(const char *inarg, char *outarg) {
 
