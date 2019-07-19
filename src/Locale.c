@@ -181,6 +181,9 @@ const char client_pid_port[] =
 const char bind_address[] =
 "Binding to local address %s\n";
 
+const char bind_address_iface[] =
+"Binding to local address %s and iface %s\n";
+
 const char multicast_ttl[] =
 "Setting multicast TTL to %d\n";
 

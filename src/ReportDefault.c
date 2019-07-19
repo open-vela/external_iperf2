@@ -413,8 +413,13 @@ void reporter_reportsettings( ReporterData *data ) {
     }
 
     if ( data->mLocalhost != NULL ) {
-        printf( bind_address, data->mLocalhost );
-	if ((data->mThreadMode != kMode_Client) && \
+	if (SockAddr_isMulticast(&data->connection.local)) {
+	    if (data->mIfrname)
+		printf(bind_address_iface, data->mLocalhost, data->mIfrname);
+	    else
+		printf( bind_address, data->mLocalhost);
+	}
+	if ((data->mThreadMode != kMode_Client) &&		\
 	    SockAddr_isMulticast(&data->connection.local)) {
 	    if(!data->mSSMMulticastStr)
 		if (!data->mIfrname)
