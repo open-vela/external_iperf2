@@ -1052,6 +1052,11 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 	if (((results = strtok(mExtSettings->mLocalhost, "%")) != NULL) && ((results = strtok(NULL, "%")) != NULL)) {
 	    mExtSettings->mIfrname = new char[ strlen(results) + 1 ];
 	    strcpy(mExtSettings->mIfrname, results);
+	    if (mExtSettings->mThreadMode == kMode_Client) {
+	        fprintf(stderr, "WARNING: Client cannot set bind device %s via -B consider using -c\n", mExtSettings->mIfrname);
+		free(mExtSettings->mIfrname);
+		mExtSettings->mIfrname = NULL;
+	    }
 	}
 	if (isIPV6(mExtSettings)) {
 	    results = isv6_bracketed_port(mExtSettings->mLocalhost);

@@ -405,15 +405,21 @@ void reporter_reportsettings( ReporterData *data ) {
                 data->mPort, pid );
 	break;
     default:
-        printf(isEnhanced(data) ? client_pid_port : client_port,
+        if (!data->mIfrnametx) {
+            printf(isEnhanced(data) ? client_pid_port : client_port,
                 data->mHost,
                 (isUDP( data ) ? "UDP" : "TCP"),
                 data->mPort, pid);
+        } else {
+            printf(client_pid_port_dev, data->mHost,
+                  (isUDP( data ) ? "UDP" : "TCP"),
+		  data->mPort, pid, data->mIfrnametx);
+        }
 	break;
     }
 
     if ( data->mLocalhost != NULL ) {
-	if (SockAddr_isMulticast(&data->connection.local)) {
+	if (isEnhanced(data) && !SockAddr_isMulticast(&data->connection.local)) {
 	    if (data->mIfrname)
 		printf(bind_address_iface, data->mLocalhost, data->mIfrname);
 	    else

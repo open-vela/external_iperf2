@@ -178,6 +178,9 @@ const char server_pid_port[] =
 const char client_pid_port[] =
 "Client connecting to %s, %s port %d with pid %d\n";
 
+const char client_pid_port_dev[] =
+"Client connecting to %s, %s port %d with pid %d via %s\n";
+
 const char bind_address[] =
 "Binding to local address %s\n";
 

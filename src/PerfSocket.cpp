@@ -120,6 +120,8 @@ void SetSocketOptions( thread_Settings *inSettings ) {
 	    len = snprintf(buf, len, "%s %s", "bind to device", inSettings->mIfrnametx);
 	    WARN_errno(1, buf );
 	    free(buf);
+	    free(inSettings->mIfrnametx);
+	    inSettings->mIfrnametx = NULL;
 	}
     }
 #endif
