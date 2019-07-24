@@ -1202,6 +1202,8 @@ void Settings_GenerateClientSettings( thread_Settings *server,
 	if ((extendflags & REVERSE) == REVERSE) {
 	    setServerReverse(server);
 	    unsetReport(server);
+            setModeTime(server);
+	    server->mAmount = 300.0;
 	}
     }
     if ( (flags & HEADER_VERSION1) != 0 ) {
