@@ -1333,11 +1333,11 @@ int Settings_GenerateClientHdr( thread_Settings *client, client_hdr *hdr ) {
     /*
      * Done with base flags (to be passed to the remote server)
      */
-    hdr->base.flags = htonl(flags);
     if (isReverse(client)) {
 	flags |= HEADER_EXTEND;
         extendflags |= REVERSE;
     }
+    hdr->base.flags = htonl(flags);
     if (flags & HEADER_EXTEND) {
 	if (isBWSet(client)) {
 	    hdr->extend.mRate = htonl(client->mUDPRate);
