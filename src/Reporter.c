@@ -1007,13 +1007,13 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
         // thread when its consumption rate is too low.   This allows
         // the traffic threads to send aggregates vs thrash
         // the packet rings.  The dissimilarity between the thread
-        // speads is due to the speed differences between i/o
+        // speeds is due to the performance differences between i/o
         // bound threads vs cpu bound ones, and it's expected
         // that reporter thread being CPU limited should be much
         // faster than the traffic threads, even in aggregate.
         // Note: If this detection is not going off it means
         // the system is likely CPU bound and iperf is now likely
-        // becoming a CPU test vs a network i/o test
+        // becoming a CPU bound test vs a network i/o bound test
 	apply_consumption_detector();
         // If there are more packets to process then handle them
 	ReportStruct *packet = NULL;

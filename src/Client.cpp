@@ -159,18 +159,10 @@ Client::Client( thread_Settings *inSettings ) {
         Condition_Unlock(mSettings->multihdr->await_reporter);
     }
 
+    // ServerReverse traffic threads don't need a new connect()
+    // as they use the session created by the client's connect()
     if (!isServerReverse(mSettings))
         ct = Connect( );
-    // start a server thread for reverse mode
-    if (isReverse(mSettings)) {
-        thread_Settings *reverse_client=NULL;
-        Settings_Copy(mSettings, &reverse_client);
-	if ((reverse_client) &&  (mSettings->mSock > 0)) {
-	    reverse_client->mSock = mSettings->mSock;
-	    reverse_client->mThreadMode = kMode_Server;
-	    thread_start(reverse_client);
-	}
-    }
 
     if (isReport(mSettings)) {
         ReportHeader *tmp = ReportSettings(mSettings);
@@ -266,7 +258,7 @@ Client::~Client() {
         WARN_errno( rc == SOCKET_ERROR, "close" );
     }
     DELETE_ARRAY( mBuf );
-    if (!isConnectOnly(mSettings)) {
+    if (!isConnectOnly(mSettings) && !isReverse(mSettings)) {
       DELETE_PTR(reportstruct);
       FreeReport(myJob);
     }
@@ -1109,7 +1101,7 @@ void Client::write_UDP_FIN (void) {
 // end write_UDP_FIN
 
 
-int Client::InitiateServer() {
+thread_Settings * Client::InitiateServer() {
     if (!isCompat(mSettings) && !isConnectOnly(mSettings)) {
 	int flags = 0;
         client_hdr* temp_hdr;
@@ -1133,12 +1125,19 @@ int Client::InitiateServer() {
 	      int currLen = send( mSettings->mSock, mBuf, (sizeof(struct TCP_datagram)), 0 );
 	      WARN_errno( currLen < 0, "send connect/tcp timestamps" );
 	}
+	// Client needs to start a server thread for reverse mode
+	if (isReverse(mSettings)) {
+	    thread_Settings *reverse_client=NULL;
+	    Settings_Copy(mSettings, &reverse_client);
+	    if (reverse_client &&  (mSettings->mSock > 0)) {
+	        reverse_client->mSock = mSettings->mSock;
+		reverse_client->mThreadMode = kMode_Server;
+		thread_start(reverse_client);
+	    }
+	    return(reverse_client);
+	}
     }
-    if (!isReverse(mSettings) && (mSettings->mSock > 0)) {
-        return 1;
-    } else {
-        return 0;
-    }
+    return NULL;
 }
 
 

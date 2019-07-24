@@ -130,6 +130,7 @@ void server_spawn( thread_Settings *thread) {
  */
 void client_spawn( thread_Settings *thread ) {
     Client *theClient = NULL;
+    thread_Settings *reverse_client = NULL;
 
     //start up the client
     // Note: socket connect() happens here in the constructor
@@ -145,10 +146,25 @@ void client_spawn( thread_Settings *thread ) {
     } else {
         // Let the server know about our settings
         // Bypass the run if this is a reverse test
-        if (theClient->InitiateServer()) {
-            // Run the test
+        if ((reverse_client = theClient->InitiateServer())) {
+#ifdef HAVE_THREAD_DEBUG
+	  thread_debug("Client reverse thread starting sock=%d", reverse_client->mSock);
+#endif
+	  thread_start(reverse_client);
+	  if (!thread_equalid(reverse_client->mTID, thread_zeroid())) {
+	    if (pthread_join(reverse_client->mTID, NULL) != 0) {
+		  WARN( 1, "pthread_join reverse failed" );
+	      } else {
+#ifdef HAVE_THREAD_DEBUG
+		  thread_debug("Client reverse thread finished");
+#endif
+	      }
+	  }
+	  Settings_Destroy(reverse_client);
+	} else {
+            // Run the client test
             theClient->Run();
-        }
+	}
     }
     DELETE_PTR( theClient );
 }
