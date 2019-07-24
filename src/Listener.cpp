@@ -246,7 +246,6 @@ sInterupted == SIGALRM
                 Settings_GenerateClientSettings( server, &tempSettings, hdr );
 		if (isServerReverse(server)) {
 		    server->mThreadMode=kMode_Client;
-		    thread_start( server );
 		}
             } else {
 	        tempSettings = NULL;

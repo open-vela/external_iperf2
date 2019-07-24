@@ -78,13 +78,13 @@ const int    kBytes_to_Bits = 8;
 
 Client::Client( thread_Settings *inSettings ) {
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Client thread started in constructor");
+  thread_debug("Client thread started in constructor (%x/%x)", inSettings->flags, inSettings->flags_extend);
 #endif
 
     mSettings = inSettings;
     mBuf = NULL;
     myJob = NULL;
-    mySocket = INVALID_SOCKET;
+    mySocket = isServerReverse(inSettings) ? inSettings->mSock : INVALID_SOCKET;
     double ct = -1.0;
 
     if (isCompat(inSettings) && isPeerVerDetect(inSettings)) {
