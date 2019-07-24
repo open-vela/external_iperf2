@@ -74,7 +74,7 @@
 
 Server::Server( thread_Settings *inSettings ) {
 #ifdef HAVE_THREAD_DEBUG
-  thread_debug("Server thread started (sock=%d)", inSettings->mSock);
+  thread_debug("Server constructor with thread=%p (sock=%d)", (void *) inSettings, inSettings->mSock);
 #endif
     mSettings = inSettings;
     mBuf = NULL;
