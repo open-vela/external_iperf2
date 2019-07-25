@@ -1101,7 +1101,7 @@ void Client::write_UDP_FIN (void) {
 // end write_UDP_FIN
 
 
-thread_Settings * Client::InitiateServer() {
+void Client::InitiateServer(void) {
     if (!isCompat(mSettings) && !isConnectOnly(mSettings)) {
 	int flags = 0;
         client_hdr* temp_hdr;
@@ -1125,19 +1125,7 @@ thread_Settings * Client::InitiateServer() {
 	      int currLen = send( mSettings->mSock, mBuf, (sizeof(struct TCP_datagram)), 0 );
 	      WARN_errno( currLen < 0, "send connect/tcp timestamps" );
 	}
-	// Client needs to start a server thread for reverse mode
-	if (isReverse(mSettings)) {
-	    thread_Settings *reverse_client=NULL;
-	    Settings_Copy(mSettings, &reverse_client);
-	    if (reverse_client &&  (mSettings->mSock > 0)) {
-	        reverse_client->mSock = mSettings->mSock;
-		reverse_client->mThreadMode = kMode_Server;
-		thread_start(reverse_client);
-	    }
-	    return(reverse_client);
-	}
     }
-    return NULL;
 }
 
 

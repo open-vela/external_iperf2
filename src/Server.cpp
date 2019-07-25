@@ -104,7 +104,7 @@ Server::~Server() {
     thread_debug("Server destructor close sock=%d drop-sock=%d", mySocket, myDropSocket);
 #endif
 
-    if ( mySocket != INVALID_SOCKET ) {
+    if ((mySocket != INVALID_SOCKET) && !(isReverse(mSettings))) {
         int rc = close( mySocket );
         WARN_errno( rc == SOCKET_ERROR, "server close" );
         mySocket = INVALID_SOCKET;
