@@ -162,7 +162,7 @@ typedef struct L2Stats {
 
 typedef struct ReportStruct {
     intmax_t packetID;
-    uintmax_t packetLen;
+    intmax_t packetLen;
     struct timeval packetTime;
     struct timeval sentTime;
     int errwrite;

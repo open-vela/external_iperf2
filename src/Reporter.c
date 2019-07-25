@@ -521,9 +521,16 @@ static inline void enqueue_packetring(ReportHeader* agent, ReportStruct *packet)
     Condition_Lock(pr->await_consumer);
     pr->awaitcounter++;
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug( "Not good, traffic's packet ring %p stalled per %p", (void *)pr, (void *)&pr->await_consumer);
+    {
+      struct timeval now;
+      static struct timeval prev={.tv_sec=0, .tv_usec=0};
+        gettimeofday( &now, NULL );
+	if (!prev.tv_sec || (TimeDifference(now, prev) > 1.0)) {
+	  prev = now;
+	  thread_debug( "Not good, traffic's packet ring %p stalled per %p", (void *)pr, (void *)&pr->await_consumer);
+	}
+    }
 #endif
-
     Condition_TimedWait(&pr->await_consumer, 1);
     Condition_Unlock(pr->await_consumer);
   }
@@ -554,8 +561,12 @@ static inline ReportStruct *dequeue_packetring(ReportHeader* agent) {
   pr->consumer = readindex;
   // Signal the traffic thread assigned to this ring
   // when the ring goes from having something to empty
-  if (pr->producer == pr->consumer)
+  if (pr->producer == pr->consumer) {
+#ifdef HAVE_THREAD_DEBUG
+    // thread_debug( "Consumer signal packet ring %p empty per %p", (void *)pr, (void *)&pr->await_consumer);
+#endif
     Condition_Signal(&pr->await_consumer);
+  }
   return packet;
 }
 
