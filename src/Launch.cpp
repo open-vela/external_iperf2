@@ -130,41 +130,52 @@ void server_spawn( thread_Settings *thread) {
  */
 void client_spawn( thread_Settings *thread ) {
     Client *theClient = NULL;
-    thread_Settings *reverse_client = NULL;
 
-    //start up the client
+    // start up the client
     // Note: socket connect() happens here in the constructor
-    // Also, for reverse cases the server thread will get started
-    // in the Clients constructor
+    // that should be fixed as a clean up
     theClient = new Client( thread );
 
     // set traffic thread to realtime if needed
     set_scheduler(thread);
 
-    if (isServerReverse(thread)) {
-        theClient->Run();
-    } else {
-        // Let the server know about our settings
-        // Bypass the run if this is a reverse test
-        if ((reverse_client = theClient->InitiateServer())) {
+    // There are a few different client startup modes
+    // o) Normal
+    // o) Dual (-d or -r)
+    // o) Reverse
+    // o) ServerReverse
+    if (!isServerReverse(thread)) {
+      theClient->InitiateServer();
+    }
+    // If this is a reverse test, then run that way
+    if (isReverse(thread)) {
 #ifdef HAVE_THREAD_DEBUG
-	  thread_debug("Client reverse thread starting sock=%d", reverse_client->mSock);
+      thread_debug("Client reverse thread starting sock=%d", thread->mSock);
 #endif
-	  thread_start(reverse_client);
-	  if (!thread_equalid(reverse_client->mTID, thread_zeroid())) {
-	    if (pthread_join(reverse_client->mTID, NULL) != 0) {
-		  WARN( 1, "pthread_join reverse failed" );
-	      } else {
+      thread_Settings *reverse_client = NULL;
+      // Settings copy will malloc space for the
+      // reverse thread settings and the run_wrapper
+      // will free it
+      Settings_Copy(thread, &reverse_client);
+      if (reverse_client && (thread->mSock > 0)) {
+	reverse_client->mSock = thread->mSock;
+	reverse_client->mThreadMode = kMode_Server;
+	thread_start(reverse_client);
+	if (!thread_equalid(reverse_client->mTID, thread_zeroid())) {
+	  if (pthread_join(reverse_client->mTID, NULL) != 0) {
+	    WARN( 1, "pthread_join reverse failed" );
+	  } else {
 #ifdef HAVE_THREAD_DEBUG
-		  thread_debug("Client reverse thread finished");
+	    thread_debug("Client reverse thread finished sock=%d", reverse_client->mSock);
 #endif
-	      }
 	  }
-	  Settings_Destroy(reverse_client);
-	} else {
-            // Run the client test
-            theClient->Run();
 	}
+      } else {
+	fprintf(stderr, "Reverse test failed to start per thread settings or socket problem\n");
+      }
+    } else {
+      // Run the normal client test
+      theClient->Run();
     }
     DELETE_PTR( theClient );
 }

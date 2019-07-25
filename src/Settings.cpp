@@ -1281,7 +1281,7 @@ int Settings_GenerateClientHdr( thread_Settings *client, client_hdr *hdr ) {
 	flags |= HEADER_EXTEND;
     }
     flags |= HEADER_SEQNO64B;
-    if (client->mMode != kTest_Normal) {
+    if ((client->mMode != kTest_Normal) || isReverse(client)) {
 	flags |= HEADER_VERSION1;
 	if ( isBuflenSet( client ) ) {
 	    hdr->base.bufferlen = htonl(client->mBufLen);
@@ -1300,7 +1300,7 @@ int Settings_GenerateClientHdr( thread_Settings *client, client_hdr *hdr ) {
 	    hdr->base.mAmount = htonl((long)client->mAmount);
 	    hdr->base.mAmount &= htonl( 0x7FFFFFFF );
 	}
-	if ((client->mMode == kTest_DualTest) || isReverse(client)) {
+	if ((client->mMode == kTest_DualTest)) {
 	    flags |= RUN_NOW;
 	}
     }
