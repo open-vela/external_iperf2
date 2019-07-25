@@ -85,7 +85,7 @@ public:
 
     // For things like dual tests a server needs to be started by the client,
     // The code in src/launch.cpp will invoke this
-    thread_Settings * InitiateServer();
+    void InitiateServer(void);
 
 private:
     void WritePacketID( intmax_t );
