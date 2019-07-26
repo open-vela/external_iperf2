@@ -953,6 +953,9 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
             fprintf(stderr, "ERROR: option of --connect-only requires tcp (not udp) and is only supported on the client and not on the server\n");
 	    exit(1);
 	}
+	if (isModeTime(mExtSettings) && isReverse(mExtSettings))
+	    mExtSettings->mAmount += mExtSettings->mAmount;
+
     }
 
     if (mExtSettings->mThreadMode != kMode_Client) {
@@ -970,7 +973,7 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 	      setModeInfinite(mExtSettings);
 	      fprintf(stderr, "WARNING: client will send traffic forever or until an external signal (e.g. SIGINT or SIGTERM) occurs to stop it\n");
 	  }
-	  if (isReverse(mExtSettings))
+	  if (isModeTime(mExtSettings) && isReverse(mExtSettings))
 	    mExtSettings->mAmount += 100;  // units are 10 ms, add 1 sec for slop on reverse
         }
     }

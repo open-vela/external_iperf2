@@ -122,14 +122,9 @@ Server::~Server() {
 }
 
 bool Server::InProgress (void) {
-#ifdef HAVE_SETITIMER
-    if (sInterupted)
-	return false;
-#else
     if (sInterupted ||
 	(isServerModeTime(mSettings) &&  mEndTime.before(reportstruct->packetTime)))
 	return false;
-#endif
     return true;
 }
 
