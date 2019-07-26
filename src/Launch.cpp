@@ -160,6 +160,7 @@ void client_spawn( thread_Settings *thread ) {
       if (reverse_client && (thread->mSock > 0)) {
 	reverse_client->mSock = thread->mSock;
 	reverse_client->mThreadMode = kMode_Server;
+	setServerReverse(reverse_client); // cause the connection report to show reverse
 	thread_start(reverse_client);
 	if (!thread_equalid(reverse_client->mTID, thread_zeroid())) {
 	  if (pthread_join(reverse_client->mTID, NULL) != 0) {
