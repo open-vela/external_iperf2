@@ -253,7 +253,7 @@ Client::~Client() {
 #if HAVE_THREAD_DEBUG
   thread_debug("Client destructor sock=%d server-reverse=%s", mySocket, (isServerReverse(mSettings) ? "true" : "false"));
 #endif
-  if (!isServerReverse(mSettings) && (mySocket != INVALID_SOCKET)) {
+  if ((!isServerReverse(mSettings) && !isModeTime(mSettings)) && (mySocket != INVALID_SOCKET)) {
         int rc = close( mySocket );
         WARN_errno( rc == SOCKET_ERROR, "close" );
     }
