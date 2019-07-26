@@ -123,7 +123,7 @@ Server::~Server() {
 
 bool Server::InProgress (void) {
     if (sInterupted ||
-	(isServerModeTime(mSettings) &&  mEndTime.before(reportstruct->packetTime)))
+	((isServerModeTime(mSettings) || (isModeTime(mSettings) && isReverse(mSettings))) && mEndTime.before(reportstruct->packetTime)))
 	return false;
     return true;
 }
@@ -287,7 +287,7 @@ void Server::InitTrafficLoop (void) {
 	    WARN_errno( mSettings->mSock == SO_RCVTIMEO, "socket" );
 	}
     }
-    if (isServerModeTime(mSettings)) {
+    if (isServerModeTime(mSettings) || (isModeTime(mSettings) && isReverse(mSettings))) {
 #ifdef HAVE_SETITIMER
         int err;
         struct itimerval it;
@@ -297,10 +297,9 @@ void Server::InitTrafficLoop (void) {
 					      it.it_value.tv_sec * 100.0));
 	err = setitimer( ITIMER_REAL, &it, NULL );
 	FAIL_errno( err != 0, "setitimer", mSettings );
-#else
+#endif
         mEndTime.setnow();
         mEndTime.add( mSettings->mAmount / 100.0 );
-#endif
     }
 
     if (isTripTime(mSettings)) {
