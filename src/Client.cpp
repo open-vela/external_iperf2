@@ -251,9 +251,9 @@ Client::Client( thread_Settings *inSettings ) {
  * ------------------------------------------------------------------- */
 Client::~Client() {
 #if HAVE_THREAD_DEBUG
-  thread_debug("Client destructor close sock=%d", mySocket);
+  thread_debug("Client destructor sock=%d server-reverse=%s", mySocket, (isServerReverse(mSettings) ? "true" : "false"));
 #endif
-    if ( mySocket != INVALID_SOCKET ) {
+  if (!isServerReverse(mSettings) && (mySocket != INVALID_SOCKET)) {
         int rc = close( mySocket );
         WARN_errno( rc == SOCKET_ERROR, "close" );
     }
@@ -415,12 +415,6 @@ void Client::Run( void ) {
 
     if (isConnectOnly(mSettings))
         return;
-
-    if (isReverse(mSettings)) {
-      while (InProgress()) {};
-      FinishTrafficActions();
-      return;
-    }
 
     // Peform common traffic setup
     InitTrafficLoop();

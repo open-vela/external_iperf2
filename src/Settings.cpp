@@ -971,7 +971,7 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 	      fprintf(stderr, "WARNING: client will send traffic forever or until an external signal (e.g. SIGINT or SIGTERM) occurs to stop it\n");
 	  }
 	  if (isReverse(mExtSettings))
-	    mExtSettings->mAmount += 10;  // units are 10 ms, add 100 ms for slop on reverse
+	    mExtSettings->mAmount += 100;  // units are 10 ms, add 1 sec for slop on reverse
         }
     }
     // UDP histogram settings

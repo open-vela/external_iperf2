@@ -181,6 +181,12 @@ void Server::RunTCP( void ) {
 		tokens -= currLen;
 	    reportstruct->packetLen = currLen;
 	    ReportPacket( mSettings->reporthdr, reportstruct );
+	    // Check for reverse and amount where
+	    // the server stops after receiving
+	    // the expected byte count
+	    if (isReverse(mSettings) && !isModeTime(mSettings) && (totLen >= (intmax_t) mSettings->mAmount)) {
+	        break;
+	    }
 	} else {
 	    // Use a 4 usec delay to fill tokens
 	    delay_loop(4);

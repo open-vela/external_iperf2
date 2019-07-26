@@ -130,6 +130,7 @@ void server_spawn( thread_Settings *thread) {
  */
 void client_spawn( thread_Settings *thread ) {
     Client *theClient = NULL;
+    thread_Settings *reverse_client = NULL;
 
     // start up the client
     // Note: socket connect() happens here in the constructor
@@ -139,20 +140,11 @@ void client_spawn( thread_Settings *thread ) {
     // set traffic thread to realtime if needed
     set_scheduler(thread);
 
-    // There are a few different client startup modes
-    // o) Normal
-    // o) Dual (-d or -r)
-    // o) Reverse
-    // o) ServerReverse
-    if (!isServerReverse(thread)) {
-      theClient->InitiateServer();
-    }
     // If this is a reverse test, then run that way
     if (isReverse(thread)) {
 #ifdef HAVE_THREAD_DEBUG
       thread_debug("Client reverse thread starting sock=%d", thread->mSock);
 #endif
-      thread_Settings *reverse_client = NULL;
       // Settings copy will malloc space for the
       // reverse thread settings and the run_wrapper
       // will free it
@@ -162,6 +154,21 @@ void client_spawn( thread_Settings *thread ) {
 	reverse_client->mThreadMode = kMode_Server;
 	setServerReverse(reverse_client); // cause the connection report to show reverse
 	thread_start(reverse_client);
+      } else {
+	fprintf(stderr, "Reverse test failed to start per thread settings or socket problem\n");
+	exit(1);
+      }
+    }
+    // There are a few different client startup modes
+    // o) Normal
+    // o) Dual (-d or -r)
+    // o) Reverse
+    // o) ServerReverse
+    if (!isServerReverse(thread)) {
+      theClient->InitiateServer();
+    }
+    // If this is a reverse test, then join the client thread to it
+    if (isReverse(thread)) {
 	if (!thread_equalid(reverse_client->mTID, thread_zeroid())) {
 	  if (pthread_join(reverse_client->mTID, NULL) != 0) {
 	    WARN( 1, "pthread_join reverse failed" );
@@ -171,9 +178,6 @@ void client_spawn( thread_Settings *thread ) {
 #endif
 	  }
 	}
-      } else {
-	fprintf(stderr, "Reverse test failed to start per thread settings or socket problem\n");
-      }
     } else {
       // Run the normal client test
       theClient->Run();
