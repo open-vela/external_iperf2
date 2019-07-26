@@ -964,13 +964,16 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 	    fprintf(stderr, "WARNING: option of --txstart-time ignored as not supported on the server\n");
 	}
     } else {
-        if (isModeTime(mExtSettings) && infinitetime) {
-	    unsetModeTime(mExtSettings);
-	    setModeInfinite(mExtSettings);
-	    fprintf(stderr, "WARNING: client will send traffic forever or until an external signal (e.g. SIGINT or SIGTERM) occurs to stop it\n");
+        if (isModeTime(mExtSettings)) {
+	  if (infinitetime) {
+	      unsetModeTime(mExtSettings);
+	      setModeInfinite(mExtSettings);
+	      fprintf(stderr, "WARNING: client will send traffic forever or until an external signal (e.g. SIGINT or SIGTERM) occurs to stop it\n");
+	  }
+	  if (isReverse(mExtSettings))
+	    mExtSettings->mAmount += 10;  // units are 10 ms, add 100 ms for slop on reverse
         }
     }
-
     // UDP histogram settings
     if (isRxHistogram(mExtSettings) && isUDP(mExtSettings) && \
 	(mExtSettings->mThreadMode != kMode_Client) && mExtSettings->mRxHistogramStr) {
@@ -1203,9 +1206,20 @@ void Settings_GenerateClientSettings( thread_Settings *server,
 	    setServerReverse(server);
 	    unsetReport(server);
             setModeTime(server);
+	    server->mAmount = ntohl(hdr->base.mAmount);
+	    if ((server->mAmount & 0x80000000) > 0) {
+	      setModeTime(server);
+#ifndef WIN32
+	      server->mAmount |= 0xFFFFFFFF00000000LL;
+#else
+	      server->mAmount |= 0xFFFFFFFF00000000;
+#endif
+	      server->mAmount = -server->mAmount;
+	    } else {
+	      unsetModeTime(server);
+	    }
 	}
-    }
-    if ( (flags & HEADER_VERSION1) != 0 ) {
+    } else if ( (flags & HEADER_VERSION1) != 0 ) {
         *client = new thread_Settings;
         memcpy(*client, server, sizeof( thread_Settings ));
         setCompat( (*client) );
