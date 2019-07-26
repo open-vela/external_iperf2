@@ -1218,6 +1218,14 @@ void Settings_GenerateClientSettings( thread_Settings *server,
 	    } else {
 	      unsetModeTime(server);
 	    }
+	    if (!isBWSet(server)) {
+	      server->mUDPRate = ntohl(hdr->extend.mRate);
+	      if ((extendflags & UNITS_PPS) == UNITS_PPS) {
+		server->mUDPRateUnits = kRate_PPS;
+	      } else {
+		server->mUDPRateUnits = kRate_BW;
+	      }
+	    }
 	}
     } else if ( (flags & HEADER_VERSION1) != 0 ) {
         *client = new thread_Settings;
