@@ -173,7 +173,7 @@ port to recieve bidirectional tests back on
 number of parallel client threads to run
 .TP
 .BR -R ", " --reverse " "
-reverse the traffic flow after header exchange, useful for testing through firewalls
+reverse the traffic flow (useful for testing through firewalls, see NOTES)
 .TP
 .BR -S ", " --tos " "
 set the socket's IP_TOS (byte) field
@@ -541,6 +541,18 @@ or configure policy routing per each -B source address and set the
 output interface there in the policy routes.  For link local v6,
 the -c link-local%dev is required to select the output interface
 as v6 link-local addresses don't cause a route to interface lookup.
+.P
+The --reverse (-R), -r and -d are confusing.  \fBIf you want to test through
+a NAT firewall, use --reverse\fR (or -R on non-windows systems).  The latter two
+of -d and -r remain supported for mostly compatibility reasons.  These open
+new sockets vs treat the originating socket as full duplex.  Firewall
+configuration is typically required to use -d and -r if a NAT gateway is
+in the path. Also, the --reverse -b <rate> setting is a bit different.  For
+TCP it will rate limit the read side, i.e. the iperf client reading
+from the full duplex socket.  This will in turn flow control the reverse
+traffic per standard TCP congestion control.  The --reverse -b <rate> must
+be applied on the transmit (i.e. the reverse server) for UDP since
+there is no flow control with UDP.
 .P
 The TCP connect time (or three way handshake) can be seen on the iperf
 client when the -e (--enhancedreports) option is set. Look for the
