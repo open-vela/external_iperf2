@@ -1246,8 +1246,10 @@ int reporter_handle_packet( ReportHeader *reporthdr, ReportStruct *packet) {
 		stats->sock_callstats.read.cntRead++;
 		stats->sock_callstats.read.totcntRead++;
 		bin = (int)floor((packet->packetLen -1)/stats->sock_callstats.read.binsize);
-		stats->sock_callstats.read.bins[bin]++;
-		stats->sock_callstats.read.totbins[bin]++;
+		if (bin < BINCOUNT) {
+		    stats->sock_callstats.read.bins[bin]++;
+		    stats->sock_callstats.read.totbins[bin]++;
+		}
 	    }
 	} else if ((stats->mUDP == kMode_Server) &&	\
 		   (stats->transit.cntTransit == 0)) {
