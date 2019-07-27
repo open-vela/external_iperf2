@@ -575,6 +575,7 @@ static inline ReportStruct *dequeue_packetring(ReportHeader* agent) {
  * done like this is not thread safe.  Use with care as there
  * is no guarantee the return value is accurate
  */
+#ifdef HAVE_THREAD_DEBUG
 static inline int getcount_packetring(ReportHeader *agent) {
     PacketRing *pr = agent->packetring;
     int depth = 0;
@@ -586,7 +587,7 @@ static inline int getcount_packetring(ReportHeader *agent) {
     }
     return depth;
 }
-
+#endif
 /*
  * ReportPacket is called by a transfer agent to record
  * the arrival or departure of a "packet" (for TCP it
