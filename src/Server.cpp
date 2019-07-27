@@ -80,8 +80,8 @@ Server::Server( thread_Settings *inSettings ) {
     mBuf = NULL;
     myJob = NULL;
     mySocket = inSettings->mSock;
-    myDropSocket = inSettings->mSockDrop;
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
+    myDropSocket = inSettings->mSockDrop;
     if (isL2LengthCheck(mSettings)) {
 	// For L2 UDP make sure we can receive a full ethernet packet plus a bit more
 	if (mSettings->mBufLen < (2 * ETHER_MAX_LEN)) {
@@ -230,8 +230,10 @@ void Server::InitKernelTimeStamping (void) {
 void Server::InitTrafficLoop (void) {
     //  copy the thread drop socket to this object such
     //  that the destructor can close it if needed
+#if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
     if (mSettings->mSockDrop > 0)
         myDropSocket = mSettings->mSockDrop;
+#endif
     InitReport(mSettings);
     if (mSettings->reporthdr) {
         ReportHeader *reporthdr = mSettings->reporthdr;

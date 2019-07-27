@@ -1325,7 +1325,7 @@ int Settings_GenerateClientHdr( thread_Settings *client, client_hdr *hdr ) {
 	    hdr->base.mAmount = htonl((long)client->mAmount);
 	    hdr->base.mAmount &= htonl( 0x7FFFFFFF );
 	}
-	if ((client->mMode == kTest_DualTest)) {
+	if (client->mMode == kTest_DualTest) {
 	    flags |= RUN_NOW;
 	}
     }
