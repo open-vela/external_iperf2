@@ -174,8 +174,10 @@ void Server::RunTCP( void ) {
 	    totLen += currLen;
 	    if (isBWSet(mSettings))
 		tokens -= currLen;
-	    reportstruct->packetLen = currLen;
-	    ReportPacket( mSettings->reporthdr, reportstruct );
+	    if (0.0 != mSettings->mInterval) {
+	      reportstruct->packetLen = currLen;
+	      ReportPacket( mSettings->reporthdr, reportstruct );
+	    }
 	    // Check for reverse and amount where
 	    // the server stops after receiving
 	    // the expected byte count
@@ -195,8 +197,8 @@ void Server::RunTCP( void ) {
 
     if(0.0 == mSettings->mInterval) {
 	reportstruct->packetLen = totLen;
+	ReportPacket( mSettings->reporthdr, reportstruct );
     }
-    ReportPacket( mSettings->reporthdr, reportstruct );
     CloseReport( mSettings->reporthdr, reportstruct );
 
     Mutex_Lock( &clients_mutex );

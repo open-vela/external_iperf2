@@ -97,11 +97,12 @@ typedef struct TransitStats {
     double totvdTransit;
 } TransitStats;
 
+#define BINCOUNT 8
 typedef struct ReadStats {
     int cntRead;
     int totcntRead;
-    int bins[8];
-    int totbins[8];
+    int bins[BINCOUNT];
+    int totbins[BINCOUNT];
     int binsize;
 } ReadStats;
 
