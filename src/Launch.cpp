@@ -164,6 +164,7 @@ void client_spawn( thread_Settings *thread ) {
     // o) Dual (-d or -r)
     // o) Reverse
     // o) ServerReverse
+    // o) WriteAck
     if (!isServerReverse(thread)) {
       theClient->InitiateServer();
     }
