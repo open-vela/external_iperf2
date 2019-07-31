@@ -343,7 +343,7 @@ typedef struct thread_Settings {
 #define isVaryLoad(settings)       ((settings->flags_extend & FLAG_VARYLOAD) != 0)
 #define isFQPacing(settings)       ((settings->flags_extend & FLAG_FQPACING) != 0)
 #define isTripTime(settings)       ((settings->flags_extend & FLAG_TRIPTIME) != 0)
-#define isModeInfinite(settings)   (settings->flags_extend & FLAG_MODEINFINITE) != 0)
+#define isModeInfinite(settings)   ((settings->flags_extend & FLAG_MODEINFINITE) != 0)
 #define isModeAmount(settings)     (!isModeTime(settings) && !isModeInfinite(settings))
 #define isConnectOnly(settings)    ((settings->flags_extend & FLAG_CONNECTONLY) != 0)
 #define isWriteAck(settings)       ((settings->flags_extend & FLAG_WRITEACK) != 0)
