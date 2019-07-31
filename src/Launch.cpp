@@ -143,7 +143,7 @@ void client_spawn( thread_Settings *thread ) {
     // If this is a reverse test, then run that way
     if (isReverse(thread)) {
 #ifdef HAVE_THREAD_DEBUG
-      thread_debug("Client reverse thread starting sock=%d", thread->mSock);
+      thread_debug("Client reverse (server) thread starting sock=%d", thread->mSock);
 #endif
       // Settings copy will malloc space for the
       // reverse thread settings and the run_wrapper
