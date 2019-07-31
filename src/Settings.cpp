@@ -81,6 +81,7 @@ static int txstarttime = 0;
 static int txholdback = 0;
 static int fqrate = 0;
 static int triptime = 0;
+static int writeack = 0;
 static int infinitetime = 0;
 static int connectonly = 0;
 #ifdef HAVE_ISOCHRONOUS
@@ -158,6 +159,7 @@ const struct option long_options[] =
 {"txdelay-time", required_argument, &txholdback, 1},
 {"fq-rate", required_argument, &fqrate, 1},
 {"trip-time", no_argument, &triptime, 1},
+{"write-ack", no_argument, &writeack, 1},
 {"connect-only", optional_argument, &connectonly, 1},
 #ifdef HAVE_ISOCHRONOUS
 {"ipg", required_argument, &burstipg, 1},
@@ -810,6 +812,10 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
 	    if (triptime) {
 		triptime = 0;
 		setTripTime(mExtSettings);
+	    }
+	    if (writeack) {
+		writeack = 0;
+		setWriteAck(mExtSettings);
 	    }
 	    if (connectonly) {
 		connectonly = 0;

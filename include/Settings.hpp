@@ -296,6 +296,7 @@ typedef struct thread_Settings {
 #define FLAG_MODEINFINITE   0x00010000
 #define FLAG_CONNECTONLY    0x00020000
 #define FLAG_SERVERREVERSE  0x00040000
+#define FLAG_WRITEACK      0x00080000
 
 #define isBuflenSet(settings)      ((settings->flags & FLAG_BUFLENSET) != 0)
 #define isCompat(settings)         ((settings->flags & FLAG_COMPAT) != 0)
@@ -332,17 +333,18 @@ typedef struct thread_Settings {
 #define isReverse(settings)        ((settings->flags_extend & FLAG_REVERSE) != 0)
 #define isServerReverse(settings)  ((settings->flags_extend & FLAG_SERVERREVERSE) != 0)
 #define isIsochronous(settings)    ((settings->flags_extend & FLAG_ISOCHRONOUS) != 0)
-#define isRxHistogram(settings)   ((settings->flags_extend & FLAG_RXHISTOGRAM) != 0)
+#define isRxHistogram(settings)    ((settings->flags_extend & FLAG_RXHISTOGRAM) != 0)
 #define isL2LengthCheck(settings)  ((settings->flags_extend & FLAG_L2LENGTHCHECK) != 0)
 #define isIncrDstIP(settings)      ((settings->flags_extend & FLAG_INCRDSTIP) != 0)
-#define isTxStartTime(settings)         ((settings->flags_extend & FLAG_TXSTARTTIME) != 0)
+#define isTxStartTime(settings)    ((settings->flags_extend & FLAG_TXSTARTTIME) != 0)
 #define isTxHoldback(settings)     ((settings->flags_extend & FLAG_TXHOLDBACK) != 0)
 #define isVaryLoad(settings)       ((settings->flags_extend & FLAG_VARYLOAD) != 0)
 #define isFQPacing(settings)       ((settings->flags_extend & FLAG_FQPACING) != 0)
 #define isTripTime(settings)       ((settings->flags_extend & FLAG_TRIPTIME) != 0)
-#define isModeInfinite(settings)     ((settings->flags_extend & FLAG_MODEINFINITE) != 0)
+#define isModeInfinite(settings)   (settings->flags_extend & FLAG_MODEINFINITE) != 0)
 #define isModeAmount(settings)     (!isModeTime(settings) && !isModeInfinite(settings))
-#define isConnectOnly(settings) ((settings->flags_extend & FLAG_CONNECTONLY) != 0)
+#define isConnectOnly(settings)    ((settings->flags_extend & FLAG_CONNECTONLY) != 0)
+#define isWriteAck(settings)       ((settings->flags_extend & FLAG_WRITEACK) != 0)
 
 #define setBuflenSet(settings)     settings->flags |= FLAG_BUFLENSET
 #define setCompat(settings)        settings->flags |= FLAG_COMPAT
@@ -377,16 +379,17 @@ typedef struct thread_Settings {
 #define setReverse(settings)       settings->flags_extend |= FLAG_REVERSE
 #define setServerReverse(settings) settings->flags_extend |= FLAG_SERVERREVERSE
 #define setIsochronous(settings)   settings->flags_extend |= FLAG_ISOCHRONOUS
-#define setRxHistogram(settings)  settings->flags_extend |= FLAG_RXHISTOGRAM
-#define setL2LengthCheck(settings)    settings->flags_extend |= FLAG_L2LENGTHCHECK
+#define setRxHistogram(settings)   settings->flags_extend |= FLAG_RXHISTOGRAM
+#define setL2LengthCheck(settings) settings->flags_extend |= FLAG_L2LENGTHCHECK
 #define setIncrDstIP(settings)     settings->flags_extend |= FLAG_INCRDSTIP
-#define setTxStartTime(settings)        settings->flags_extend |= FLAG_TXSTARTTIME
+#define setTxStartTime(settings)   settings->flags_extend |= FLAG_TXSTARTTIME
 #define setTxHoldback(settings)    settings->flags_extend |= FLAG_TXHOLDBACK
 #define setVaryLoad(settings)      settings->flags_extend |= FLAG_VARYLOAD
 #define setFQPacing(settings)      settings->flags_extend |= FLAG_FQPACING
 #define setTripTime(settings)      settings->flags_extend |= FLAG_TRIPTIME
 #define setModeInfinite(settings)  settings->flags_extend |= FLAG_MODEINFINITE
 #define setConnectOnly(settings)   settings->flags_extend |= FLAG_CONNECTONLY
+#define setWriteAck(settings)      settings->flags_extend |= FLAG_WRITEACK
 
 #define unsetBuflenSet(settings)   settings->flags &= ~FLAG_BUFLENSET
 #define unsetCompat(settings)      settings->flags &= ~FLAG_COMPAT
@@ -417,20 +420,21 @@ typedef struct thread_Settings {
 #define unsetEnhanced(settings)    settings->flags &= ~FLAG_ENHANCEDREPORT
 #define unsetServerModeTime(settings)    settings->flags &= ~FLAG_SERVERMODETIME
 #define unsetPeerVerDetect(settings)    settings->flags_extend &= ~FLAG_PEERVER
-#define unsetSeqNo64b(settings)    settings->flags_extend &= ~FLAG_SEQNO64
-#define unsetReverse(settings)     settings->flags_extend &= ~FLAG_REVERSE
+#define unsetSeqNo64b(settings)     settings->flags_extend &= ~FLAG_SEQNO64
+#define unsetReverse(settings)      settings->flags_extend &= ~FLAG_REVERSE
 #define unsetServerReverse(settings) settings->flags_extend &= ~FLAG_SERVERREVERSE
-#define unsetIsochronous(settings) settings->flags_extend &= ~FLAG_ISOCHRONOUS
+#define unsetIsochronous(settings)  settings->flags_extend &= ~FLAG_ISOCHRONOUS
 #define unsetRxHistogram(settings)    settings->flags_extend &= ~FLAG_RXHISTOGRAM
 #define unsetL2LengthCheck(settings)  settings->flags_extend &= ~FLAG_L2LENGTHCHECK
-#define unsetIncrDstIP(settings)   settings->flags_extend &= ~FLAG_INCRDSTIP
-#define unsetTxStartTime(settings) settings->flags_extend &= ~FLAG_TXSTARTTIME
-#define unsetTxHoldback(settings)  settings->flags_extend &= ~FLAG_TXHOLDBACK
+#define unsetIncrDstIP(settings)    settings->flags_extend &= ~FLAG_INCRDSTIP
+#define unsetTxStartTime(settings)  settings->flags_extend &= ~FLAG_TXSTARTTIME
+#define unsetTxHoldback(settings)   settings->flags_extend &= ~FLAG_TXHOLDBACK
 #define unsetVaryLoad(settings)     settings->flags_extend &= ~FLAG_VARYLOAD
 #define unsetFQPacing(settings)     settings->flags_extend &= ~FLAG_FQPACING
 #define unsetTripTime(settings)     settings->flags_extend &= ~FLAG_TRIPTIME
 #define unsetModeInfinite(settings) settings->flags_extend &= ~FLAG_MODEINFINITE
 #define unsetConnectOnly(settings)  settings->flags_extend &= ~FLAG_CONNECTONLY
+#define unsetWriteAack(settings)    settings->flags_extend &= ~FLAG_WRITEACK
 
 /*
  * Message header flags
