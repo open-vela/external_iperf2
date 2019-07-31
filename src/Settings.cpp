@@ -1215,31 +1215,46 @@ void Settings_GenerateClientSettings( thread_Settings *server,
                                       thread_Settings **client,
                                       client_hdr *hdr ) {
     int extendflags = 0;
+    if (!server || !hdr)
+      return;
     int flags = ntohl(hdr->base.flags);
     if ((flags & HEADER_EXTEND) != 0 ) {
 	extendflags = ntohl(hdr->extend.flags);
-	if ((extendflags & REVERSE) == REVERSE) {
-	    setServerReverse(server);
-	    unsetReport(server);
-            setModeTime(server);
-	    server->mAmount = ntohl(hdr->base.mAmount);
-	    if ((server->mAmount & 0x80000000) > 0) {
-	      setModeTime(server);
-#ifndef WIN32
-	      server->mAmount |= 0xFFFFFFFF00000000LL;
-#else
-	      server->mAmount |= 0xFFFFFFFF00000000;
-#endif
-	      server->mAmount = -server->mAmount;
-	    } else {
-	      unsetModeTime(server);
+	thread_Settings *reverse = NULL;
+	if (((extendflags & BIDIR) == BIDIR) ||	 \
+	    ((extendflags & REVERSE) == REVERSE)) {
+	    if ((extendflags & BIDIR) == BIDIR) {
+	        Settings_Copy(server, &reverse);
+		if (reverse) {
+		   *client = reverse;
+		   setBidir(reverse);
+		}
+	    } else if ((extendflags & REVERSE) == REVERSE) {
+	        *client = NULL;
+	        reverse = server;
 	    }
-	    if (!isBWSet(server)) {
-	      server->mUDPRate = ntohl(hdr->extend.mRate);
-	      if ((extendflags & UNITS_PPS) == UNITS_PPS) {
-		server->mUDPRateUnits = kRate_PPS;
+	    if (reverse) {
+	      setServerReverse(reverse);
+	      unsetReport(reverse);
+	      reverse->mAmount = ntohl(hdr->base.mAmount);
+	      if ((reverse->mAmount & 0x80000000) > 0) {
+		setModeTime(reverse);
+#ifndef WIN32
+		reverse->mAmount |= 0xFFFFFFFF00000000LL;
+#else
+		reverse->mAmount |= 0xFFFFFFFF00000000;
+#endif
+		reverse->mAmount = -reverse->mAmount;
 	      } else {
-		server->mUDPRateUnits = kRate_BW;
+		unsetModeTime(reverse);
+	      }
+	      if (!isBWSet(reverse)) {
+		reverse->mUDPRate = ntohl(hdr->extend.mRate);
+		if ((extendflags & UNITS_PPS) == UNITS_PPS) {
+		  reverse->mUDPRateUnits = kRate_PPS;
+		} else {
+		  reverse->mUDPRateUnits = kRate_BW;
+		}
 	      }
 	    }
 	}
@@ -1373,6 +1388,10 @@ int Settings_GenerateClientHdr( thread_Settings *client, client_hdr *hdr ) {
     if (isReverse(client)) {
 	flags |= HEADER_EXTEND;
         extendflags |= REVERSE;
+    }
+    if (isBidir(client)) {
+	flags |= HEADER_EXTEND;
+        extendflags |= BIDIR;
     }
     hdr->base.flags = htonl(flags);
     if (flags & HEADER_EXTEND) {
