@@ -165,6 +165,7 @@ void client_spawn( thread_Settings *thread ) {
     // o) Reverse
     // o) ServerReverse
     // o) WriteAck
+    // o) Bidir
     if (!isServerReverse(thread)) {
       theClient->InitiateServer();
     }

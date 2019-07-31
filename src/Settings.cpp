@@ -1220,40 +1220,40 @@ void Settings_GenerateClientSettings( thread_Settings *server,
     int flags = ntohl(hdr->base.flags);
     if ((flags & HEADER_EXTEND) != 0 ) {
 	extendflags = ntohl(hdr->extend.flags);
-	thread_Settings *reverse = NULL;
+	thread_Settings *fullduplex = NULL;
 	if (((extendflags & BIDIR) == BIDIR) ||	 \
 	    ((extendflags & REVERSE) == REVERSE)) {
 	    if ((extendflags & BIDIR) == BIDIR) {
-	        Settings_Copy(server, &reverse);
-		if (reverse) {
-		   *client = reverse;
-		   setBidir(reverse);
+	        Settings_Copy(server, &fullduplex);
+		if (fullduplex) {
+		   *client = fullduplex;
+		   setBidir(fullduplex);
 		}
 	    } else if ((extendflags & REVERSE) == REVERSE) {
 	        *client = NULL;
-	        reverse = server;
+	        fullduplex = server;
 	    }
-	    if (reverse) {
-	      setServerReverse(reverse);
-	      unsetReport(reverse);
-	      reverse->mAmount = ntohl(hdr->base.mAmount);
-	      if ((reverse->mAmount & 0x80000000) > 0) {
-		setModeTime(reverse);
+	    if (fullduplex) {
+	      setServerReverse(fullduplex);
+	      unsetReport(fullduplex);
+	      fullduplex->mAmount = ntohl(hdr->base.mAmount);
+	      if ((fullduplex->mAmount & 0x80000000) > 0) {
+		setModeTime(fullduplex);
 #ifndef WIN32
-		reverse->mAmount |= 0xFFFFFFFF00000000LL;
+		fullduplex->mAmount |= 0xFFFFFFFF00000000LL;
 #else
-		reverse->mAmount |= 0xFFFFFFFF00000000;
+		fullduplex->mAmount |= 0xFFFFFFFF00000000;
 #endif
-		reverse->mAmount = -reverse->mAmount;
+		fullduplex->mAmount = -fullduplex->mAmount;
 	      } else {
-		unsetModeTime(reverse);
+		unsetModeTime(fullduplex);
 	      }
-	      if (!isBWSet(reverse)) {
-		reverse->mUDPRate = ntohl(hdr->extend.mRate);
+	      if (!isBWSet(fullduplex)) {
+		fullduplex->mUDPRate = ntohl(hdr->extend.mRate);
 		if ((extendflags & UNITS_PPS) == UNITS_PPS) {
-		  reverse->mUDPRateUnits = kRate_PPS;
+		  fullduplex->mUDPRateUnits = kRate_PPS;
 		} else {
-		  reverse->mUDPRateUnits = kRate_BW;
+		  fullduplex->mUDPRateUnits = kRate_BW;
 		}
 	      }
 	    }
