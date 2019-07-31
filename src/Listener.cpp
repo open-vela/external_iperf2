@@ -245,12 +245,17 @@ sInterupted == SIGALRM
 		// there is no need for the Listener to start a client
                 Settings_GenerateClientSettings( server, &tempSettings, hdr );
 		if (isServerReverse(server)) {
+		  if (tempSettings) {
+		    tempSettings->mThreadMode=kMode_Client;
+                    server->runNow =  tempSettings;
+		  } else {
 		    server->mThreadMode=kMode_Client;
+		  }
 		}
             } else {
 	        tempSettings = NULL;
 	    }
-            if ( tempSettings != NULL ) {
+            if ((tempSettings != NULL) && !isBidir(tempSettings)) {
 	        client_init( tempSettings );
                 if ( tempSettings->mMode == kTest_DualTest ) {
 #ifdef HAVE_THREAD
