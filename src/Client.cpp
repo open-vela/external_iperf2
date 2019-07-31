@@ -170,9 +170,9 @@ Client::Client( thread_Settings *inSettings ) {
 	PostReport(tmp);
     }
 
-    //  A connect only test doesn't need to setup data stuff
-    //  but merely pass the connection reports
-    if (isConnectOnly(mSettings) || isReverse(mSettings)) {
+    //  Tests that don't pass packet stats to the reporter thread
+    //  are Connect only or Reverse only
+    if (isConnectOnly(mSettings) || (isReverse(mSettings) && !isBidir(mSettings))) {
 	if (!mSettings->reporthdr) {
 	    InitConnectionReport(mSettings);
 	    if (mSettings->reporthdr) {
