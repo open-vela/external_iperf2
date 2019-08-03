@@ -331,6 +331,7 @@ typedef struct PacketRing {
   int maxcount;
   int consumerdone;
   int awaitcounter;
+  ReportStruct metapacket;
 
   // Use a condition variables
   // o) await_consumer - producer waits for the consumer thread to
