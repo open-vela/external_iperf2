@@ -198,18 +198,15 @@ Client::Client( thread_Settings *inSettings ) {
 	// even when mSettings has already destroyed
 	myJob = mSettings->reporthdr;
 	if (mSettings->reporthdr) {
-	  mSettings->reporthdr->report.connection.connecttime = ct;
-	  PostReport(mSettings->reporthdr);
+	    mSettings->reporthdr->report.connection.connecttime = ct;
+	    PostReport(mSettings->reporthdr);
+	    reportstruct = &mSettings->reporthdr->packetring->metapacket;
+	    reportstruct->packetID = (isPeerVerDetect(mSettings)) ? 1 : INITIAL_PACKETID;
+	    reportstruct->errwrite=WriteNoErr;
+	    reportstruct->emptyreport=0;
+	    reportstruct->socket = mSettings->mSock;
+	    reportstruct->packetLen = 0;
 	}
-	// Create the Report structure that's used to pass packet metadata to the reporter thread
-	reportstruct = new ReportStruct();
-	FAIL_errno( reportstruct == NULL, "No memory for report structure\n", mSettings );
-	reportstruct->packetID = (isPeerVerDetect(mSettings)) ? 1 : INITIAL_PACKETID;
-	reportstruct->errwrite=WriteNoErr;
-	reportstruct->emptyreport=0;
-	reportstruct->socket = mSettings->mSock;
-	reportstruct->packetLen = 0;
-
 	if (mSettings->reporthdr && (isDataReport(mSettings) || isConnectionReport(mSettings))) {
 	    ReportHeader *reporthdr = mSettings->reporthdr;
 	    //
@@ -259,7 +256,6 @@ Client::~Client() {
     }
     DELETE_ARRAY( mBuf );
     if (!isConnectOnly(mSettings) && !isReverse(mSettings)) {
-      DELETE_PTR(reportstruct);
       FreeReport(myJob);
     }
 } // end ~Client

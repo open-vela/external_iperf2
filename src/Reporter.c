@@ -511,7 +511,7 @@ static PacketRing * init_packetring (int count) {
   return (pr);
 }
 
-static inline void enqueue_packetring(ReportHeader* agent, ReportStruct *packet) {
+static inline void enqueue_packetring(ReportHeader* agent, ReportStruct *metapacket) {
   PacketRing *pr = agent->packetring;
   while (((pr->producer == pr->maxcount) && (pr->consumer == 0)) || \
 	 ((pr->producer + 1) == pr->consumer)) {
@@ -541,7 +541,7 @@ static inline void enqueue_packetring(ReportHeader* agent, ReportStruct *packet)
     writeindex = (pr->producer  + 1);
 
   /* Next two lines must be maintained as is */
-  memcpy((agent->packetring->data + writeindex), packet, sizeof(ReportStruct));
+  memcpy((agent->packetring->data + writeindex), metapacket, sizeof(ReportStruct));
   pr->producer = writeindex;
 }
 
