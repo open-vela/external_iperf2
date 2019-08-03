@@ -204,8 +204,6 @@ void Server::RunTCP( void ) {
     Mutex_Lock( &clients_mutex );
     Iperf_delete( &(mSettings->peer), &clients );
     Mutex_Unlock( &clients_mutex );
-
-    DELETE_PTR( reportstruct );
     EndReport( mSettings->reporthdr );
 }
 
@@ -238,32 +236,28 @@ void Server::InitTrafficLoop (void) {
 #endif
     InitReport(mSettings);
     if (mSettings->reporthdr) {
-        ReportHeader *reporthdr = mSettings->reporthdr;
+        // Squirrel this away so the destructor can free the memory
+        // even when mSettings has already destroyed
+        myJob = mSettings->reporthdr;
 	//
 	// Set the report start times and next report times
 	//
 	Timestamp now;
-	reporthdr->report.startTime.tv_sec = now.getSecs();
-	reporthdr->report.startTime.tv_usec = now.getUsecs();
-	reporthdr->report.nextTime = reporthdr->report.startTime;
-	TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
+	myJob->report.startTime.tv_sec = now.getSecs();
+	myJob->report.startTime.tv_usec = now.getUsecs();
+	myJob->report.nextTime = myJob->report.startTime;
+	TimeAdd(myJob->report.nextTime, myJob->report.intervalTime);
+	reportstruct = &myJob->packetring->metapacket;
+	reportstruct->packetID = 0;
+	reportstruct->l2len = 0;
+	reportstruct->l2errors = 0x0;
     }
-    // Squirrel this away so the destructor can free the memory
-    // even when mSettings has already destroyed
-    myJob = mSettings->reporthdr;
-
-    reportstruct = new ReportStruct();
-    FAIL(reportstruct == NULL, "Out of memory! Closing server thread\n", mSettings);
-    reportstruct->packetID = 0;
-    reportstruct->l2len = 0;
-    reportstruct->l2errors = 0x0;
-    if (mSettings->mBufLen < (int) sizeof( UDP_datagram ) ) {
-	mSettings->mBufLen = sizeof( UDP_datagram );
-	fprintf( stderr, warn_buffer_too_small, mSettings->mBufLen );
+    if (mSettings->mBufLen < (int) sizeof(UDP_datagram)) {
+       mSettings->mBufLen = sizeof( UDP_datagram );
+       fprintf( stderr, warn_buffer_too_small, mSettings->mBufLen );
     }
-
     // This will only have the connection report
-    PostReport(mSettings->reporthdr);
+    PostReport(myJob);
 
     // Enable kernel level timestamping if available
     InitKernelTimeStamping();
@@ -312,8 +306,8 @@ void Server::InitTrafficLoop (void) {
 	if (len && ((n = recvn(mSettings->mSock, (char *)&buf[0], sizeof(buf), MSG_PEEK)) != (int) sizeof(buf))) {
 	    fprintf(stdout,"Warn: socket trip time read error\n");
 	} else {
-	    mSettings->reporthdr->report.clientStartTime.tv_sec = ntohl(buf[1]);
-	    mSettings->reporthdr->report.clientStartTime.tv_usec = ntohl(buf[2]);
+	    myJob->report.clientStartTime.tv_sec = ntohl(buf[1]);
+	    myJob->report.clientStartTime.tv_usec = ntohl(buf[2]);
 	}
     }
 }
