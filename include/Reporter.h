@@ -291,6 +291,7 @@ typedef struct ReporterData {
     ReportMode mode;
     uintmax_t TotalLen;
     uintmax_t lastTotal;
+
     // doubles
     // shorts
     unsigned short mPort;           // -p
@@ -348,6 +349,7 @@ typedef struct ReportHeader {
     // function pointer for per packet processing
     int (*packet_handler) (struct ReportHeader *report, ReportStruct *packet);
     MultiHeader *multireport;
+    MultiHeader *bidirreport;
     struct ReportHeader *next;
     int delaycounter; // used to detect CPU bound systems
     PacketRing *packetring;
@@ -365,7 +367,7 @@ void UpdateConnectionReport(struct thread_Settings *mSettings, ReportHeader *rep
 void BarrierClient(MultiHeader *agent);
 void PostReport(ReportHeader *agent);
 void ReportPacket( ReportHeader *agent, ReportStruct *packet );
-void CloseReport( ReportHeader *agent, ReportStruct *packet );
+void CloseReport( ReportHeader *agent );
 void EndReport( ReportHeader *agent );
 void FreeReport(ReportHeader *agent);
 Transfer_Info* GetReport( ReportHeader *agent );

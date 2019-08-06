@@ -122,7 +122,7 @@ extern Condition ReportCond;
 int reporter_process_report ( ReportHeader *report );
 void process_report ( ReportHeader *report );
 int reporter_handle_packet( ReportHeader *report, ReportStruct *packet);
-int reporter_condprintstats( ReporterData *stats, MultiHeader *multireport, int force );
+int output_transfer_report( ReporterData *stats, ReportStruc *packet);
 int reporter_print( ReporterData *stats, int type, int end );
 void PrintMSS( ReporterData *stats );
 
@@ -132,85 +132,76 @@ static void gettcpistats(ReporterData *stats, int final);
 #endif
 static PacketRing * init_packetring(int count);
 
-MultiHeader* InitMulti( thread_Settings *agent, int inID) {
-    MultiHeader *multihdr = NULL;
-    if ( agent->mThreads > 1 || agent->mThreadMode == kMode_Server ) {
-        if ( isMultipleReport( agent ) ) {
-	    if (agent->mThreadMode == kMode_Client) {
-		num_multi_slots = (agent->mMode == kTest_DualTest) ? ((agent->mThreads * 2) + 1) : (agent->mThreads  + 1);
+MultiHeader* InitMulti(thread_Settings *agent, int inID, int type) {
+    // Multiheader is already configured so just return
+    if (!agent->multihdr)
+	return;
+    MultiHeader *multihdr = calloc((sizeof(MultiHeader) +  sizeof(ReporterData) + sizeof(Transfer_Info)), sizeof(char*));
+    if ( multihdr != NULL ) {
+	memset(multihdr, 0, sizeof(MultiHeader));
+	if (!agent->multihdr)
+	Condition_Initialize(&multihdr->barrier);
+	Condition_Initialize(&multihdr->await_reporter);
+	multihdr->reporter_running = 0;
+	multihdr->groupID = inID;
+	if (agent->mThreadMode == kMode_Client) {
+	    multihdr->threads = agent->mThreads;
+	}
+	if (isMultipleReport(agent)) {
+	    int i;
+	    ReporterData *data = NULL;
+	    multihdr->report = (ReporterData*)(multihdr + 1);
+	    memset(multihdr->report, 0, sizeof(ReporterData));
+	    multihdr->data = (Transfer_Info*)(multihdr->report + 1);
+	    data = multihdr->report;
+	    for ( i = 0; i < num_multi_slots; i++ ) {
+		multihdr->data[i].startTime = -1;
+		multihdr->data[i].transferID = inID;
+		multihdr->data[i].groupID = -2;
+	    }
+	    data->type = TRANSFER_REPORT;
+	    if ( agent->mInterval != 0.0 ) {
+		struct timeval *interval = &data->intervalTime;
+		interval->tv_sec = (long) agent->mInterval;
+		interval->tv_usec = (long) ((agent->mInterval - interval->tv_sec)
+					    * rMillion);
+	    }
+	    data->mHost = agent->mHost;
+	    data->mLocalhost = agent->mLocalhost;
+	    data->mBufLen = agent->mBufLen;
+	    data->mMSS = agent->mMSS;
+	    data->mTCPWin = agent->mTCPWin;
+	    data->FQPacingRate = agent->mFQPacingRate;
+	    data->flags = agent->flags;
+	    data->mThreadMode = agent->mThreadMode;
+	    data->mode = agent->mReportMode;
+	    data->info.mFormat = agent->mFormat;
+	    data->info.mTTL = agent->mTTL;
+	    if (data->mThreadMode == kMode_Server)
+		data->info.sock_callstats.read.binsize = data->mBufLen / 8;
+	    if ( isEnhanced( agent ) ) {
+		data->info.mEnhanced = 1;
 	    } else {
-		num_multi_slots = (((agent->mThreads * 2) + 1) > NUM_MULTI_SLOTS) ? ((agent->mThreads * 2) + 1) : NUM_MULTI_SLOTS;
+		data->info.mEnhanced = 0;
 	    }
-	    // printf ("Alloc %d multislots\n", num_multi_slots);
-            multihdr = calloc((sizeof(MultiHeader) +  sizeof(ReporterData) +
-			       num_multi_slots * sizeof(Transfer_Info)), sizeof(char*));
-        } else {
-            multihdr = calloc(sizeof(MultiHeader), sizeof(char*));
-        }
-        if ( multihdr != NULL ) {
-            memset( multihdr, 0, sizeof(MultiHeader) );
-            Condition_Initialize( &multihdr->barrier );
-            Condition_Initialize( &multihdr->await_reporter );
-	    multihdr->reporter_running = 0;
-            multihdr->groupID = inID;
-	    if (agent->mThreadMode == kMode_Client) {
-		multihdr->threads = agent->mThreads;
+	    if ( isUDP( agent ) ) {
+		multihdr->report->info.mUDP = (char)agent->mThreadMode;
+		multihdr->report->info.mUDP = 0;
+	    } else {
+		multihdr->report->info.mTCP = (char)agent->mThreadMode;
 	    }
-            if ( isMultipleReport( agent ) ) {
-                int i;
-                ReporterData *data = NULL;
-                multihdr->report = (ReporterData*)(multihdr + 1);
-                memset(multihdr->report, 0, sizeof(ReporterData));
-                multihdr->data = (Transfer_Info*)(multihdr->report + 1);
-                data = multihdr->report;
-                for ( i = 0; i < num_multi_slots; i++ ) {
-                    multihdr->data[i].startTime = -1;
-                    multihdr->data[i].transferID = inID;
-                    multihdr->data[i].groupID = -2;
-                }
-                data->type = TRANSFER_REPORT;
-                if ( agent->mInterval != 0.0 ) {
-                    struct timeval *interval = &data->intervalTime;
-                    interval->tv_sec = (long) agent->mInterval;
-                    interval->tv_usec = (long) ((agent->mInterval - interval->tv_sec)
-                                                * rMillion);
-                }
-                data->mHost = agent->mHost;
-                data->mLocalhost = agent->mLocalhost;
-                data->mBufLen = agent->mBufLen;
-                data->mMSS = agent->mMSS;
-                data->mTCPWin = agent->mTCPWin;
-		data->FQPacingRate = agent->mFQPacingRate;
-		data->flags = agent->flags;
-                data->mThreadMode = agent->mThreadMode;
-                data->mode = agent->mReportMode;
-                data->info.mFormat = agent->mFormat;
-                data->info.mTTL = agent->mTTL;
-		if (data->mThreadMode == kMode_Server)
-		    data->info.sock_callstats.read.binsize = data->mBufLen / 8;
-                if ( isEnhanced( agent ) ) {
-		    data->info.mEnhanced = 1;
-		} else {
-		    data->info.mEnhanced = 0;
-		}
-                if ( isUDP( agent ) ) {
-                    multihdr->report->info.mUDP = (char)agent->mThreadMode;
-                    multihdr->report->info.mUDP = 0;
-                } else {
-                    multihdr->report->info.mTCP = (char)agent->mThreadMode;
-		}
-                if ( isConnectionReport( agent ) ) {
-                    data->type |= CONNECTION_REPORT;
-                    data->connection.peer = agent->peer;
-                    data->connection.size_peer = agent->size_peer;
-                    SockAddr_setPortAny( &data->connection.peer );
-                    data->connection.local = agent->local;
-                    data->connection.size_local = agent->size_local;
-                    SockAddr_setPortAny( &data->connection.local );
-		    data->connection.peerversion = agent->peerversion;
-                }
-            }
-        } else {
+	    if ( isConnectionReport( agent ) ) {
+		data->type |= CONNECTION_REPORT;
+		data->connection.peer = agent->peer;
+		data->connection.size_peer = agent->size_peer;
+		SockAddr_setPortAny( &data->connection.peer );
+		data->connection.local = agent->local;
+		data->connection.size_local = agent->size_local;
+		SockAddr_setPortAny( &data->connection.local );
+		data->connection.peerversion = agent->peerversion;
+	    }
+	}
+    } else {
             FAIL(1, "Out of Memory!!\n", agent);
         }
     }
@@ -611,9 +602,9 @@ void ReportPacket( ReportHeader* agent, ReportStruct *packet ) {
  * CloseReport is called by a transfer agent to finalize
  * the report and signal transfer is over.
  */
-void CloseReport( ReportHeader *agent, ReportStruct *packet ) {
-    int currpktid;
+void CloseReport(ReportHeader *agent) {
     if ( agent != NULL) {
+	ReportStruct packet;
         /*
          * Using PacketID of -1 ends reporting
          * It pushes a "special packet" through
@@ -621,11 +612,9 @@ void CloseReport( ReportHeader *agent, ReportStruct *packet ) {
          * by the reporter thread as and end of traffic
          * event
          */
-	currpktid = packet->packetID;
-        packet->packetID = -1;
-        packet->packetLen = 0;
-        ReportPacket( agent, packet );
-        packet->packetID = currpktid;
+        packet.packetID = -1;
+        packet.packetLen = 0;
+        ReportPacket( agent, &packet );
     }
 }
 
@@ -956,6 +945,35 @@ void process_report ( ReportHeader *report ) {
     }
 }
 
+static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *packet) {
+    int nextring_event = 0;
+    // Print a report if packet time exceeds the next report interval time,
+    // Also signal to the caller to move to the next report (or packet ring)
+    // if there was output. This will allow for more precise interval sum accounting.
+    if (reporthdr->report &&	\
+	(TimeDifference(reporthdr->report.nextTime, packet->packetTime) < 0)) {
+	    output_transfer_report(&reporthdr->report, packet);
+	    nextring_event = 1;
+    }
+    if (reporthdr->bidirreport && \
+	(TimeDifference(reporthdr->reportbidir->nextTime, packet->packetTime) < 0)) {
+	nextring_event = 1;
+	if ((--reporthdr->bidirreport->threads) <= 0) {
+	    reporthdr->bidirreport->threads = 2;
+	    output_transfer_bidir_report(reporthdr->bidirreport, &reporthdr->report.info);
+	}
+    }
+    if (reporthdr->multiplereport && \
+	(TimeDifference(reporthdr->multiplereport, packet->packetTime) < 0)) {
+	nextring_event = 1;
+	if ((--reporthdr->multiplereport->threads) <= 0) {
+	    reporthdr->multiplereport->threads = thread_numtrafficthreads();
+	    output_transfer_sum_report(reporthdr->multireport, &reporthdr->report.info);
+	}
+    }
+    return nextring_event;
+}
+
 /*
  * Process reports starting with "reporthdr"
  */
@@ -994,7 +1012,7 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 	    }
         }
     }
-    // This code works but is a joke - fix this and use a proper dispatcher
+    // This code works but is a mess - fix this and use a proper dispatcher
     // for updating reports and for outputing them
     if ( (reporthdr->report.type & SETTINGS_REPORT) != 0 ) {
         reporthdr->report.type &= ~SETTINGS_REPORT;
@@ -1029,36 +1047,50 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 	apply_consumption_detector();
         // If there are more packets to process then handle them
 	ReportStruct *packet = NULL;
-        while ((packet = dequeue_packetring(reporthdr))) {
+	int nextring_event = 0;
+        while ((packet = dequeue_packetring(reporthdr)) && !nextring_event) {
 	    // Increment the total packet count processed by this thread
 	    // this will be used to make decisions on if the reporter
 	    // thread should add some delay to eliminate cpu thread
 	    // thrashing,
 	    consumption_detector.accounted_packets--;
+	    // Check for a final packet event on this packet ring
+	    if (packet->packetID < 0) {
+		data->TotalLen += packet->packetLen;
+		reporthdr->packetring->consumerdone = 1;
+		reporthdr->delaycounter = consumption_detector.delay_counter;
+		need_free = 1;
+	    } else if (mSettings->mInterval > 0) {
+		// Check for interval reports
+		nextring_event = condprint_interval_reports(reporthdr, packet);
+	    }
+	    // Do the packet accounting
 	    if (reporthdr->packet_handler) {
-	        int event_lastpacket = (*reporthdr->packet_handler)(reporthdr, packet);
-		if (event_lastpacket) {
-		    reporthdr->packetring->consumerdone = 1;
-		    reporthdr->delaycounter = consumption_detector.delay_counter;
-		    need_free = 1;
-		}
+		(*reporthdr->packet_handler)(reporthdr, packet);
 	    }
 	}
+	if (reporthdr->packetring->consumerdone) {
+	    if (reporthdr->report)
+		outputt_transfer_final_report(&reporthdr->report);
+	    if (reporthdr->bidirreport)
+		output_transfer_bidir_final_report(reporthdr->bidirreport, &reporthdr->report.info);
+	    if (reporthdr->mutlireport)
+		output_transfer_sum_final_report(reporthdr->multireport, &reporthdr->report.info);
+	}
+	// need_free is a poor implementation.  It's done this way
+	// because of the recursion.  It also signals two things,
+	// one is remove from the reporter's job queue and the second
+	// is to free the report's memory which was dynamically allocated
+	// by another thread.  This is a good thing to fix with a c++
+	// version of the reporter
+	return need_free;
     }
-    // need_free is a poor implementation.  It's done this way
-    // because of the recursion.  It also signals two things,
-    // one is remove from the reporter's job queue and the second
-    // is to free the report's memory which was dynamically allocated
-    // by another thread.  This is a good thing to fix with a c++
-    // version of the reporter
-    return need_free;
-}
 
 /*
  * Updates connection stats
  */
 #define L2DROPFILTERCOUNTER 100
-int reporter_handle_packet( ReportHeader *reporthdr, ReportStruct *packet) {
+int reporter_handle_packet(ReportHeader *reporthdr, ReportStruct *packet) {
     ReporterData *data = &reporthdr->report;
     Transfer_Info *stats = &reporthdr->report.info;
     int finished = 0;
@@ -1066,11 +1098,6 @@ int reporter_handle_packet( ReportHeader *reporthdr, ReportStruct *packet) {
 
     data->packetTime = packet->packetTime;
     stats->socket = packet->socket;
-    if ( packet->packetID < 0 ) {
-        finished = 1;
-        if ( reporthdr->report.mThreadMode != kMode_Client ) {
-            data->TotalLen += packet->packetLen;
-        }
     } else {
 	// Process error counters that are mostly
 	// unrelated to receiving a valid packet
@@ -1265,103 +1292,9 @@ int reporter_handle_packet( ReportHeader *reporthdr, ReportStruct *packet) {
 	    stats->transit.m2Transit = 0;
 	}
     }
-    // Print a report if appropriate
-    return reporter_condprintstats( &reporthdr->report, reporthdr->multireport, finished );
+    return finished;
 }
 
-/*
- * Handles summing of threads
- */
-void reporter_handle_multiple_reports( MultiHeader *reporthdr, Transfer_Info *stats, int force ) {
-    if ( reporthdr != NULL ) {
-        if ( reporthdr->threads > 1 ) {
-            int i;
-            Transfer_Info *current = NULL;
-            // Search for start Time
-            for ( i = 0; i < num_multi_slots; i++ ) {
-                current = &reporthdr->data[i];
-                if ( current->startTime == stats->startTime ) {
-                    break;
-                }
-            }
-            if ( current->startTime != stats->startTime ) {
-                // Find first available
-                for ( i = 0; i < num_multi_slots; i++ ) {
-                    current = &reporthdr->data[i];
-                    if ( current->startTime < 0 ) {
-                        break;
-                    }
-                }
-                current->cntDatagrams = stats->cntDatagrams;
-                current->cntError = stats->cntError;
-                current->cntOutofOrder = stats->cntOutofOrder;
-                current->TotalLen = stats->TotalLen;
-                current->mFormat = stats->mFormat;
-                current->mEnhanced = stats->mEnhanced;
-                current->endTime = stats->endTime;
-                current->jitter = stats->jitter;
-                current->startTime = stats->startTime;
-		current->IPGcnt = stats->IPGcnt;
-                current->startTime = stats->startTime;
-		current->IPGsum = stats->IPGsum;
-		current->mUDP = stats->mUDP;
-		current->mTCP = stats->mTCP;
-		if (stats->mTCP == kMode_Server) {
-		    int ix;
-		    current->sock_callstats.read.cntRead = stats->sock_callstats.read.cntRead;
-		    for (ix = 0; ix < 8; ix++) {
-			current->sock_callstats.read.bins[ix] = stats->sock_callstats.read.bins[ix];
-		    }
-		} else {
-		    current->sock_callstats.write.WriteErr = stats->sock_callstats.write.WriteErr;
-		    current->sock_callstats.write.WriteCnt = stats->sock_callstats.write.WriteCnt;
-#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-		    if (stats->mTCP == kMode_Client) {
-			current->sock_callstats.write.TCPretry = stats->sock_callstats.write.TCPretry;
-		    }
-#endif
-		}
-                current->free = 1;
-            } else {
-                current->cntDatagrams += stats->cntDatagrams;
-                current->cntError += stats->cntError;
-                current->cntOutofOrder += stats->cntOutofOrder;
-                current->TotalLen += stats->TotalLen;
-		current->IPGcnt += stats->IPGcnt;
-		if (stats->mTCP == kMode_Server) {
-		    int ix;
-		    current->sock_callstats.read.cntRead += stats->sock_callstats.read.cntRead;
-		    for (ix = 0; ix < 8; ix++) {
-			current->sock_callstats.read.bins[ix] += stats->sock_callstats.read.bins[ix];
-		    }
-		} else {
-		    current->sock_callstats.write.WriteErr += stats->sock_callstats.write.WriteErr;
-		    current->sock_callstats.write.WriteCnt += stats->sock_callstats.write.WriteCnt;
-#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-		    if (stats->mTCP == kMode_Client) {
-			current->sock_callstats.write.TCPretry += stats->sock_callstats.write.TCPretry;
-		    }
-#endif
-		}
-                if ( current->endTime < stats->endTime ) {
-                    current->endTime = stats->endTime;
-                }
-                if ( current->jitter < stats->jitter ) {
-                    current->jitter = stats->jitter;
-                }
-                current->free++;
-                if ( current->free == reporthdr->threads ) {
-                    void *reserved = reporthdr->report->info.reserved_delay;
-                    current->free = force;
-                    memcpy( &reporthdr->report->info, current, sizeof(Transfer_Info) );
-                    current->startTime = -1;
-                    reporthdr->report->info.reserved_delay = reserved;
-                    reporter_print( reporthdr->report, MULTIPLE_REPORT, force );
-                }
-            }
-        }
-    }
-}
 
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 static void gettcpistats (ReporterData *stats, int final) {
@@ -1402,16 +1335,93 @@ static void gettcpistats (ReporterData *stats, int final) {
 }
 #endif
 /*
- * Prints reports conditionally
+ * Report printing routines below
  */
-int reporter_condprintstats( ReporterData *stats, MultiHeader *multireport, int force ) {
 
+// If reports were missed, catch up now
+void output_missed_reports(ReporterData *stats, ReportStruct *packet) {
+    while ((stats->intervalTime.tv_sec != 0 || \
+	    stats->intervalTime.tv_usec != 0) && \
+	   TimeDifference(stats->nextTime, stats->packetTime ) < 0 ) {
+	stats->info.startTime = stats->info.endTime;
+	stats->info.endTime = TimeDifference( stats->nextTime, stats->startTime );
+	TimeAdd(stats->nextTime, stats->intervalTime);
+	if (TimeDifference(stats->nextTime, stats->packetTime) < 0) {
+	    ReporterData emptystats;
+	    memset(&emptystats, 0, sizeof(ReporterData));
+	    emptystats.info.startTime = stats->info.startTime;
+	    emptystats.info.endTime = stats->info.endTime;
+	    emptystats.info.mFormat = stats->info.mFormat;
+	    emptystats.info.mTCP = stats->info.mTCP;
+	    emptystats.info.mUDP = stats->info.mUDP;
+	    emptystats.info.mIsochronous = stats->info.mIsochronous;
+	    emptystats.info.mEnhanced = stats->info.mEnhanced;
+	    emptystats.info.transferID = stats->info.transferID;
+	    emptystats.info.groupID = stats->info.groupID;
+	    reporter_print( &emptystats, TRANSFER_REPORT, 0);
+	}
+    }
+}
+
+// This is the primary interval report
+int output_transfer_report(ReporterData *stats, ReportStruct *packet) {
+    output_missed_reports(stats, packet);
+    stats->info.cntOutofOrder = stats->cntOutofOrder - stats->lastOutofOrder;
+    stats->lastOutofOrder = stats->cntOutofOrder;
+    // assume most of the  time out-of-order packets are not
+    // duplicate packets, so conditionally subtract them from the lost packets.
+    stats->info.cntError = stats->cntError - stats->lastError;
+    stats->info.cntError -= stats->info.cntOutofOrder;
+    if (stats->info.cntError < 0) {
+	stats->info.cntError = 0;
+    }
+    stats->lastError = stats->cntError;
+    stats->info.cntDatagrams = ((stats->info.mUDP == kMode_Server) ? stats->PacketID - stats->lastDatagrams :
+				stats->cntDatagrams - stats->lastDatagrams);
+    stats->lastDatagrams = ((stats->info.mUDP == kMode_Server) ? stats->PacketID : stats->cntDatagrams);
+    stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
+    stats->lastTotal = stats->TotalLen;
+    stats->info.free = 0;
+    reporter_print( stats, TRANSFER_REPORT, force );
+
+    /*
+     * Reset transfer stats now that both the individual and SUM reports
+     * have completed
+     */
+    if (stats->info.mUDP) {
+	stats->info.IPGcnt = 0;
+	stats->info.IPGsum = 0;
+	if (stats->info.mUDP == kMode_Server) {
+	    stats->info.l2counts.cnt = 0;
+	    stats->info.l2counts.unknown = 0;
+	    stats->info.l2counts.udpcsumerr = 0;
+	    stats->info.l2counts.lengtherr = 0;
+	}
+    }
+    if (stats->info.mEnhanced) {
+	if ((stats->info.mTCP == (char)kMode_Client) || (stats->info.mUDP == (char)kMode_Client)) {
+	    stats->info.sock_callstats.write.WriteCnt = 0;
+	    stats->info.sock_callstats.write.WriteErr = 0;
+	    stats->info.sock_callstats.write.WriteErr = 0;
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+	    stats->info.sock_callstats.write.up_to_date = 0;
+#endif
+	} else if (stats->info.mTCP == (char)kMode_Server) {
+	    int ix;
+	    stats->info.sock_callstats.read.cntRead = 0;
+	    for (ix = 0; ix < 8; ix++) {
+		stats->info.sock_callstats.read.bins[ix] = 0;
+	    }
+	}
+    }
+}
+
+int output_transfer_final_report(ReporterData *stats) {
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
     if ((stats->info.mEnhanced && stats->info.mTCP == kMode_Client) && (force || !stats->info.sock_callstats.write.up_to_date))
         gettcpistats(stats, force);
 #endif
 
-    if ( force ) {
         stats->info.cntOutofOrder = stats->cntOutofOrder;
         // assume most of the time out-of-order packets are not
         // duplicate packets, so conditionally subtract them from the lost packets.
@@ -1477,91 +1487,85 @@ int reporter_condprintstats( ReporterData *stats, MultiHeader *multireport, int 
 	}
 #endif
         reporter_print( stats, TRANSFER_REPORT, force );
-        if ( isMultipleReport(stats) ) {
-            reporter_handle_multiple_reports( multireport, &stats->info, force );
-        }
-    } else while ((stats->intervalTime.tv_sec != 0 ||
-                   stats->intervalTime.tv_usec != 0) &&
-                  TimeDifference( stats->nextTime,
-                                  stats->packetTime ) < 0 ) {
-	static int ignore_pktevent = 0;
-	    stats->info.startTime = stats->info.endTime;
-	    stats->info.endTime = TimeDifference( stats->nextTime, stats->startTime );
-	    TimeAdd(stats->nextTime, stats->intervalTime);
-	    if (TimeDifference(stats->nextTime, stats->packetTime) < 0) {
-	        ReporterData emptystats;
-		memset(&emptystats, 0, sizeof(ReporterData));
-		emptystats.info.startTime = stats->info.startTime;
-		emptystats.info.endTime = stats->info.endTime;
-		emptystats.info.mFormat = stats->info.mFormat;
-		emptystats.info.mTCP = stats->info.mTCP;
-		emptystats.info.mUDP = stats->info.mUDP;
-		emptystats.info.mIsochronous = stats->info.mIsochronous;
-		emptystats.info.mEnhanced = stats->info.mEnhanced;
-		emptystats.info.transferID = stats->info.transferID;
-		emptystats.info.groupID = stats->info.groupID;
-		reporter_print( &emptystats, TRANSFER_REPORT, 0);
-		ignore_pktevent = 0;
-		continue;
-	    } else {
-	        if (ignore_pktevent) {
-		    ignore_pktevent = 0;
-		    return 0;
-	        }
-	        stats->info.cntOutofOrder = stats->cntOutofOrder - stats->lastOutofOrder;
-	        stats->lastOutofOrder = stats->cntOutofOrder;
-	        // assume most of the  time out-of-order packets are not
-	        // duplicate packets, so conditionally subtract them from the lost packets.
-	        stats->info.cntError = stats->cntError - stats->lastError;
-	        stats->info.cntError -= stats->info.cntOutofOrder;
-	        if (stats->info.cntError < 0) {
-		  stats->info.cntError = 0;
-	        }
-		stats->lastError = stats->cntError;
-		stats->info.cntDatagrams = ((stats->info.mUDP == kMode_Server) ? stats->PacketID - stats->lastDatagrams :
-					    stats->cntDatagrams - stats->lastDatagrams);
-		stats->lastDatagrams = ((stats->info.mUDP == kMode_Server) ? stats->PacketID : stats->cntDatagrams);
-		stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
-		stats->lastTotal = stats->TotalLen;
-		stats->info.free = 0;
-		reporter_print( stats, TRANSFER_REPORT, force );
-	    }
-	    if ( isMultipleReport(stats) ) {
-	        reporter_handle_multiple_reports( multireport, &stats->info, force );
-	    }
+}
 
-	    /*
-	     * Reset transfer stats now that both the individual and SUM reports
-	     * have completed
-	     */
-	    if (stats->info.mUDP) {
-		stats->info.IPGcnt = 0;
-		stats->info.IPGsum = 0;
-		if (stats->info.mUDP == kMode_Server) {
-		    stats->info.l2counts.cnt = 0;
-		    stats->info.l2counts.unknown = 0;
-		    stats->info.l2counts.udpcsumerr = 0;
-		    stats->info.l2counts.lengtherr = 0;
-		}
-	    }
-	    if (stats->info.mEnhanced) {
-		if ((stats->info.mTCP == (char)kMode_Client) || (stats->info.mUDP == (char)kMode_Client)) {
-		    stats->info.sock_callstats.write.WriteCnt = 0;
-		    stats->info.sock_callstats.write.WriteErr = 0;
-		    stats->info.sock_callstats.write.WriteErr = 0;
-#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-		    stats->info.sock_callstats.write.up_to_date = 0;
-#endif
-		} else if (stats->info.mTCP == (char)kMode_Server) {
-		    int ix;
-		    stats->info.sock_callstats.read.cntRead = 0;
-		    for (ix = 0; ix < 8; ix++) {
-			stats->info.sock_callstats.read.bins[ix] = 0;
-		    }
-		}
-	    }
+/*
+ * Handles summing of threads
+ */
+void ouptput_sum_report(MultiHeader *reporthdr) {
+    current->cntDatagrams += stats->cntDatagrams;
+    current->cntError += stats->cntError;
+    current->cntOutofOrder += stats->cntOutofOrder;
+    current->TotalLen += stats->TotalLen;
+    current->IPGcnt += stats->IPGcnt;
+    if (stats->mTCP == kMode_Server) {
+	int ix;
+	current->sock_callstats.read.cntRead += stats->sock_callstats.read.cntRead;
+	for (ix = 0; ix < 8; ix++) {
+	    current->sock_callstats.read.bins[ix] += stats->sock_callstats.read.bins[ix];
 	}
-    return force;
+    } else {
+	current->sock_callstats.write.WriteErr += stats->sock_callstats.write.WriteErr;
+	current->sock_callstats.write.WriteCnt += stats->sock_callstats.write.WriteCnt;
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+	if (stats->mTCP == kMode_Client) {
+	    current->sock_callstats.write.TCPretry += stats->sock_callstats.write.TCPretry;
+	}
+#endif
+    }
+    if ( current->endTime < stats->endTime ) {
+	current->endTime = stats->endTime;
+    }
+    if ( current->jitter < stats->jitter ) {
+	current->jitter = stats->jitter;
+    }
+    current->free++;
+    if ( current->free == reporthdr->threads ) {
+	void *reserved = reporthdr->report->info.reserved_delay;
+	current->free = force;
+	memcpy( &reporthdr->report->info, current, sizeof(Transfer_Info) );
+	current->startTime = -1;
+	reporthdr->report->info.reserved_delay = reserved;
+	reporter_print( reporthdr->report, MULTIPLE_REPORT, force );
+    }
+}
+
+void ouptput_sum_final_report(MultiHeader *reporthdr) {
+    if ( reporthdr != NULL ) {
+	current->cntDatagrams = stats->cntDatagrams;
+	current->cntError = stats->cntError;
+	current->cntOutofOrder = stats->cntOutofOrder;
+	current->TotalLen = stats->TotalLen;
+	current->mFormat = stats->mFormat;
+	current->mEnhanced = stats->mEnhanced;
+	current->endTime = stats->endTime;
+	current->jitter = stats->jitter;
+	current->startTime = stats->startTime;
+	current->IPGcnt = stats->IPGcnt;
+	current->startTime = stats->startTime;
+	current->IPGsum = stats->IPGsum;
+	current->mUDP = stats->mUDP;
+	current->mTCP = stats->mTCP;
+	if (stats->mTCP == kMode_Server) {
+	    int ix;
+	    current->sock_callstats.read.cntRead = stats->sock_callstats.read.cntRead;
+	    for (ix = 0; ix < 8; ix++) {
+		current->sock_callstats.read.bins[ix] = stats->sock_callstats.read.bins[ix];
+	    }
+	} else {
+	    current->sock_callstats.write.WriteErr = stats->sock_callstats.write.WriteErr;
+	    current->sock_callstats.write.WriteCnt = stats->sock_callstats.write.WriteCnt;
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+	    if (stats->mTCP == kMode_Client) {
+		current->sock_callstats.write.TCPretry = stats->sock_callstats.write.TCPretry;
+	    }
+#endif
+	}
+	current->free = 1;
+    }
+}
+
+void ouptput_sum_report(MultiHeader *reporthdr, ReportStruct *packet) {
 }
 
 /*
