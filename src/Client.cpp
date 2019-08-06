@@ -1007,7 +1007,7 @@ void Client::FinishTrafficActions(void) {
 	reportstruct->packetLen = totLen;
 	ReportPacket( mSettings->reporthdr, reportstruct );
     }
-    CloseReport( mSettings->reporthdr, reportstruct );
+    CloseReport( mSettings->reporthdr);
     EndReport( mSettings->reporthdr );
 }
 

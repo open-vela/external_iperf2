@@ -139,6 +139,7 @@ typedef struct thread_Settings {
     FILE*  Extractor_file;
     ReportHeader*  reporthdr;
     MultiHeader*   multihdr;
+    MultiHeader*   bidirhdr;
     struct thread_Settings *runNow;
     struct thread_Settings *runNext;
     // int's

@@ -145,6 +145,11 @@ void client_spawn( thread_Settings *thread ) {
 #ifdef HAVE_THREAD_DEBUG
       thread_debug("Client reverse (server) thread starting sock=%d", thread->mSock);
 #endif
+      if (isBidr(thread)) {
+	  thread->bidirreport = InitMulti(thread, fix);
+      } else {
+	  thread->bidirreport = NULL;
+      }
       // Settings copy will malloc space for the
       // reverse thread settings and the run_wrapper
       // will free it
