@@ -141,10 +141,10 @@ static void gettcpistats(ReporterData *stats, int final);
 #endif
 static PacketRing * init_packetring(int count);
 
-MultiHeader* InitMulti(thread_Settings *agent, int inID, int type) {
+MultiHeader* InitMulti(thread_Settings *agent, int inID, MultiHdrType type) {
     // Multiheader is already configured so just return
     if (!agent->multihdr)
-	return;
+	return agent->multihdr;
     MultiHeader *multihdr = calloc((sizeof(MultiHeader) +  sizeof(ReporterData) + sizeof(Transfer_Info)), sizeof(char*));
     if ( multihdr != NULL ) {
 	memset(multihdr, 0, sizeof(MultiHeader));
@@ -212,7 +212,6 @@ MultiHeader* InitMulti(thread_Settings *agent, int inID, int type) {
 	}
     } else {
             FAIL(1, "Out of Memory!!\n", agent);
-        }
     }
     return multihdr;
 }
@@ -959,17 +958,16 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
     // Print a report if packet time exceeds the next report interval time,
     // Also signal to the caller to move to the next report (or packet ring)
     // if there was output. This will allow for more precise interval sum accounting.
-    if (reporthdr->report &&	\
-	(TimeDifference(reporthdr->report.nextTime, packet->packetTime) < 0)) {
+    if (TimeDifference(reporthdr->report.nextTime, packet->packetTime) < 0) {
         // In the (hopefully unlikely event) the reporter fell behind
         // ouput the missed reports to catch up
-        output_missed_reports(reporthdr->report, packet);
-        output_transfer_report(&reporthdr->report, packet);
+        output_missed_reports(&reporthdr->report, packet);
+        output_transfer_report(&reporthdr->report);
 	TimeAdd(reporthdr->report.nextTime, reporthdr->report.nextTime);
         nextring_event = 1;
     }
     if (reporthdr->bidirreport && \
-	(TimeDifference(reporthdr->reportbidir->nextTime, packet->packetTime) < 0)) {
+	(TimeDifference(reporthdr->bidirreport->nextTime, packet->packetTime) < 0)) {
 	nextring_event = 1;
 	if ((--reporthdr->bidirreport->threads) <= 0) {
 	    reporthdr->bidirreport->threads = 2;
