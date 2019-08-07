@@ -268,23 +268,6 @@ void reporter_printstats( Transfer_Info *stats ) {
 		    stats->l2counts.udpcsumerr, stats->l2counts.unknown);
 	}
     }
-    // Reset the enhanced stats for the next report interval
-    if (stats->mEnhanced) {
-	if (stats->mUDP) {
-	    stats->transit.minTransit=stats->transit.lastTransit;
-	    stats->transit.maxTransit=stats->transit.lastTransit;
-	    stats->transit.sumTransit = stats->transit.lastTransit;
-	    stats->transit.cntTransit = 0;
-	    stats->transit.vdTransit = 0;
-	    stats->transit.meanTransit = 0;
-	    stats->transit.m2Transit = 0;
-#ifdef HAVE_ISOCHRONOUS
-	    stats->isochstats.framecnt = 0;
-	    stats->isochstats.framelostcnt = 0;
-	    stats->isochstats.slipcnt = 0;
-#endif
-	}
-    }
 
     if ( stats->free == 1) {
 	if (stats->mUDP == (char)kMode_Client ) {

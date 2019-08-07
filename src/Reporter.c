@@ -122,10 +122,19 @@ extern Condition ReportCond;
 int reporter_process_report ( ReportHeader *report );
 void process_report ( ReportHeader *report );
 int reporter_handle_packet( ReportHeader *report, ReportStruct *packet);
-int output_transfer_report( ReporterData *stats, ReportStruc *packet);
 int reporter_print( ReporterData *stats, int type, int end );
 void PrintMSS( ReporterData *stats );
 
+// Private routines
+static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *packet);
+static void output_missed_reports(ReporterData *stats, ReportStruct *packet);
+static void output_transfer_report( ReporterData *stats);
+static void output_transfer_final_report( ReporterData *stats);
+static void output_transfer_sum_report( ReporterData *stats);
+static void output_transfer_sum_final_report( ReporterData *stats);
+static void output_transfer_bidir_report( ReporterData *stats);
+static void output_transfer_bidir_final_report( ReporterData *stats);
+static void reset_transfer_stats( ReporterData *stats);
 static void InitDataReport(struct thread_Settings *mSettings);
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 static void gettcpistats(ReporterData *stats, int final);
@@ -952,15 +961,21 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
     // if there was output. This will allow for more precise interval sum accounting.
     if (reporthdr->report &&	\
 	(TimeDifference(reporthdr->report.nextTime, packet->packetTime) < 0)) {
-	    output_transfer_report(&reporthdr->report, packet);
-	    nextring_event = 1;
+        // In the (hopefully unlikely event) the reporter fell behind
+        // ouput the missed reports to catch up
+        output_missed_reports(reporthdr->report, packet);
+        output_transfer_report(&reporthdr->report, packet);
+	TimeAdd(reporthdr->report.nextTime, reporthdr->report.nextTime);
+        nextring_event = 1;
     }
     if (reporthdr->bidirreport && \
 	(TimeDifference(reporthdr->reportbidir->nextTime, packet->packetTime) < 0)) {
 	nextring_event = 1;
 	if ((--reporthdr->bidirreport->threads) <= 0) {
 	    reporthdr->bidirreport->threads = 2;
+	    output_missed_reports(reporthdr->bidirreport, packet);
 	    output_transfer_bidir_report(reporthdr->bidirreport, &reporthdr->report.info);
+	    TimeAdd(reporthdr->report.nextTime, reporthdr->report.nextTime);
 	}
     }
     if (reporthdr->multiplereport && \
@@ -968,7 +983,9 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
 	nextring_event = 1;
 	if ((--reporthdr->multiplereport->threads) <= 0) {
 	    reporthdr->multiplereport->threads = thread_numtrafficthreads();
+	    output_missed_reports(reporthdr->multireport, packet);
 	    output_transfer_sum_report(reporthdr->multireport, &reporthdr->report.info);
+	    TimeAdd(reporthdr->report.nextTime, reporthdr->report.nextTime);
 	}
     }
     return nextring_event;
@@ -1339,7 +1356,7 @@ static void gettcpistats (ReporterData *stats, int final) {
  */
 
 // If reports were missed, catch up now
-void output_missed_reports(ReporterData *stats, ReportStruct *packet) {
+static inline void output_missed_reports(ReporterData *stats, ReportStruct *packet) {
     while ((stats->intervalTime.tv_sec != 0 || \
 	    stats->intervalTime.tv_usec != 0) && \
 	   TimeDifference(stats->nextTime, stats->packetTime ) < 0 ) {
@@ -1362,27 +1379,15 @@ void output_missed_reports(ReporterData *stats, ReportStruct *packet) {
 	}
     }
 }
-
-// This is the primary interval report
-int output_transfer_report(ReporterData *stats, ReportStruct *packet) {
-    output_missed_reports(stats, packet);
-    stats->info.cntOutofOrder = stats->cntOutofOrder - stats->lastOutofOrder;
+// Actions required after an interval report has been outputted
+static inline void reset_transfer_stats (ReporterData *stats) {
     stats->lastOutofOrder = stats->cntOutofOrder;
-    // assume most of the  time out-of-order packets are not
-    // duplicate packets, so conditionally subtract them from the lost packets.
-    stats->info.cntError = stats->cntError - stats->lastError;
-    stats->info.cntError -= stats->info.cntOutofOrder;
     if (stats->info.cntError < 0) {
 	stats->info.cntError = 0;
     }
     stats->lastError = stats->cntError;
-    stats->info.cntDatagrams = ((stats->info.mUDP == kMode_Server) ? stats->PacketID - stats->lastDatagrams :
-				stats->cntDatagrams - stats->lastDatagrams);
     stats->lastDatagrams = ((stats->info.mUDP == kMode_Server) ? stats->PacketID : stats->cntDatagrams);
-    stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
     stats->lastTotal = stats->TotalLen;
-    stats->info.free = 0;
-    reporter_print( stats, TRANSFER_REPORT, force );
 
     /*
      * Reset transfer stats now that both the individual and SUM reports
@@ -1413,15 +1418,44 @@ int output_transfer_report(ReporterData *stats, ReportStruct *packet) {
 		stats->info.sock_callstats.read.bins[ix] = 0;
 	    }
 	}
+    // Reset the enhanced stats for the next report interval
+	if (stats->mUDP) {
+	    stats->transit.minTransit=stats->transit.lastTransit;
+	    stats->transit.maxTransit=stats->transit.lastTransit;
+	    stats->transit.sumTransit = stats->transit.lastTransit;
+	    stats->transit.cntTransit = 0;
+	    stats->transit.vdTransit = 0;
+	    stats->transit.meanTransit = 0;
+	    stats->transit.m2Transit = 0;
+#ifdef HAVE_ISOCHRONOUS
+	    stats->isochstats.framecnt = 0;
+	    stats->isochstats.framelostcnt = 0;
+	    stats->isochstats.slipcnt = 0;
+#endif
+	}
     }
 }
 
-int output_transfer_final_report(ReporterData *stats) {
+// This is the primary interval report
+static void output_transfer_report(ReporterData *stats) {
+    stats->info.cntOutofOrder = stats->cntOutofOrder - stats->lastOutofOrder;
+    // assume most of the  time out-of-order packets are not
+    // duplicate packets, so conditionally subtract them from the lost packets.
+    stats->info.cntError = stats->cntError - stats->lastError;
+    stats->info.cntError -= stats->info.cntOutofOrder;
+    stats->info.cntDatagrams = ((stats->info.mUDP == kMode_Server) ? stats->PacketID - stats->lastDatagrams :
+				stats->cntDatagrams - stats->lastDatagrams);
+    stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
+    stats->info.free = 0;
+    reporter_print(stats, TRANSFER_REPORT, force);
+    reset_transfer_stats(stats);
+}
+
+void output_transfer_final_report(ReporterData *stats) {
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
     if ((stats->info.mEnhanced && stats->info.mTCP == kMode_Client) && (force || !stats->info.sock_callstats.write.up_to_date))
         gettcpistats(stats, force);
 #endif
-
         stats->info.cntOutofOrder = stats->cntOutofOrder;
         // assume most of the time out-of-order packets are not
         // duplicate packets, so conditionally subtract them from the lost packets.
@@ -1492,7 +1526,7 @@ int output_transfer_final_report(ReporterData *stats) {
 /*
  * Handles summing of threads
  */
-void ouptput_sum_report(MultiHeader *reporthdr) {
+void ouptput_transfer_sum_report(MultiHeader *reporthdr) {
     current->cntDatagrams += stats->cntDatagrams;
     current->cntError += stats->cntError;
     current->cntOutofOrder += stats->cntOutofOrder;
@@ -1530,7 +1564,7 @@ void ouptput_sum_report(MultiHeader *reporthdr) {
     }
 }
 
-void ouptput_sum_final_report(MultiHeader *reporthdr) {
+void ouptput_transfer_sum_final_report(MultiHeader *reporthdr) {
     if ( reporthdr != NULL ) {
 	current->cntDatagrams = stats->cntDatagrams;
 	current->cntError = stats->cntError;
@@ -1565,9 +1599,11 @@ void ouptput_sum_final_report(MultiHeader *reporthdr) {
     }
 }
 
-void ouptput_sum_report(MultiHeader *reporthdr, ReportStruct *packet) {
+void ouptput_transfer_bidir_report(MultiHeader *reporthdr) {
 }
 
+void ouptput_transfer_bidir_final_report(MultiHeader *reporthdr) {
+}
 /*
  * This function handles multiple format printing by sending to the
  * appropriate dispatch function
