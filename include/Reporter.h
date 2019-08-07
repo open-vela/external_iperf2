@@ -311,9 +311,15 @@ typedef struct ReporterData {
     unsigned int FQPacingRate;
 } ReporterData;
 
+typedef enum MultiHdrType {
+    MULTISUM  = 0,
+    MULTIBIDIR
+} MultiHdrType;
+
 typedef struct MultiHeader {
     int groupID;
     int threads;
+    MultiHdrType type;
     ReporterData *report;
     Transfer_Info *data;
     Condition barrier;
@@ -360,7 +366,7 @@ typedef void (* report_settings)( ReporterData* );
 typedef void (* report_statistics)( Transfer_Info* );
 typedef void (* report_serverstatistics)( Connection_Info*, Transfer_Info* );
 
-MultiHeader* InitMulti( struct thread_Settings *agent, int inID );
+MultiHeader* InitMulti( struct thread_Settings *agent, int inID, MultiHdrType type);
 void InitReport( struct thread_Settings *agent );
 void InitConnectionReport( struct thread_Settings *agent );
 void UpdateConnectionReport(struct thread_Settings *mSettings, ReportHeader *reporthdr);

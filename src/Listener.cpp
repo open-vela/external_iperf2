@@ -282,7 +282,7 @@ sInterupted == SIGALRM
             } else {
                 Mutex_Lock( &groupCond );
                 groupID--;
-                listtemp->holder = InitMulti( server, groupID );
+                listtemp->holder = InitMulti( server, groupID, MULTISUM);
                 server->multihdr = listtemp->holder;
                 Mutex_Unlock( &groupCond );
             }
@@ -1002,7 +1002,7 @@ void Listener::UDPSingleServer( ) {
                     ReportPacket( exist->server->reporthdr, reportstruct );
                     // stop timing
                     gettimeofday( &(reportstruct->packetTime), NULL );
-                    CloseReport( exist->server->reporthdr, reportstruct );
+                    CloseReport( exist->server->reporthdr);
 
                     if (rc > (int) (sizeof(UDP_datagram) + sizeof(server_hdr))) {
                         UDP_datagram *UDP_Hdr;
@@ -1095,7 +1095,7 @@ void Listener::UDPSingleServer( ) {
         } else {
             Mutex_Lock( &groupCond );
             groupID--;
-            listtemp->holder = InitMulti( server, groupID );
+            listtemp->holder = InitMulti( server, groupID, MULTISUM);
             server->multihdr = listtemp->holder;
             Mutex_Unlock( &groupCond );
         }

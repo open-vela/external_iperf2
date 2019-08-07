@@ -146,9 +146,9 @@ void client_spawn( thread_Settings *thread ) {
       thread_debug("Client reverse (server) thread starting sock=%d", thread->mSock);
 #endif
       if (isBidir(thread)) {
-	  thread->bidirreport = InitMulti(thread, fix);
+	  thread->bidirhdr = InitMulti(thread, 0, MULTIBIDIR);
       } else {
-	  thread->bidirreport = NULL;
+	  thread->bidirhdr = NULL;
       }
       // Settings copy will malloc space for the
       // reverse thread settings and the run_wrapper
@@ -157,7 +157,7 @@ void client_spawn( thread_Settings *thread ) {
       if (reverse_client && (thread->mSock > 0)) {
 	reverse_client->mSock = thread->mSock;
 	reverse_client->mThreadMode = kMode_Server;
-	reverse_client->bidireport = thread->bidirreport;
+	reverse_client->bidirhdr = thread->bidirhdr;
 	setServerReverse(reverse_client); // cause the connection report to show reverse
 	thread_start(reverse_client);
       } else {
