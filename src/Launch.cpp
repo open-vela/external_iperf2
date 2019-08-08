@@ -223,7 +223,7 @@ void client_init( thread_Settings *clients ) {
     // sum of multiple client threads
     Mutex_Lock( &groupCond );
     groupID--;
-    clients->multihdr = InitMulti( clients, groupID );
+    clients->multihdr = InitMulti( clients, groupID, MULTISUM);
     Mutex_Unlock( &groupCond );
 
 #ifdef HAVE_THREAD
