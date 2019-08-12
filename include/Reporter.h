@@ -321,12 +321,9 @@ typedef struct MultiHeader {
     int threads;
     MultiHdrType type;
     ReporterData *report;
-    Transfer_Info *data;
     Condition barrier;
     Condition await_reporter;
     int reporter_running;
-    struct timeval startTime;
-    struct timeval nextTime;
 } MultiHeader;
 
 typedef struct PacketRing {
@@ -353,7 +350,7 @@ typedef struct PacketRing {
 typedef struct ReportHeader {
     ReporterData report;
     // function pointer for per packet processing
-    int (*packet_handler) (struct ReportHeader *report, ReportStruct *packet);
+    void (*packet_handler) (struct ReportHeader *report, ReportStruct *packet);
     MultiHeader *multireport;
     MultiHeader *bidirreport;
     struct ReportHeader *next;

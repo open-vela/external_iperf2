@@ -227,8 +227,8 @@ Client::Client( thread_Settings *inSettings ) {
 	    reporthdr->report.nextTime = reporthdr->report.startTime;
 	    TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
 	    if (reporthdr->multireport) {
-	        reporthdr->multireport->startTime = reporthdr->report.startTime;
-	        reporthdr->multireport->nextTime = reporthdr->report.nextTime;
+	        reporthdr->multireport->report->startTime = reporthdr->report.startTime;
+	        reporthdr->multireport->report->nextTime = reporthdr->report.nextTime;
 	    }
 	}
 	if (mSettings->reporthdr) {
