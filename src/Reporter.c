@@ -276,6 +276,7 @@ void InitDataReport(thread_Settings *mSettings) {
 	mSettings->reporthdr = reporthdr;
 	reporthdr->multireport = mSettings->multihdr;
 	data = &reporthdr->report;
+	data->mThreadMode = mSettings->mThreadMode;
 	reporthdr->packet_handler = NULL;
 	if (!isConnectOnly(mSettings)) {
 	    reporthdr->packetring = init_packetring(NUM_REPORT_STRUCTS);
@@ -975,7 +976,7 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
 	    TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
 	}
     }
-    if (reporthdr->multireport && \
+    if (reporthdr->multireport &&  (reporthdr->multireport->refcount > 1) &&\
 	(TimeDifference(reporthdr->multireport->report.nextTime, packet->packetTime) < 0)) {
 	nextring_event = 1;
 	if ((--reporthdr->multireport->threads) <= 0) {
