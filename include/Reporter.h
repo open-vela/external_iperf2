@@ -264,7 +264,9 @@ typedef struct ReporterData {
     intmax_t cntDatagrams;
     intmax_t lastDatagrams;
     intmax_t PacketID;
-
+    uintmax_t TotalLen;
+    uintmax_t lastTotal;  
+  
     int mBufLen;                    // -l
     int mMSS;                       // -M
     int mTCPWin;                    // -w
@@ -289,8 +291,6 @@ typedef struct ReporterData {
     // enums (which should be special int's)
     ThreadMode mThreadMode;         // -s or -c
     ReportMode mode;
-    uintmax_t TotalLen;
-    uintmax_t lastTotal;
 
     // doubles
     // shorts
