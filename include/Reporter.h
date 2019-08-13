@@ -265,8 +265,8 @@ typedef struct ReporterData {
     intmax_t lastDatagrams;
     intmax_t PacketID;
     uintmax_t TotalLen;
-    uintmax_t lastTotal;  
-  
+    uintmax_t lastTotal;
+
     int mBufLen;                    // -l
     int mMSS;                       // -M
     int mTCPWin;                    // -w
@@ -354,6 +354,7 @@ typedef struct ReportHeader {
     ReporterData report;
     // function pointer for per packet processing
     void (*packet_handler) (struct ReportHeader *report, ReportStruct *packet);
+    void (*output_handler) (struct ReporterData *stats);
     MultiHeader *multireport;
     MultiHeader *bidirreport;
     struct ReportHeader *next;
