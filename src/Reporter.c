@@ -148,6 +148,9 @@ static PacketRing * init_packetring(int count);
 MultiHeader* InitMulti(thread_Settings *agent, int inID, MultiHdrType type) {
     MultiHeader *multihdr = (MultiHeader *) calloc(1, sizeof(MultiHeader));
     if ( multihdr != NULL ) {
+#ifdef HAVE_THREAD_DEBUG
+        thread_debug("Init multiheader %p id=%d (type=%d)", (void *)multihdr, inID, type);
+#endif
         agent->multihdr = multihdr;
 	multihdr->groupID = inID;
 	if (agent->mThreadMode == kMode_Client) {
