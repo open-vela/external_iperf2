@@ -146,7 +146,10 @@ void client_spawn( thread_Settings *thread ) {
       thread_debug("Client reverse (server) thread starting sock=%d", thread->mSock);
 #endif
       if (isBidir(thread)) {
-	  thread->bidirhdr = InitMulti(thread, 0, MULTIBIDIR);
+          Mutex_Lock( &groupCond );
+	  thread->bidirhdr = InitMulti(thread, thread->mSock, MULTIBIDIR);
+	  thread->bidirhdr->refcount = 1;
+          Mutex_Unlock( &groupCond );
       } else {
 	  thread->bidirhdr = NULL;
       }
@@ -155,14 +158,17 @@ void client_spawn( thread_Settings *thread ) {
       // will free it
       Settings_Copy(thread, &reverse_client);
       if (reverse_client && (thread->mSock > 0)) {
-	reverse_client->mSock = thread->mSock;
-	reverse_client->mThreadMode = kMode_Server;
-	reverse_client->bidirhdr = thread->bidirhdr;
-	setServerReverse(reverse_client); // cause the connection report to show reverse
-	thread_start(reverse_client);
+	  reverse_client->mSock = thread->mSock;
+	  reverse_client->mThreadMode = kMode_Server;
+	  reverse_client->bidirhdr = thread->bidirhdr;
+	  setServerReverse(reverse_client); // cause the connection report to show reverse
+          Mutex_Lock( &groupCond );
+	  thread->bidirhdr->refcount++;
+          Mutex_Unlock( &groupCond );
+	  thread_start(reverse_client);
       } else {
-	fprintf(stderr, "Reverse test failed to start per thread settings or socket problem\n");
-	exit(1);
+	  fprintf(stderr, "Reverse test failed to start per thread settings or socket problem\n");
+	  exit(1);
       }
     }
     // There are a few different client startup modes
@@ -223,7 +229,7 @@ void client_init( thread_Settings *clients ) {
     // sum of multiple client threads
     Mutex_Lock( &groupCond );
     groupID--;
-    clients->multihdr = InitMulti( clients, groupID, MULTISUM);
+    clients->multihdr = InitMulti(clients, groupID, MULTISUM);
     Mutex_Unlock( &groupCond );
 
 #ifdef HAVE_THREAD

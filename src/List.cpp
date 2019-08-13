@@ -58,7 +58,7 @@
  * Global List and Mutex variables
  */
 Iperf_ListEntry *clients = NULL;
-Mutex clients_mutex;
+Mutex clients_mutex; // This is a list of active clients, mutex is to protect updates
 
 /*
  * Add Entry add to the List
@@ -72,6 +72,7 @@ void Iperf_pushback ( Iperf_ListEntry *add, Iperf_ListEntry **root ) {
  * Delete Entry del from the List
  */
 void Iperf_delete ( iperf_sockaddr *del, Iperf_ListEntry **root ) {
+    Mutex_Lock( &clients_mutex );
     Iperf_ListEntry *temp = Iperf_present( del, *root );
     if ( temp != NULL ) {
         if ( temp == *root ) {
@@ -88,6 +89,7 @@ void Iperf_delete ( iperf_sockaddr *del, Iperf_ListEntry **root ) {
         }
         delete temp;
     }
+    Mutex_Unlock( &clients_mutex );
 }
 
 /*

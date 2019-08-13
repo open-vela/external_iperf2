@@ -91,6 +91,8 @@ static int burstipg_set = 0;
 static int isochronous = 0;
 #endif
 
+extern Mutex groupCond;
+
 void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtSettings );
 // apply compound settings after the command line has been fully parsed
 void Settings_ModalOptions( thread_Settings *mExtSettings );
@@ -367,6 +369,14 @@ void Settings_Destroy( thread_Settings *mSettings) {
 #ifdef HAVE_ISOCHRONOUS
     DELETE_ARRAY( mSettings->mIsochronousStr );
 #endif
+    // decrease the reference counter for mutliheaders
+    // and check to free the multiheader
+    Mutex_Lock( &groupCond );
+    if (mSettings->multihdr && (--mSettings->multihdr->refcount <= 0))
+        DELETE_PTR(mSettings->multihdr);
+    if (mSettings->bidirhdr && (--mSettings->bidirhdr->refcount <= 0))
+        DELETE_PTR(mSettings->bidirhdr);
+    Mutex_Unlock( &groupCond );
     DELETE_PTR( mSettings );
 } // end ~Settings
 

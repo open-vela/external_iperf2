@@ -200,11 +200,8 @@ void Server::RunTCP( void ) {
 	ReportPacket( mSettings->reporthdr, reportstruct );
     }
     CloseReport( mSettings->reporthdr );
-
-    Mutex_Lock( &clients_mutex );
-    Iperf_delete( &(mSettings->peer), &clients );
-    Mutex_Unlock( &clients_mutex );
     EndReport( mSettings->reporthdr );
+    Iperf_delete( &(mSettings->peer), &clients );
 }
 
 void Server::InitKernelTimeStamping (void) {
@@ -590,12 +587,8 @@ void Server::RunUDP( void ) {
 	write_UDP_AckFIN( );
     }
 
-    Mutex_Lock( &clients_mutex );
-    Iperf_delete( &(mSettings->peer), &clients );
-    Mutex_Unlock( &clients_mutex );
-
-    DELETE_PTR( reportstruct );
     EndReport( mSettings->reporthdr );
+    Iperf_delete( &(mSettings->peer), &clients );
 }
 // end Recv
 
