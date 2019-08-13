@@ -1078,7 +1078,7 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 		(*reporthdr->packet_handler)(reporthdr, packet);
 	    }
 	    if (reporthdr->bidirreport) {
-		reporthdr->bidirreport->report.info.TotalLen += packet->packetLen;
+		reporthdr->bidirreport->report.TotalLen += packet->packetLen;
 	    }
 	}
 	if (reporthdr->packetring->consumerdone) {
