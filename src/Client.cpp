@@ -76,6 +76,8 @@ const int    kBytes_to_Bits = 8;
 # define INITIAL_PACKETID 0
 #endif
 
+extern Condition MultiBarrier;
+
 Client::Client( thread_Settings *inSettings ) {
 #ifdef HAVE_THREAD_DEBUG
   thread_debug("Client thread started in constructor (%x/%x)", inSettings->flags, inSettings->flags_extend);
@@ -152,11 +154,11 @@ Client::Client( thread_Settings *inSettings ) {
 
     // let the reporter thread go first in the case of -P greater than 1
     if (mSettings->multihdr) {
-        Condition_Lock(mSettings->multihdr->await_reporter);
-	while (!mSettings->multihdr->reporter_running) {
-	    Condition_Wait(&mSettings->multihdr->await_reporter);
+        Condition_Lock(reporter_state.await_reporter);
+	while (!reporter_state.reporter_running) {
+	    Condition_Wait(&reporter_state.await_reporter);
 	}
-        Condition_Unlock(mSettings->multihdr->await_reporter);
+        Condition_Unlock(reporter_state.await_reporter);
     }
 
     // ServerReverse traffic threads don't need a new connect()
@@ -184,11 +186,11 @@ Client::Client( thread_Settings *inSettings ) {
 	        // completing the connect() w/o going to close()
 	        // by leveraging this barrier
 #ifdef HAVE_THREAD_DEBUG
-	        thread_debug("Barrier client on condition %p", (void *)mSettings->multihdr);
+	        thread_debug("Barrier client on condition %p", (void *)MultiBarrier);
 #endif
 	        BarrierClient(mSettings->multihdr);
 #ifdef HAVE_THREAD_DEBUG
-	        thread_debug("Barrier done on condition %p", (void *)mSettings->multihdr);
+	        thread_debug("Barrier done on condition %p", (void *)MultiBarrier);
 #endif
 	    }
 	}
@@ -218,7 +220,7 @@ Client::Client( thread_Settings *inSettings ) {
 	    // i.e. before their traffic run loops
             if (reporthdr->multireport) {
 	        // syncronize watches on my mark......
-	        BarrierClient(mSettings->multihdr);
+	        BarrierClient(reporthdr->multireport);
 		now.setnow();
 	    }
 #endif
@@ -227,8 +229,8 @@ Client::Client( thread_Settings *inSettings ) {
 	    reporthdr->report.nextTime = reporthdr->report.startTime;
 	    TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
 	    if (reporthdr->multireport) {
-	        reporthdr->multireport->report->startTime = reporthdr->report.startTime;
-	        reporthdr->multireport->report->nextTime = reporthdr->report.nextTime;
+	        reporthdr->multireport->report.startTime = reporthdr->report.startTime;
+	        reporthdr->multireport->report.nextTime = reporthdr->report.nextTime;
 	    }
 	}
 	if (mSettings->reporthdr) {
@@ -255,9 +257,7 @@ Client::~Client() {
         WARN_errno( rc == SOCKET_ERROR, "close" );
     }
     DELETE_ARRAY( mBuf );
-    if (!isConnectOnly(mSettings) && !isReverse(mSettings)) {
-      FreeReport(myJob);
-    }
+    FreeReport(myJob);
 } // end ~Client
 
 

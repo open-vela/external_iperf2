@@ -274,19 +274,19 @@ sInterupted == SIGALRM
             // See if we need to do summing
             Mutex_Lock( &clients_mutex );
             exist = Iperf_hostpresent( &server->peer, clients);
-
+            Mutex_Lock( &groupCond );
             if ( exist != NULL ) {
                 // Copy group ID
                 listtemp->holder = exist->holder;
+		exist->holder->refcount++;
                 server->multihdr = exist->holder;
             } else {
-                Mutex_Lock( &groupCond );
+		exist->holder->refcount = 1;
                 groupID--;
                 listtemp->holder = InitMulti( server, groupID, MULTISUM);
                 server->multihdr = listtemp->holder;
-                Mutex_Unlock( &groupCond );
             }
-
+            Mutex_Unlock( &groupCond );
 
 	    // Perform L2 setup if needed
 	    if (isUDP(mSettings) && (isL2LengthCheck(mSettings) || isL2LengthCheck(server))) {
@@ -1087,19 +1087,19 @@ void Listener::UDPSingleServer( ) {
 
         // See if we need to do summing
         exist = Iperf_hostpresent( &server->peer, clients);
-
+        Mutex_Lock( &groupCond );
         if ( exist != NULL ) {
             // Copy group ID
             listtemp->holder = exist->holder;
             server->multihdr = exist->holder;
+	    exist->holder->refcount++;
         } else {
-            Mutex_Lock( &groupCond );
+	    exist->holder->refcount = 1;
             groupID--;
             listtemp->holder = InitMulti( server, groupID, MULTISUM);
             server->multihdr = listtemp->holder;
-            Mutex_Unlock( &groupCond );
         }
-
+        Mutex_Unlock( &groupCond );
         // Store entry in connection list
         Iperf_pushback( listtemp, &clients );
 
