@@ -186,11 +186,11 @@ Client::Client( thread_Settings *inSettings ) {
 	        // completing the connect() w/o going to close()
 	        // by leveraging this barrier
 #ifdef HAVE_THREAD_DEBUG
-	        thread_debug("Barrier client on condition %p", (void *)MultiBarrier);
+	        thread_debug("Barrier client on condition %p", (void *)&MultiBarrier);
 #endif
 	        BarrierClient(mSettings->multihdr);
 #ifdef HAVE_THREAD_DEBUG
-	        thread_debug("Barrier done on condition %p", (void *)MultiBarrier);
+	        thread_debug("Barrier done on condition %p", (void *)&MultiBarrier);
 #endif
 	    }
 	}
