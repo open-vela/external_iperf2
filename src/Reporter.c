@@ -129,7 +129,10 @@ void PrintMSS( ReporterData *stats );
 static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *packet);
 static void output_missed_reports(ReporterData *stats, ReportStruct *packet);
 static void output_missed_multireports(ReporterData *stats, ReportStruct *packet);
-static void output_transfer_report(ReporterData *stats);
+static void output_transfer_report_client_tcp(ReporterData *stats);
+static void output_transfer_report_client_udp(ReporterData *stats);
+static void output_transfer_report_server_tcp(ReporterData *stats);
+static void output_transfer_report_server_udp(ReporterData *stats);
 static void output_transfer_final_report(ReporterData *stats);
 static void output_transfer_sum_report(ReporterData *stats);
 static void output_transfer_sum_final_report(ReporterData *stats);
@@ -185,7 +188,6 @@ MultiHeader* InitMulti(thread_Settings *agent, int inID, MultiHdrType type) {
 	    }
 	    if ( isUDP( agent ) ) {
 		multihdr->report.info.mUDP = (char)agent->mThreadMode;
-		multihdr->report.info.mUDP = 0;
 	    } else {
 		multihdr->report.info.mTCP = (char)agent->mThreadMode;
 	    }
@@ -284,12 +286,19 @@ void InitDataReport(thread_Settings *mSettings) {
 	    case kMode_Server :
 		if (isUDP(mSettings)) {
 		    reporthdr->packet_handler = reporter_handle_packet_server_udp;
+		    reporthdr->output_handler = output_transfer_report_server_udp;
 		} else {
 		    reporthdr->packet_handler = reporter_handle_packet_server_tcp;
+		    reporthdr->output_handler = output_transfer_report_server_tcp;
 		}
 		break;
 	    case kMode_Client :
 		reporthdr->packet_handler = reporter_handle_packet_client;
+		if (isUDP(mSettings)) {
+		    reporthdr->output_handler = output_transfer_report_client_udp;
+		} else {
+		    reporthdr->output_handler = output_transfer_report_client_tcp;
+		}
 		break;
 	    case kMode_Unknown :
 	    case kMode_Reporter :
@@ -962,7 +971,7 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
         // In the (hopefully unlikely event) the reporter fell behind
         // ouput the missed reports to catch up
         output_missed_reports(&reporthdr->report, packet);
-        output_transfer_report(&reporthdr->report);
+	(*reporthdr->output_handler)(&reporthdr->report);
 	TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
         nextring_event = 1;
     }
@@ -1398,6 +1407,7 @@ static inline void output_missed_multireports(ReporterData *stats, ReportStruct 
 
 // Actions required after an interval report has been outputted
 static inline void reset_transfer_stats(ReporterData *stats) {
+    stats->info.startTime = stats->info.endTime;
     stats->lastOutofOrder = stats->cntOutofOrder;
     if (stats->info.cntError < 0) {
 	stats->info.cntError = 0;
@@ -1453,12 +1463,8 @@ static inline void reset_transfer_stats(ReporterData *stats) {
     }
 }
 
-// This is the primary interval report
-static void output_transfer_report(ReporterData *stats) {
-#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-  if (stats->info.mEnhanced && (stats->info.mTCP == kMode_Client))
-        gettcpistats(stats, 0);
-#endif
+// These are the output handlers that get the reports ready and then prints them
+static void output_transfer_report_server_udp(ReporterData *stats) {
     stats->info.cntOutofOrder = stats->cntOutofOrder - stats->lastOutofOrder;
     // assume most of the  time out-of-order packets are not
     // duplicate packets, so conditionally subtract them from the lost packets.
@@ -1467,7 +1473,43 @@ static void output_transfer_report(ReporterData *stats) {
     stats->info.cntDatagrams = ((stats->info.mUDP == kMode_Server) ? stats->PacketID - stats->lastDatagrams :
 				stats->cntDatagrams - stats->lastDatagrams);
     stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
-    stats->info.free = 0;
+    reporter_print(stats, TRANSFER_REPORT, 0);
+    reset_transfer_stats(stats);
+}
+
+static void output_transfer_report_server_tcp(ReporterData *stats) {
+    stats->info.cntOutofOrder = stats->cntOutofOrder - stats->lastOutofOrder;
+    // assume most of the  time out-of-order packets are not
+    // duplicate packets, so conditionally subtract them from the lost packets.
+    stats->info.cntError = stats->cntError - stats->lastError;
+    stats->info.cntError -= stats->info.cntOutofOrder;
+    stats->info.cntDatagrams = ((stats->info.mUDP == kMode_Server) ? stats->PacketID - stats->lastDatagrams :
+				stats->cntDatagrams - stats->lastDatagrams);
+    stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
+    reporter_print(stats, TRANSFER_REPORT, 0);
+    reset_transfer_stats(stats);
+}
+
+static void output_transfer_report_client_udp(ReporterData *stats) {
+    stats->info.cntOutofOrder = stats->cntOutofOrder - stats->lastOutofOrder;
+    // assume most of the  time out-of-order packets are not
+    // duplicate packets, so conditionally subtract them from the lost packets.
+    stats->info.cntError = stats->cntError - stats->lastError;
+    stats->info.cntError -= stats->info.cntOutofOrder;
+    stats->info.cntDatagrams = ((stats->info.mUDP == kMode_Server) ? stats->PacketID - stats->lastDatagrams :
+				stats->cntDatagrams - stats->lastDatagrams);
+    stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
+    reporter_print(stats, TRANSFER_REPORT, 0);
+    reset_transfer_stats(stats);
+}
+
+static void output_transfer_report_client_tcp(ReporterData *stats) {
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+  if (stats->info.mEnhanced && (stats->info.mTCP == kMode_Client))
+        gettcpistats(stats, 0);
+#endif
+    stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
+    stats->info.endTime = TimeDifference(stats->nextTime, stats->startTime);
     reporter_print(stats, TRANSFER_REPORT, 0);
     reset_transfer_stats(stats);
 }
