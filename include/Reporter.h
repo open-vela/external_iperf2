@@ -316,14 +316,17 @@ typedef enum MultiHdrType {
     MULTIBIDIR
 } MultiHdrType;
 
+typedef struct ReporterMutex {
+    Condition await_reporter;
+    int reporter_running;
+} ReporterMutex;
+
 typedef struct MultiHeader {
     int groupID;
     int threads;
+    int refcount;
     MultiHdrType type;
-    ReporterData *report;
-    Condition barrier;
-    Condition await_reporter;
-    int reporter_running;
+    ReporterData report;
 } MultiHeader;
 
 typedef struct PacketRing {
@@ -378,6 +381,8 @@ void ReportServerUDP( struct thread_Settings *agent, struct server_hdr *server )
 ReportHeader *ReportSettings( struct thread_Settings *agent );
 void ReportConnections( struct thread_Settings *agent );
 void reporter_peerversion (struct thread_Settings *inSettings, int upper, int lower);
+
+extern ReporterMutex reporter_state;
 
 extern report_connection connection_reports[];
 
