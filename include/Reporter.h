@@ -354,7 +354,7 @@ typedef struct ReportHeader {
     ReporterData report;
     // function pointer for per packet processing
     void (*packet_handler) (struct ReportHeader *report, ReportStruct *packet);
-    void (*output_handler) (struct ReporterData *stats, int final);
+    void (*output_handler) (struct ReporterData *stats, ReporterData *sumstats, int final);
     MultiHeader *multireport;
     MultiHeader *bidirreport;
     struct ReportHeader *next;
