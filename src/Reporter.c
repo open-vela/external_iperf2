@@ -129,10 +129,10 @@ void PrintMSS( ReporterData *stats );
 static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *packet);
 static void output_missed_reports(ReporterData *stats, ReportStruct *packet);
 static void output_missed_multireports(ReporterData *stats, ReportStruct *packet);
-static void output_transfer_report_client_tcp(ReporterData *stats, int final);
-static void output_transfer_report_client_udp(ReporterData *stats, int final);
-static void output_transfer_report_server_tcp(ReporterData *stats, int final);
-static void output_transfer_report_server_udp(ReporterData *stats, int final);
+static void output_transfer_report_client_tcp(ReporterData *stats, ReporterData *sumstats, int final);
+static void output_transfer_report_client_udp(ReporterData *stats, ReporterData *sumstats, int final);
+static void output_transfer_report_server_tcp(ReporterData *stats, ReporterData *sumstats, int final);
+static void output_transfer_report_server_udp(ReporterData *stats, ReporterData *sumstats, int final);
 static void output_transfer_sum_report(ReporterData *stats);
 static void output_transfer_sum_final_report(ReporterData *stats);
 static void output_transfer_bidir_report(ReporterData *stats);
@@ -143,7 +143,7 @@ static void reporter_handle_packet_server_tcp(ReportHeader *report, ReportStruct
 static void reporter_handle_packet_client(ReportHeader *report, ReportStruct *packet);
 static void InitDataReport(struct thread_Settings *mSettings);
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-static void gettcpistats(ReporterData *stats, int final);
+static void gettcpistats(ReporterData *stats, ReporterData *sumstats, int final);
 #endif
 static PacketRing * init_packetring(int count);
 
@@ -1009,7 +1009,8 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
         // In the (hopefully unlikely event) the reporter fell behind
         // ouput the missed reports to catch up
         output_missed_reports(&reporthdr->report, packet);
-	(*reporthdr->output_handler)(&reporthdr->report, 0);
+	ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
+	(*reporthdr->output_handler)(&reporthdr->report, sumstats, 0);
 	TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
         nextring_event = 1;
     }
@@ -1130,7 +1131,8 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 	    }
 	}
 	if (reporthdr->packetring->consumerdone) {
-	    (*reporthdr->output_handler)(&reporthdr->report, 1);
+	    ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
+	    (*reporthdr->output_handler)(&reporthdr->report, sumstats, 1);
 	    if (reporthdr->bidirreport)
 		output_transfer_bidir_final_report(&reporthdr->bidirreport->report);
 	    if ((reporthdr->multireport) && (reporthdr->multireport->refcount > 1))
@@ -1346,7 +1348,7 @@ inline void reporter_handle_packet_server_udp(ReportHeader *reporthdr, ReportStr
     if (reporthdr->multireport) {
 	ReporterData *sumdata = &reporthdr->multireport->report;
 	Transfer_Info *sumstats = &reporthdr->multireport->report.info;
-	sumstats->TotalLen += packet->packetLen;
+	sumdata->TotalLen += packet->packetLen;
 	reporter_handle_packet_pps(sumdata, sumstats);
     }
 }
@@ -1387,7 +1389,7 @@ void reporter_handle_packet_client(ReportHeader *reporthdr, ReportStruct *packet
 
 
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-static void gettcpistats (ReporterData *stats, int final) {
+static void gettcpistats (ReporterData *stats, ReporterData *sumstats, int final) {
     static int cnt = 0;
     struct tcp_info tcp_internal;
     socklen_t tcp_info_length = sizeof(struct tcp_info);
@@ -1418,6 +1420,10 @@ static void gettcpistats (ReporterData *stats, int final) {
 	cnt++;
 	stats->info.sock_callstats.write.meanrtt = (stats->info.sock_callstats.write.meanrtt * ((double) (cnt - 1) / (double) cnt)) + ((double) (tcp_internal.tcpi_rtt) / (double) cnt);
 	stats->info.sock_callstats.write.rtt = tcp_internal.tcpi_rtt;
+	if (sumstats) {
+	  sumstats->info.sock_callstats.write.TCPretry += retry;
+	  sumstats->info.sock_callstats.write.totTCPretry += retry;
+	}
     }
     if (final) {
         stats->info.sock_callstats.write.rtt = stats->info.sock_callstats.write.meanrtt;
@@ -1516,7 +1522,7 @@ static inline void reset_transfer_stats(ReporterData *stats) {
 }
 
 // These are the output handlers that get the reports ready and then prints them
-static void output_transfer_report_server_udp(ReporterData *stats, int final) {
+static void output_transfer_report_server_udp(ReporterData *stats, ReporterData *sumstats, int final) {
     stats->info.cntOutofOrder = stats->cntOutofOrder - stats->lastOutofOrder;
     // assume most of the  time out-of-order packets are not
     // duplicate packets, so conditionally subtract them from the lost packets.
@@ -1529,7 +1535,7 @@ static void output_transfer_report_server_udp(ReporterData *stats, int final) {
     reset_transfer_stats(stats);
 }
 
-static void output_transfer_report_server_tcp(ReporterData *stats, int final) {
+static void output_transfer_report_server_tcp(ReporterData *stats, ReporterData *sumstats, int final) {
     stats->info.cntOutofOrder = stats->cntOutofOrder - stats->lastOutofOrder;
     // assume most of the  time out-of-order packets are not
     // duplicate packets, so conditionally subtract them from the lost packets.
@@ -1542,7 +1548,7 @@ static void output_transfer_report_server_tcp(ReporterData *stats, int final) {
     reset_transfer_stats(stats);
 }
 
-static void output_transfer_report_client_udp(ReporterData *stats, int final) {
+static void output_transfer_report_client_udp(ReporterData *stats, ReporterData *sumstats, int final) {
     stats->info.cntOutofOrder = stats->cntOutofOrder - stats->lastOutofOrder;
     // assume most of the  time out-of-order packets are not
     // duplicate packets, so conditionally subtract them from the lost packets.
@@ -1555,10 +1561,10 @@ static void output_transfer_report_client_udp(ReporterData *stats, int final) {
     reset_transfer_stats(stats);
 }
 
-static void output_transfer_report_client_tcp(ReporterData *stats, int final) {
+static void output_transfer_report_client_tcp(ReporterData *stats, ReporterData *sumstats, int final) {
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
   if (stats->info.mEnhanced && (stats->info.mTCP == kMode_Client))
-        gettcpistats(stats, 0);
+    gettcpistats(stats, sumstats, 0);
 #endif
   if (final) {
     stats->info.sock_callstats.write.WriteErr = stats->info.sock_callstats.write.totWriteErr;
@@ -1581,7 +1587,7 @@ static void output_transfer_report_client_tcp(ReporterData *stats, int final) {
 static void output_transfer_final_report_client_tcp(ReporterData *stats) {
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
     if ((stats->info.mEnhanced && stats->info.mTCP == kMode_Client) && (!stats->info.sock_callstats.write.up_to_date))
-        gettcpistats(stats, 1);
+        gettcpistats(stats, NULL, 1);
 #endif
         stats->info.cntOutofOrder = stats->cntOutofOrder;
         // assume most of the time out-of-order packets are not
@@ -1654,6 +1660,8 @@ static void output_transfer_final_report_client_tcp(ReporterData *stats) {
  * Handles summing of threads
  */
 static void output_transfer_sum_report(ReporterData *stats) {
+    stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
+    stats->info.endTime = TimeDifference(stats->nextTime, stats->startTime);
     reporter_print( stats, MULTIPLE_REPORT, 0 );
     reset_transfer_stats(stats);
 }
