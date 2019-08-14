@@ -277,15 +277,15 @@ void FreeReport(ReportHeader *reporthdr) {
 #endif
 	  }
 	}
-    }
-    if (reporthdr->bidirreport && (--reporthdr->bidirreport->refcount <= 0)) {
+	if (reporthdr->bidirreport && (--reporthdr->bidirreport->refcount <= 0)) {
 #ifdef HAVE_THREAD_DEBUG
-        thread_debug("Free bidir multiheader %p", (void *)reporthdr->bidirreport);
+	  thread_debug("Free bidir multiheader %p", (void *)reporthdr->bidirreport);
 #endif
-        free(reporthdr->bidirreport);
+	  free(reporthdr->bidirreport);
+	}
+	Mutex_Unlock( &groupCond );
+	free(reporthdr);
     }
-    Mutex_Unlock( &groupCond );
-    free(reporthdr);
 }
 
 void InitDataReport(thread_Settings *mSettings) {
@@ -298,11 +298,11 @@ void InitDataReport(thread_Settings *mSettings) {
     if ( reporthdr != NULL ) {
 	mSettings->reporthdr = reporthdr;
 	reporthdr->multireport = mSettings->multihdr;
-	Mutex_Lock( &groupCond );
 	if (reporthdr->multireport) {
+	    Mutex_Lock( &groupCond );
 	    reporthdr->multireport->refcount++;
+	    Mutex_Unlock( &groupCond );
 	}
-	Mutex_Unlock( &groupCond );
 	reporthdr->bidirreport = mSettings->bidirhdr;
 	data = &reporthdr->report;
 	data->mThreadMode = mSettings->mThreadMode;
