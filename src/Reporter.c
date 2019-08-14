@@ -572,7 +572,7 @@ static inline ReportStruct *dequeue_packetring(ReportHeader* agent) {
     // when the ring goes from having something to empty
     if (pr->producer == pr->consumer) {
 #ifdef HAVE_THREAD_DEBUG
-	// thread_debug( "Consumer signal packet ring %p empty per %p", (void *)pr, (void *)&pr->await_consumer);
+       // thread_debug( "Consumer signal packet ring %p empty per %p", (void *)pr, (void *)&pr->await_consumer);
 #endif
 	Condition_Signal(&pr->await_consumer);
     }
@@ -606,6 +606,11 @@ static inline int getcount_packetring(ReportHeader *agent) {
  */
 void ReportPacket( ReportHeader* agent, ReportStruct *packet ) {
     if ( agent != NULL ) {
+#ifdef HAVE_THREAD_DEBUG
+	if (packet->packetID < 0) {
+	  thread_debug("Reporting last packet for %p  qdepth=%d", (void *) agent, getcount_packetring(agent));
+	}
+#endif
         enqueue_packetring(agent, packet);
 #ifndef HAVE_THREAD
         /*
@@ -632,7 +637,9 @@ void CloseReport(ReportHeader *agent) {
          */
         packet.packetID = -1;
         packet.packetLen = 0;
-        ReportPacket( agent, &packet );
+	packet.packetTime.tv_sec = 0;
+	packet.packetTime.tv_usec = 0;
+        ReportPacket(agent, &packet);
     }
 }
 
@@ -643,9 +650,13 @@ void CloseReport(ReportHeader *agent) {
  */
 void EndReport( ReportHeader *agent ) {
     if ( agent != NULL ) {
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug( "Traffic thread awaiting reporter to be done with %p", (void *)agent);
+#endif
         Condition_Lock (agent->packetring->await_consumer);
 	while (!agent->packetring->consumerdone) {
 	    Condition_TimedWait(&agent->packetring->await_consumer, 1);
+	    // printf("Consumer done may be stuck\n");
 	}
         Condition_Unlock (agent->packetring->await_consumer);
 #ifdef HAVE_THREAD_DEBUG
@@ -1065,7 +1076,7 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
         // If there are more packets to process then handle them
 	ReportStruct *packet = NULL;
 	int nextring_event = 0;
-        while ((packet = dequeue_packetring(reporthdr)) && !nextring_event) {
+        while (!nextring_event && (packet = dequeue_packetring(reporthdr))) {
 	    // Increment the total packet count processed by this thread
 	    // this will be used to make decisions on if the reporter
 	    // thread should add some delay to eliminate cpu thread
@@ -1076,14 +1087,15 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 	    // Check for a final packet event on this packet ring
 	    if (packet->packetID < 0) {
 		reporthdr->packetring->consumerdone = 1;
+		// printf("last packet event detected\n"); fflush(stdout);
 		reporthdr->delaycounter = consumption_detector.delay_counter;
 		need_free = 1;
 	    } else if (!TimeZero(reporthdr->report.intervalTime)) {
 		// Check for interval reports
-		nextring_event = condprint_interval_reports(reporthdr, packet);
+	        nextring_event = (condprint_interval_reports(reporthdr, packet) && !TimeZero(packet->packetTime));
 	    }
 	    // Do the packet accounting per the handler type
-	    if (reporthdr->packet_handler) {
+	    if (!TimeZero(packet->packetTime) && reporthdr->packet_handler) {
 		(*reporthdr->packet_handler)(reporthdr, packet);
 	    }
 	    if (reporthdr->bidirreport) {
@@ -1104,6 +1116,7 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
     // is to free the report's memory which was dynamically allocated
     // by another thread.  This is a good thing to fix with a c++
     // version of the reporter
+
     return need_free;
 }
 

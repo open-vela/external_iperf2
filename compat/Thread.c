@@ -236,7 +236,7 @@ void thread_start( struct thread_Settings* thread ) {
  * preemptively stop a thread.
  * ------------------------------------------------------------------- */
 void thread_stop( struct thread_Settings* thread ) {
-
+  printf("in thread stop\n");
 #ifdef HAVE_THREAD
   #ifdef HAVE_THREAD_DEBUG
   thread_debug("Thread stop invoked %p", (void *)thread);
