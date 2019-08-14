@@ -338,7 +338,6 @@ void Settings_Copy( thread_Settings *from, thread_Settings **into ) {
 #ifdef HAVE_CLOCK_NANOSLEEP
     (*into)->txstart = from->txstart;
 #endif
-    (*into)->multihdr = from->multihdr;
     // Zero out certain entries
     (*into)->mTID = thread_zeroid();
     (*into)->runNext = NULL;
@@ -369,22 +368,6 @@ void Settings_Destroy( thread_Settings *mSettings) {
 #ifdef HAVE_ISOCHRONOUS
     DELETE_ARRAY( mSettings->mIsochronousStr );
 #endif
-    // decrease the reference counter for mutliheaders
-    // and check to free the multiheader
-    Mutex_Lock( &groupCond );
-    if (mSettings->multihdr && (--mSettings->multihdr->refcount <= 0)) {
-#ifdef HAVE_THREAD_DEBUG
-      thread_debug("Free sum multiheader %p", (void *)mSettings->multihdr);
-#endif
-      DELETE_PTR(mSettings->multihdr);
-    }
-    if (mSettings->bidirhdr && (--mSettings->bidirhdr->refcount <= 0)) {
-#ifdef HAVE_THREAD_DEBUG
-        thread_debug("Free bidir multiheader %p", (void *)mSettings->bidirhdr);
-#endif
-        DELETE_PTR(mSettings->bidirhdr);
-    }
-    Mutex_Unlock( &groupCond );
     DELETE_PTR( mSettings );
 } // end ~Settings
 
