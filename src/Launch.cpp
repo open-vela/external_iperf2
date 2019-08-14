@@ -148,7 +148,8 @@ void client_spawn( thread_Settings *thread ) {
       if (isBidir(thread)) {
           Mutex_Lock( &groupCond );
 	  thread->bidirhdr = InitMulti(thread, thread->mSock, MULTIBIDIR);
-	  thread->bidirhdr->refcount = 1;
+	  if (thread->bidirhdr)
+	    thread->bidirhdr->refcount = 1;
           Mutex_Unlock( &groupCond );
       } else {
 	  thread->bidirhdr = NULL;
@@ -162,10 +163,12 @@ void client_spawn( thread_Settings *thread ) {
 	  reverse_client->mThreadMode = kMode_Server;
 	  reverse_client->bidirhdr = thread->bidirhdr;
 	  setServerReverse(reverse_client); // cause the connection report to show reverse
-          Mutex_Lock( &groupCond );
-	  thread->bidirhdr->refcount++;
-          Mutex_Unlock( &groupCond );
-	  thread_start(reverse_client);
+	  if (thread->bidirhdr) {
+	    Mutex_Lock( &groupCond );
+	    thread->bidirhdr->refcount++;
+	    Mutex_Unlock( &groupCond );
+	    thread_start(reverse_client);
+	  }
       } else {
 	  fprintf(stderr, "Reverse test failed to start per thread settings or socket problem\n");
 	  exit(1);
@@ -224,13 +227,14 @@ void client_init( thread_Settings *clients ) {
     setReport(clients);
     // See if we need to start a listener as well
     Settings_GenerateListenerSettings( clients, &next );
-
-    // Create a multiple report header to handle reporting the
-    // sum of multiple client threads
-    Mutex_Lock( &groupCond );
-    groupID--;
-    clients->multihdr = InitMulti(clients, groupID, MULTISUM);
-    Mutex_Unlock( &groupCond );
+    if (clients->mThreads > 1) {
+      // Create a multiple report header to handle reporting the
+      // sum of multiple client threads
+      Mutex_Lock( &groupCond );
+      groupID--;
+      clients->multihdr = InitMulti(clients, groupID, MULTISUM);
+      Mutex_Unlock( &groupCond );
+    }
 
 #ifdef HAVE_THREAD
     if ( next != NULL ) {
