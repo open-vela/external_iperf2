@@ -1071,10 +1071,10 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 	    // thread should add some delay to eliminate cpu thread
 	    // thrashing,
 	    consumption_detector.accounted_packets--;
+	    // update fields common to TCP and UDP, client and server which is bytes
+	    reporthdr->report.TotalLen += packet->packetLen;
 	    // Check for a final packet event on this packet ring
 	    if (packet->packetID < 0) {
-		// update fields common to TCP and UDP, client and server which is bytes
-		reporthdr->report.TotalLen += packet->packetLen;
 		reporthdr->packetring->consumerdone = 1;
 		reporthdr->delaycounter = consumption_detector.delay_counter;
 		need_free = 1;
