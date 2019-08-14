@@ -1370,6 +1370,9 @@ void reporter_handle_packet_client(ReportHeader *reporthdr, ReportStruct *packet
     if (!packet->emptyreport && isUDP(data)) {
 	reporter_handle_packet_pps(data, stats);
     }
+    if (reporthdr->multireport) {
+        reporthdr->multireport->report.TotalLen += packet->packetLen;
+    }
 }
 
 
