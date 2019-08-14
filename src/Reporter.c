@@ -1371,7 +1371,17 @@ void reporter_handle_packet_client(ReportHeader *reporthdr, ReportStruct *packet
 	reporter_handle_packet_pps(data, stats);
     }
     if (reporthdr->multireport) {
+        Transfer_Info *sumstats = &reporthdr->multireport->report.info;
         reporthdr->multireport->report.TotalLen += packet->packetLen;
+	if (packet->errwrite) {
+	  if (packet->errwrite != WriteErrNoAccount) {
+	    sumstats->sock_callstats.write.WriteErr++;
+	    sumstats->sock_callstats.write.totWriteErr++;
+	  }
+	} else {
+	  sumstats->sock_callstats.write.WriteCnt++;
+	  sumstats->sock_callstats.write.totWriteCnt++;
+	}
     }
 }
 
