@@ -377,18 +377,6 @@ void Client::InitTrafficLoop (void) {
      */
 
     if (isModeTime(mSettings)) {
-#ifdef HAVE_SETITIMER
-        if (mSettings->mMode == kTest_Normal) {
-	    int err;
-	    struct itimerval it;
-	    memset (&it, 0, sizeof (it));
-	    it.it_value.tv_sec = (int) (mSettings->mAmount / 100.0);
-	    it.it_value.tv_usec = (int) (10000 * (mSettings->mAmount -
-						  it.it_value.tv_sec * 100.0));
-	    err = setitimer( ITIMER_REAL, &it, NULL );
-	    FAIL_errno( err != 0, "setitimer", mSettings );
-	}
-#endif
         mEndTime.setnow();
         mEndTime.add( mSettings->mAmount / 100.0 );
     }
@@ -512,18 +500,9 @@ void Client::RunTCP( void ) {
 	    totLen += reportstruct->packetLen;
 	    reportstruct->errwrite=WriteNoErr;
 	}
-// skip the packet time setting syscall() for the case of no interval reporting
-// or packet reporting needed and an itimer is available to stop the traffic/while loop
-#ifdef HAVE_SETITIMER
-	if ((mSettings->mInterval > 0) || isEnhanced(mSettings) ||
-	    mSettings->mMode != kTest_Normal)
-#endif
-	{
-	    now.setnow();
-	    reportstruct->packetTime.tv_sec = now.getSecs();
-	    reportstruct->packetTime.tv_usec = now.getUsecs();
-	}
-
+	now.setnow();
+	reportstruct->packetTime.tv_sec = now.getSecs();
+	reportstruct->packetTime.tv_usec = now.getUsecs();
 	if ((mSettings->mInterval > 0) || isEnhanced(mSettings)) {
             ReportPacket( mSettings->reporthdr, reportstruct );
         }
