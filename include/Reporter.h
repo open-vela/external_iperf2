@@ -374,7 +374,7 @@ void UpdateConnectionReport(struct thread_Settings *mSettings, ReportHeader *rep
 void BarrierClient(MultiHeader *agent);
 void PostReport(ReportHeader *agent);
 void ReportPacket( ReportHeader *agent, ReportStruct *packet );
-void CloseReport( ReportHeader *agent );
+void CloseReport( ReportHeader *agent,  ReportStruct *packet);
 void EndReport( ReportHeader *agent );
 void FreeReport(ReportHeader *agent);
 Transfer_Info* GetReport( ReportHeader *agent );
