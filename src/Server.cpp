@@ -199,7 +199,7 @@ void Server::RunTCP( void ) {
 	reportstruct->packetLen = totLen;
 	ReportPacket( mSettings->reporthdr, reportstruct );
     }
-    CloseReport( mSettings->reporthdr );
+    CloseReport( mSettings->reporthdr, reportstruct );
     EndReport( mSettings->reporthdr );
     Iperf_delete( &(mSettings->peer), &clients );
 }
@@ -579,7 +579,7 @@ void Server::RunUDP( void ) {
 
     }
 
-    CloseReport( mSettings->reporthdr );
+    CloseReport( mSettings->reporthdr, reportstruct );
 
     // send a acknowledgement back only if we're NOT receiving multicast
     if (!isMulticast( mSettings ) ) {

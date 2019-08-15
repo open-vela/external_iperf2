@@ -292,7 +292,7 @@ void Settings_Initialize( thread_Settings *main ) {
 void Settings_Copy( thread_Settings *from, thread_Settings **into ) {
     *into = new thread_Settings;
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Thread settings copy (malloc) from/to=%p/%p", (void *)from, (void *)*into);
+    thread_debug("Copy thread settings (malloc) from/to=%p/%p", (void *)from, (void *)*into);
 #endif
 
     memcpy( *into, from, sizeof(thread_Settings) );
@@ -355,7 +355,7 @@ void Settings_Copy( thread_Settings *from, thread_Settings **into ) {
 
 void Settings_Destroy( thread_Settings *mSettings) {
 #if HAVE_THREAD_DEBUG
-    thread_debug("Thread settings free=%p", mSettings);
+    thread_debug("Free thread settings=%p", mSettings);
 #endif
     DELETE_ARRAY( mSettings->mHost      );
     DELETE_ARRAY( mSettings->mLocalhost );
