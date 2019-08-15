@@ -1002,7 +1002,7 @@ void Listener::UDPSingleServer( ) {
                     ReportPacket( exist->server->reporthdr, reportstruct );
                     // stop timing
                     gettimeofday( &(reportstruct->packetTime), NULL );
-                    CloseReport( exist->server->reporthdr);
+                    CloseReport( exist->server->reporthdr, reportstruct);
 
                     if (rc > (int) (sizeof(UDP_datagram) + sizeof(server_hdr))) {
                         UDP_datagram *UDP_Hdr;
