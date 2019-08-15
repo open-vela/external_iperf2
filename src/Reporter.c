@@ -133,8 +133,7 @@ static void output_transfer_report_client_tcp(ReporterData *stats, ReporterData 
 static void output_transfer_report_client_udp(ReporterData *stats, ReporterData *sumstats, int final);
 static void output_transfer_report_server_tcp(ReporterData *stats, ReporterData *sumstats, int final);
 static void output_transfer_report_server_udp(ReporterData *stats, ReporterData *sumstats, int final);
-static void output_transfer_sum_report(ReporterData *stats);
-static void output_transfer_sum_final_report(ReporterData *stats);
+static void output_transfer_sum_report_client_tcp(ReporterData *stats, int final);
 static void output_transfer_bidir_report(ReporterData *stats);
 static void output_transfer_bidir_final_report(ReporterData *stats);
 static void reset_transfer_stats(ReporterData *stats);
@@ -322,6 +321,7 @@ void InitDataReport(thread_Settings *mSettings) {
 		    reporthdr->output_handler = output_transfer_report_client_udp;
 		} else {
 		    reporthdr->output_handler = output_transfer_report_client_tcp;
+		    reporthdr->output_sum_handler = output_transfer_sum_report_client_tcp;
 		}
 		break;
 	    case kMode_Unknown :
@@ -1025,7 +1025,7 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
     if (reporthdr->multireport  && (reporthdr->multireport->threads <= 0)) {
 	reporthdr->multireport->threads = reporthdr->multireport->refcount;
 	// output_missed_multireports(&reporthdr->multireport->report, packet);
-	output_transfer_sum_report(&reporthdr->multireport->report);
+	(*reporthdr->output_sum_handler)(&reporthdr->multireport->report, 0);
 	TimeAdd(reporthdr->multireport->report.nextTime, reporthdr->report.intervalTime);
     }
     return nextring_event;
@@ -1098,6 +1098,7 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
         // If there are more packets to process then handle them
 	ReportStruct *packet = NULL;
 	int nextring_event = 0;
+	int setconsumerdone  = 0;
         while (!nextring_event && (packet = dequeue_packetring(reporthdr))) {
 	    // Increment the total packet count processed by this thread
 	    // this will be used to make decisions on if the reporter
@@ -1108,7 +1109,7 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 	    reporthdr->report.TotalLen += packet->packetLen;
 	    // Check for a final packet event on this packet ring
 	    if (packet->packetID < 0) {
-		reporthdr->packetring->consumerdone = 1;
+	        setconsumerdone = 1;
 		// printf("last packet event detected\n"); fflush(stdout);
 		reporthdr->delaycounter = consumption_detector.delay_counter;
 		need_free = 1;
@@ -1127,17 +1128,18 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 		}
 	    }
 	}
-	if (reporthdr->packetring->consumerdone) {
-	    ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
-	    (*reporthdr->output_handler)(&reporthdr->report, sumstats, 1);
+	if (setconsumerdone) {
 	    if (reporthdr->bidirreport)
 		output_transfer_bidir_final_report(&reporthdr->bidirreport->report);
 	    if (reporthdr->multireport) {
 	        UpdateMultiHdrRefCounter(reporthdr->multireport, -1);
 		if (reporthdr->multireport->refcount <= 0) {
-		  output_transfer_sum_final_report(&reporthdr->multireport->report);
+		  (*reporthdr->output_sum_handler)(&reporthdr->multireport->report, 1);
 		}
 	    }
+	    ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
+	    (*reporthdr->output_handler)(&reporthdr->report, sumstats, 1);
+	    reporthdr->packetring->consumerdone = 1;
 	}
     }
     // need_free is a poor implementation.  It's done this way
@@ -1653,14 +1655,8 @@ static void output_transfer_final_report_client_tcp(ReporterData *stats) {
 /*
  * Handles summing of threads
  */
-static void output_transfer_sum_report(ReporterData *stats) {
-    stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
-    stats->info.endTime = TimeDifference(stats->nextTime, stats->startTime);
-    reporter_print( stats, MULTIPLE_REPORT, 0 );
-    reset_transfer_stats(stats);
-}
-
-static void output_transfer_sum_final_report(ReporterData *stats) {
+static void output_transfer_sum_report_client_tcp(ReporterData *stats, int final) {
+  if (final) {
     stats->info.sock_callstats.write.WriteErr = stats->info.sock_callstats.write.totWriteErr;
     stats->info.sock_callstats.write.WriteCnt = stats->info.sock_callstats.write.totWriteCnt;
     stats->info.sock_callstats.write.TCPretry = stats->info.sock_callstats.write.totTCPretry;
@@ -1668,6 +1664,12 @@ static void output_transfer_sum_final_report(ReporterData *stats) {
     stats->info.startTime = 0.0;
     stats->info.endTime = TimeDifference(stats->packetTime, stats->startTime);
     reporter_print( stats, MULTIPLE_REPORT, 1 );
+  } else {
+    stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
+    stats->info.endTime = TimeDifference(stats->nextTime, stats->startTime);
+    reporter_print( stats, MULTIPLE_REPORT, 0 );
+    reset_transfer_stats(stats);
+  }
 }
 
 static void output_transfer_bidir_report(ReporterData *stats) {
