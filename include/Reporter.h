@@ -97,12 +97,12 @@ typedef struct TransitStats {
     double totvdTransit;
 } TransitStats;
 
-#define BINCOUNT 8
+#define TCPREADBINCOUNT 8
 typedef struct ReadStats {
     int cntRead;
     int totcntRead;
-    int bins[BINCOUNT];
-    int totbins[BINCOUNT];
+    int bins[TCPREADBINCOUNT];
+    int totbins[TCPREADBINCOUNT];
     int binsize;
 } ReadStats;
 
@@ -385,6 +385,8 @@ void ReportConnections( struct thread_Settings *agent );
 void reporter_peerversion (struct thread_Settings *inSettings, int upper, int lower);
 
 extern ReporterMutex reporter_state;
+
+extern void UpdateMultiHdrRefCounter(MultiHeader *reporthdr, int val);
 
 extern report_connection connection_reports[];
 
