@@ -268,7 +268,9 @@ sInterupted == SIGALRM
 
             // Create an entry for the connection list
             listtemp = new Iperf_ListEntry;
-            memcpy(listtemp, &server->peer, sizeof(iperf_sockaddr));
+            memcpy(&listtemp->data, &server->peer, sizeof(iperf_sockaddr));
+            listtemp->holder = NULL;
+            listtemp->server = server;
             listtemp->next = NULL;
 
             // See if we need to do summing
@@ -276,15 +278,28 @@ sInterupted == SIGALRM
             exist = Iperf_hostpresent( &server->peer, clients);
             Mutex_Lock( &groupCond );
             if ( exist != NULL ) {
-                // Copy group ID
+                // Copy the multiheader
                 listtemp->holder = exist->holder;
-		exist->holder->refcount++;
+		// Found an entry and only one,
+		// set the multiheader now for the first one
+		// this wil enable server summing per each client
+		if (exist->server && !exist->server->multihdr)
+		  exist->server->multihdr = exist->holder;
+		// This is the new entry so set its multihdr
                 server->multihdr = exist->holder;
+		// updated the reference counter,
+		// multihdr free will occur per iperf_delete in List.cpp
+                if (server->multihdr)
+		  // can update here because the groupCond is already locked
+		  server->multihdr++;
             } else {
-		exist->holder->refcount = 1;
                 groupID--;
+		// this is the case of a single client host, no summing
+		// create a multihdr in prepartion but only store
+		// the value in the client list, don't set the server
+		// thread's multihdr yet (do this above)
                 listtemp->holder = InitMulti( server, groupID, MULTISUM);
-                server->multihdr = listtemp->holder;
+                server->multihdr = NULL;
             }
             Mutex_Unlock( &groupCond );
 
