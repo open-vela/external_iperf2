@@ -55,7 +55,6 @@
 
 #include "headers.h"
 #include "Settings.hpp"
-#include "Reporter.h"
 #include "Mutex.h"
 
 /*

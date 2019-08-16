@@ -250,6 +250,8 @@ static void free_packetring(PacketRing *pr) {
 }
 
 void UpdateMultiHdrRefCounter(MultiHeader *multihdr, int val) {
+  if (!multihdr)
+    return;
   // decrease the reference counter for mutliheaders
   // and check to free the multiheader
   Mutex_Lock( &groupCond );
@@ -279,13 +281,20 @@ void FreeReport(ReportHeader *reporthdr) {
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug("Free report hdr %p delay counter=%d", (void *)reporthdr, reporthdr->delaycounter);
 #endif
-       if (reporthdr->multireport && reporthdr->multireport->refcount <= 0) {
-	    free(reporthdr->multireport);
+	Mutex_Lock( &groupCond );
+	if (reporthdr->multireport && --reporthdr->multireport->refcount > 0) {
+#ifdef HAVE_THREAD_DEBUG
+	    thread_debug("Sum multiheader %p ref=%d->%d", (void *) reporthdr->multireport, \
+		         (reporthdr->multireport->refcount + 1), reporthdr->multireport->refcount);
+#endif
+	} else {
 #ifdef HAVE_THREAD_DEBUG
 	    thread_debug("Free sum multiheader %p", (void *)reporthdr->multireport);
 #endif
-       }
-       free(reporthdr);
+	    free(reporthdr->multireport);
+	}
+	Mutex_Unlock( &groupCond );
+	free(reporthdr);
     }
 }
 
@@ -299,9 +308,6 @@ void InitDataReport(thread_Settings *mSettings) {
     if ( reporthdr != NULL ) {
 	mSettings->reporthdr = reporthdr;
 	reporthdr->multireport = mSettings->multihdr;
-	if (reporthdr->multireport) {
-	    UpdateMultiHdrRefCounter(reporthdr->multireport, 1);
-	}
 	reporthdr->bidirreport = mSettings->bidirhdr;
 	data = &reporthdr->report;
 	data->mThreadMode = mSettings->mThreadMode;
@@ -311,6 +317,9 @@ void InitDataReport(thread_Settings *mSettings) {
 	    // packet stats from the traffic thread to the reporter
 	    // thread.  The reporter thread does all packet accounting
 	    reporthdr->packetring = init_packetring(NUM_REPORT_STRUCTS);
+	    if (reporthdr->multireport) {
+	        UpdateMultiHdrRefCounter(reporthdr->multireport, 1);
+	    }
 	    // Set up the function vectors, there are three
 	    // 1) packet_handler: does packet accounting per the test and protocol
 	    // 2) output_handler: performs output, e.g. interval reports, per the test and protocol
@@ -1035,7 +1044,8 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
 	    TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
 	}
     }
-    if (reporthdr->multireport  && (reporthdr->multireport->threads <= 0)) {
+    if (reporthdr->multireport  && (reporthdr->multireport->refcount > 1) && \
+	(reporthdr->multireport->threads <= 0)) {
 	reporthdr->multireport->threads = reporthdr->multireport->refcount;
 	// output_missed_multireports(&reporthdr->multireport->report, packet);
 	(*reporthdr->output_sum_handler)(&reporthdr->multireport->report, 0);
@@ -1141,11 +1151,11 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 		// output final reports
 		if (reporthdr->bidirreport)
 		  output_transfer_bidir_final_report(&reporthdr->bidirreport->report);
-		if (reporthdr->multireport) {
-		  UpdateMultiHdrRefCounter(reporthdr->multireport, -1);
-		  if (reporthdr->multireport->refcount <= 0)
+		if (reporthdr->multireport && (reporthdr->multireport->refcount <= 0) && \
+		    (reporthdr->multireport->refcount > 1)) {
 		    (*reporthdr->output_sum_handler)(&reporthdr->multireport->report, 1);
 		}
+		// Do the invidual report last
 		ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
 		(*reporthdr->output_handler)(&reporthdr->report, sumstats, 1);
 		// Thread is done with the packet ring, signal back to the traffic thread
@@ -1720,7 +1730,7 @@ static void output_transfer_sum_report_server_tcp(ReporterData *stats, int final
     reporter_print( stats, MULTIPLE_REPORT, 1 );
   } else {
     stats->info.endTime = TimeDifference(stats->nextTime, stats->startTime);
-    reporter_print( stats, MULTIPLE_REPORT, 0 );
+    //reporter_print( stats, MULTIPLE_REPORT, 0 );
     reset_transfer_stats(stats);
   }
 }

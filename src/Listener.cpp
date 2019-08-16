@@ -276,32 +276,25 @@ sInterupted == SIGALRM
             // See if we need to do summing
             Mutex_Lock( &clients_mutex );
             exist = Iperf_hostpresent( &server->peer, clients);
-            Mutex_Lock( &groupCond );
+
             if ( exist != NULL ) {
                 // Copy the multiheader
                 listtemp->holder = exist->holder;
-		// Found an entry and only one,
-		// set the multiheader now for the first one
-		// this wil enable server summing per each client
-		if (exist->server && !exist->server->multihdr)
-		  exist->server->multihdr = exist->holder;
-		// This is the new entry so set its multihdr
                 server->multihdr = exist->holder;
-		// updated the reference counter,
-		// multihdr free will occur per iperf_delete in List.cpp
-                if (server->multihdr)
-		  // can update here because the groupCond is already locked
-		  server->multihdr++;
             } else {
+	        Mutex_Lock( &groupCond );
                 groupID--;
+		Mutex_Unlock( &groupCond );
 		// this is the case of a single client host, no summing
 		// create a multihdr in prepartion but only store
 		// the value in the client list, don't set the server
 		// thread's multihdr yet (do this above)
                 listtemp->holder = InitMulti( server, groupID, MULTISUM);
-                server->multihdr = NULL;
+                server->multihdr = listtemp->holder;
+		// decrease the ref counter - this is a pre-allocated one
+		// InitDataReport will increase it when a packet ring is created
+	        UpdateMultiHdrRefCounter(server->multihdr, -1);
             }
-            Mutex_Unlock( &groupCond );
 
 	    // Perform L2 setup if needed
 	    if (isUDP(mSettings) && (isL2LengthCheck(mSettings) || isL2LengthCheck(server))) {
@@ -1107,9 +1100,7 @@ void Listener::UDPSingleServer( ) {
             // Copy group ID
             listtemp->holder = exist->holder;
             server->multihdr = exist->holder;
-	    exist->holder->refcount++;
         } else {
-	    exist->holder->refcount = 1;
             groupID--;
             listtemp->holder = InitMulti( server, groupID, MULTISUM);
             server->multihdr = listtemp->holder;
