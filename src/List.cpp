@@ -1,4 +1,3 @@
-
 /*---------------------------------------------------------------
  * Copyright (c) 1999,2000,2001,2002,2003
  * The Board of Trustees of the University of Illinois
@@ -60,6 +59,7 @@
  */
 Iperf_ListEntry *clients = NULL;
 Mutex clients_mutex; // This is a list of active clients, mutex is to protect updates
+extern Mutex groupCond;
 
 /*
  * Add Entry add to the List
@@ -88,6 +88,15 @@ void Iperf_delete ( iperf_sockaddr *del, Iperf_ListEntry **root ) {
                 itr = itr->next;
             }
         }
+	if (temp->holder) {
+	  UpdateMultiHdrRefCounter(temp->holder, -1);
+	  if (temp->holder->refcount == 0) {
+#ifdef HAVE_THREAD_DEBUG
+	    thread_debug("Free sum multiheader %p", (void *)temp->holder);
+#endif
+	    free(temp->holder);
+	  }
+	}
         delete temp;
     }
     Mutex_Unlock( &clients_mutex );

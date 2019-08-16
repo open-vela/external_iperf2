@@ -281,6 +281,8 @@ sInterupted == SIGALRM
                 // Copy the multiheader
                 listtemp->holder = exist->holder;
                 server->multihdr = exist->holder;
+		// Increase the ref counter
+	        UpdateMultiHdrRefCounter(server->multihdr, 1);
             } else {
 	        Mutex_Lock( &groupCond );
                 groupID--;
@@ -291,9 +293,6 @@ sInterupted == SIGALRM
 		// thread's multihdr yet (do this above)
                 listtemp->holder = InitMulti( server, groupID, MULTISUM);
                 server->multihdr = listtemp->holder;
-		// decrease the ref counter - this is a pre-allocated one
-		// InitDataReport will increase it when a packet ring is created
-	        UpdateMultiHdrRefCounter(server->multihdr, -1);
             }
 
 	    // Perform L2 setup if needed
