@@ -88,15 +88,6 @@ void Iperf_delete ( iperf_sockaddr *del, Iperf_ListEntry **root ) {
                 itr = itr->next;
             }
         }
-	if (temp->holder) {
-	  UpdateMultiHdrRefCounter(temp->holder, -1);
-	  if (temp->holder->refcount == 0) {
-#ifdef HAVE_THREAD_DEBUG
-	    thread_debug("Free sum multiheader %p", (void *)temp->holder);
-#endif
-	    free(temp->holder);
-	  }
-	}
         delete temp;
     }
     Mutex_Unlock( &clients_mutex );
@@ -109,8 +100,6 @@ void Iperf_destroy ( Iperf_ListEntry **root ) {
     Iperf_ListEntry *itr1 = *root, *itr2;
     while ( itr1 != NULL ) {
         itr2 = itr1->next;
-	if (itr1->holder)
-	  UpdateMultiHdrRefCounter(itr1->holder, -1);
         delete itr1;
         itr1 = itr2;
     }

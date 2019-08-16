@@ -578,15 +578,12 @@ void Server::RunUDP( void ) {
 	ReportPacket(mSettings->reporthdr, reportstruct);
 
     }
-
     CloseReport( mSettings->reporthdr, reportstruct );
-
     // send a acknowledgement back only if we're NOT receiving multicast
     if (!isMulticast( mSettings ) ) {
 	// send back an acknowledgement of the terminating datagram
 	write_UDP_AckFIN( );
     }
-
     EndReport( mSettings->reporthdr );
     Iperf_delete( &(mSettings->peer), &clients );
 }
