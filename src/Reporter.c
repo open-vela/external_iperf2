@@ -1018,7 +1018,7 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
 	ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
 	(*reporthdr->output_handler)(&reporthdr->report, sumstats, 0);
 	TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
-	if (reporthdr->multireport) {
+	if (reporthdr->multireport && (reporthdr->multireport->refcount > 1)) {
 	    nextring_event = 1;
 	    reporthdr->multireport->threads--;
 	}
@@ -1033,7 +1033,8 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
 	}
     }
     if (reporthdr->multireport  && (reporthdr->multireport->refcount > 1) && \
-	(reporthdr->multireport->threads <= 0)) {
+	(reporthdr->multireport->threads == 0)) {
+        reporthdr->multireport->report.packetTime=packet->packetTime;
 	reporthdr->multireport->threads = reporthdr->multireport->refcount;
 	// output_missed_multireports(&reporthdr->multireport->report, packet);
 	(*reporthdr->output_sum_handler)(&reporthdr->multireport->report, 0);
@@ -1137,14 +1138,15 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 	        need_free = 1;
 		reporthdr->delaycounter = consumption_detector.delay_counter;
 		// output final reports
-		if (reporthdr->bidirreport)
-		  output_transfer_bidir_final_report(&reporthdr->bidirreport->report);
-		if (reporthdr->multireport && (reporthdr->multireport->refcount < 1)) {
-		    (*reporthdr->output_sum_handler)(&reporthdr->multireport->report, 1);
-		}
-		// Do the invidual report last
+		reporthdr->report.packetTime=packet->packetTime;
 		ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
 		(*reporthdr->output_handler)(&reporthdr->report, sumstats, 1);
+		if (reporthdr->bidirreport)
+		  output_transfer_bidir_final_report(&reporthdr->bidirreport->report);
+		if (reporthdr->multireport && (reporthdr->multireport->refcount > 1)) {
+		    reporthdr->multireport->report.packetTime=packet->packetTime;
+		    (*reporthdr->output_sum_handler)(&reporthdr->multireport->report, 1);
+		}
 		// Thread is done with the packet ring, signal back to the traffic thread
 		// which will proceed from the EndReport wait, this must be the last thing done
 		reporthdr->packetring->consumerdone = 1;
@@ -1562,7 +1564,7 @@ static void output_transfer_report_server_tcp(ReporterData *stats, ReporterData 
     else
       stats->info.tripTime = 0;
     if (sumstats) {
-        sumstats->info.TotalLen += stats->TotalLen - stats->lastTotal;
+        sumstats->TotalLen += stats->TotalLen - stats->lastTotal;
         sumstats->info.sock_callstats.read.cntRead += stats->info.sock_callstats.read.cntRead;
         for (ix = 0; ix < TCPREADBINCOUNT; ix++) {
 	    sumstats->info.sock_callstats.read.bins[ix] += stats->info.sock_callstats.read.bins[ix];
@@ -1710,14 +1712,16 @@ static void output_transfer_sum_report_server_tcp(ReporterData *stats, int final
   if (final) {
     int ix;
     stats->info.startTime = 0.0;
+    stats->info.TotalLen = stats->TotalLen;
     stats->info.sock_callstats.read.cntRead = stats->info.sock_callstats.read.totcntRead;
     for (ix = 0; ix < TCPREADBINCOUNT; ix++) {
       stats->info.sock_callstats.read.bins[ix] = stats->info.sock_callstats.read.totbins[ix];
     }
     reporter_print( stats, MULTIPLE_REPORT, 1 );
   } else {
+    stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
     stats->info.endTime = TimeDifference(stats->nextTime, stats->startTime);
-    //reporter_print( stats, MULTIPLE_REPORT, 0 );
+    reporter_print( stats, MULTIPLE_REPORT, 0 );
     reset_transfer_stats(stats);
   }
 }
