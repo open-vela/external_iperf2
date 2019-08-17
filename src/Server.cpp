@@ -244,11 +244,17 @@ void Server::InitTrafficLoop (void) {
 	myJob->report.startTime.tv_usec = now.getUsecs();
 	myJob->report.nextTime = myJob->report.startTime;
 	TimeAdd(myJob->report.nextTime, myJob->report.intervalTime);
+	if (mSettings->reporthdr->multireport && TimeZero(mSettings->reporthdr->multireport->report.startTime)) {
+	    mSettings->reporthdr->multireport->report.startTime = myJob->report.startTime;
+	    mSettings->reporthdr->multireport->report.nextTime = myJob->report.nextTime;
+	}
+	// Initialze the reportstruct scratchpad
 	reportstruct = &myJob->packetring->metapacket;
 	reportstruct->packetID = 0;
 	reportstruct->l2len = 0;
 	reportstruct->l2errors = 0x0;
     }
+
     if (mSettings->mBufLen < (int) sizeof(UDP_datagram)) {
        mSettings->mBufLen = sizeof( UDP_datagram );
        fprintf( stderr, warn_buffer_too_small, mSettings->mBufLen );
