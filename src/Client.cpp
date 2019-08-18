@@ -181,7 +181,7 @@ Client::Client( thread_Settings *inSettings ) {
 	        mSettings->reporthdr->report.connection.connecttime = ct;
 	        PostReport(mSettings->reporthdr);
 	    }
-	    if (mSettings->multihdr) {
+	    if (!isServerReverse(mSettings) && (mSettings->multihdr)) {
 	        // For the case multilple clients wait on all
 	        // completing the connect() w/o going to close()
 	        // by leveraging this barrier
@@ -218,7 +218,7 @@ Client::Client( thread_Settings *inSettings ) {
 #ifdef HAVE_THREAD
 	    // In the case of parellel clients synchronize them after the connect(),
 	    // i.e. before their traffic run loops
-            if (reporthdr->multireport) {
+            if (!isServerReverse(mSettings) && (reporthdr->multireport)) {
 	        // syncronize watches on my mark......
 	        BarrierClient(reporthdr->multireport);
 		now.setnow();
