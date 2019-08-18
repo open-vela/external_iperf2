@@ -257,16 +257,18 @@ Client::~Client() {
         WARN_errno( rc == SOCKET_ERROR, "close" );
     }
     DELETE_ARRAY( mBuf );
-    if (myJob->multireport) {
-      UpdateMultiHdrRefCounter(myJob->multireport, -1);
-      if (myJob->multireport->refcount == 0) {
+    if (myJob) {
+	if (myJob->multireport) {
+	    UpdateMultiHdrRefCounter(myJob->multireport, -1);
+	    if (myJob->multireport->refcount == 0) {
 #ifdef HAVE_THREAD_DEBUG
-	thread_debug("Free sum multiheader %p", (void *)myJob->multireport);
+		thread_debug("Free sum multiheader %p", (void *)myJob->multireport);
 #endif
-	free(myJob->multireport);
-      }
+		free(myJob->multireport);
+	    }
+	}
+	FreeReport(myJob);
     }
-    FreeReport(myJob);
 } // end ~Client
 
 
