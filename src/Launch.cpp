@@ -143,36 +143,38 @@ void client_spawn( thread_Settings *thread ) {
     // If this is a reverse test, then run that way
     if (isReverse(thread)) {
 #ifdef HAVE_THREAD_DEBUG
-      thread_debug("Client reverse (server) thread starting sock=%d", thread->mSock);
+	thread_debug("Client reverse (server) thread starting sock=%d", thread->mSock);
 #endif
-      if (isBidir(thread)) {
-          Mutex_Lock( &groupCond );
-	  thread->bidirhdr = InitMulti(thread, thread->mSock, MULTIBIDIR);
-	  if (thread->bidirhdr)
-	    thread->bidirhdr->refcount = 1;
-          Mutex_Unlock( &groupCond );
-      } else {
-	  thread->bidirhdr = NULL;
-      }
-      // Settings copy will malloc space for the
-      // reverse thread settings and the run_wrapper
-      // will free it
-      Settings_Copy(thread, &reverse_client);
-      if (reverse_client && (thread->mSock > 0)) {
-	  reverse_client->mSock = thread->mSock;
-	  reverse_client->mThreadMode = kMode_Server;
-	  reverse_client->bidirhdr = thread->bidirhdr;
-	  setServerReverse(reverse_client); // cause the connection report to show reverse
-	  if (thread->bidirhdr) {
+	if (isBidir(thread)) {
 	    Mutex_Lock( &groupCond );
-	    thread->bidirhdr->refcount++;
+	    thread->bidirhdr = InitMulti(thread, thread->mSock, MULTIBIDIR);
+	    if (thread->bidirhdr)
+		thread->bidirhdr->refcount = 1;
 	    Mutex_Unlock( &groupCond );
-	    thread_start(reverse_client);
-	  }
-      } else {
-	  fprintf(stderr, "Reverse test failed to start per thread settings or socket problem\n");
-	  exit(1);
-      }
+	} else {
+	    thread->bidirhdr = NULL;
+	}
+	// Settings copy will malloc space for the
+	// reverse thread settings and the run_wrapper
+	// will free it
+	Settings_Copy(thread, &reverse_client);
+	if (reverse_client && (thread->mSock > 0)) {
+	    reverse_client->mSock = thread->mSock;
+	    reverse_client->mThreadMode = kMode_Server;
+	    reverse_client->bidirhdr = thread->bidirhdr;
+	    setServerReverse(reverse_client); // cause the connection report to show reverse
+	    if (thread->bidirhdr) {
+		Mutex_Lock( &groupCond );
+		thread->bidirhdr->refcount++;
+		Mutex_Unlock( &groupCond );
+		thread_start(reverse_client);
+	    } else {
+		thread_start(reverse_client);
+	    }
+	} else {
+	    fprintf(stderr, "Reverse test failed to start per thread settings or socket problem\n");
+	    exit(1);
+	}
     }
     // There are a few different client startup modes
     // o) Normal
@@ -182,22 +184,25 @@ void client_spawn( thread_Settings *thread ) {
     // o) WriteAck
     // o) Bidir
     if (!isServerReverse(thread)) {
-      theClient->InitiateServer();
+	theClient->InitiateServer();
     }
     // If this is a only reverse test, then join the client thread to it
     if (isReverse(thread) && !isBidir(thread)) {
 	if (!thread_equalid(reverse_client->mTID, thread_zeroid())) {
-	  if (pthread_join(reverse_client->mTID, NULL) != 0) {
-	    WARN( 1, "pthread_join reverse failed" );
-	  } else {
 #ifdef HAVE_THREAD_DEBUG
-	    thread_debug("Client reverse thread finished sock=%d", reverse_client->mSock);
+	    thread_debug("Reverse pthread join sock=%d", reverse_client->mSock);
 #endif
-	  }
+	    if (pthread_join(reverse_client->mTID, NULL) != 0) {
+		WARN( 1, "pthread_join reverse failed" );
+	    } else {
+#ifdef HAVE_THREAD_DEBUG
+		thread_debug("Client reverse thread finished sock=%d", reverse_client->mSock);
+#endif
+	    }
 	}
     } else {
-      // Run the normal client test
-      theClient->Run();
+	// Run the normal client test
+	theClient->Run();
     }
     DELETE_PTR( theClient );
 }
