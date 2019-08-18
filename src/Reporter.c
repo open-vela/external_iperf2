@@ -331,7 +331,7 @@ void InitDataReport(thread_Settings *mSettings) {
 		    reporthdr->output_handler = output_transfer_report_client_tcp;
 		    reporthdr->output_sum_handler = output_transfer_sum_report_client_tcp;
 		}
-		if (reporthdr->multireport) {
+		if (!isServerReverse(mSettings) && (reporthdr->multireport)) {
 		  UpdateMultiHdrRefCounter(reporthdr->multireport, 1);
 		}
 		break;
