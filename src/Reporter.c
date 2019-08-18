@@ -140,6 +140,9 @@ static void output_transfer_sum_report_server_tcp(ReporterData *stats, int final
 static void output_transfer_bidir_report(ReporterData *stats);
 static void output_transfer_bidir_final_report(ReporterData *stats);
 static void reset_transfer_stats(ReporterData *stats);
+static inline void reset_transfer_stats_client(ReporterData *stats);
+static inline void reset_transfer_stats_server_udp(ReporterData *stats);
+static inline void reset_transfer_stats_server_tcp(ReporterData *stats);
 static void reporter_handle_packet_server_udp(ReportHeader *report, ReportStruct *packet);
 static void reporter_handle_packet_server_tcp(ReportHeader *report, ReportStruct *packet);
 static void reporter_handle_packet_client(ReportHeader *report, ReportStruct *packet);
@@ -1535,6 +1538,43 @@ static inline void reset_transfer_stats(ReporterData *stats) {
     }
 }
 
+static inline void reset_transfer_stats_client(ReporterData *stats) {
+    stats->info.startTime = stats->info.endTime;
+    stats->lastTotal = stats->TotalLen;
+    stats->info.sock_callstats.write.WriteCnt = 0;
+    stats->info.sock_callstats.write.WriteErr = 0;
+    stats->info.sock_callstats.write.WriteErr = 0;
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+    stats->info.sock_callstats.write.up_to_date = 0;
+#endif
+}
+static inline void reset_transfer_stats_server_tcp(ReporterData *stats) {
+    int ix;
+    stats->info.startTime = stats->info.endTime;
+    stats->lastTotal = stats->TotalLen;
+    stats->info.sock_callstats.read.cntRead = 0;
+    for (ix = 0; ix < 8; ix++) {
+	stats->info.sock_callstats.read.bins[ix] = 0;
+    }
+}
+static inline void reset_transfer_stats_server_udp(ReporterData *stats) {
+    // Reset the enhanced stats for the next report interval
+    stats->info.startTime = stats->info.endTime;
+    stats->lastTotal = stats->TotalLen;
+    stats->info.transit.minTransit=stats->info.transit.lastTransit;
+    stats->info.transit.maxTransit=stats->info.transit.lastTransit;
+    stats->info.transit.sumTransit = stats->info.transit.lastTransit;
+    stats->info.transit.cntTransit = 0;
+    stats->info.transit.vdTransit = 0;
+    stats->info.transit.meanTransit = 0;
+    stats->info.transit.m2Transit = 0;
+#ifdef HAVE_ISOCHRONOUS
+    stats->info.isochstats.framecnt = 0;
+    stats->info.isochstats.framelostcnt = 0;
+    stats->info.isochstats.slipcnt = 0;
+#endif
+}
+
 // These are the output handlers that get the reports ready and then prints them
 static void output_transfer_report_server_udp(ReporterData *stats, ReporterData *sumstats, int final) {
     stats->info.cntOutofOrder = stats->cntOutofOrder - stats->lastOutofOrder;
@@ -1546,7 +1586,7 @@ static void output_transfer_report_server_udp(ReporterData *stats, ReporterData 
 				stats->cntDatagrams - stats->lastDatagrams);
     stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
     reporter_print(stats, TRANSFER_REPORT, 0);
-    reset_transfer_stats(stats);
+    reset_transfer_stats_server_udp(stats);
 }
 
 static void output_transfer_report_server_tcp(ReporterData *stats, ReporterData *sumstats, int final) {
@@ -1562,10 +1602,6 @@ static void output_transfer_report_server_tcp(ReporterData *stats, ReporterData 
     } else {
         stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
     }
-    if (stats->clientStartTime.tv_sec > 0)
-      stats->info.tripTime = TimeDifference( stats->packetTime, stats->clientStartTime );
-    else
-      stats->info.tripTime = 0;
     if (sumstats) {
         sumstats->TotalLen += stats->TotalLen - stats->lastTotal;
         sumstats->info.sock_callstats.read.cntRead += stats->info.sock_callstats.read.cntRead;
@@ -1574,7 +1610,7 @@ static void output_transfer_report_server_tcp(ReporterData *stats, ReporterData 
         }
     }
     reporter_print(stats, TRANSFER_REPORT, 0);
-    reset_transfer_stats(stats);
+    reset_transfer_stats_server_tcp(stats);
 }
 
 static void output_transfer_report_client_udp(ReporterData *stats, ReporterData *sumstats, int final) {
@@ -1592,31 +1628,32 @@ static void output_transfer_report_client_udp(ReporterData *stats, ReporterData 
 
 static void output_transfer_report_client_tcp(ReporterData *stats, ReporterData *sumstats, int final) {
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-  if (stats->info.mEnhanced && (stats->info.mTCP == kMode_Client))
-    gettcpistats(stats, sumstats, 0);
+    if (stats->info.mEnhanced && (stats->info.mTCP == kMode_Client))
+	gettcpistats(stats, sumstats, 0);
 #endif
-  if (sumstats) {
-    sumstats->TotalLen += stats->TotalLen - stats->lastTotal;
-    sumstats->info.sock_callstats.write.WriteErr += stats->info.sock_callstats.write.WriteErr;
-    sumstats->info.sock_callstats.write.WriteCnt += stats->info.sock_callstats.write.WriteCnt;
-    sumstats->info.sock_callstats.write.TCPretry += stats->info.sock_callstats.write.TCPretry;
-    sumstats->info.sock_callstats.write.totWriteErr += stats->info.sock_callstats.write.WriteErr;
-    sumstats->info.sock_callstats.write.totWriteCnt += stats->info.sock_callstats.write.WriteCnt;
-    sumstats->info.sock_callstats.write.totTCPretry += stats->info.sock_callstats.write.TCPretry;
-  }
-  if (final) {
-    stats->info.sock_callstats.write.WriteErr = stats->info.sock_callstats.write.totWriteErr;
-    stats->info.sock_callstats.write.WriteCnt = stats->info.sock_callstats.write.totWriteCnt;
-    stats->info.sock_callstats.write.TCPretry = stats->info.sock_callstats.write.totTCPretry;
-    stats->info.TotalLen = stats->TotalLen;
-    stats->info.startTime = 0.0;
-    stats->info.endTime = TimeDifference(stats->packetTime, stats->startTime);
-  } else {
-    stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
-    stats->info.endTime = TimeDifference(stats->nextTime, stats->startTime);
-  }
-  reporter_print(stats, TRANSFER_REPORT, final);
-  reset_transfer_stats(stats);
+    if (sumstats) {
+	sumstats->TotalLen += stats->TotalLen - stats->lastTotal;
+	sumstats->info.sock_callstats.write.WriteErr += stats->info.sock_callstats.write.WriteErr;
+	sumstats->info.sock_callstats.write.WriteCnt += stats->info.sock_callstats.write.WriteCnt;
+	sumstats->info.sock_callstats.write.TCPretry += stats->info.sock_callstats.write.TCPretry;
+	sumstats->info.sock_callstats.write.totWriteErr += stats->info.sock_callstats.write.WriteErr;
+	sumstats->info.sock_callstats.write.totWriteCnt += stats->info.sock_callstats.write.WriteCnt;
+	sumstats->info.sock_callstats.write.totTCPretry += stats->info.sock_callstats.write.TCPretry;
+    }
+    if (final) {
+	stats->info.sock_callstats.write.WriteErr = stats->info.sock_callstats.write.totWriteErr;
+	stats->info.sock_callstats.write.WriteCnt = stats->info.sock_callstats.write.totWriteCnt;
+	stats->info.sock_callstats.write.TCPretry = stats->info.sock_callstats.write.totTCPretry;
+	stats->info.TotalLen = stats->TotalLen;
+	stats->info.startTime = 0.0;
+	stats->info.endTime = TimeDifference(stats->packetTime, stats->startTime);
+	reporter_print(stats, TRANSFER_REPORT, 1);
+    } else {
+	stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
+	stats->info.endTime = TimeDifference(stats->nextTime, stats->startTime);
+	reporter_print(stats, TRANSFER_REPORT, 0);
+	reset_transfer_stats_server_udp(stats);
+    }
 }
 
 static void output_transfer_final_report_client_tcp(ReporterData *stats) {
@@ -1706,7 +1743,7 @@ static void output_transfer_sum_report_client_tcp(ReporterData *stats, int final
     } else {
 	stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
 	reporter_print( stats, MULTIPLE_REPORT, 0 );
-	reset_transfer_stats(stats);
+	reset_transfer_stats_client(stats);
     }
 }
 
@@ -1724,7 +1761,7 @@ static void output_transfer_sum_report_server_tcp(ReporterData *stats, int final
     } else {
 	stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
 	reporter_print( stats, MULTIPLE_REPORT, 0 );
-	reset_transfer_stats(stats);
+	reset_transfer_stats_server_tcp(stats);
     }
 }
 
