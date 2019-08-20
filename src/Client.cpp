@@ -181,7 +181,7 @@ Client::Client( thread_Settings *inSettings ) {
 	        mSettings->reporthdr->report.connection.connecttime = ct;
 	        PostReport(mSettings->reporthdr);
 	    }
-	    if (!isServerReverse(mSettings) && (mSettings->multihdr)) {
+	    if (mSettings->multihdr && (mSettings->multihdr->refcount > 1)) {
 	        // For the case multilple clients wait on all
 	        // completing the connect() w/o going to close()
 	        // by leveraging this barrier
