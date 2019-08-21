@@ -1018,7 +1018,6 @@ void process_report ( ReportHeader *report ) {
 
 static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *packet) {
     int nextring_event = 0;
-
     // Print a report if packet time exceeds the next report interval time,
     // Also signal to the caller to move to the next report (or packet ring)
     // if there was output. This will allow for more precise interval sum accounting.
@@ -1133,7 +1132,9 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 	    // Check for a final packet event on this packet ring
 	    if (!(packet->packetID < 0)) {
 		// Check for interval reports
-	        nextring_event = condprint_interval_reports(reporthdr, packet);
+		if (!TimeZero(reporthdr->report.intervalTime)) {
+		    nextring_event = condprint_interval_reports(reporthdr, packet);
+		}
 		// Do the packet accounting per the handler type
 		if (reporthdr->packet_handler) {
 		  (*reporthdr->packet_handler)(reporthdr, packet);
