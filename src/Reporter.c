@@ -1564,6 +1564,7 @@ static inline void reset_transfer_stats_server_udp(ReporterData *stats) {
     // Reset the enhanced stats for the next report interval
     stats->info.startTime = stats->info.endTime;
     stats->lastTotal = stats->TotalLen;
+    stats->lastDatagrams = stats->cntDatagrams;    
     stats->info.transit.minTransit=stats->info.transit.lastTransit;
     stats->info.transit.maxTransit=stats->info.transit.lastTransit;
     stats->info.transit.sumTransit = stats->info.transit.lastTransit;
