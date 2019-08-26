@@ -1327,7 +1327,6 @@ inline void reporter_handle_packet_server_udp(ReportHeader *reporthdr, ReportStr
     data->packetTime = packet->packetTime;
     stats->socket = packet->socket;
 
-    // These are valid packets that need standard iperf accounting
     if (packet->emptyreport && (stats->transit.cntTransit == 0)) {
 	// This is the case when empty reports
 	// cross the report interval boundary
@@ -1371,6 +1370,7 @@ inline void reporter_handle_packet_server_udp(ReportHeader *reporthdr, ReportStr
     if ( packet->packetID > data->PacketID ) {
 	data->PacketID = packet->packetID;
     }
+    // These are valid packets that need standard iperf accounting
     reporter_handle_packet_pps(data, stats);
     reporter_handle_packet_udp_transit(data, stats, packet);
     reporter_handle_packet_isochronous(data, stats, packet);
@@ -1581,6 +1581,14 @@ static inline void reset_transfer_stats_server_udp(ReporterData *stats) {
 // These are the output handlers that get the reports ready and then prints them
 static void output_transfer_report_server_udp(ReporterData *stats, ReporterData *sumstats, int final) {
     set_endtime(stats);
+    if (sumstats) {
+	sumstats->info.cntOutofOrder += stats->cntOutofOrder - stats->lastOutofOrder;
+	// assume most of the  time out-of-order packets are not
+	// duplicate packets, so conditionally subtract them from the lost packets.
+	sumstats->info.cntError += stats->cntError - stats->lastError;
+	sumstats->info.cntDatagrams += stats->PacketID - stats->lastDatagrams;
+	sumstats->info.TotalLen += stats->TotalLen - stats->lastTotal;
+    }
     if (final) {
 	stats->info.cntOutofOrder = stats->cntOutofOrder;
 	// assume most of the  time out-of-order packets are not
@@ -1601,14 +1609,30 @@ static void output_transfer_report_server_udp(ReporterData *stats, ReporterData 
 	reporter_print(stats, TRANSFER_REPORT, 0);
 	reset_transfer_stats_server_udp(stats);
     }
-    if (sumstats) {
-    }
 }
 static void output_transfer_sum_report_server_udp(ReporterData *stats, int final) {
     set_endtime(stats);
     if (final) {
+	stats->info.cntOutofOrder = stats->cntOutofOrder;
+	// assume most of the  time out-of-order packets are not
+	// duplicate packets, so conditionally subtract them from the lost packets.
+	stats->info.cntError = stats->cntError;
+	stats->info.cntError -= stats->info.cntOutofOrder;
+	stats->info.cntDatagrams = stats->PacketID;
+	stats->info.TotalLen = stats->TotalLen;
+	reporter_print(stats, MULTIPLE_REPORT, 1);
     } else {
+	stats->info.cntOutofOrder = stats->cntOutofOrder - stats->lastOutofOrder;
+	// assume most of the  time out-of-order packets are not
+	// duplicate packets, so conditionally subtract them from the lost packets.
+	stats->info.cntError = stats->cntError - stats->lastError;
+	stats->info.cntError -= stats->info.cntOutofOrder;
+	stats->info.cntDatagrams = stats->PacketID - stats->lastDatagrams;
+	stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
+	reporter_print(stats, MULTIPLE_REPORT, 0);
+	reset_transfer_stats_server_udp(stats);
     }
+
 }
 static void output_transfer_sum_report_client_udp(ReporterData *stats, int final) {
     set_endtime(stats);
