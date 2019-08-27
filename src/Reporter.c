@@ -1597,7 +1597,8 @@ static void output_transfer_report_server_udp(ReporterData *stats, ReporterData 
 	sumstats->cntError += stats->cntError - stats->lastError;
 	sumstats->cntDatagrams += stats->PacketID - stats->lastDatagrams;
 	sumstats->TotalLen += stats->TotalLen - stats->lastTotal;
-	sumstats->info.IPGsum = stats->info.IPGsum;
+	if (sumstats->info.IPGsum < stats->info.IPGsum)
+	    sumstats->info.IPGsum = stats->info.IPGsum;
 	sumstats->info.IPGcnt += stats->info.IPGcnt;
     }
     if (final) {
