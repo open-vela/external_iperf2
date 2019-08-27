@@ -320,7 +320,6 @@ void reporter_multistats( Transfer_Info *stats ) {
 		    stats->startTime, stats->endTime,
 		    buffer, &buffer[sizeof(buffer)/2],
 		    stats->cntError, stats->cntDatagrams,
-		    (100.0 * stats->cntError) / stats->cntDatagrams,
 		    (stats->IPGcnt ? (stats->IPGcnt / stats->IPGsum) : 0.0));
 	} else if (stats->mUDP) {
 	    // UDP Enhanced Reporting

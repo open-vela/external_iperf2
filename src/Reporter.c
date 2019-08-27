@@ -1579,6 +1579,12 @@ static inline void reset_transfer_stats_server_udp(ReporterData *stats) {
     stats->info.isochstats.framelostcnt = 0;
     stats->info.isochstats.slipcnt = 0;
 #endif
+    stats->info.IPGcnt = 0;
+    stats->info.IPGsum = 0;
+    stats->info.l2counts.cnt = 0;
+    stats->info.l2counts.unknown = 0;
+    stats->info.l2counts.udpcsumerr = 0;
+    stats->info.l2counts.lengtherr = 0;
 }
 
 // These are the output handlers that get the reports ready and then prints them
@@ -1591,7 +1597,7 @@ static void output_transfer_report_server_udp(ReporterData *stats, ReporterData 
 	sumstats->cntError += stats->cntError - stats->lastError;
 	sumstats->cntDatagrams += stats->PacketID - stats->lastDatagrams;
 	sumstats->TotalLen += stats->TotalLen - stats->lastTotal;
-	sumstats->info.IPGsum += stats->info.IPGsum;
+	sumstats->info.IPGsum = stats->info.IPGsum;
 	sumstats->info.IPGcnt += stats->info.IPGcnt;
     }
     if (final) {
