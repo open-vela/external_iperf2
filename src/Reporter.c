@@ -1564,7 +1564,9 @@ static inline void reset_transfer_stats_server_udp(ReporterData *stats) {
     // Reset the enhanced stats for the next report interval
     stats->info.startTime = stats->info.endTime;
     stats->lastTotal = stats->TotalLen;
-    stats->lastDatagrams = stats->cntDatagrams;    
+    stats->lastDatagrams = stats->cntDatagrams;
+    stats->lastOutofOrder = stats->cntOutofOrder;
+    stats->lastError = stats->cntError;
     stats->info.transit.minTransit=stats->info.transit.lastTransit;
     stats->info.transit.maxTransit=stats->info.transit.lastTransit;
     stats->info.transit.sumTransit = stats->info.transit.lastTransit;
@@ -1583,12 +1585,14 @@ static inline void reset_transfer_stats_server_udp(ReporterData *stats) {
 static void output_transfer_report_server_udp(ReporterData *stats, ReporterData *sumstats, int final) {
     set_endtime(stats);
     if (sumstats) {
-	sumstats->info.cntOutofOrder += stats->cntOutofOrder - stats->lastOutofOrder;
+	sumstats->cntOutofOrder += stats->cntOutofOrder - stats->lastOutofOrder;
 	// assume most of the  time out-of-order packets are not
 	// duplicate packets, so conditionally subtract them from the lost packets.
-	sumstats->info.cntError += stats->cntError - stats->lastError;
-	sumstats->info.cntDatagrams += stats->PacketID - stats->lastDatagrams;
-	sumstats->info.TotalLen += stats->TotalLen - stats->lastTotal;
+	sumstats->cntError += stats->cntError - stats->lastError;
+	sumstats->cntDatagrams += stats->PacketID - stats->lastDatagrams;
+	sumstats->TotalLen += stats->TotalLen - stats->lastTotal;
+	sumstats->info.IPGsum += stats->info.IPGsum;
+	sumstats->info.IPGcnt += stats->info.IPGcnt;
     }
     if (final) {
 	stats->info.cntOutofOrder = stats->cntOutofOrder;
@@ -1619,7 +1623,7 @@ static void output_transfer_sum_report_server_udp(ReporterData *stats, int final
 	// duplicate packets, so conditionally subtract them from the lost packets.
 	stats->info.cntError = stats->cntError;
 	stats->info.cntError -= stats->info.cntOutofOrder;
-	stats->info.cntDatagrams = stats->PacketID;
+	stats->info.cntDatagrams = stats->cntDatagrams;
 	stats->info.TotalLen = stats->TotalLen;
 	reporter_print(stats, MULTIPLE_REPORT, 1);
     } else {
@@ -1628,7 +1632,7 @@ static void output_transfer_sum_report_server_udp(ReporterData *stats, int final
 	// duplicate packets, so conditionally subtract them from the lost packets.
 	stats->info.cntError = stats->cntError - stats->lastError;
 	stats->info.cntError -= stats->info.cntOutofOrder;
-	stats->info.cntDatagrams = stats->PacketID - stats->lastDatagrams;
+	stats->info.cntDatagrams = stats->cntDatagrams - stats->lastDatagrams;
 	stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
 	reporter_print(stats, MULTIPLE_REPORT, 0);
 	reset_transfer_stats_server_udp(stats);
