@@ -267,6 +267,16 @@ Client::~Client() {
 		free(myJob->multireport);
 	    }
 	}
+	if (myJob->bidirreport) {
+	    UpdateMultiHdrRefCounter(myJob->bidirreport, -1);
+	    if (myJob->bidirreport->refcount == 0) {
+#ifdef HAVE_THREAD_DEBUG
+		thread_debug("Free bidir multiheader %p", (void *)myJob->bidirreport);
+#endif
+		free(myJob->bidirreport);
+	    }
+	}
+
 	FreeReport(myJob);
     }
 } // end ~Client

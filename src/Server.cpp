@@ -201,6 +201,7 @@ void Server::RunTCP( void ) {
     }
     CloseReport( mSettings->reporthdr, reportstruct );
     EndReport( mSettings->reporthdr );
+
     Iperf_delete( &(mSettings->peer), &clients );
 }
 

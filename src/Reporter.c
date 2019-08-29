@@ -353,10 +353,10 @@ void InitDataReport(thread_Settings *mSettings) {
     if ( reporthdr != NULL ) {
 	mSettings->reporthdr = reporthdr;
 	reporthdr->multireport = mSettings->multihdr;
-#ifdef HAVE_THREAD_DEBUG
-	thread_debug("Multireport is %p", (void *)reporthdr->multireport);
-#endif
 	reporthdr->bidirreport = mSettings->bidirhdr;
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug("Multireport is %p, Bidirreport is %p", (void *)reporthdr->multireport, (void *)reporthdr->bidirreport);
+#endif
 	data = &reporthdr->report;
 	data->mThreadMode = mSettings->mThreadMode;
 	reporthdr->packet_handler = NULL;
@@ -375,14 +375,12 @@ void InitDataReport(thread_Settings *mSettings) {
 		    reporthdr->packet_handler = reporter_handle_packet_server_udp;
 		    reporthdr->output_handler = output_transfer_report_server_udp;
 		    reporthdr->output_sum_handler = output_transfer_sum_report_server_udp;
-		    if (isBidir(mSettings))
-		        reporthdr->output_bidir_handler = output_transfer_bidir_report_udp;
+		    reporthdr->output_bidir_handler = output_transfer_bidir_report_udp;
 		} else {
 		    reporthdr->packet_handler = reporter_handle_packet_server_tcp;
 		    reporthdr->output_handler = output_transfer_report_server_tcp;
 		    reporthdr->output_sum_handler = output_transfer_sum_report_server_tcp;
-		    if (isBidir(mSettings))
-		        reporthdr->output_bidir_handler = output_transfer_bidir_report_tcp;
+		    reporthdr->output_bidir_handler = output_transfer_bidir_report_tcp;
 		}
 		break;
 	    case kMode_Client :
@@ -390,9 +388,11 @@ void InitDataReport(thread_Settings *mSettings) {
 		if (isUDP(mSettings)) {
 		    reporthdr->output_handler = output_transfer_report_client_udp;
 		    reporthdr->output_sum_handler = output_transfer_sum_report_client_udp;
+		    reporthdr->output_bidir_handler = output_transfer_bidir_report_udp;
 		} else {
 		    reporthdr->output_handler = output_transfer_report_client_tcp;
 		    reporthdr->output_sum_handler = output_transfer_sum_report_client_tcp;
+		    reporthdr->output_bidir_handler = output_transfer_bidir_report_tcp;
 		}
 		if (!isServerReverse(mSettings) && (reporthdr->multireport)) {
 		  UpdateMultiHdrRefCounter(reporthdr->multireport, 1);
@@ -1082,6 +1082,7 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
         // output_missed_reports(&reporthdr->report, packet);
 	ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
 	ReporterData *bidirstats = (reporthdr->bidirreport ? &reporthdr->bidirreport->report : NULL);
+	WARN(!*reporthdr->output_handler, "Transfer output handler is not set:");
 	(*reporthdr->output_handler)(&reporthdr->report, sumstats, bidirstats, 0);
 	TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
 	if (reporthdr->multireport && (reporthdr->multireport->refcount > 1)) {
@@ -1097,6 +1098,7 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
 	reporthdr->bidirreport->threads = 0;
 	reporthdr->bidirreport->report.packetTime = packet->packetTime;
 	// output_missed_multireports(&reporthdr->multireport->report, packet);
+	WARN(!*reporthdr->output_bidir_handler, "Bidir output handler is not set:");
 	(*reporthdr->output_bidir_handler)(&reporthdr->bidirreport->report, 0);
     }
     if (reporthdr->multireport  && (reporthdr->multireport->refcount > 1) && \
@@ -1104,6 +1106,7 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
 	reporthdr->multireport->threads = 0;
 	reporthdr->multireport->report.packetTime = packet->packetTime;
 	// output_missed_multireports(&reporthdr->multireport->report, packet);
+	WARN(!*reporthdr->output_sum_handler, "Sum output handler is not set:");
 	(*reporthdr->output_sum_handler)(&reporthdr->multireport->report, 0);
     }
     return nextring_event;
@@ -1204,7 +1207,7 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 		ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
 		ReporterData *bidirstats = (reporthdr->bidirreport ? &reporthdr->bidirreport->report : NULL);
 		(*reporthdr->output_handler)(&reporthdr->report, sumstats, bidirstats, 1);
-		if (reporthdr->output_bidir_handler && reporthdr->bidirreport && (++reporthdr->multireport->threads == 2)) {
+		if (reporthdr->output_bidir_handler && reporthdr->bidirreport && (++reporthdr->bidirreport->threads == reporthdr->bidirreport->refcount)) {
 		  (*reporthdr->output_bidir_handler)(&reporthdr->multireport->report, 1);
 		}
 		if (reporthdr->multireport && (reporthdr->multireport->refcount > 1)) {

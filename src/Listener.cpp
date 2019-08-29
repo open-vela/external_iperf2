@@ -252,7 +252,7 @@ sInterupted == SIGALRM
 #if HAVE_THREAD_DEBUG
 		    thread_debug("BiDir report client=%p/%p server=%p/%p", (void *) tempSettings, (void *) tempSettings->bidirhdr, (void *) server, (void *) server->bidirhdr);
 #endif
-		    UpdateMultiHdrRefCounter(server->bidirhdr, 1);
+		    UpdateMultiHdrRefCounter(server->bidirhdr, 2);
 		    thread_start(tempSettings);
 		}
             } else {

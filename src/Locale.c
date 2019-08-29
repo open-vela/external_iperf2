@@ -77,11 +77,8 @@ Client/Server:\n\
   -m, --print_mss          print TCP maximum segment size (MTU - TCP/IP header)\n\
   -o, --output    <filename> output the report or error message to this specified file\n\
   -p, --port      #        server port to listen on/connect to\n\
-  -u, --udp                use UDP rather than TCP\n"
-#ifdef HAVE_SEQNO64b
-"      --udp-counters-64bit use 64 bit sequence numbers with UDP\n"
-#endif
-"  -w, --window    #[KM]    TCP window size (socket buffer size)\n"
+  -u, --udp                use UDP rather than TCP\n\
+  -w, --window    #[KM]    TCP window size (socket buffer size)\n"
 #ifdef HAVE_SCHED_SETSCHEDULER
 "  -z, --realtime           request realtime scheduler\n"
 #endif
@@ -109,12 +106,14 @@ const char usage_long2[] = "\
 \n\
 Client specific:\n\
   -c, --client    <host>   run in client mode, connecting to <host>\n\
-  -d, --dualtest           Do a bidirectional test simultaneously\n"
+  -d, --dualtest           Do a bidirectional test simultaneously (multiple sockets)\n\
+      --bidir              run bidirectional test over same socket (full duplex mode)\n"
 #ifdef HAVE_ISOCHRONOUS
 "      --ipg                set the the interpacket gap (milliseconds) for packets within an isochronous frame\n\
       --isochronous <frames-per-second>:<mean>,<stddev> send traffic in bursts (frames - emulate video traffic)\n"
 #endif
-"  -n, --num       #[kmgKMG]    number of bytes to transmit (instead of -t)\n\
+"      --incr-dstip         Increment the destination ip with parallel (-P) traffic threads\n\
+  -n, --num       #[kmgKMG]    number of bytes to transmit (instead of -t)\n\
   -r, --tradeoff           Do a bidirectional test individually\n\
   -t, --time      #        time in seconds to transmit for (default 10 secs)\n\
   -B, --bind [<ip> | <ip:port>] bind ip (and optional port) from which to source traffic\n\
@@ -124,6 +123,9 @@ Client specific:\n\
   -P, --parallel  #        number of parallel client threads to run\n"
 #ifndef WIN32
 "  -R, --reverse            reverse the test (client receives, server sends)\n"
+#else
+"  -R                       Remove the windows service\n"
+"      --reverse            reverse the test (client receives, server sends)\n"
 #endif
 "  -T, --ttl       #        time-to-live, for multicast (default 1)\n\
   -V, --ipv6_domain        Set the domain to IPv6 (send packets over IPv6)\n\
@@ -259,7 +261,6 @@ const char report_sum_bw_jitter_loss_format[] =
 const char client_report_epoch_start[] =
 "[%3d] Client thread traffic started at %ld.%.6ld (epoch/unix format)\n";
 
-
 const char client_write_size[] =
 "Write buffer size";
 
@@ -342,6 +343,13 @@ const char report_sum_bw_jitter_loss_enhanced_format[] =
 
 const char report_bw_jitter_loss_suppress_enhanced_format[] =
 "[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%) -/-/-/- ms %4.0f pps\n";
+
+/* -------------------------------------------------------------------
+ * Bidir reports
+ * ------------------------------------------------------------------- */
+
+const char report_bw_sum_bidir_format[] =
+"[%3d] [BIDIR]" IPERFTimeFrmt " sec  %ss  %ss/sec\n\n";
 
 /* -------------------------------------------------------------------
  * Misc reports
