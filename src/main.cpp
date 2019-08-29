@@ -245,14 +245,8 @@ int main( int argc, char **argv ) {
 	// Create the settings structure for the reporter thread
 	Settings_Copy( ext_gSettings, &into );
 	into->mThreadMode = ReporterThreadMode;
-	Mutex_Lock( &groupCond );
-	if (into->multihdr)
-	  into->multihdr->refcount--;
-	if (into->bidirhdr)
-	  into->bidirhdr->refcount--;
 	into->multihdr = NULL;
 	into->bidirhdr = NULL;
-	Mutex_Unlock( &groupCond );
 	// Have the reporter launch the client or listener
 	into->runNow = ext_gSettings;
 

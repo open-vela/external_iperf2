@@ -248,6 +248,11 @@ sInterupted == SIGALRM
 		    server->mThreadMode=kMode_Client;
 		} else if (tempSettings && isBidir(tempSettings)) {
 		    tempSettings->mThreadMode=kMode_Client;
+		    tempSettings->bidirhdr = InitBiDirReport( server, groupID);
+#if HAVE_THREAD_DEBUG
+		    thread_debug("BiDir report client=%p/%p server=%p/%p", (void *) tempSettings, (void *) tempSettings->bidirhdr, (void *) server, (void *) server->bidirhdr);
+#endif
+		    UpdateMultiHdrRefCounter(server->bidirhdr, 1);
 		    thread_start(tempSettings);
 		}
             } else {
@@ -291,8 +296,10 @@ sInterupted == SIGALRM
 		// create a multihdr in prepartion but only store
 		// the value in the client list, don't set the server
 		// thread's multihdr yet (do this above)
-                listtemp->holder = InitMulti( server, groupID, MULTISUM);
-                server->multihdr = listtemp->holder;
+		if (!server->multihdr) {
+		    listtemp->holder = InitSumReport( server, groupID);
+		    server->multihdr = listtemp->holder;
+		}
             }
 
 	    // Perform L2 setup if needed
@@ -1101,7 +1108,7 @@ void Listener::UDPSingleServer( ) {
             server->multihdr = exist->holder;
         } else {
             groupID--;
-            listtemp->holder = InitMulti( server, groupID, MULTISUM);
+            listtemp->holder = InitSumReport( server, groupID);
             server->multihdr = listtemp->holder;
         }
         Mutex_Unlock( &groupCond );

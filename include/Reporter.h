@@ -311,10 +311,6 @@ typedef struct ReporterData {
     unsigned int FQPacingRate;
 } ReporterData;
 
-typedef enum MultiHdrType {
-    MULTISUM  = 0,
-    MULTIBIDIR
-} MultiHdrType;
 
 typedef struct ReporterMutex {
     Condition await_reporter;
@@ -325,7 +321,6 @@ typedef struct MultiHeader {
     int groupID;
     int threads;
     int refcount;
-    MultiHdrType type;
     ReporterData report;
 } MultiHeader;
 
@@ -354,8 +349,9 @@ typedef struct ReportHeader {
     ReporterData report;
     // function pointer for per packet processing
     void (*packet_handler) (struct ReportHeader *report, ReportStruct *packet);
-    void (*output_handler) (struct ReporterData *stats, ReporterData *sumstats, int final);
+    void (*output_handler) (struct ReporterData *stats, ReporterData *sumstats, ReporterData *bidirstats, int final);
     void (*output_sum_handler) (struct ReporterData *stats, int final);
+    void (*output_bidir_handler) (struct ReporterData *stats, int final);
     MultiHeader *multireport;
     MultiHeader *bidirreport;
     struct ReportHeader *next;
@@ -368,7 +364,8 @@ typedef void (* report_settings)( ReporterData* );
 typedef void (* report_statistics)( Transfer_Info* );
 typedef void (* report_serverstatistics)( Connection_Info*, Transfer_Info* );
 
-MultiHeader* InitMulti( struct thread_Settings *agent, int inID, MultiHdrType type);
+MultiHeader* InitSumReport( struct thread_Settings *agent, int inID);
+MultiHeader* InitBiDirReport( struct thread_Settings *agent, int inID);
 void InitReport( struct thread_Settings *agent );
 void InitConnectionReport( struct thread_Settings *agent );
 void UpdateConnectionReport(struct thread_Settings *mSettings, ReportHeader *reporthdr);

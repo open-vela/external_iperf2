@@ -109,7 +109,9 @@ void listener_spawn( thread_Settings *thread ) {
  */
 void server_spawn( thread_Settings *thread) {
     Server *theServer = NULL;
-
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Server spawn thread=%p multihdr=%p", (void *) thread, (void *)thread->multihdr);
+#endif
     // Start up the server
     theServer = new Server( thread );
     // set traffic thread to realtime if needed
@@ -147,7 +149,7 @@ void client_spawn( thread_Settings *thread ) {
 #endif
 	if (isBidir(thread)) {
 	    Mutex_Lock( &groupCond );
-	    thread->bidirhdr = InitMulti(thread, thread->mSock, MULTIBIDIR);
+	    thread->bidirhdr = InitSumReport(thread, thread->mSock);
 	    if (thread->bidirhdr)
 		thread->bidirhdr->refcount = 1;
 	    Mutex_Unlock( &groupCond );
@@ -237,7 +239,7 @@ void client_init( thread_Settings *clients ) {
       // sum of multiple client threads
       Mutex_Lock( &groupCond );
       groupID--;
-      clients->multihdr = InitMulti(clients, groupID, MULTISUM);
+      clients->multihdr = InitSumReport(clients, groupID);
       Mutex_Unlock( &groupCond );
     }
 
