@@ -988,6 +988,13 @@ bool Client::InProgress (void) {
  * Common things to do to finish a traffic thread
  */
 void Client::FinishTrafficActions(void) {
+    // Close the TCP socket as the event for the server to end
+    if ((!isServerReverse(mSettings) && !isUDP(mSettings)) && (mySocket != INVALID_SOCKET)) {
+        int rc = close( mySocket );
+	mySocket = INVALID_SOCKET;
+        WARN_errno( rc == SOCKET_ERROR, "close" );
+    }
+
     // stop timing
     now.setnow();
     reportstruct->packetTime.tv_sec = now.getSecs();
