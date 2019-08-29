@@ -137,16 +137,16 @@ static void reporter_handle_packet_client(ReportHeader *report, ReportStruct *pa
 static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *packet);
 static void output_missed_reports(ReporterData *stats, ReportStruct *packet);
 static void output_missed_multireports(ReporterData *stats, ReportStruct *packet);
-static void output_transfer_report_client_tcp(ReporterData *stats, ReporterData *sumstats, int final);
-static void output_transfer_report_client_udp(ReporterData *stats, ReporterData *sumstats, int final);
-static void output_transfer_report_server_tcp(ReporterData *stats, ReporterData *sumstats, int final);
-static void output_transfer_report_server_udp(ReporterData *stats, ReporterData *sumstats, int final);
+static void output_transfer_report_client_tcp(ReporterData *stats, ReporterData *sumstats, ReporterData *bidirstats, int final);
+static void output_transfer_report_client_udp(ReporterData *stats, ReporterData *sumstats, ReporterData *bidirstats, int final);
+static void output_transfer_report_server_tcp(ReporterData *stats, ReporterData *sumstats, ReporterData *bidirstats, int final);
+static void output_transfer_report_server_udp(ReporterData *stats, ReporterData *sumstats, ReporterData *bidirstats, int final);
 static void output_transfer_sum_report_client_tcp(ReporterData *stats, int final);
 static void output_transfer_sum_report_server_tcp(ReporterData *stats, int final);
 static void output_transfer_sum_report_client_udp(ReporterData *stats, int final);
 static void output_transfer_sum_report_server_udp(ReporterData *stats, int final);
-static void output_transfer_bidir_report(ReporterData *stats);
-static void output_transfer_bidir_final_report(ReporterData *stats);
+static void output_transfer_bidir_report_tcp(ReporterData *stats, int final);
+static void output_transfer_bidir_report_udp(ReporterData *stats, int final);
 
 static void reset_transfer_stats(ReporterData *stats);
 static inline void reset_transfer_stats_client(ReporterData *stats);
@@ -160,11 +160,11 @@ static void gettcpistats(ReporterData *stats, ReporterData *sumstats, int final)
 static PacketRing * init_packetring(int count);
 
 
-MultiHeader* InitMulti(thread_Settings *agent, int inID, MultiHdrType type) {
+MultiHeader* InitSumReport(thread_Settings *agent, int inID) {
     MultiHeader *multihdr = (MultiHeader *) calloc(1, sizeof(MultiHeader));
     if ( multihdr != NULL ) {
 #ifdef HAVE_THREAD_DEBUG
-        thread_debug("Init multiheader %p id=%d (type=%d)", (void *)multihdr, inID, type);
+        thread_debug("Init multiheader sum report %p id=%d (type=%d)", (void *)multihdr, inID);
 #endif
         agent->multihdr = multihdr;
 	multihdr->groupID = inID;
@@ -172,6 +172,53 @@ MultiHeader* InitMulti(thread_Settings *agent, int inID, MultiHdrType type) {
 	if (agent->mThreadMode == kMode_Client) {
 	    multihdr->threads = agent->mThreads;
 	}
+	if (isMultipleReport(agent)) {
+	    ReporterData *data = &multihdr->report;
+	    data->type = TRANSFER_REPORT;
+	    if (agent->mInterval != 0.0) {
+		struct timeval *interval = &data->intervalTime;
+		interval->tv_sec = (long) agent->mInterval;
+		interval->tv_usec = (long) ((agent->mInterval - interval->tv_sec)
+					    * rMillion);
+	    }
+	    data->mHost = agent->mHost;
+	    data->mLocalhost = agent->mLocalhost;
+	    data->mBufLen = agent->mBufLen;
+	    data->mMSS = agent->mMSS;
+	    data->mTCPWin = agent->mTCPWin;
+	    data->FQPacingRate = agent->mFQPacingRate;
+	    data->flags = agent->flags;
+	    data->mThreadMode = agent->mThreadMode;
+	    data->mode = agent->mReportMode;
+	    data->info.mFormat = agent->mFormat;
+	    data->info.mTTL = agent->mTTL;
+	    if (data->mThreadMode == kMode_Server)
+		data->info.sock_callstats.read.binsize = data->mBufLen / 8;
+	    if ( isEnhanced( agent ) ) {
+		data->info.mEnhanced = 1;
+	    } else {
+		data->info.mEnhanced = 0;
+	    }
+	    if ( isUDP( agent ) ) {
+		multihdr->report.info.mUDP = (char)agent->mThreadMode;
+	    } else {
+		multihdr->report.info.mTCP = (char)agent->mThreadMode;
+	    }
+	}
+    } else {
+            FAIL(1, "Out of Memory!!\n", agent);
+    }
+    return multihdr;
+}
+
+MultiHeader* InitBiDirReport(thread_Settings *agent, int inID) {
+    MultiHeader *multihdr = (MultiHeader *) calloc(1, sizeof(MultiHeader));
+    if ( multihdr != NULL ) {
+#ifdef HAVE_THREAD_DEBUG
+        thread_debug("Init multiheader bidir report %p id=%d (type=%d)", (void *)multihdr, inID);
+#endif
+        agent->bidirhdr = multihdr;
+	multihdr->groupID = inID;
 	if (isMultipleReport(agent)) {
 	    ReporterData *data = &multihdr->report;
 	    data->type = TRANSFER_REPORT;
@@ -306,6 +353,9 @@ void InitDataReport(thread_Settings *mSettings) {
     if ( reporthdr != NULL ) {
 	mSettings->reporthdr = reporthdr;
 	reporthdr->multireport = mSettings->multihdr;
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug("Multireport is %p", (void *)reporthdr->multireport);
+#endif
 	reporthdr->bidirreport = mSettings->bidirhdr;
 	data = &reporthdr->report;
 	data->mThreadMode = mSettings->mThreadMode;
@@ -325,10 +375,14 @@ void InitDataReport(thread_Settings *mSettings) {
 		    reporthdr->packet_handler = reporter_handle_packet_server_udp;
 		    reporthdr->output_handler = output_transfer_report_server_udp;
 		    reporthdr->output_sum_handler = output_transfer_sum_report_server_udp;
+		    if (isBidir(mSettings))
+		        reporthdr->output_bidir_handler = output_transfer_bidir_report_udp;
 		} else {
 		    reporthdr->packet_handler = reporter_handle_packet_server_tcp;
 		    reporthdr->output_handler = output_transfer_report_server_tcp;
 		    reporthdr->output_sum_handler = output_transfer_sum_report_server_tcp;
+		    if (isBidir(mSettings))
+		        reporthdr->output_bidir_handler = output_transfer_bidir_report_tcp;
 		}
 		break;
 	    case kMode_Client :
@@ -1027,21 +1081,23 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
         // ouput the missed reports to catch up
         // output_missed_reports(&reporthdr->report, packet);
 	ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
-	(*reporthdr->output_handler)(&reporthdr->report, sumstats, 0);
+	ReporterData *bidirstats = (reporthdr->bidirreport ? &reporthdr->bidirreport->report : NULL);
+	(*reporthdr->output_handler)(&reporthdr->report, sumstats, bidirstats, 0);
 	TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
 	if (reporthdr->multireport && (reporthdr->multireport->refcount > 1)) {
 	    nextring_event = 1;
 	    reporthdr->multireport->threads++;
 	}
-    }
-    if (reporthdr->bidirreport && \
-	(TimeDifference(reporthdr->bidirreport->report.nextTime, packet->packetTime) < 0)) {
-	if ((--reporthdr->bidirreport->threads) <= 0) {
-	    reporthdr->bidirreport->threads = 2;
-	    output_missed_multireports(&reporthdr->bidirreport->report, packet);
-	    output_transfer_bidir_report(&reporthdr->bidirreport->report);
-	    TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
+	if (reporthdr->bidirreport) {
+	    nextring_event = 1;
+	    reporthdr->bidirreport->threads++;
 	}
+    }
+    if (reporthdr->bidirreport && (reporthdr->bidirreport->threads == reporthdr->bidirreport->refcount)) {
+	reporthdr->bidirreport->threads = 0;
+	reporthdr->bidirreport->report.packetTime = packet->packetTime;
+	// output_missed_multireports(&reporthdr->multireport->report, packet);
+	(*reporthdr->output_bidir_handler)(&reporthdr->bidirreport->report, 0);
     }
     if (reporthdr->multireport  && (reporthdr->multireport->refcount > 1) && \
 	(reporthdr->multireport->threads == reporthdr->multireport->refcount)) {
@@ -1049,7 +1105,6 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
 	reporthdr->multireport->report.packetTime = packet->packetTime;
 	// output_missed_multireports(&reporthdr->multireport->report, packet);
 	(*reporthdr->output_sum_handler)(&reporthdr->multireport->report, 0);
-	TimeAdd(reporthdr->multireport->report.nextTime, reporthdr->report.intervalTime);
     }
     return nextring_event;
 }
@@ -1137,13 +1192,7 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 		}
 		// Do the packet accounting per the handler type
 		if (reporthdr->packet_handler) {
-		  (*reporthdr->packet_handler)(reporthdr, packet);
-		  if (reporthdr->bidirreport) {
-		    reporthdr->bidirreport->report.TotalLen += packet->packetLen;
-		  }
-		  if (reporthdr->multireport) {
-		      reporthdr->multireport->report.packetTime = packet->packetTime;
-		  }
+		    (*reporthdr->packet_handler)(reporthdr, packet);
 		}
 	    } else {
 	        // A last packet event was detected
@@ -1153,10 +1202,11 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 		// output final reports
 		reporthdr->report.packetTime=packet->packetTime;
 		ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
-		(*reporthdr->output_handler)(&reporthdr->report, sumstats, 1);
-
-		if (reporthdr->bidirreport)
-		    output_transfer_bidir_final_report(&reporthdr->bidirreport->report);
+		ReporterData *bidirstats = (reporthdr->bidirreport ? &reporthdr->bidirreport->report : NULL);
+		(*reporthdr->output_handler)(&reporthdr->report, sumstats, bidirstats, 1);
+		if (reporthdr->output_bidir_handler && reporthdr->bidirreport && (++reporthdr->multireport->threads == 2)) {
+		  (*reporthdr->output_bidir_handler)(&reporthdr->multireport->report, 1);
+		}
 		if (reporthdr->multireport && (reporthdr->multireport->refcount > 1)) {
 		    if (++reporthdr->multireport->threads == reporthdr->multireport->refcount) {
 			reporthdr->multireport->report.packetTime=packet->packetTime;
@@ -1588,7 +1638,7 @@ static inline void reset_transfer_stats_server_udp(ReporterData *stats) {
 }
 
 // These are the output handlers that get the reports ready and then prints them
-static void output_transfer_report_server_udp(ReporterData *stats, ReporterData *sumstats, int final) {
+static void output_transfer_report_server_udp(ReporterData *stats, ReporterData *sumstats, ReporterData *bidirstats, int final) {
     set_endtime(stats);
     if (sumstats) {
 	sumstats->cntOutofOrder += stats->cntOutofOrder - stats->lastOutofOrder;
@@ -1662,7 +1712,7 @@ static void output_transfer_sum_report_client_udp(ReporterData *stats, int final
     }
 }
 
-static void output_transfer_report_client_udp(ReporterData *stats, ReporterData *sumstats, int final) {
+static void output_transfer_report_client_udp(ReporterData *stats, ReporterData *sumstats, ReporterData *bidirstats, int final) {
     set_endtime(stats);
     if (sumstats) {
 	sumstats->TotalLen += stats->TotalLen - stats->lastTotal;
@@ -1694,7 +1744,7 @@ static void output_transfer_report_client_udp(ReporterData *stats, ReporterData 
     }
 }
 
-static void output_transfer_report_server_tcp(ReporterData *stats, ReporterData *sumstats, int final) {
+static void output_transfer_report_server_tcp(ReporterData *stats, ReporterData *sumstats, ReporterData *bidirstats, int final) {
     set_endtime(stats);
     int ix;
     if (final) {
@@ -1719,7 +1769,7 @@ static void output_transfer_report_server_tcp(ReporterData *stats, ReporterData 
 }
 
 
-static void output_transfer_report_client_tcp(ReporterData *stats, ReporterData *sumstats, int final) {
+static void output_transfer_report_client_tcp(ReporterData *stats, ReporterData *sumstats, ReporterData *bidirstats, int final) {
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
     if (stats->info.mEnhanced && (stats->info.mTCP == kMode_Client))
 	gettcpistats(stats, sumstats, 0);
@@ -1858,9 +1908,10 @@ static void output_transfer_sum_report_server_tcp(ReporterData *stats, int final
     }
 }
 
-static void output_transfer_bidir_report(ReporterData *stats) {
+static void output_transfer_bidir_report_tcp(ReporterData *stats, int final) {
 }
-static void output_transfer_bidir_final_report(ReporterData *stats) {
+
+static void output_transfer_bidir_report_udp(ReporterData *stats, int final) {
 }
 
 /*
