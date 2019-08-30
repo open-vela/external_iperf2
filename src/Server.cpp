@@ -290,6 +290,9 @@ void Server::InitTrafficLoop (void) {
 	}
     }
     if (isServerModeTime(mSettings) || (isModeTime(mSettings) && isReverse(mSettings))) {
+        if (isModeTime(mSettings) && isReverse(mSettings)) {
+           mSettings->mAmount += 100;  // units are 10 ms, add 1 sec for slop on reverse
+        }
 #ifdef HAVE_SETITIMER
         int err;
         struct itimerval it;
