@@ -980,17 +980,12 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 	    unsetTxStartTime(mExtSettings);
 	    fprintf(stderr, "WARNING: option of --txstart-time ignored as not supported on the server\n");
 	}
-    } else {
-        if (isModeTime(mExtSettings)) {
-	  if (infinitetime) {
-	      unsetModeTime(mExtSettings);
-	      setModeInfinite(mExtSettings);
-	      fprintf(stderr, "WARNING: client will send traffic forever or until an external signal (e.g. SIGINT or SIGTERM) occurs to stop it\n");
-	  }
-	  if (isModeTime(mExtSettings) && isReverse(mExtSettings))
-	    mExtSettings->mAmount += 100;  // units are 10 ms, add 1 sec for slop on reverse
-        }
+    } else if (isModeTime(mExtSettings)  && infinitetime) {
+        unsetModeTime(mExtSettings);
+	setModeInfinite(mExtSettings);
+	fprintf(stderr, "WARNING: client will send traffic forever or until an external signal (e.g. SIGINT or SIGTERM) occurs to stop it\n");
     }
+
     // UDP histogram settings
     if (isRxHistogram(mExtSettings) && isUDP(mExtSettings) && \
 	(mExtSettings->mThreadMode != kMode_Client) && mExtSettings->mRxHistogramStr) {
