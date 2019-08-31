@@ -249,6 +249,10 @@ void Server::InitTrafficLoop (void) {
 	    mSettings->reporthdr->multireport->report.startTime = myJob->report.startTime;
 	    mSettings->reporthdr->multireport->report.nextTime = myJob->report.nextTime;
 	}
+	if (mSettings->reporthdr->bidirreport && TimeZero(mSettings->reporthdr->bidirreport->report.startTime)) {
+	    mSettings->reporthdr->bidirreport->report.startTime = myJob->report.startTime;
+	    mSettings->reporthdr->bidirreport->report.nextTime = myJob->report.nextTime;
+	}
 	// Initialze the reportstruct scratchpad
 	reportstruct = &myJob->packetring->metapacket;
 	reportstruct->packetID = 0;

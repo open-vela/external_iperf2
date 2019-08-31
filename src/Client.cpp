@@ -232,6 +232,10 @@ Client::Client( thread_Settings *inSettings ) {
 	        reporthdr->multireport->report.startTime = reporthdr->report.startTime;
 	        reporthdr->multireport->report.nextTime = reporthdr->report.nextTime;
 	    }
+	    if (reporthdr->bidirreport && TimeZero(reporthdr->bidirreport->report.nextTime)) {
+	        reporthdr->bidirreport->report.startTime = reporthdr->report.startTime;
+	        reporthdr->bidirreport->report.nextTime = reporthdr->report.nextTime;
+	    }
 	}
 	if (mSettings->reporthdr) {
 	    mSettings->reporthdr->report.connection.connecttime = ct;
@@ -988,11 +992,13 @@ bool Client::InProgress (void) {
  * Common things to do to finish a traffic thread
  */
 void Client::FinishTrafficActions(void) {
-    // Close the TCP socket as the event for the server to end
-    if ((!isServerReverse(mSettings) && !isUDP(mSettings)) && (mySocket != INVALID_SOCKET)) {
-        int rc = close( mySocket );
-	mySocket = INVALID_SOCKET;
-        WARN_errno( rc == SOCKET_ERROR, "close" );
+    // Shutdown the TCP socket's writes as the event for the server to end its traffic loop
+    if (!isUDP(mSettings) && (mySocket != INVALID_SOCKET)) {
+        int rc = shutdown(mySocket, SHUT_WR);
+#ifdef HAVE_THREAD_DEBUG
+        thread_debug("Shutdown client write tcp socket %d", mySocket);
+#endif
+        WARN_errno( rc == SOCKET_ERROR, "shutdown" );
     }
 
     // stop timing
