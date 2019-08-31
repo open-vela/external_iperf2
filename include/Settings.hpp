@@ -75,6 +75,7 @@ extern "C" {
 #else
 #define SMALLEST_INTERVAL 0.0001
 #endif
+#define SLOPSECS 2
 
 // server/client mode
 typedef enum ThreadMode {

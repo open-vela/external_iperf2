@@ -114,7 +114,7 @@ void server_spawn(thread_Settings *thread) {
 #endif
     // set traffic thread to realtime if needed
     set_scheduler(thread);
-    
+
     // Start up the server
     theServer = new Server( thread );
     // Run the test
@@ -177,11 +177,14 @@ void client_spawn( thread_Settings *thread ) {
 	reverse_client->mThreadMode = kMode_Server;
 	setServerReverse(reverse_client); // cause the connection report to show reverse
 	reverse_client->bidirhdr = thread->bidirhdr; // reverse_client thread updates the bidir report
+	if (isModeTime(reverse_client)) {
+	  reverse_client->mAmount += (SLOPSECS * 100);  // add 2 sec for slop on reverse, units are 10 ms
+        }
 	thread_start(reverse_client);
-	// Now exchange test information with remote server
 	// RJM ADD a thread event here so reverse_client is in a known ready state prior to test exchange
+	// Now exchange client's test information with remote server
 	theClient->InitiateServer();
-	// Now handle bidir vs reverse only for client side now
+	// Now handle bidir vs reverse-only for client side invocation
         if (!isBidir(thread)) {
 	  // Reverse only, client thread waits on reverse_server and never runs any traffic
 	  if (!thread_equalid(reverse_client->mTID, thread_zeroid())) {

@@ -93,6 +93,7 @@ private:
     int L2_quintuple_filter (void);
     void Isoch_processing (int);
     bool InProgress(void);
+    void FirstReadBarrier(void);
     Timestamp connect_done;
 #if WIN32
     SOCKET mySocket;
