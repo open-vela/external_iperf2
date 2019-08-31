@@ -93,6 +93,9 @@ Server::Server( thread_Settings *inSettings ) {
     mBuf = new char[((mSettings->mBufLen > SIZEOF_MAXHDRMSG) ? mSettings->mBufLen : SIZEOF_MAXHDRMSG)];
     FAIL_errno( mBuf == NULL, "No memory for buffer\n", mSettings );
     SockAddr_Ifrname(mSettings);
+    if (isServerReverse(inSettings)) {
+      FirstReadBarrier();
+    }
 }
 
 /* -------------------------------------------------------------------
@@ -293,10 +296,7 @@ void Server::InitTrafficLoop (void) {
 	    WARN_errno( mSettings->mSock == SO_RCVTIMEO, "socket" );
 	}
     }
-    if (isServerModeTime(mSettings) || (isModeTime(mSettings) && isReverse(mSettings))) {
-        if (isModeTime(mSettings) && isReverse(mSettings)) {
-           mSettings->mAmount += 100;  // units are 10 ms, add 1 sec for slop on reverse
-        }
+    if (isServerModeTime(mSettings)) {
 #ifdef HAVE_SETITIMER
         int err;
         struct itimerval it;
@@ -603,6 +603,35 @@ void Server::RunUDP( void ) {
 }
 // end Recv
 
+
+// A reverse server thread needs to block on a read being ready
+void Server::FirstReadBarrier() {
+  fd_set readSet;
+  FD_ZERO( &readSet );
+
+  struct timeval timeout;
+
+  // wait until the socket is readable, or our timeout expires
+  FD_SET( mSettings->mSock, &readSet );
+  if (isModeTime(mSettings)) {
+    timeout.tv_sec = (int) (mSettings->mAmount / 100.0) - SLOPSECS;
+    timeout.tv_usec = (int) (10000 * (mSettings->mAmount - timeout.tv_sec * 100.0));
+  } else {
+    timeout.tv_sec  = SLOPSECS;
+    timeout.tv_usec = 0;
+  }
+#ifdef HAVE_THREAD_DEBUG
+  thread_debug("Server reverse block on first read with timeout %ld.%ld (sock=%d)", timeout.tv_sec, timeout.tv_usec, mSettings->mSock);
+#endif
+  int rc = select( mSettings->mSock+1, &readSet, NULL, NULL, &timeout );
+  FAIL_errno( rc == SOCKET_ERROR, "select", mSettings );
+  if ( rc == 0 ) {
+    FAIL_errno( 1, "select timeout", mSettings );
+  }
+#ifdef HAVE_THREAD_DEBUG
+  thread_debug("Server reverse read ready (sock=%d)", mSettings->mSock);
+#endif
+}
 /* -------------------------------------------------------------------
  * Send an AckFIN (a datagram acknowledging a FIN) on the socket,
  * then select on the socket for some time. If additional datagrams
