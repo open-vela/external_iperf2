@@ -296,7 +296,7 @@ void Server::InitTrafficLoop (void) {
 	    WARN_errno( mSettings->mSock == SO_RCVTIMEO, "socket" );
 	}
     }
-    if (isServerModeTime(mSettings)) {
+    if (isServerModeTime(mSettings) || (isModeTime(mSettings) && isServerReverse(mSettings))) {
 #ifdef HAVE_SETITIMER
         int err;
         struct itimerval it;
@@ -614,8 +614,10 @@ void Server::FirstReadBarrier() {
   // wait until the socket is readable, or our timeout expires
   FD_SET( mSettings->mSock, &readSet );
   if (isModeTime(mSettings)) {
-    timeout.tv_sec = (int) (mSettings->mAmount / 100.0) - SLOPSECS;
+    timeout.tv_sec = (int) (mSettings->mAmount / 100.0);
     timeout.tv_usec = (int) (10000 * (mSettings->mAmount - timeout.tv_sec * 100.0));
+    if ((timeout.tv_sec -= SLOPSECS) < SLOPSECS)
+      timeout.tv_sec = SLOPSECS;
   } else {
     timeout.tv_sec  = SLOPSECS;
     timeout.tv_usec = 0;
