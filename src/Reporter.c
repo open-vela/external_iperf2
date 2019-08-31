@@ -117,6 +117,11 @@ report_statistics multiple_reports[kReport_MAXIMUM] = {
     CSV_stats
 };
 
+report_statistics bidir_reports[kReport_MAXIMUM] = {
+    reporter_bidirstats,
+    statistics_notimpl
+};
+
 char buffer[SNBUFFERSIZE]; // Buffer for printing
 ReportHeader *ReportRoot = NULL;
 extern Condition ReportCond;
@@ -354,6 +359,8 @@ void InitDataReport(thread_Settings *mSettings) {
 	mSettings->reporthdr = reporthdr;
 	reporthdr->multireport = mSettings->multihdr;
 	reporthdr->bidirreport = mSettings->bidirhdr;
+	if (reporthdr->bidirreport)
+	  reporthdr->bidirreport->report.info.transferID = mSettings->mSock;
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug("Multireport is %p, Bidirreport is %p", (void *)reporthdr->multireport, (void *)reporthdr->bidirreport);
 #endif
@@ -1085,7 +1092,7 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
 	WARN(!*reporthdr->output_handler, "Transfer output handler is not set:");
 	(*reporthdr->output_handler)(&reporthdr->report, sumstats, bidirstats, 0);
 	TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
-	if (reporthdr->multireport && (reporthdr->multireport->refcount > 1)) {
+	if (reporthdr->multireport && (reporthdr->multireport->refcount > (reporthdr->bidirreport ?  2 : 1))) {
 	    nextring_event = 1;
 	    reporthdr->multireport->threads++;
 	}
@@ -1101,8 +1108,8 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
 	WARN(!*reporthdr->output_bidir_handler, "Bidir output handler is not set:");
 	(*reporthdr->output_bidir_handler)(&reporthdr->bidirreport->report, 0);
     }
-    if (reporthdr->multireport  && (reporthdr->multireport->refcount > 1) && \
-	(reporthdr->multireport->threads == reporthdr->multireport->refcount)) {
+    if (reporthdr->multireport  && (reporthdr->multireport->refcount > (reporthdr->bidirreport ?  2 : 1)) && \
+	(reporthdr->multireport->threads == (reporthdr->bidirreport ? ( 2 * reporthdr->multireport->refcount) : reporthdr->multireport->refcount)))  {
 	reporthdr->multireport->threads = 0;
 	reporthdr->multireport->report.packetTime = packet->packetTime;
 	// output_missed_multireports(&reporthdr->multireport->report, packet);
@@ -1208,7 +1215,7 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 		ReporterData *bidirstats = (reporthdr->bidirreport ? &reporthdr->bidirreport->report : NULL);
 		(*reporthdr->output_handler)(&reporthdr->report, sumstats, bidirstats, 1);
 		if (reporthdr->output_bidir_handler && reporthdr->bidirreport && (++reporthdr->bidirreport->threads == reporthdr->bidirreport->refcount)) {
-		  (*reporthdr->output_bidir_handler)(&reporthdr->multireport->report, 1);
+		  (*reporthdr->output_bidir_handler)(&reporthdr->bidirreport->report, 1);
 		}
 		if (reporthdr->multireport && (reporthdr->multireport->refcount > 1)) {
 		    if (++reporthdr->multireport->threads == reporthdr->multireport->refcount) {
@@ -1594,6 +1601,10 @@ static inline void reset_transfer_stats(ReporterData *stats) {
     }
 }
 
+static inline void reset_transfer_stats_bidir(ReporterData *stats) {
+    stats->info.startTime = stats->info.endTime;
+    stats->lastTotal = stats->TotalLen;
+}
 static inline void reset_transfer_stats_client(ReporterData *stats) {
     stats->info.startTime = stats->info.endTime;
     stats->lastTotal = stats->TotalLen;
@@ -1654,6 +1665,9 @@ static void output_transfer_report_server_udp(ReporterData *stats, ReporterData 
 	    sumstats->info.IPGsum = stats->info.IPGsum;
 	sumstats->info.IPGcnt += stats->info.IPGcnt;
     }
+    if (bidirstats) {
+	bidirstats->TotalLen += stats->TotalLen - stats->lastTotal;
+    }
     if (final) {
 	stats->info.cntOutofOrder = stats->cntOutofOrder;
 	// assume most of the  time out-of-order packets are not
@@ -1697,7 +1711,6 @@ static void output_transfer_sum_report_server_udp(ReporterData *stats, int final
 	reporter_print(stats, MULTIPLE_REPORT, 0);
 	reset_transfer_stats_server_udp(stats);
     }
-
 }
 static void output_transfer_sum_report_client_udp(ReporterData *stats, int final) {
     set_endtime(stats);
@@ -1729,6 +1742,9 @@ static void output_transfer_report_client_udp(ReporterData *stats, ReporterData 
 	sumstats->info.IPGsum += stats->info.IPGsum;
 	sumstats->info.IPGcnt += stats->info.IPGcnt;
     }
+    if (bidirstats) {
+	bidirstats->TotalLen += stats->TotalLen - stats->lastTotal;
+    }
     if (final) {
 	stats->info.TotalLen = stats->TotalLen;
 	stats->info.sock_callstats.write.WriteErr = stats->info.sock_callstats.write.totWriteErr;
@@ -1750,16 +1766,6 @@ static void output_transfer_report_client_udp(ReporterData *stats, ReporterData 
 static void output_transfer_report_server_tcp(ReporterData *stats, ReporterData *sumstats, ReporterData *bidirstats, int final) {
     set_endtime(stats);
     int ix;
-    if (final) {
-        stats->info.TotalLen = stats->TotalLen;
-	stats->info.startTime = 0.0;
-        stats->info.sock_callstats.read.cntRead = stats->info.sock_callstats.read.totcntRead;
-        for (ix = 0; ix < TCPREADBINCOUNT; ix++) {
-	    stats->info.sock_callstats.read.bins[ix] = stats->info.sock_callstats.read.totbins[ix];
-        }
-    } else {
-        stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
-    }
     if (sumstats) {
         sumstats->TotalLen += stats->TotalLen - stats->lastTotal;
         sumstats->info.sock_callstats.read.cntRead += stats->info.sock_callstats.read.cntRead;
@@ -1767,8 +1773,29 @@ static void output_transfer_report_server_tcp(ReporterData *stats, ReporterData 
 	    sumstats->info.sock_callstats.read.bins[ix] += stats->info.sock_callstats.read.bins[ix];
         }
     }
-    reporter_print(stats, TRANSFER_REPORT, 0);
-    reset_transfer_stats_server_tcp(stats);
+    if (bidirstats) {
+	bidirstats->TotalLen += stats->TotalLen - stats->lastTotal;
+    }
+    if (final) {
+        stats->info.TotalLen = stats->TotalLen;
+	stats->info.startTime = 0.0;
+        stats->info.sock_callstats.read.cntRead = stats->info.sock_callstats.read.totcntRead;
+        for (ix = 0; ix < TCPREADBINCOUNT; ix++) {
+	    stats->info.sock_callstats.read.bins[ix] = stats->info.sock_callstats.read.totbins[ix];
+        }
+	if (!bidirstats)
+	  reporter_print(stats, TRANSFER_REPORT, 1);
+	else if (stats->info.mEnhanced)
+	  reporter_print(stats, TRANSFER_REPORT, 1);
+
+    } else {
+        stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
+	if (!bidirstats)
+	  reporter_print(stats, TRANSFER_REPORT, 0);
+	else if (stats->info.mEnhanced)
+	  reporter_print(stats, TRANSFER_REPORT, 0);
+	reset_transfer_stats_server_tcp(stats);
+    }
 }
 
 
@@ -1786,6 +1813,9 @@ static void output_transfer_report_client_tcp(ReporterData *stats, ReporterData 
 	sumstats->info.sock_callstats.write.totWriteCnt += stats->info.sock_callstats.write.WriteCnt;
 	sumstats->info.sock_callstats.write.totTCPretry += stats->info.sock_callstats.write.TCPretry;
     }
+    if (bidirstats) {
+	bidirstats->TotalLen += stats->TotalLen - stats->lastTotal;
+    }
     if (final) {
 	stats->info.sock_callstats.write.WriteErr = stats->info.sock_callstats.write.totWriteErr;
 	stats->info.sock_callstats.write.WriteCnt = stats->info.sock_callstats.write.totWriteCnt;
@@ -1793,11 +1823,17 @@ static void output_transfer_report_client_tcp(ReporterData *stats, ReporterData 
 	stats->info.TotalLen = stats->TotalLen;
 	stats->info.startTime = 0.0;
 	stats->info.endTime = TimeDifference(stats->packetTime, stats->startTime);
-	reporter_print(stats, TRANSFER_REPORT, 1);
+	if (!bidirstats)
+	    reporter_print(stats, TRANSFER_REPORT, 1);
+	else if (stats->info.mEnhanced)
+	  reporter_print(stats, TRANSFER_REPORT, 1);
     } else {
 	stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
 	stats->info.endTime = TimeDifference(stats->nextTime, stats->startTime);
-	reporter_print(stats, TRANSFER_REPORT, 0);
+	if (!bidirstats)
+	    reporter_print(stats, TRANSFER_REPORT, 0);
+	else if (stats->info.mEnhanced)
+	  reporter_print(stats, TRANSFER_REPORT, 0);
 	reset_transfer_stats_server_udp(stats);
     }
 }
@@ -1912,6 +1948,16 @@ static void output_transfer_sum_report_server_tcp(ReporterData *stats, int final
 }
 
 static void output_transfer_bidir_report_tcp(ReporterData *stats, int final) {
+    set_endtime(stats);
+    if (final) {
+	stats->info.TotalLen = stats->TotalLen;
+	stats->info.startTime = 0.0;
+	reporter_print( stats, BIDIR_REPORT, 1 );
+    } else {
+	stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
+	reporter_print( stats, BIDIR_REPORT, 0 );
+	reset_transfer_stats_bidir(stats);
+    }
 }
 
 static void output_transfer_bidir_report_udp(ReporterData *stats, int final) {
@@ -1941,6 +1987,9 @@ int reporter_print( ReporterData *stats, int type, int end ) {
             break;
         case MULTIPLE_REPORT:
             multiple_reports[stats->mode]( &stats->info );
+            break;
+        case BIDIR_REPORT:
+            bidir_reports[stats->mode]( &stats->info );
             break;
         default:
             fprintf( stderr, "Printing type not implemented! No Output\n" );

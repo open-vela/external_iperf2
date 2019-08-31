@@ -253,7 +253,6 @@ sInterupted == SIGALRM
 		    thread_debug("BiDir report client=%p/%p server=%p/%p", (void *) tempSettings, (void *) tempSettings->bidirhdr, (void *) server, (void *) server->bidirhdr);
 #endif
 		    UpdateMultiHdrRefCounter(server->bidirhdr, 2);
-		    thread_start(tempSettings);
 		}
             } else {
 	        tempSettings = NULL;
@@ -287,20 +286,22 @@ sInterupted == SIGALRM
                 listtemp->holder = exist->holder;
                 server->multihdr = exist->holder;
 		// Increase the ref counter
-	        UpdateMultiHdrRefCounter(server->multihdr, 1);
+		UpdateMultiHdrRefCounter(server->multihdr, 1);
             } else {
 	        Mutex_Lock( &groupCond );
                 groupID--;
 		Mutex_Unlock( &groupCond );
 		// this is the case of a single client host, no summing
-		// create a multihdr in prepartion but only store
-		// the value in the client list, don't set the server
-		// thread's multihdr yet (do this above)
 		if (!server->multihdr) {
-		    listtemp->holder = InitSumReport( server, groupID);
+		    listtemp->holder = InitSumReport(server, groupID);
 		    server->multihdr = listtemp->holder;
 		}
             }
+	    // Handle bidir client
+	    if (tempSettings && !server->multihdr &&isBidir(tempSettings)) {
+	        tempSettings->multihdr = server->multihdr;
+	        UpdateMultiHdrRefCounter(server->multihdr, 1);
+	    }
 
 	    // Perform L2 setup if needed
 	    if (isUDP(mSettings) && (isL2LengthCheck(mSettings) || isL2LengthCheck(server))) {
@@ -333,7 +334,12 @@ sInterupted == SIGALRM
 		{
 		    if (mSettings->mSock > 0)
 			thread_start( server );
+		    // Start the BiDir client if exists
+		    if (tempSettings && isBidir(tempSettings)) {
+		      thread_start(tempSettings);
+		    }
 		}
+
 	    // create a new socket for the Listener thread now that server thread
 	    // is handling the current one
             if ( UDP ) {

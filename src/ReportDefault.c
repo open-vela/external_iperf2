@@ -364,6 +364,24 @@ void reporter_multistats( Transfer_Info *stats ) {
     }
 }
 
+
+/*
+ * Prints bidir sum transfer reports in default style
+ */
+void reporter_bidirstats( Transfer_Info *stats ) {
+
+  byte_snprintf( buffer, sizeof(buffer)/2, (double) stats->TotalLen,
+		 toupper( (int)stats->mFormat));
+  byte_snprintf( &buffer[sizeof(buffer)/2], sizeof(buffer)/2,
+		 ((double) stats->TotalLen) / (stats->endTime - stats->startTime),
+		 stats->mFormat);
+
+  // TCP Reporting
+  printf(report_bw_sum_bidir_format, stats->transferID,
+	 stats->startTime, stats->endTime,
+	 buffer, &buffer[sizeof(buffer)/2]);
+}
+
 /*
  * Prints server transfer reports in default style
  */

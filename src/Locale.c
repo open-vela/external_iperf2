@@ -349,7 +349,7 @@ const char report_bw_jitter_loss_suppress_enhanced_format[] =
  * ------------------------------------------------------------------- */
 
 const char report_bw_sum_bidir_format[] =
-"[%3d] [BIDIR]" IPERFTimeFrmt " sec  %ss  %ss/sec\n\n";
+"[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec\n";
 
 /* -------------------------------------------------------------------
  * Misc reports
