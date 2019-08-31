@@ -107,15 +107,16 @@ void listener_spawn( thread_Settings *thread ) {
  * and launching the server. It is provided as a means for
  * the C thread subsystem to launch the server C++ object.
  */
-void server_spawn( thread_Settings *thread) {
+void server_spawn(thread_Settings *thread) {
     Server *theServer = NULL;
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Server spawn thread=%p multihdr=%p", (void *) thread, (void *)thread->multihdr);
 #endif
-    // Start up the server
-    theServer = new Server( thread );
     // set traffic thread to realtime if needed
     set_scheduler(thread);
+    
+    // Start up the server
+    theServer = new Server( thread );
     // Run the test
     if ( isUDP( thread ) ) {
         theServer->RunUDP();
@@ -129,83 +130,81 @@ void server_spawn( thread_Settings *thread) {
  * client_spawn is responsible for creating a Client class
  * and launching the client. It is provided as a means for
  * the C thread subsystem to launch the client C++ object.
+ *
+ * There are a few different client startup modes
+ * o) Normal
+ * o) Dual (-d or -r) (legacy)
+ * o) Reverse (Client side) (client acts like server)
+ * o) Bidir (Client side) client starts server
+ * o) ServerReverse (Server side) (listener starts a client)
+ * o) Bidir (Server side) (listener starts server & client)
+ * o) WriteAck
+ *
  */
 void client_spawn( thread_Settings *thread ) {
     Client *theClient = NULL;
     thread_Settings *reverse_client = NULL;
 
+    // set traffic thread to realtime if needed
+    set_scheduler(thread);
+
     // start up the client
     // Note: socket connect() happens here in the constructor
     // that should be fixed as a clean up
     theClient = new Client( thread );
-
-    // set traffic thread to realtime if needed
-    set_scheduler(thread);
-
-    // If this is a reverse test, then run that way
-    if (isReverse(thread)) {
+    // Code for the normal case
+    if (!isReverse(thread) && !isReverse(thread)) {
+	theClient->InitiateServer();
+	theClient->Run();
+    } else if (isReverse(thread)) {
+       // This is a client side initiated reverse test,
+       // Could be bidir or reverse only
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug("Client reverse (server) thread starting sock=%d", thread->mSock);
 #endif
+	// Create a bidir report if needed
 	if (isBidir(thread)) {
-	    Mutex_Lock( &groupCond );
-	    thread->bidirhdr = InitSumReport(thread, thread->mSock);
-	    if (thread->bidirhdr)
-		thread->bidirhdr->refcount = 1;
-	    Mutex_Unlock( &groupCond );
+	    thread->bidirhdr = InitBiDirReport(thread, thread->mSock);
 	} else {
 	    thread->bidirhdr = NULL;
 	}
-	// Settings copy will malloc space for the
-	// reverse thread settings and the run_wrapper
-	// will free it
+	// Create thread setting for the reverse_client (i.e. client as server)
+	// Note: Settings copy will malloc space for the
+	// reverse thread settings and the run_wrapper will free it
 	Settings_Copy(thread, &reverse_client);
-	if (reverse_client && (thread->mSock > 0)) {
-	    reverse_client->mSock = thread->mSock;
-	    reverse_client->mThreadMode = kMode_Server;
-	    reverse_client->bidirhdr = thread->bidirhdr;
-	    setServerReverse(reverse_client); // cause the connection report to show reverse
-	    if (thread->bidirhdr) {
-		Mutex_Lock( &groupCond );
-		thread->bidirhdr->refcount++;
-		Mutex_Unlock( &groupCond );
-		thread_start(reverse_client);
-	    } else {
-		thread_start(reverse_client);
-	    }
-	} else {
-	    fprintf(stderr, "Reverse test failed to start per thread settings or socket problem\n");
-	    exit(1);
-	}
-    }
-    // There are a few different client startup modes
-    // o) Normal
-    // o) Dual (-d or -r)
-    // o) Reverse
-    // o) ServerReverse
-    // o) WriteAck
-    // o) Bidir
-    if (!isServerReverse(thread)) {
+	FAIL((!reverse_client || !(thread->mSock > 0)), "Reverse test failed to start per thread settings or socket problem",  thread);
+	reverse_client->mSock = thread->mSock; // use the same socket for both directions
+	reverse_client->mThreadMode = kMode_Server;
+	setServerReverse(reverse_client); // cause the connection report to show reverse
+	reverse_client->bidirhdr = thread->bidirhdr; // reverse_client thread updates the bidir report
+	thread_start(reverse_client);
+	// Now exchange test information with remote server
+	// RJM ADD a thread event here so reverse_client is in a known ready state prior to test exchange
 	theClient->InitiateServer();
-    }
-    // If this is a only reverse test, then join the client thread to it
-    if (isReverse(thread) && !isBidir(thread)) {
-	if (!thread_equalid(reverse_client->mTID, thread_zeroid())) {
+	// Now handle bidir vs reverse only for client side now
+        if (!isBidir(thread)) {
+	  // Reverse only, client thread waits on reverse_server and never runs any traffic
+	  if (!thread_equalid(reverse_client->mTID, thread_zeroid())) {
 #ifdef HAVE_THREAD_DEBUG
 	    thread_debug("Reverse pthread join sock=%d", reverse_client->mSock);
 #endif
 	    if (pthread_join(reverse_client->mTID, NULL) != 0) {
-		WARN( 1, "pthread_join reverse failed" );
+	      WARN( 1, "pthread_join reverse failed" );
 	    } else {
 #ifdef HAVE_THREAD_DEBUG
-		thread_debug("Client reverse thread finished sock=%d", reverse_client->mSock);
+	      thread_debug("Client reverse thread finished sock=%d", reverse_client->mSock);
 #endif
 	    }
+	  }
+	} else {
+	  // bidir case, start the client traffic
+	  theClient->Run();
 	}
-    } else {
-	// Run the normal client test
-	theClient->Run();
+    } else if (isServerReverse(thread)) {
+        // This is the case of the listener launching a client, no test exchange or connect
+        theClient->Run();
     }
+    // Call the client's destructor which will close the socket
     DELETE_PTR( theClient );
 }
 

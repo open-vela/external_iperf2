@@ -56,6 +56,7 @@
 
 void reporter_printstats( Transfer_Info *stats );
 void reporter_multistats( Transfer_Info *stats );
+void reporter_bidirstats( Transfer_Info *stats );
 void reporter_serverstats( Connection_Info *conn, Transfer_Info *stats );
 void reporter_reportsettings( ReporterData *stats );
 void *reporter_reportpeer( Connection_Info *stats, int ID);
