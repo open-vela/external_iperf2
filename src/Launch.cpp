@@ -153,19 +153,31 @@ void client_spawn( thread_Settings *thread ) {
     // that should be fixed as a clean up
     theClient = new Client( thread );
     // Code for the normal case
-    if (!isReverse(thread) && !isReverse(thread)) {
+    if (!isReverse(thread) && !isServerReverse(thread)) {
 	theClient->InitiateServer();
 	theClient->Run();
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug("Client spawn thread normal (sock=%d)", (void *) thread, thread->mSock);
+#endif
+    } else if (isServerReverse(thread)) {
+#ifdef HAVE_THREAD_DEBUG
+      thread_debug("Client spawn thread server-reverse", (void *) thread, thread->mSock);
+#endif
+        // This is the case of the listener launching a client, no test exchange nor connect
+        theClient->Run();
     } else if (isReverse(thread)) {
        // This is a client side initiated reverse test,
        // Could be bidir or reverse only
-#ifdef HAVE_THREAD_DEBUG
-	thread_debug("Client reverse (server) thread starting sock=%d", thread->mSock);
-#endif
 	// Create a bidir report if needed
 	if (isBidir(thread)) {
+#ifdef HAVE_THREAD_DEBUG
+	  thread_debug("Client spawn reverse (bidir) (sock=%d)", (void *) thread);
+#endif
 	    thread->bidirhdr = InitBiDirReport(thread, thread->mSock);
 	} else {
+#ifdef HAVE_THREAD_DEBUG
+	  thread_debug("Client spawn reverse (server) (sock=%d)", (void *) thread);
+#endif
 	    thread->bidirhdr = NULL;
 	}
 	// Create thread setting for the reverse_client (i.e. client as server)
@@ -203,9 +215,6 @@ void client_spawn( thread_Settings *thread ) {
 	  // bidir case, start the client traffic
 	  theClient->Run();
 	}
-    } else if (isServerReverse(thread)) {
-        // This is the case of the listener launching a client, no test exchange or connect
-        theClient->Run();
     }
     // Call the client's destructor which will close the socket
     DELETE_PTR( theClient );
