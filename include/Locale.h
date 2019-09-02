@@ -188,6 +188,8 @@ extern const char report_sum_bw_jitter_loss_enhanced_format[];
 
 extern const char report_bw_sum_bidir_format[];
 
+extern const char report_bw_sum_bidir_enhanced_format[];
+
 /* -------------------------------------------------------------------
  * Misc reports
  * ------------------------------------------------------------------- */

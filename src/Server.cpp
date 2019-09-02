@@ -93,9 +93,6 @@ Server::Server( thread_Settings *inSettings ) {
     mBuf = new char[((mSettings->mBufLen > SIZEOF_MAXHDRMSG) ? mSettings->mBufLen : SIZEOF_MAXHDRMSG)];
     FAIL_errno( mBuf == NULL, "No memory for buffer\n", mSettings );
     SockAddr_Ifrname(mSettings);
-    if (isServerReverse(inSettings)) {
-      FirstReadBarrier();
-    }
 }
 
 /* -------------------------------------------------------------------
@@ -606,32 +603,30 @@ void Server::RunUDP( void ) {
 
 // A reverse server thread needs to block on a read being ready
 void Server::FirstReadBarrier() {
-  fd_set readSet;
-  FD_ZERO( &readSet );
-
-  struct timeval timeout;
-
-  // wait until the socket is readable, or our timeout expires
-  FD_SET( mSettings->mSock, &readSet );
-  if (isModeTime(mSettings)) {
-    timeout.tv_sec = (int) (mSettings->mAmount / 100.0);
-    timeout.tv_usec = (int) (10000 * (mSettings->mAmount - timeout.tv_sec * 100.0));
-    if ((timeout.tv_sec -= SLOPSECS) < SLOPSECS)
-      timeout.tv_sec = SLOPSECS;
-  } else {
-    timeout.tv_sec  = SLOPSECS;
-    timeout.tv_usec = 0;
-  }
+    fd_set readSet;
+    FD_ZERO( &readSet );
+    struct timeval timeout;
+    // wait until the socket is readable, or our timeout expires
+    FD_SET( mSettings->mSock, &readSet );
+    if (isModeTime(mSettings)) {
+	timeout.tv_sec = (int) (mSettings->mAmount / 100.0);
+	timeout.tv_usec = (int) (10000 * (mSettings->mAmount - timeout.tv_sec * 100.0));
+	if ((timeout.tv_sec -= SLOPSECS) < SLOPSECS)
+	    timeout.tv_sec = SLOPSECS;
+    } else {
+	timeout.tv_sec  = SLOPSECS;
+	timeout.tv_usec = 0;
+    }
 #ifdef HAVE_THREAD_DEBUG
-  thread_debug("Server reverse block on first read with timeout %ld.%ld (sock=%d)", timeout.tv_sec, timeout.tv_usec, mSettings->mSock);
+    thread_debug("Server reverse block on first read with timeout %ld.%ld (sock=%d)", timeout.tv_sec, timeout.tv_usec, mSettings->mSock);
 #endif
-  int rc = select( mSettings->mSock+1, &readSet, NULL, NULL, &timeout );
-  FAIL_errno( rc == SOCKET_ERROR, "select", mSettings );
-  if ( rc == 0 ) {
-    FAIL_errno( 1, "select timeout", mSettings );
-  }
+    int rc = select( mSettings->mSock+1, &readSet, NULL, NULL, &timeout );
+    FAIL_errno( rc == SOCKET_ERROR, "select", mSettings );
+    if ( rc == 0 ) {
+	FAIL_errno( 1, "select timeout", mSettings );
+    }
 #ifdef HAVE_THREAD_DEBUG
-  thread_debug("Server reverse read ready (sock=%d)", mSettings->mSock);
+    thread_debug("Server reverse read ready (sock=%d)", mSettings->mSock);
 #endif
 }
 /* -------------------------------------------------------------------
