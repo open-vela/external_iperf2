@@ -224,6 +224,7 @@ MultiHeader* InitBiDirReport(thread_Settings *agent, int inID) {
 #endif
         agent->bidirhdr = multihdr;
 	multihdr->groupID = inID;
+	multihdr->refcount = 2;
 	if (isMultipleReport(agent)) {
 	    ReporterData *data = &multihdr->report;
 	    data->type = TRANSFER_REPORT;
@@ -258,7 +259,7 @@ MultiHeader* InitBiDirReport(thread_Settings *agent, int inID) {
 	    }
 	}
     } else {
-            FAIL(1, "Out of Memory!!\n", agent);
+	FAIL(1, "Out of Memory!!\n", agent);
     }
     return multihdr;
 }
@@ -312,19 +313,19 @@ static void free_packetring(PacketRing *pr) {
 }
 
 void UpdateMultiHdrRefCounter(MultiHeader *multihdr, int val) {
-  if (!multihdr)
-    return;
-  // decrease the reference counter for mutliheaders
-  // and check to free the multiheader
-  Mutex_Lock( &groupCond );
-  if (multihdr) {
+    if (!multihdr)
+	return;
+    // decrease the reference counter for mutliheaders
+    // and check to free the multiheader
+    Mutex_Lock( &groupCond );
+    if (multihdr) {
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Sum multiheader %p ref=%d->%d", (void *)multihdr, \
-		 multihdr->refcount, (multihdr->refcount + val));
+	thread_debug("Sum multiheader %p ref=%d->%d", (void *)multihdr, \
+		     multihdr->refcount, (multihdr->refcount + val));
 #endif
-    multihdr->refcount += val;
-  }
-  Mutex_Unlock( &groupCond );
+	multihdr->refcount += val;
+    }
+    Mutex_Unlock( &groupCond );
 }
 void FreeReport(ReportHeader *reporthdr) {
     if (reporthdr) {
@@ -360,9 +361,9 @@ void InitDataReport(thread_Settings *mSettings) {
 	reporthdr->multireport = mSettings->multihdr;
 	reporthdr->bidirreport = mSettings->bidirhdr;
 	if (reporthdr->bidirreport)
-	  reporthdr->bidirreport->report.info.transferID = mSettings->mSock;
+	    reporthdr->bidirreport->report.info.transferID = mSettings->mSock;
 #ifdef HAVE_THREAD_DEBUG
-	thread_debug("Multireport is %p, Bidirreport is %p", (void *)reporthdr->multireport, (void *)reporthdr->bidirreport);
+	thread_debug("Job report %p uses multireport %p and bidirreport is %p", (void *)mSettings->reporthdr, (void *)reporthdr->multireport, (void *)reporthdr->bidirreport);
 #endif
 	data = &reporthdr->report;
 	data->mThreadMode = mSettings->mThreadMode;
@@ -402,7 +403,7 @@ void InitDataReport(thread_Settings *mSettings) {
 		    reporthdr->output_bidir_handler = output_transfer_bidir_report_tcp;
 		}
 		if (!isServerReverse(mSettings) && (reporthdr->multireport)) {
-		  UpdateMultiHdrRefCounter(reporthdr->multireport, 1);
+		    UpdateMultiHdrRefCounter(reporthdr->multireport, 1);
 		}
 		break;
 	    case kMode_Unknown :
