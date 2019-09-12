@@ -291,11 +291,11 @@ void Settings_Initialize( thread_Settings *main ) {
 
 void Settings_Copy( thread_Settings *from, thread_Settings **into ) {
     *into = new thread_Settings;
-#ifdef HAVE_THREAD_DEBUG
-    thread_debug("Copy thread settings (malloc) from/to=%p/%p", (void *)from, (void *)*into);
-#endif
-
     memcpy( *into, from, sizeof(thread_Settings) );
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Copy thread settings (malloc) from/to=%p/%p report/multi/bidir %p/%p/%p", \
+		 (void *)from, (void *)*into, (void *)(*into)->reporthdr, (void *)(*into)->multihdr, (void *)(*into)->bidirhdr);
+#endif
     if ( from->mHost != NULL ) {
         (*into)->mHost = new char[ strlen(from->mHost) + 1];
         strcpy( (*into)->mHost, from->mHost );
