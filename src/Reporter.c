@@ -388,6 +388,9 @@ void InitDataReport(thread_Settings *mSettings) {
 		    reporthdr->output_sum_handler = output_transfer_sum_report_server_tcp;
 		    reporthdr->output_bidir_handler = output_transfer_bidir_report_tcp;
 		}
+		if (isReverse(mSettings) && reporthdr->multireport) {
+		    UpdateMultiHdrRefCounter(reporthdr->multireport, 1);
+		}
 		break;
 	    case kMode_Client :
 		reporthdr->packet_handler = reporter_handle_packet_client;
@@ -400,7 +403,7 @@ void InitDataReport(thread_Settings *mSettings) {
 		    reporthdr->output_sum_handler = output_transfer_sum_report_client_tcp;
 		    reporthdr->output_bidir_handler = output_transfer_bidir_report_tcp;
 		}
-		if (!isServerReverse(mSettings) && (reporthdr->multireport)) {
+		if (!isServerReverse(mSettings) && reporthdr->multireport) {
 		    UpdateMultiHdrRefCounter(reporthdr->multireport, 1);
 		}
 		break;
@@ -1091,7 +1094,7 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
 	WARN(!*reporthdr->output_handler, "Transfer output handler is not set:");
 	(*reporthdr->output_handler)(&reporthdr->report, sumstats, bidirstats, 0);
 	TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
-	if (reporthdr->multireport && (reporthdr->multireport->refcount == (reporthdr->bidirreport ?  2 : 1))) {
+	if (reporthdr->multireport) {
 	    nextring_event = 1;
 	    reporthdr->multireport->threads++;
 	}
@@ -1108,7 +1111,7 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
 	(*reporthdr->output_bidir_handler)(&reporthdr->bidirreport->report, 0);
     }
     if (reporthdr->multireport  && \
-	(reporthdr->multireport->threads == (reporthdr->bidirreport ? ( 2 * reporthdr->multireport->refcount) : reporthdr->multireport->refcount)))  {
+	(reporthdr->multireport->threads == reporthdr->multireport->refcount))  {
 	reporthdr->multireport->threads = 0;
 	reporthdr->multireport->report.packetTime = packet->packetTime;
 	// output_missed_multireports(&reporthdr->multireport->report, packet);

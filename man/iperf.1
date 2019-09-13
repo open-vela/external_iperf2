@@ -59,8 +59,8 @@ TCP window size (socket buffer size)
 .BR -z ", " --realtime " "
 Request real-time scheduler, if supported.
 .TP
-.BR -B ", " --bind " \fIhost\fR"
-bind to \fIhost\fR, ip address or multicast address and optional port (see NOTES)
+.BR -B ", " --bind " \fIhost\fR[:\fIport\fR][%\fIdev\fR]"
+bind to \fIhost\fR, ip address or multicast address, optional port or device (see NOTES)
 .TP
 .BR -C ", " --compatibility " "
 for use with older versions does not sent extra msgs
@@ -525,12 +525,12 @@ Protocol (NTP) or Precision Time Protocol (PTP) are commonly used for
 this.  The reference clock(s) or oscillator's error will also affect
 the accuracy of UDP latency measurements.
 .P
-The -B option affects the bind() system call.  The -c <host>%<dev> requires root
-and sets the output interface.  These can be confusing.  The -B
-is typically used to bind to a particular IP address. For the server,
-only packets destined to that IP address will be received while any
-transmitted packets will carry that IP address as their source. The
--B does not control anything about the routing of transmitted packets.
+Binding is done via the -B for logical level and the percent (%) for device level
+on both the client and server. On the client, the -B option affects the bind() system
+call, and will set the source ip addresss and the source port, e.g. iperf -c <host>
+-B 192.168.100.2:6002. This controls the packet's source values but not routing.
+These can be confusing in that a route or device lookup may not
+be that of the device with the configured source IP.
 So, for example, if the IP address of eth0 is used for -B and the
 routing table for the destination IP address resolves
 the ouput interface to be eth1, then the host will send the packet
@@ -538,9 +538,11 @@ out device eth1 while using the source IP address of eth0 in the packet.
 To affect the physical output interface (e.g. dual homed systems) either use
 -c <host>%<dev> (requires root) and bypasses this host route table lookup,
 or configure policy routing per each -B source address and set the
-output interface there in the policy routes.  For link local v6,
-the -c link-local%dev is required to select the output interface
-as v6 link-local addresses don't cause a route to interface lookup.
+output interface there in the policy routes. On the server or receive,
+only packets destined to -B IP address will be received. It's also useful
+for multicast. For example, iperf -s -B 224.0.0.1%eth0 will receive ip
+multicast address received on eth0.  Finally, the device specifier is required
+for v6 link-local, e.g. -c [v6addr]%dev -V, to select the output interface.
 .P
 The --reverse (-R), -r and -d are confusing.  \fBIf you want to test through
 a NAT firewall, use --reverse\fR (or -R on non-windows systems).  The latter two
