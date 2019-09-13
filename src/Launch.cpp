@@ -148,6 +148,11 @@ void client_spawn( thread_Settings *thread ) {
     // set traffic thread to realtime if needed
     set_scheduler(thread);
 
+    if (isBidir(thread))
+      thread->bidirhdr = InitBiDirReport(thread, 0);
+    else
+      thread->bidirhdr = NULL;
+
     // start up the client
     // Note: socket connect() happens here in the constructor
     // that should be fixed as a clean up
@@ -173,7 +178,9 @@ void client_spawn( thread_Settings *thread ) {
 #ifdef HAVE_THREAD_DEBUG
 	    thread_debug("Client spawn reverse (bidir) (sock=%d)", thread->mSock);
 #endif
-	    thread->reporthdr->bidirreport = InitBiDirReport(thread, thread->mSock);
+	    if (thread->bidirhdr != NULL) {
+	        UpdateMultiHdrRefCounter(thread->bidirhdr, 1);
+	    }
 	} else {
 #ifdef HAVE_THREAD_DEBUG
 	    thread_debug("Client spawn reverse (server) (sock=%d)", thread->mSock);
@@ -189,6 +196,7 @@ void client_spawn( thread_Settings *thread ) {
 	reverse_client->mThreadMode = kMode_Server;
 	setServerReverse(reverse_client); // cause the connection report to show reverse
 	reverse_client->bidirhdr = thread->bidirhdr; // reverse_client thread updates the bidir report
+	UpdateMultiHdrRefCounter(thread->bidirhdr, 1);
 	if (isModeTime(reverse_client)) {
 	    reverse_client->mAmount += (SLOPSECS * 100);  // add 2 sec for slop on reverse, units are 10 ms
         }
