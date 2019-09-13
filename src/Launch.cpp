@@ -258,7 +258,10 @@ void client_init( thread_Settings *clients ) {
       // sum of multiple client threads
       Mutex_Lock( &groupCond );
       groupID--;
-      clients->multihdr = InitSumReport(clients, groupID);
+      if ((clients->multihdr = InitSumReport(clients, groupID)) != NULL) {
+          Condition_Initialize(&clients->multihdr->multibarrier_cond);
+	  clients->multihdr->multibarrier_cnt = clients->mThreads;
+      }
       Mutex_Unlock( &groupCond );
     }
 
