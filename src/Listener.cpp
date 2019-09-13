@@ -284,8 +284,6 @@ sInterupted == SIGALRM
                 // Copy the multiheader
                 listtemp->holder = exist->holder;
                 server->multihdr = exist->holder;
-		// Increase the ref counter
-		UpdateMultiHdrRefCounter(server->multihdr, 1);
             } else {
 	        Mutex_Lock( &groupCond );
                 groupID--;
@@ -296,8 +294,8 @@ sInterupted == SIGALRM
 		    server->multihdr = listtemp->holder;
 		}
             }
-	    // Handle bidir client
-	    if (tempSettings && !server->multihdr &&isBidir(tempSettings)) {
+	    // Handle bidir client on server side
+	    if (tempSettings && !server->multihdr && isBidir(tempSettings)) {
 	        tempSettings->multihdr = server->multihdr;
 	        UpdateMultiHdrRefCounter(server->multihdr, 1);
 	    }
@@ -318,6 +316,8 @@ sInterupted == SIGALRM
             //
 	    // Everything is now ready to start the server
 	    //
+	    // Increase the ref counter
+	    UpdateMultiHdrRefCounter(server->multihdr, 1);
 #if defined(WIN32) && defined(HAVE_THREAD)
             if ( UDP && mSettings->mSock > 0) {
                 // WIN32 does bad UDP handling so run single threaded
