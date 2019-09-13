@@ -321,6 +321,7 @@ typedef struct ReporterMutex {
 typedef struct MultiHeader {
     int groupID;
     int threads;
+    Mutex refcountlock;
     int refcount;
     ReporterData report;
 } MultiHeader;
