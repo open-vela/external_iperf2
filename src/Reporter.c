@@ -173,7 +173,8 @@ MultiHeader* InitSumReport(thread_Settings *agent, int inID) {
 #endif
         agent->multihdr = multihdr;
 	multihdr->groupID = inID;
-	multihdr->refcount = 1;
+	multihdr->refcount = 0;
+	Mutex_Initialize(&multihdr->refcountlock);
 	if (agent->mThreadMode == kMode_Client) {
 	    multihdr->threads = agent->mThreads;
 	}
@@ -224,7 +225,8 @@ MultiHeader* InitBiDirReport(thread_Settings *agent, int inID) {
 #endif
         agent->bidirhdr = multihdr;
 	multihdr->groupID = inID;
-	multihdr->refcount = 2;
+	multihdr->refcount = 0;
+	Mutex_Initialize(&multihdr->refcountlock);
 	if (isMultipleReport(agent)) {
 	    ReporterData *data = &multihdr->report;
 	    data->type = TRANSFER_REPORT;
@@ -317,7 +319,7 @@ void UpdateMultiHdrRefCounter(MultiHeader *multihdr, int val) {
 	return;
     // decrease the reference counter for mutliheaders
     // and check to free the multiheader
-    Mutex_Lock( &groupCond );
+    Mutex_Lock(&multihdr->refcountlock);
     if (multihdr) {
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug("Sum multiheader %p ref=%d->%d", (void *)multihdr, \
@@ -325,7 +327,7 @@ void UpdateMultiHdrRefCounter(MultiHeader *multihdr, int val) {
 #endif
 	multihdr->refcount += val;
     }
-    Mutex_Unlock( &groupCond );
+    Mutex_Unlock(&multihdr->refcountlock);
 }
 void FreeReport(ReportHeader *reporthdr) {
     if (reporthdr) {
@@ -1093,7 +1095,7 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
 	WARN(!*reporthdr->output_handler, "Transfer output handler is not set:");
 	(*reporthdr->output_handler)(&reporthdr->report, sumstats, bidirstats, 0);
 	TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
-	if (reporthdr->multireport && (reporthdr->multireport->refcount > (reporthdr->bidirreport ?  2 : 1))) {
+	if (reporthdr->multireport && (reporthdr->multireport->refcount == (reporthdr->bidirreport ?  2 : 1))) {
 	    nextring_event = 1;
 	    reporthdr->multireport->threads++;
 	}
@@ -1109,7 +1111,7 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
 	WARN(!*reporthdr->output_bidir_handler, "Bidir output handler is not set:");
 	(*reporthdr->output_bidir_handler)(&reporthdr->bidirreport->report, 0);
     }
-    if (reporthdr->multireport  && (reporthdr->multireport->refcount > (reporthdr->bidirreport ?  2 : 1)) && \
+    if (reporthdr->multireport  && \
 	(reporthdr->multireport->threads == (reporthdr->bidirreport ? ( 2 * reporthdr->multireport->refcount) : reporthdr->multireport->refcount)))  {
 	reporthdr->multireport->threads = 0;
 	reporthdr->multireport->report.packetTime = packet->packetTime;
