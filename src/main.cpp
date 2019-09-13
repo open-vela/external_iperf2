@@ -97,7 +97,6 @@ extern "C" {
     // be needed but is "belts and suspeners"
     Condition ReportCond;
     // Initialize reporter thread mutex
-    Condition MultiBarrier;
     ReporterMutex reporter_state;
 }
 
@@ -147,7 +146,6 @@ int main( int argc, char **argv ) {
     Condition_Initialize ( &ReportCond );
     Mutex_Initialize( &groupCond );
     Mutex_Initialize( &clients_mutex );
-    Condition_Initialize(&MultiBarrier);
     // Initialize reporter thread mutex
     reporter_state.reporter_running = 0;
     Condition_Initialize(&reporter_state.await_reporter);

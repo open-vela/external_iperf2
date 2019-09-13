@@ -76,8 +76,6 @@ const int    kBytes_to_Bits = 8;
 # define INITIAL_PACKETID 0
 #endif
 
-extern Condition MultiBarrier;
-
 Client::Client( thread_Settings *inSettings ) {
 #ifdef HAVE_THREAD_DEBUG
   thread_debug("Client thread started in constructor (%x/%x)", inSettings->flags, inSettings->flags_extend);
@@ -181,16 +179,16 @@ Client::Client( thread_Settings *inSettings ) {
 	        mSettings->reporthdr->report.connection.connecttime = ct;
 	        PostReport(mSettings->reporthdr);
 	    }
-	    if (mSettings->multihdr && (mSettings->multihdr->refcount > 1)) {
+	    if (mSettings->multihdr && (mSettings->multihdr->multibarrier_cnt > 1)) {
 	        // For the case multilple clients wait on all
 	        // completing the connect() w/o going to close()
 	        // by leveraging this barrier
 #ifdef HAVE_THREAD_DEBUG
-	        thread_debug("Barrier client on condition %p", (void *)&MultiBarrier);
+	        thread_debug("Barrier client on condition %p", (void *)&mSettings->multihdr->multibarrier_cond);
 #endif
 	        BarrierClient(mSettings->multihdr);
 #ifdef HAVE_THREAD_DEBUG
-	        thread_debug("Barrier done on condition %p", (void *)&MultiBarrier);
+	        thread_debug("Barrier done on condition %p", (void *)&mSettings->multihdr->multibarrier_cond);
 #endif
 	    }
 	}

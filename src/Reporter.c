@@ -86,8 +86,6 @@ void serverstatistics_notimpl( Connection_Info *nused1, Transfer_Info *nused2 ) 
 #include "report_default.h"
 #include "report_CSV.h"
 
-extern Condition MultiBarrier;
-
 // The following array of report structs contains the
 // pointers required for reporting in different reporting
 // styles. To add a reporting style add a report struct
@@ -175,9 +173,7 @@ MultiHeader* InitSumReport(thread_Settings *agent, int inID) {
 	multihdr->groupID = inID;
 	multihdr->refcount = 0;
 	Mutex_Initialize(&multihdr->refcountlock);
-	if (agent->mThreadMode == kMode_Client) {
-	    multihdr->threads = agent->mThreads;
-	}
+	multihdr->threads = 0;
 	if (isMultipleReport(agent)) {
 	    ReporterData *data = &multihdr->report;
 	    data->type = TRANSFER_REPORT;
@@ -269,19 +265,19 @@ MultiHeader* InitBiDirReport(thread_Settings *agent, int inID) {
 /*
  * BarrierClient allows for multiple stream clients to be syncronized
  */
-void BarrierClient( MultiHeader *multihdr ) {
-    Condition_Lock(MultiBarrier);
-    multihdr->threads--;
-    if ( multihdr->threads == 0 ) {
+void BarrierClient(MultiHeader *multihdr) {
+    assert(multihdr == NULL);
+    Condition_Lock(multihdr->multibarrier_cond);
+    multihdr->multibarrier_cnt--;
+    if ( multihdr->multibarrier_cnt == 0 ) {
         // store the wake up or start time in the shared multihdr
         gettimeofday( &(multihdr->report.startTime), NULL );
         // last one wake's up everyone else
-        Condition_Broadcast(&MultiBarrier);
+        Condition_Broadcast(&multihdr->multibarrier_cond);
     } else {
-        Condition_Wait(&MultiBarrier);
+        Condition_Wait(&multihdr->multibarrier_cond);
     }
-    multihdr->threads++;
-    Condition_Unlock(MultiBarrier);
+    Condition_Unlock(multihdr->multibarrier_cond);
 }
 
 /*
