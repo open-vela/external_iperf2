@@ -388,9 +388,6 @@ void InitDataReport(thread_Settings *mSettings) {
 		    reporthdr->output_sum_handler = output_transfer_sum_report_server_tcp;
 		    reporthdr->output_bidir_handler = output_transfer_bidir_report_tcp;
 		}
-		if (isReverse(mSettings) && reporthdr->multireport) {
-		    UpdateMultiHdrRefCounter(reporthdr->multireport, 1);
-		}
 		break;
 	    case kMode_Client :
 		reporthdr->packet_handler = reporter_handle_packet_client;
@@ -403,9 +400,6 @@ void InitDataReport(thread_Settings *mSettings) {
 		    reporthdr->output_sum_handler = output_transfer_sum_report_client_tcp;
 		    reporthdr->output_bidir_handler = output_transfer_bidir_report_tcp;
 		}
-		if (!isServerReverse(mSettings) && reporthdr->multireport) {
-		    UpdateMultiHdrRefCounter(reporthdr->multireport, 1);
-		}
 		break;
 	    case kMode_Unknown :
 	    case kMode_Reporter :
@@ -416,6 +410,13 @@ void InitDataReport(thread_Settings *mSettings) {
 	    case kMode_Listener:
 	    default:
 		reporthdr->packet_handler = NULL;
+	    }
+	    // increment the reference counters for bidir and sum reports
+	    if (mSettings->bidirhdr != NULL) {
+	        UpdateMultiHdrRefCounter(mSettings->bidirhdr, 1);
+	    }
+	    if (mSettings->multihdr != NULL) {
+	        UpdateMultiHdrRefCounter(mSettings->multihdr, 1);
 	    }
 	}
 #ifdef HAVE_THREAD_DEBUG
@@ -1103,7 +1104,7 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
 	    reporthdr->bidirreport->threads++;
 	}
     }
-    if (reporthdr->bidirreport && (reporthdr->bidirreport->threads == reporthdr->bidirreport->refcount)) {
+    if (reporthdr->bidirreport && (reporthdr->bidirreport->threads == reporthdr->bidirreport->refcount) && (reporthdr->bidirreport->refcount > 1)) {
 	reporthdr->bidirreport->threads = 0;
 	reporthdr->bidirreport->report.packetTime = packet->packetTime;
 	// output_missed_multireports(&reporthdr->multireport->report, packet);

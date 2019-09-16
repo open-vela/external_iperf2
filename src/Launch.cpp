@@ -173,20 +173,6 @@ void client_spawn( thread_Settings *thread ) {
     } else if (isReverse(thread)) {
 	// This is a client side initiated reverse test,
 	// Could be bidir or reverse only
-	// Create a bidir report if needed
-	if (isBidir(thread)) {
-#ifdef HAVE_THREAD_DEBUG
-	    thread_debug("Client spawn reverse (bidir) (sock=%d)", thread->mSock);
-#endif
-	    if (thread->bidirhdr != NULL) {
-	        UpdateMultiHdrRefCounter(thread->bidirhdr, 1);
-	    }
-	} else {
-#ifdef HAVE_THREAD_DEBUG
-	    thread_debug("Client spawn reverse (server) (sock=%d)", thread->mSock);
-#endif
-	    thread->bidirhdr = NULL;
-	}
 	// Create thread setting for the reverse_client (i.e. client as server)
 	// Note: Settings copy will malloc space for the
 	// reverse thread settings and the run_wrapper will free it
@@ -196,7 +182,6 @@ void client_spawn( thread_Settings *thread ) {
 	reverse_client->mThreadMode = kMode_Server;
 	setServerReverse(reverse_client); // cause the connection report to show reverse
 	reverse_client->bidirhdr = thread->bidirhdr; // reverse_client thread updates the bidir report
-	UpdateMultiHdrRefCounter(thread->bidirhdr, 1);
 	if (isModeTime(reverse_client)) {
 	    reverse_client->mAmount += (SLOPSECS * 100);  // add 2 sec for slop on reverse, units are 10 ms
         }

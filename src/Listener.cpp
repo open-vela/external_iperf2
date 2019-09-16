@@ -297,7 +297,6 @@ sInterupted == SIGALRM
 	    // Handle bidir client on server side
 	    if (tempSettings && !server->multihdr && isBidir(tempSettings)) {
 	        tempSettings->multihdr = server->multihdr;
-	        UpdateMultiHdrRefCounter(server->multihdr, 1);
 	    }
 
 	    // Perform L2 setup if needed
@@ -316,8 +315,6 @@ sInterupted == SIGALRM
             //
 	    // Everything is now ready to start the server
 	    //
-	    // Increase the ref counter
-	    UpdateMultiHdrRefCounter(server->multihdr, 1);
 #if defined(WIN32) && defined(HAVE_THREAD)
             if ( UDP && mSettings->mSock > 0) {
                 // WIN32 does bad UDP handling so run single threaded
