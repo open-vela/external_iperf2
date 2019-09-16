@@ -167,7 +167,7 @@ MultiHeader* InitSumReport(thread_Settings *agent, int inID) {
     MultiHeader *multihdr = (MultiHeader *) calloc(1, sizeof(MultiHeader));
     if ( multihdr != NULL ) {
 #ifdef HAVE_THREAD_DEBUG
-        thread_debug("Init multiheader sum report %p id=%d (type=%d)", (void *)multihdr, inID);
+        thread_debug("Init multiheader sum report %p id=%d", (void *)multihdr, inID);
 #endif
         agent->multihdr = multihdr;
 	multihdr->groupID = inID;
@@ -217,7 +217,7 @@ MultiHeader* InitBiDirReport(thread_Settings *agent, int inID) {
     MultiHeader *multihdr = (MultiHeader *) calloc(1, sizeof(MultiHeader));
     if ( multihdr != NULL ) {
 #ifdef HAVE_THREAD_DEBUG
-        thread_debug("Init multiheader bidir report %p id=%d (type=%d)", (void *)multihdr, inID);
+        thread_debug("Init multiheader bidir report %p id=%d", (void *)multihdr, inID);
 #endif
         agent->bidirhdr = multihdr;
 	multihdr->groupID = inID;
@@ -1111,7 +1111,7 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
 	WARN(!*reporthdr->output_bidir_handler, "Bidir output handler is not set:");
 	(*reporthdr->output_bidir_handler)(&reporthdr->bidirreport->report, 0);
     }
-    if (reporthdr->multireport  && \
+    if (reporthdr->multireport  && (reporthdr->multireport->refcount > 1) &&  \
 	(reporthdr->multireport->threads == reporthdr->multireport->refcount))  {
 	reporthdr->multireport->threads = 0;
 	reporthdr->multireport->report.packetTime = packet->packetTime;
