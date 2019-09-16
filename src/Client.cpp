@@ -252,12 +252,8 @@ Client::Client( thread_Settings *inSettings ) {
  * ------------------------------------------------------------------- */
 Client::~Client() {
 #if HAVE_THREAD_DEBUG
-  thread_debug("Client destructor sock=%d server-reverse=%s", mySocket, (isServerReverse(mSettings) ? "true" : "false"));
+    thread_debug("Client destructor sock=%d server-reverse=%s", mySocket, (isServerReverse(mSettings) ? "true" : "false"));
 #endif
-  if ((!isServerReverse(mSettings) && !isModeTime(mSettings)) && (mySocket != INVALID_SOCKET)) {
-        int rc = close( mySocket );
-        WARN_errno( rc == SOCKET_ERROR, "close" );
-    }
     DELETE_ARRAY( mBuf );
     if (myJob) {
 	if (myJob->multireport) {
@@ -276,10 +272,19 @@ Client::~Client() {
 		thread_debug("Free bidir multiheader %p", (void *)myJob->bidirreport);
 #endif
 		free(myJob->bidirreport);
+#if HAVE_THREAD_DEBUG
+		thread_debug("Socket (bidir) close sock=%d (in client destructor)", mySocket);
+#endif
+		int rc = close( mySocket );
+		WARN_errno( rc == SOCKET_ERROR, "client bidir close" );
+		mySocket = INVALID_SOCKET;
 	    }
 	}
-
 	FreeReport(myJob);
+    } else if (!(isReverse(mSettings))) {
+        int rc = close( mySocket );
+	WARN_errno( rc == SOCKET_ERROR, "client close" );
+	mySocket = INVALID_SOCKET;
     }
 } // end ~Client
 
