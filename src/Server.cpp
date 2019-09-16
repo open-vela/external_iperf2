@@ -100,25 +100,25 @@ Server::Server( thread_Settings *inSettings ) {
  * ------------------------------------------------------------------- */
 
 Server::~Server() {
+  if (mySocket != INVALID_SOCKET) {
+    if (!isReverse(mSettings) || (myJob->bidirreport && (myJob->bidirreport->refcount == 0))) {
 #if HAVE_THREAD_DEBUG
-    thread_debug("Server destructor close sock=%d drop-sock=%d", mySocket, myDropSocket);
+      thread_debug("Socket close sock=%d (server destructor)", mySocket);
 #endif
-
-    if ((mySocket != INVALID_SOCKET) && !(isReverse(mSettings))) {
-        int rc = close( mySocket );
-        WARN_errno( rc == SOCKET_ERROR, "server close" );
-        mySocket = INVALID_SOCKET;
+      int rc = close( mySocket );
+      WARN_errno( rc == SOCKET_ERROR, "server close" );
+      mySocket = INVALID_SOCKET;
     }
-
+  }
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
-    if ( myDropSocket != INVALID_SOCKET ) {
-	int rc = close( myDropSocket );
-        WARN_errno( rc == SOCKET_ERROR, "server close drop" );
-        myDropSocket = INVALID_SOCKET;
-    }
+  if ( myDropSocket != INVALID_SOCKET ) {
+    int rc = close( myDropSocket );
+    WARN_errno( rc == SOCKET_ERROR, "server close drop" );
+    myDropSocket = INVALID_SOCKET;
+  }
 #endif
-    DELETE_ARRAY( mBuf );
-    FreeReport(myJob);
+  DELETE_ARRAY( mBuf );
+  FreeReport(myJob);
 }
 
 bool Server::InProgress (void) {
