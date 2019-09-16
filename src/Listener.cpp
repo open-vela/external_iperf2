@@ -244,14 +244,15 @@ sInterupted == SIGALRM
 		// The following will set the tempSettings to NULL if
 		// there is no need for the Listener to start a client
                 Settings_GenerateClientSettings( server, &tempSettings, hdr );
-		if (isServerReverse(server)) {
-		    server->mThreadMode=kMode_Client;
-		} else if (tempSettings && isBidir(tempSettings)) {
-		    tempSettings->mThreadMode=kMode_Client;
+		if (tempSettings && isBidir(tempSettings)) {
 		    tempSettings->bidirhdr = InitBiDirReport( server, groupID);
+		    server->bidirhdr = tempSettings->bidirhdr;
+		    tempSettings->mThreadMode=kMode_Client;
 #if HAVE_THREAD_DEBUG
 		    thread_debug("BiDir report client=%p/%p server=%p/%p", (void *) tempSettings, (void *) tempSettings->bidirhdr, (void *) server, (void *) server->bidirhdr);
 #endif
+		} else if (isServerReverse(server)) {
+		    server->mThreadMode=kMode_Client;
 		}
             } else {
 	        tempSettings = NULL;
@@ -294,10 +295,6 @@ sInterupted == SIGALRM
 		    server->multihdr = listtemp->holder;
 		}
             }
-	    // Handle bidir client on server side
-	    if (tempSettings && !server->multihdr && isBidir(tempSettings)) {
-	        tempSettings->multihdr = server->multihdr;
-	    }
 
 	    // Perform L2 setup if needed
 	    if (isUDP(mSettings) && (isL2LengthCheck(mSettings) || isL2LengthCheck(server))) {
