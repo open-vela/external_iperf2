@@ -148,10 +148,8 @@ void client_spawn( thread_Settings *thread ) {
     // set traffic thread to realtime if needed
     set_scheduler(thread);
 
-    if (isBidir(thread))
-      thread->bidirhdr = InitBiDirReport(thread, 0);
-    else
-      thread->bidirhdr = NULL;
+    if (isBidir(thread) && !thread->bidirhdr)
+        thread->bidirhdr = InitBiDirReport(thread, 0);
 
     // start up the client
     // Note: socket connect() happens here in the constructor
@@ -185,6 +183,9 @@ void client_spawn( thread_Settings *thread ) {
 	if (isModeTime(reverse_client)) {
 	    reverse_client->mAmount += (SLOPSECS * 100);  // add 2 sec for slop on reverse, units are 10 ms
         }
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug("Client spawn thread reverse (sock=%d)", thread->mSock);
+#endif
 	theClient->InitiateServer();
 	// RJM ADD a thread event here so reverse_client is in a known ready state prior to test exchange
 	// Now exchange client's test information with remote server
