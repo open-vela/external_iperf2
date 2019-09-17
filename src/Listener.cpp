@@ -286,14 +286,17 @@ sInterupted == SIGALRM
                 // Copy the multiheader
                 listtemp->holder = exist->holder;
                 server->multihdr = exist->holder;
+		if (tempSettings && isBidir(tempSettings))
+		    tempSettings->multihdr = listtemp->holder;
             } else {
 	        Mutex_Lock( &groupCond );
                 groupID--;
 		Mutex_Unlock( &groupCond );
-		// this is the case of a single client host, no summing
 		if (!server->multihdr) {
 		    listtemp->holder = InitSumReport(server, groupID);
 		    server->multihdr = listtemp->holder;
+		    if (tempSettings && isBidir(tempSettings))
+		        tempSettings->multihdr = listtemp->holder;
 		}
             }
 
