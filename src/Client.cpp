@@ -252,40 +252,24 @@ Client::Client( thread_Settings *inSettings ) {
  * ------------------------------------------------------------------- */
 Client::~Client() {
 #if HAVE_THREAD_DEBUG
-    thread_debug("Client destructor sock=%d server-reverse=%s", mySocket, (isServerReverse(mSettings) ? "true" : "false"));
+    thread_debug("Client destructor sock=%d server-reverse=%s bidir=%s", \
+	       mySocket, (isServerReverse(mSettings) ? "true" : "false"), (isBidir(mSettings) ? "true" : "false"));
 #endif
-    DELETE_ARRAY( mBuf );
-    if (myJob) {
-	if (myJob->multireport) {
-	    UpdateMultiHdrRefCounter(myJob->multireport, -1);
-	    if (myJob->multireport->refcount == 0) {
-#ifdef HAVE_THREAD_DEBUG
-		thread_debug("Free sum multiheader %p", (void *)myJob->multireport);
-#endif
-		free(myJob->multireport);
-	    }
-	}
-	if (myJob->bidirreport) {
-	    UpdateMultiHdrRefCounter(myJob->bidirreport, -1);
-	    if (myJob->bidirreport->refcount == 0) {
-#ifdef HAVE_THREAD_DEBUG
-		thread_debug("Free bidir multiheader %p", (void *)myJob->bidirreport);
-#endif
-		free(myJob->bidirreport);
-#if HAVE_THREAD_DEBUG
-		thread_debug("Socket (bidir) close sock=%d (in client destructor)", mySocket);
-#endif
-		int rc = close( mySocket );
-		WARN_errno( rc == SOCKET_ERROR, "client bidir close" );
-		mySocket = INVALID_SOCKET;
-	    }
-	}
-	FreeReport(myJob);
-    } else if (!(isReverse(mSettings))) {
+    if (!isBidir(mSettings) || (myJob && !myJob->bidirreport)) {
         int rc = close( mySocket );
 	WARN_errno( rc == SOCKET_ERROR, "client close" );
 	mySocket = INVALID_SOCKET;
     }
+    if (myJob) {
+	if (myJob->bidirreport) {
+	    UpdateMultiHdrRefCounter(myJob->bidirreport, -1, mySocket);
+	}
+	if (myJob->multireport) {
+	    UpdateMultiHdrRefCounter(myJob->multireport, -1, 0);
+	}
+	FreeReport(myJob);
+    }
+    DELETE_ARRAY(mBuf);
 } // end ~Client
 
 

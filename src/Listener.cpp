@@ -245,6 +245,7 @@ sInterupted == SIGALRM
 		// there is no need for the Listener to start a client
                 Settings_GenerateClientSettings( server, &tempSettings, hdr );
 		if (tempSettings && isBidir(tempSettings)) {
+		    setBidir(server);
 		    tempSettings->bidirhdr = InitBiDirReport( server, groupID);
 		    server->bidirhdr = tempSettings->bidirhdr;
 		    tempSettings->mThreadMode=kMode_Client;

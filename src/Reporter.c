@@ -128,8 +128,6 @@ void process_report ( ReportHeader *report );
 int reporter_print( ReporterData *stats, int type, int end );
 void PrintMSS( ReporterData *stats );
 
-void UpdateMultiHdrRefCounter(MultiHeader *reporthdr, int val);
-
 // Private routines
 // Packet accounting:
 static void reporter_handle_packet_server_udp(ReportHeader *report, ReportStruct *packet);
@@ -310,20 +308,36 @@ static void free_packetring(PacketRing *pr) {
     if (pr->data) free(pr->data);
 }
 
-void UpdateMultiHdrRefCounter(MultiHeader *multihdr, int val) {
-    if (!multihdr)
-	return;
-    // decrease the reference counter for mutliheaders
-    // and check to free the multiheader
-    Mutex_Lock(&multihdr->refcountlock);
-    if (multihdr) {
+void UpdateMultiHdrRefCounter(MultiHeader *multihdr, int val, int sockfd) {
+  if (!multihdr)
+    return;
+  // decrease the reference counter for mutliheaders
+  // and check to free the multiheader
+  Mutex_Lock(&multihdr->refcountlock);
 #ifdef HAVE_THREAD_DEBUG
-	thread_debug("Sum multiheader %p ref=%d->%d", (void *)multihdr, \
-		     multihdr->refcount, (multihdr->refcount + val));
+  thread_debug("Sum multiheader %p ref=%d->%d", (void *)multihdr, \
+	       multihdr->refcount, (multihdr->refcount + val));
 #endif
-	multihdr->refcount += val;
+  if ((multihdr->refcount == 0) && (val > 0)) {
+    multihdr->sockfd = sockfd;
+  }
+  multihdr->refcount += val;
+  if (multihdr->refcount == 0) {
+    if (val < 0) {
+      if (sockfd && (multihdr->sockfd == sockfd)) {
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug("Close socket %d per last reference", sockfd);
+#endif
+	int rc = close(multihdr->sockfd);
+	WARN_errno( rc == SOCKET_ERROR, "client bidir close" );
+      }
+#ifdef HAVE_THREAD_DEBUG
+      thread_debug("Free sum multiheader %p per last reference", (void *)multihdr);
+#endif
+      free(multihdr);
     }
-    Mutex_Unlock(&multihdr->refcountlock);
+  }
+  Mutex_Unlock(&multihdr->refcountlock);
 }
 void FreeReport(ReportHeader *reporthdr) {
     if (reporthdr) {
@@ -413,10 +427,10 @@ void InitDataReport(thread_Settings *mSettings) {
 	    }
 	    // increment the reference counters for bidir and sum reports
 	    if (mSettings->bidirhdr != NULL) {
-	        UpdateMultiHdrRefCounter(mSettings->bidirhdr, 1);
+	        UpdateMultiHdrRefCounter(mSettings->bidirhdr, 1, mSettings->mSock);
 	    }
 	    if (mSettings->multihdr != NULL) {
-	        UpdateMultiHdrRefCounter(mSettings->multihdr, 1);
+	        UpdateMultiHdrRefCounter(mSettings->multihdr, 1, 0);
 	    }
 	}
 #ifdef HAVE_THREAD_DEBUG
