@@ -100,16 +100,22 @@ Server::Server( thread_Settings *inSettings ) {
  * ------------------------------------------------------------------- */
 
 Server::~Server() {
-  if (mySocket != INVALID_SOCKET) {
-    if (!isReverse(mSettings) || (myJob->bidirreport && (myJob->bidirreport->refcount == 0))) {
+#if HAVE_THREAD_DEBUG
+    thread_debug("Server destructor sock=%d bidir=%s", mySocket, (isBidir(mSettings) ? "true" : "false"));
+#endif
+  if (isBidir(mSettings) && mSettings->bidirhdr) {
+     // for bidir update will close the socket if needed
+      UpdateMultiHdrRefCounter(mSettings->bidirhdr, -1, mySocket);
+  } else if ((mySocket != INVALID_SOCKET) && !isReverse(mSettings) \
+      && !isBidir(mSettings) && (myJob && !myJob->bidirreport)) {
 #if HAVE_THREAD_DEBUG
       thread_debug("Socket close sock=%d (server destructor)", mySocket);
 #endif
       int rc = close( mySocket );
       WARN_errno( rc == SOCKET_ERROR, "server close" );
       mySocket = INVALID_SOCKET;
-    }
   }
+  Iperf_delete( &(mSettings->peer), &clients );
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
   if ( myDropSocket != INVALID_SOCKET ) {
     int rc = close( myDropSocket );
@@ -201,8 +207,6 @@ void Server::RunTCP( void ) {
     }
     CloseReport( mSettings->reporthdr, reportstruct );
     EndReport( mSettings->reporthdr );
-
-    Iperf_delete( &(mSettings->peer), &clients );
 }
 
 void Server::InitKernelTimeStamping (void) {
@@ -596,7 +600,6 @@ void Server::RunUDP( void ) {
 	write_UDP_AckFIN( );
     }
     EndReport( mSettings->reporthdr );
-    Iperf_delete( &(mSettings->peer), &clients );
 }
 // end Recv
 

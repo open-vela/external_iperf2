@@ -325,6 +325,7 @@ typedef struct MultiHeader {
     int multibarrier_cnt;
     Mutex refcountlock;
     int refcount;
+    int sockfd;
     ReporterData report;
 } MultiHeader;
 
@@ -387,7 +388,7 @@ void reporter_peerversion (struct thread_Settings *inSettings, int upper, int lo
 
 extern ReporterMutex reporter_state;
 
-extern void UpdateMultiHdrRefCounter(MultiHeader *reporthdr, int val);
+extern void UpdateMultiHdrRefCounter(MultiHeader *reporthdr, int val, int sockfd);
 
 extern report_connection connection_reports[];
 
