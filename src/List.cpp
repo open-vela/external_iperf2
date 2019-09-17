@@ -89,13 +89,7 @@ void Iperf_delete ( iperf_sockaddr *del, Iperf_ListEntry **root ) {
             }
         }
 	if (temp->holder) {
-	  UpdateMultiHdrRefCounter(temp->holder, -1);
-	  if (temp->holder->refcount == 0) {
-#ifdef HAVE_THREAD_DEBUG
-	    thread_debug("Free sum multiheader %p", (void *)temp->holder);
-#endif
-	    free(temp->holder);
-	  }
+	    UpdateMultiHdrRefCounter(temp->holder, -1, 0);
 	}
         delete temp;
     }
