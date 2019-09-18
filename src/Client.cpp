@@ -128,8 +128,7 @@ Client::Client( thread_Settings *inSettings ) {
 	FAIL_errno( !(mSettings->mFPS > 0.0), "Invalid value for frames per second in the isochronous settings\n", mSettings );
 #endif
 
-#ifdef HAVE_CLOCK_NANOSLEEP
-#ifdef HAVE_CLOCK_GETTIME
+#if defined(HAVE_CLOCK_NANOSLEEP) && defined(HAVE_CLOCK_GETTIME)
     if (isTxStartTime(inSettings)) {
 	int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &inSettings->txstart, NULL);
         if (rc) {
@@ -147,7 +146,6 @@ Client::Client( thread_Settings *inSettings ) {
 	inSettings->txholdback_ts.tv_sec = now.getSecs();
         inSettings->txholdback_ts.tv_nsec = (1000 * now.getUsecs());
     }
-#endif
 #endif
 
     // let the reporter thread go first in the case of -P greater than 1
