@@ -64,6 +64,7 @@
  * o Use a busy loop or nanosleep
  *
  * Some notes:
+ * o clock nanosleep with a relative is preferred (see man page for why)
  * o clock_gettime() (if available) is preferred over gettimeofday()
  *   as it give nanosecond resolution and should be more efficient.
  *   It also supports CLOCK_MONOTONIC and CLOCK_MONOTONIC_RAW
@@ -92,14 +93,23 @@
 
 void delay_loop(unsigned long usec)
 {
-#ifdef HAVE_KALMAN
+#ifdef HAVE_CLOCK_NANOSLEEP
+  {
+    struct timespec res;
+    res.tv_sec = usec/MILLION;
+    res.tv_nsec = (usec * 1000) % BILLION;
+    clock_nanosleep(CLOCK_MONOTONIC, 0, &res, NULL);
+  }
+#else
+  #ifdef HAVE_KALMAN
     delay_kalman(usec);
-#else
-#ifdef HAVE_NANOSLEEP
+  #else
+  #ifdef HAVE_NANOSLEEP
     delay_nanosleep(usec);
-#else
+  #else
     delay_busyloop(usec);
-#endif
+  #endif
+  #endif
 #endif
 }
 
@@ -117,7 +127,8 @@ void delay_nanosleep (unsigned long usec) {
 
 #if defined (HAVE_NANOSLEEP) || defined (HAVE_CLOCK_GETTIME)
 static void timespec_add_ulong (struct timespec *tv0, unsigned long value) {
-    tv0->tv_nsec += value;
+    tv0->tv_sec += (value / BILLION);
+    tv0->tv_nsec += (value % BILLION);
     if (tv0->tv_nsec >= BILLION) {
 	tv0->tv_sec++;
 	tv0->tv_nsec -= BILLION;
@@ -322,5 +333,3 @@ void delay_kalman (unsigned long usec) {
 }
 #endif // Kalman
 #endif
-
-
