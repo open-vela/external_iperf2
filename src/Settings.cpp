@@ -79,6 +79,7 @@ static int rxhistogram = 0;
 static int l2checks = 0;
 static int incrdstip = 0;
 static int txstarttime = 0;
+static int writesync = 0;
 static int txholdback = 0;
 static int fqrate = 0;
 static int triptime = 0;
@@ -160,6 +161,7 @@ const struct option long_options[] =
 {"incr-dstip", no_argument, &incrdstip, 1},
 {"txstart-time", required_argument, &txstarttime, 1},
 {"txdelay-time", required_argument, &txholdback, 1},
+{"write-sync", no_argument, &writesync, 1},
 {"fq-rate", required_argument, &fqrate, 1},
 {"trip-time", no_argument, &triptime, 1},
 {"write-ack", no_argument, &writeack, 1},
@@ -795,6 +797,14 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
 		}
 #else
 	        fprintf(stderr, "WARNING: --txstart-time not supported\n");
+#endif
+	    }
+	    if (writesync) {
+#ifdef HAVE_THREAD
+		writesync = 0;
+		setWriteSync(mExtSettings);
+#else
+	        fprintf(stderr, "WARNING: --write-sync requires thread support and not supported\n");
 #endif
 	    }
 	    if (txholdback) {

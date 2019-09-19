@@ -132,6 +132,8 @@ void thread_debug(const char *format, ...) {
 int thread_sNum = 0;
 // number of currently running traffic threads
 int thread_trfc_sNum = 0;
+int thread_trfctx_sNum = 0;
+int thread_trfcrx_sNum = 0;
 // number of non-terminating running threads (ie listener thread)
 int nonterminating_num = 0;
 // condition to protect updating the above and alerting on
@@ -192,8 +194,13 @@ void thread_start( struct thread_Settings* thread ) {
             // decrement thread count
             Condition_Lock( thread_sNum_cond );
             thread_sNum--;
-	    if ((thread->mThreadMode == kMode_Client) || (thread->mThreadMode == kMode_Server)) {
-	      thread_trfc_sNum--;
+	    if (thread->mThreadMode == kMode_Client) {
+	        thread_trfc_sNum--;
+	        thread_trfctx_sNum--;
+	    }
+	    if (thread->mThreadMode == kMode_Server) {
+	        thread_trfc_sNum--;
+	        thread_trfcrx_sNum--;
 	    }
             Condition_Unlock( thread_sNum_cond );
         }
