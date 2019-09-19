@@ -374,7 +374,7 @@ MultiHeader* InitBiDirReport( struct thread_Settings *agent, int inID);
 void InitReport( struct thread_Settings *agent );
 void InitConnectionReport( struct thread_Settings *agent );
 void UpdateConnectionReport(struct thread_Settings *mSettings, ReportHeader *reporthdr);
-void BarrierClient(MultiHeader *agent);
+void BarrierClient(MultiHeader *agent, int timeflag);
 void PostReport(ReportHeader *agent);
 void ReportPacket( ReportHeader *agent, ReportStruct *packet );
 void CloseReport( ReportHeader *agent,  ReportStruct *packet);

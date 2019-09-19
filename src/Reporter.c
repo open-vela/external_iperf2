@@ -263,18 +263,20 @@ MultiHeader* InitBiDirReport(thread_Settings *agent, int inID) {
 /*
  * BarrierClient allows for multiple stream clients to be syncronized
  */
-void BarrierClient(MultiHeader *multihdr) {
+void BarrierClient(MultiHeader *multihdr, int starttime) {
     assert(multihdr == NULL);
     Condition_Lock(multihdr->multibarrier_cond);
     multihdr->multibarrier_cnt--;
     if ( multihdr->multibarrier_cnt == 0 ) {
         // store the wake up or start time in the shared multihdr
-        gettimeofday( &(multihdr->report.startTime), NULL );
+        if (starttime)
+	    gettimeofday( &(multihdr->report.startTime), NULL );
         // last one wake's up everyone else
         Condition_Broadcast(&multihdr->multibarrier_cond);
     } else {
         Condition_Wait(&multihdr->multibarrier_cond);
     }
+    multihdr->multibarrier_cnt++;
     Condition_Unlock(multihdr->multibarrier_cond);
 }
 
@@ -1125,7 +1127,7 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
 	WARN(!*reporthdr->output_bidir_handler, "Bidir output handler is not set:");
 	(*reporthdr->output_bidir_handler)(&reporthdr->bidirreport->report, 0);
     }
-    if (reporthdr->multireport  && (reporthdr->multireport->refcount > 1) &&  \
+    if (reporthdr->multireport && (reporthdr->multireport->refcount > 1) &&  \
 	(reporthdr->multireport->threads == reporthdr->multireport->refcount))  {
 	reporthdr->multireport->threads = 0;
 	reporthdr->multireport->report.packetTime = packet->packetTime;
