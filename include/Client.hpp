@@ -95,7 +95,8 @@ private:
     void FinalUDPHandshake(void);
     void write_UDP_FIN(void);
     bool InProgress(void);
-
+    inline void WriteSync(void);
+    inline void WriteSyncDone(void);
     ReportStruct *reportstruct;
     double delay_lower_bounds;
     intmax_t totLen;

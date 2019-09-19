@@ -177,6 +177,7 @@ Client::Client( thread_Settings *inSettings ) {
 	        mSettings->reporthdr->report.connection.connecttime = ct;
 	        PostReport(mSettings->reporthdr);
 	    }
+#ifdef HAVE_THREAD
 	    if (mSettings->multihdr && (mSettings->multihdr->multibarrier_cnt > 1)) {
 	        // For the case multilple clients wait on all
 	        // completing the connect() w/o going to close()
@@ -184,11 +185,9 @@ Client::Client( thread_Settings *inSettings ) {
 #ifdef HAVE_THREAD_DEBUG
 	        thread_debug("Barrier client on condition %p", (void *)&mSettings->multihdr->multibarrier_cond);
 #endif
-	        BarrierClient(mSettings->multihdr);
-#ifdef HAVE_THREAD_DEBUG
-	        thread_debug("Barrier done on condition %p", (void *)&mSettings->multihdr->multibarrier_cond);
-#endif
+	        BarrierClient(mSettings->multihdr, 0);
 	    }
+#endif
 	}
     } else {
 	InitReport(mSettings);
@@ -216,7 +215,7 @@ Client::Client( thread_Settings *inSettings ) {
 	    // i.e. before their traffic run loops
             if (!isServerReverse(mSettings) && (reporthdr->multireport)) {
 	        // syncronize watches on my mark......
-	        BarrierClient(reporthdr->multireport);
+	        BarrierClient(reporthdr->multireport, 1);
 		now.setnow();
 	    }
 #endif
@@ -395,6 +394,29 @@ void Client::InitTrafficLoop (void) {
     readAt = mBuf;
 }
 
+inline void Client::WriteSync(void) {
+#ifdef HAVE_THREAD
+  if (isWriteSync(mSettings) && mSettings->multihdr) {
+        BarrierClient(mSettings->multihdr, 0);
+#ifdef HAVE_THREAD_DEBUG
+	// thread_debug("Write-Sync done per %p", (void *)&mSettings->multihdr->multibarrier_cond);
+#endif
+  }
+#endif
+}
+inline void Client::WriteSyncDone(void) {
+#ifdef HAVE_THREAD
+    if (isWriteSync(mSettings) && mSettings->multihdr) {
+      Condition_Lock(mSettings->multihdr->multibarrier_cond);
+      mSettings->multihdr->multibarrier_cnt--;
+      if (mSettings->multihdr->multibarrier_cnt == 0 ) {
+          Condition_Broadcast(&mSettings->multihdr->multibarrier_cond);
+      }
+      Condition_Unlock(mSettings->multihdr->multibarrier_cond);
+    }
+#endif
+}
+
 
 /* -------------------------------------------------------------------
  * Run the appropriate send loop between
@@ -494,6 +516,7 @@ void Client::RunTCP( void ) {
 	    WriteTcpHdr(reportstruct);
 	}
 	// perform write
+	WriteSync();
 	reportstruct->packetLen = write( mSettings->mSock, mBuf, reportstruct->packetLen);
         if ( reportstruct->packetLen < 0 ) {
 	    if (NONFATALTCPWRITERR(errno)) {
@@ -565,6 +588,7 @@ void Client::RunRateLimitedTCP ( void ) {
 	        WriteTcpHdr(reportstruct);
 	    }
 	    // perform write
+	    WriteSync();
 	    reportstruct->packetLen = write( mSettings->mSock, mBuf, reportstruct->packetLen);
 	    if ( reportstruct->packetLen < 0 ) {
 	        if (NONFATALTCPWRITERR(errno)) {
@@ -700,6 +724,7 @@ void Client::RunUDP( void ) {
 	reportstruct->emptyreport = 0;
 
 	// perform write
+	WriteSync();
 	if (isModeAmount(mSettings)) {
 	    currLen = write( mSettings->mSock, mBuf, (mSettings->mAmount < (unsigned) mSettings->mBufLen) ? mSettings->mAmount : mSettings->mBufLen);
 	} else {
@@ -835,6 +860,7 @@ void Client::RunUDPIsochronous (void) {
 	    reportstruct->emptyreport = 0;
 
 	    // perform write
+	    WriteSync();
 	    if (isModeAmount(mSettings) && (mSettings->mAmount < (unsigned) mSettings->mBufLen)) {
 	        mBuf_isoch->remaining = htonl(mSettings->mAmount);
 		reportstruct->remaining=mSettings->mAmount;
@@ -990,7 +1016,8 @@ void Client::FinishTrafficActions(void) {
     now.setnow();
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
-
+    // remove the thread from the write sync barrier
+    WriteSyncDone();
     /*
      *  For UDP, there is a final handshake between the client and the server,
      *  do that now.

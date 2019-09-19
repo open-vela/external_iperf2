@@ -300,6 +300,7 @@ typedef struct thread_Settings {
 #define FLAG_SERVERREVERSE  0x00040000
 #define FLAG_BIDIR          0x00080000
 #define FLAG_WRITEACK       0x00100000
+#define FLAG_WRITESYNC         0x00200000
 
 #define isBuflenSet(settings)      ((settings->flags & FLAG_BUFLENSET) != 0)
 #define isCompat(settings)         ((settings->flags & FLAG_COMPAT) != 0)
@@ -349,6 +350,7 @@ typedef struct thread_Settings {
 #define isModeAmount(settings)     (!isModeTime(settings) && !isModeInfinite(settings))
 #define isConnectOnly(settings)    ((settings->flags_extend & FLAG_CONNECTONLY) != 0)
 #define isWriteAck(settings)       ((settings->flags_extend & FLAG_WRITEACK) != 0)
+#define isWriteSync(settings)         ((settings->flags_extend & FLAG_WRITESYNC) != 0)
 
 #define setBuflenSet(settings)     settings->flags |= FLAG_BUFLENSET
 #define setCompat(settings)        settings->flags |= FLAG_COMPAT
@@ -395,6 +397,7 @@ typedef struct thread_Settings {
 #define setModeInfinite(settings)  settings->flags_extend |= FLAG_MODEINFINITE
 #define setConnectOnly(settings)   settings->flags_extend |= FLAG_CONNECTONLY
 #define setWriteAck(settings)      settings->flags_extend |= FLAG_WRITEACK
+#define setWriteSync(settings)        settings->flags_extend |= FLAG_WRITESYNC
 
 #define unsetBuflenSet(settings)   settings->flags &= ~FLAG_BUFLENSET
 #define unsetCompat(settings)      settings->flags &= ~FLAG_COMPAT
@@ -441,6 +444,7 @@ typedef struct thread_Settings {
 #define unsetModeInfinite(settings) settings->flags_extend &= ~FLAG_MODEINFINITE
 #define unsetConnectOnly(settings)  settings->flags_extend &= ~FLAG_CONNECTONLY
 #define unsetWriteAack(settings)    settings->flags_extend &= ~FLAG_WRITEACK
+#define unsetWriteSync(settings)       settings->flags_extend &= ~FLAG_WRITESYNC
 
 /*
  * Message header flags
