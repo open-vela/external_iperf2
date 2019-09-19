@@ -1629,7 +1629,6 @@ static inline void reset_transfer_stats_client(ReporterData *stats) {
     stats->lastTotal = stats->TotalLen;
     stats->info.sock_callstats.write.WriteCnt = 0;
     stats->info.sock_callstats.write.WriteErr = 0;
-    stats->info.sock_callstats.write.WriteErr = 0;
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
     stats->info.sock_callstats.write.up_to_date = 0;
 #endif
@@ -1853,7 +1852,7 @@ static void output_transfer_report_client_tcp(ReporterData *stats, ReporterData 
 	    reporter_print(stats, TRANSFER_REPORT, 0);
 	else if (stats->info.mEnhanced)
 	  reporter_print(stats, TRANSFER_REPORT, 0);
-	reset_transfer_stats_server_udp(stats);
+	reset_transfer_stats_client(stats);
     }
 }
 
