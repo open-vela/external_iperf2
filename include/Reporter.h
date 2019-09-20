@@ -327,6 +327,7 @@ typedef struct MultiHeader {
     int refcount;
     int sockfd;
     ReporterData report;
+    void (*output_sum_handler) (struct ReporterData *stats, int final);
 } MultiHeader;
 
 typedef struct PacketRing {
