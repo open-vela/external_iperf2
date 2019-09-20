@@ -326,6 +326,8 @@ void UpdateMultiHdrRefCounter(MultiHeader *multihdr, int val, int sockfd) {
   multihdr->refcount += val;
   if (multihdr->refcount == 0) {
     if (val < 0) {
+      // Output a final report before freeing it
+      (*multihdr->output_sum_handler)(&multihdr->report, 1);
       if (sockfd && (multihdr->sockfd == sockfd)) {
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug("Close socket %d per last reference", sockfd);
@@ -341,6 +343,7 @@ void UpdateMultiHdrRefCounter(MultiHeader *multihdr, int val, int sockfd) {
   }
   Mutex_Unlock(&multihdr->refcountlock);
 }
+
 void FreeReport(ReportHeader *reporthdr) {
     if (reporthdr) {
         if (reporthdr->delaycounter < 3) {
@@ -396,25 +399,27 @@ void InitDataReport(thread_Settings *mSettings) {
 		if (isUDP(mSettings)) {
 		    reporthdr->packet_handler = reporter_handle_packet_server_udp;
 		    reporthdr->output_handler = output_transfer_report_server_udp;
-		    reporthdr->output_sum_handler = output_transfer_sum_report_server_udp;
-		    reporthdr->output_bidir_handler = output_transfer_bidir_report_udp;
+		    reporthdr->multireport->output_sum_handler = output_transfer_sum_report_server_udp;
+		    reporthdr->bidirreport->output_sum_handler = output_transfer_bidir_report_udp;
 		} else {
 		    reporthdr->packet_handler = reporter_handle_packet_server_tcp;
 		    reporthdr->output_handler = output_transfer_report_server_tcp;
-		    reporthdr->output_sum_handler = output_transfer_sum_report_server_tcp;
-		    reporthdr->output_bidir_handler = output_transfer_bidir_report_tcp;
+		    reporthdr->multireport->output_sum_handler = output_transfer_sum_report_server_tcp;
+		    reporthdr->bidirreport->output_sum_handler = output_transfer_bidir_report_tcp;
 		}
 		break;
 	    case kMode_Client :
 		reporthdr->packet_handler = reporter_handle_packet_client;
 		if (isUDP(mSettings)) {
 		    reporthdr->output_handler = output_transfer_report_client_udp;
-		    reporthdr->output_sum_handler = output_transfer_sum_report_client_udp;
-		    reporthdr->output_bidir_handler = output_transfer_bidir_report_udp;
+		    reporthdr->multireport->output_sum_handler = output_transfer_sum_report_client_udp;
+		    reporthdr->bidirreport->output_sum_handler = output_transfer_bidir_report_udp;
 		} else {
 		    reporthdr->output_handler = output_transfer_report_client_tcp;
-		    reporthdr->output_sum_handler = output_transfer_sum_report_client_tcp;
-		    reporthdr->output_bidir_handler = output_transfer_bidir_report_tcp;
+		    if (reporthdr->multireport)
+		        reporthdr->multireport->output_sum_handler = output_transfer_sum_report_client_tcp;
+		    if (reporthdr->bidirreport)
+		        reporthdr->bidirreport->output_sum_handler = output_transfer_bidir_report_tcp;
 		}
 		break;
 	    case kMode_Unknown :
@@ -607,7 +612,7 @@ void PostReport (ReportHeader *reporthdr) {
 	 */
 	Condition_Lock( ReportCond );
 	reporthdr->next = ReportRoot;
-	ReportRoot = reporthdr;
+ReportRoot = reporthdr;
 	Condition_Signal( &ReportCond );
 	Condition_Unlock( ReportCond );
 #else
@@ -1020,6 +1025,8 @@ void reporter_spawn( thread_Settings *thread ) {
     Condition_Broadcast(&reporter_state.await_reporter);
 
     do {
+        // ReportRoot is a linked list configured as
+        // as a circular buffer, i.e. tail points to head
         Condition_Lock ( ReportCond );
         if ( ReportRoot == NULL ) {
 	    //  Use a timed wait because the traffic threads
@@ -1035,6 +1042,11 @@ void reporter_spawn( thread_Settings *thread ) {
       again:
         if ( ReportRoot != NULL ) {
             ReportHeader *tmp = ReportRoot;
+	    // Report process report returns true
+	    // if the report header is done and needs
+	    // to be freed.  The common case will return false
+	    // where the next report in the circular buffer
+	    // will be processed
             if ( reporter_process_report ( tmp ) ) {
                 // This section allows for more reports to be added while
                 // the reporter is processing reports without needing to
@@ -1062,8 +1074,12 @@ void reporter_spawn( thread_Settings *thread ) {
 		    free(tmp);
 		}
                 Condition_Unlock ( ReportCond );
-                if (ReportRoot)
+                if (ReportRoot) {
+#ifdef HAVE_THREAD_DEBUG
+		    thread_debug("Compound report %p being processed again", (void *) ReportRoot);
+#endif
                     goto again;
+		}
             }
         }
 	/*
@@ -1097,12 +1113,11 @@ void process_report ( ReportHeader *report ) {
 }
 
 static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *packet) {
-    int nextring_event = 0;
+    int timeslot_event = 0;
     // Print a report if packet time exceeds the next report interval time,
     // Also signal to the caller to move to the next report (or packet ring)
     // if there was output. This will allow for more precise interval sum accounting.
     if (TimeDifference(reporthdr->report.nextTime, packet->packetTime) < 0) {
-        reporthdr->report.packetTime=packet->packetTime;
         // In the (hopefully unlikely event) the reporter fell behind
         // ouput the missed reports to catch up
         // output_missed_reports(&reporthdr->report, packet);
@@ -1112,30 +1127,26 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
 	(*reporthdr->output_handler)(&reporthdr->report, sumstats, bidirstats, 0);
 	TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
 	if (reporthdr->multireport) {
-	    nextring_event = 1;
+	    timeslot_event = 1;
 	    reporthdr->multireport->threads++;
 	}
 	if (reporthdr->bidirreport) {
-	    nextring_event = 1;
+	    timeslot_event = 1;
 	    reporthdr->bidirreport->threads++;
 	}
     }
     if (reporthdr->bidirreport && (reporthdr->bidirreport->threads == reporthdr->bidirreport->refcount) && (reporthdr->bidirreport->refcount > 1)) {
 	reporthdr->bidirreport->threads = 0;
-	reporthdr->bidirreport->report.packetTime = packet->packetTime;
 	// output_missed_multireports(&reporthdr->multireport->report, packet);
-	WARN(!*reporthdr->output_bidir_handler, "Bidir output handler is not set:");
-	(*reporthdr->output_bidir_handler)(&reporthdr->bidirreport->report, 0);
+	(*reporthdr->bidirreport->output_sum_handler)(&reporthdr->bidirreport->report, 0);
     }
     if (reporthdr->multireport && (reporthdr->multireport->refcount > 1) &&  \
 	(reporthdr->multireport->threads == reporthdr->multireport->refcount))  {
 	reporthdr->multireport->threads = 0;
-	reporthdr->multireport->report.packetTime = packet->packetTime;
 	// output_missed_multireports(&reporthdr->multireport->report, packet);
-	WARN(!*reporthdr->output_sum_handler, "Sum output handler is not set:");
-	(*reporthdr->output_sum_handler)(&reporthdr->multireport->report, 0);
+	(*reporthdr->multireport->output_sum_handler)(&reporthdr->multireport->report, 0);
     }
-    return nextring_event;
+    return timeslot_event;
 }
 
 /*
@@ -1204,8 +1215,8 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 	apply_consumption_detector();
         // If there are more packets to process then handle them
 	ReportStruct *packet = NULL;
-	int nextring_event = 0;
-        while (!nextring_event && (packet = dequeue_packetring(reporthdr))) {
+	int timeslot_event = 0;
+        while (!timeslot_event && (packet = dequeue_packetring(reporthdr))) {
 	    // Increment the total packet count processed by this thread
 	    // this will be used to make decisions on if the reporter
 	    // thread should add some delay to eliminate cpu thread
@@ -1217,9 +1228,10 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 	    if (!(packet->packetID < 0)) {
 		// Check for interval reports
 		if (!TimeZero(reporthdr->report.intervalTime)) {
-		    nextring_event = condprint_interval_reports(reporthdr, packet);
+		    timeslot_event = condprint_interval_reports(reporthdr, packet);
 		}
 		// Do the packet accounting per the handler type
+		reporthdr->report.packetTime=packet->packetTime;
 		if (reporthdr->packet_handler) {
 		    (*reporthdr->packet_handler)(reporthdr, packet);
 		}
@@ -1233,15 +1245,6 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 		ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
 		ReporterData *bidirstats = (reporthdr->bidirreport ? &reporthdr->bidirreport->report : NULL);
 		(*reporthdr->output_handler)(&reporthdr->report, sumstats, bidirstats, 1);
-		if (reporthdr->output_bidir_handler && reporthdr->bidirreport && (++reporthdr->bidirreport->threads == reporthdr->bidirreport->refcount)) {
-		  (*reporthdr->output_bidir_handler)(&reporthdr->bidirreport->report, 1);
-		}
-		if (reporthdr->multireport && (reporthdr->multireport->refcount > 1)) {
-		    if (++reporthdr->multireport->threads == reporthdr->multireport->refcount) {
-			reporthdr->multireport->report.packetTime=packet->packetTime;
-			(*reporthdr->output_sum_handler)(&reporthdr->multireport->report, 1);
-		    }
-		}
 		// Thread is done with the packet ring, signal back to the traffic thread
 		// which will proceed from the EndReport wait, this must be the last thing done
 		reporthdr->packetring->consumerdone = 1;
