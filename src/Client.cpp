@@ -86,6 +86,7 @@ Client::Client( thread_Settings *inSettings ) {
     myJob = NULL;
     mySocket = isServerReverse(inSettings) ? inSettings->mSock : INVALID_SOCKET;
     double ct = -1.0;
+    Timestamp now;
 
     if (isCompat(inSettings) && isPeerVerDetect(inSettings)) {
 	fprintf(stderr, "%s", warn_compat_and_peer_exchange);
@@ -141,7 +142,7 @@ Client::Client( thread_Settings *inSettings ) {
 	}
     }
     if (isTxHoldback(inSettings)) {
-        Timestamp now;
+        now.setnow();
 	now.add(inSettings->txholdbacktime);
 	inSettings->txholdback_ts.tv_sec = now.getSecs();
         inSettings->txholdback_ts.tv_nsec = (1000 * now.getUsecs());
@@ -209,24 +210,24 @@ Client::Client( thread_Settings *inSettings ) {
 	    //
 	    // Set the report start times and next report times
 	    //
-	    Timestamp now;
+
 #ifdef HAVE_THREAD
 	    // In the case of parellel clients synchronize them after the connect(),
 	    // i.e. before their traffic run loops
             if (!isServerReverse(mSettings) && (reporthdr->multireport)) {
 	        // syncronize watches on my mark......
 	        BarrierClient(reporthdr->multireport, 1);
-		now.setnow();
-	    }
+		reporthdr->report.startTime.tv_sec = reporthdr->multireport->report.startTime.tv_sec;
+		reporthdr->report.startTime.tv_usec =reporthdr->multireport->report.startTime.tv_usec;
+	    } else
 #endif
-	    reporthdr->report.startTime.tv_sec = now.getSecs();
-	    reporthdr->report.startTime.tv_usec = now.getUsecs();
+	    {
+	        now.setnow();
+		reporthdr->report.startTime.tv_sec = now.getSecs();
+		reporthdr->report.startTime.tv_usec = now.getUsecs();
+	    }
 	    reporthdr->report.nextTime = reporthdr->report.startTime;
 	    TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
-	    if (reporthdr->multireport && TimeZero(reporthdr->multireport->report.nextTime)) {
-	        reporthdr->multireport->report.startTime = reporthdr->report.startTime;
-	        reporthdr->multireport->report.nextTime = reporthdr->report.nextTime;
-	    }
 	    if (reporthdr->bidirreport && TimeZero(reporthdr->bidirreport->report.nextTime)) {
 	        reporthdr->bidirreport->report.startTime = reporthdr->report.startTime;
 	        reporthdr->bidirreport->report.nextTime = reporthdr->report.nextTime;
