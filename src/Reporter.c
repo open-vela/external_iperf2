@@ -181,6 +181,7 @@ MultiHeader* InitSumReport(thread_Settings *agent, int inID) {
 		interval->tv_usec = (long) ((agent->mInterval - interval->tv_sec)
 					    * rMillion);
 	    }
+
 	    data->mHost = agent->mHost;
 	    data->mLocalhost = agent->mLocalhost;
 	    data->mBufLen = agent->mBufLen;
@@ -264,13 +265,17 @@ MultiHeader* InitBiDirReport(thread_Settings *agent, int inID) {
  * BarrierClient allows for multiple stream clients to be syncronized
  */
 void BarrierClient(MultiHeader *multihdr, int starttime) {
+#ifdef HAVE_THREAD
     assert(multihdr == NULL);
     Condition_Lock(multihdr->multibarrier_cond);
     multihdr->multibarrier_cnt--;
     if ( multihdr->multibarrier_cnt == 0 ) {
         // store the wake up or start time in the shared multihdr
-        if (starttime)
+        if (starttime) {
 	    gettimeofday( &(multihdr->report.startTime), NULL );
+	    multihdr->report.nextTime= multihdr->report.startTime;
+	    TimeAdd(multihdr->report.nextTime, multihdr->report.intervalTime);
+	}
         // last one wake's up everyone else
         Condition_Broadcast(&multihdr->multibarrier_cond);
     } else {
@@ -278,6 +283,12 @@ void BarrierClient(MultiHeader *multihdr, int starttime) {
     }
     multihdr->multibarrier_cnt++;
     Condition_Unlock(multihdr->multibarrier_cond);
+#else
+    if (starttime) {
+        gettimeofday( &(multihdr->report.startTime), NULL );
+	TimeAdd(multihdr->report.nextTime, multihdr->report.intervalTime);
+    }
+#endif
 }
 
 /*
@@ -288,6 +299,7 @@ void BarrierClient(MultiHeader *multihdr, int starttime) {
  * Finally, in the case of parallel clients, have them all
  * synchronize on compeleting their connect()
  */
+
 void InitReport(thread_Settings *mSettings) {
     // Note, this must be called in order as
     // the data report structures need to be
@@ -404,8 +416,10 @@ void InitDataReport(thread_Settings *mSettings) {
 		} else {
 		    reporthdr->packet_handler = reporter_handle_packet_server_tcp;
 		    reporthdr->output_handler = output_transfer_report_server_tcp;
-		    reporthdr->multireport->output_sum_handler = output_transfer_sum_report_server_tcp;
-		    reporthdr->bidirreport->output_sum_handler = output_transfer_bidir_report_tcp;
+		    if (reporthdr->multireport)
+		        reporthdr->multireport->output_sum_handler = output_transfer_sum_report_server_tcp;
+		    if (reporthdr->bidirreport)
+		        reporthdr->bidirreport->output_sum_handler = output_transfer_bidir_report_tcp;
 		}
 		break;
 	    case kMode_Client :
@@ -589,6 +603,7 @@ void InitConnectionReport (thread_Settings *mSettings) {
 void UpdateConnectionReport(thread_Settings *mSettings, ReportHeader *reporthdr) {
     if (reporthdr != NULL) {
         ReporterData *data = &reporthdr->report;
+	data->info.transferID = mSettings->mSock;
 	if (mSettings && (mSettings->mSock > 0)) {
 	    data->connection.winsize = getsock_tcp_windowsize(mSettings->mSock, \
                   (data->mThreadMode != kMode_Client ? 0 : 1) );
@@ -603,7 +618,7 @@ void UpdateConnectionReport(thread_Settings *mSettings, ReportHeader *reporthdr)
 
 void PostReport (ReportHeader *reporthdr) {
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug( "Post report %p", reporthdr);
+    thread_debug( "Post report %p (0x%X)", reporthdr, reporthdr->report.type);
 #endif
     if (reporthdr) {
 #ifdef HAVE_THREAD
@@ -612,7 +627,7 @@ void PostReport (ReportHeader *reporthdr) {
 	 */
 	Condition_Lock( ReportCond );
 	reporthdr->next = ReportRoot;
-ReportRoot = reporthdr;
+	ReportRoot = reporthdr;
 	Condition_Signal( &ReportCond );
 	Condition_Unlock( ReportCond );
 #else
@@ -701,7 +716,7 @@ static inline ReportStruct *dequeue_packetring(ReportHeader* agent) {
     // when the ring goes from having something to empty
     if (pr->producer == pr->consumer) {
 #ifdef HAVE_THREAD_DEBUG
-       // thread_debug( "Consumer signal packet ring %p empty per %p", (void *)pr, (void *)&pr->await_consumer);
+      // thread_debug( "Consumer signal packet ring %p empty per %p", (void *)pr, (void *)&pr->await_consumer);
 #endif
 	Condition_Signal(&pr->await_consumer);
     }
@@ -818,57 +833,55 @@ Transfer_Info *GetReport( ReportHeader *agent ) {
  * settings being used with Listeners or Clients
  */
 ReportHeader *ReportSettings( thread_Settings *agent ) {
-  ReportHeader *reporthdr = agent->reporthdr;
+  ReportHeader *reporthdr = NULL;
   if ( isSettingsReport( agent ) ) {
-        /*
-         * Populate and optionally create a new settings report
-         */
-	 if (!reporthdr)
-	    reporthdr = calloc(sizeof(ReportHeader), sizeof(char*));
-	 if (reporthdr) {
+    /*
+     * Populate and create a new settings report
+     */
+    if ((reporthdr = ( ReportHeader *) calloc(sizeof(ReportHeader), sizeof(char*)))) {
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Init settings report %p", reporthdr);
+      thread_debug("Init settings report %p", reporthdr);
 #endif
-            ReporterData *data = &reporthdr->report;
-            data->info.transferID = agent->mSock;
-            data->info.groupID = -1;
-            data->mHost = agent->mHost;
-            data->mLocalhost = agent->mLocalhost;
-	    data->mSSMMulticastStr = agent->mSSMMulticastStr;
-	    data->mIfrname = agent->mIfrname;
-	    data->mIfrnametx = agent->mIfrnametx;
-            data->mode = agent->mReportMode;
-            data->type = SETTINGS_REPORT;
-            data->mBufLen = agent->mBufLen;
-            data->mMSS = agent->mMSS;
-            data->mTCPWin = agent->mTCPWin;
-	    data->FQPacingRate = agent->mFQPacingRate;
-            data->flags = agent->flags;
-            data->flags_extend = agent->flags_extend;
-            data->mThreadMode = agent->mThreadMode;
-            data->mPort = agent->mPort;
-            data->info.mFormat = agent->mFormat;
-            data->info.mTTL = agent->mTTL;
-            data->connection.peer = agent->peer;
-            data->connection.size_peer = agent->size_peer;
-            data->connection.local = agent->local;
-            data->connection.size_local = agent->size_local;
-            data->mUDPRate = agent->mUDPRate;
-            data->mUDPRateUnits = agent->mUDPRateUnits;
+      ReporterData *data = &reporthdr->report;
+      data->info.transferID = agent->mSock;
+      data->info.groupID = -1;
+      data->mHost = agent->mHost;
+      data->mLocalhost = agent->mLocalhost;
+      data->mSSMMulticastStr = agent->mSSMMulticastStr;
+      data->mIfrname = agent->mIfrname;
+      data->mIfrnametx = agent->mIfrnametx;
+      data->mode = agent->mReportMode;
+      data->type = SETTINGS_REPORT;
+      data->mBufLen = agent->mBufLen;
+      data->mMSS = agent->mMSS;
+      data->mTCPWin = agent->mTCPWin;
+      data->FQPacingRate = agent->mFQPacingRate;
+      data->flags = agent->flags;
+      data->flags_extend = agent->flags_extend;
+      data->mThreadMode = agent->mThreadMode;
+      data->mPort = agent->mPort;
+      data->info.mFormat = agent->mFormat;
+      data->info.mTTL = agent->mTTL;
+      data->connection.peer = agent->peer;
+      data->connection.size_peer = agent->size_peer;
+      data->connection.local = agent->local;
+      data->connection.size_local = agent->size_local;
+      data->mUDPRate = agent->mUDPRate;
+      data->mUDPRateUnits = agent->mUDPRateUnits;
 #ifdef HAVE_ISOCHRONOUS
-	    if (isIsochronous(data)) {
-		data->isochstats.mFPS = agent->mFPS;
-		data->isochstats.mMean = agent->mMean/8;
-		data->isochstats.mVariance = agent->mVariance/8;
-		data->isochstats.mBurstIPG = (unsigned int) (agent->mBurstIPG*1000.0);
-		data->isochstats.mBurstInterval = (unsigned int) (1 / agent->mFPS * 1000000);
-	    }
+      if (isIsochronous(data)) {
+	data->isochstats.mFPS = agent->mFPS;
+	data->isochstats.mMean = agent->mMean/8;
+	data->isochstats.mVariance = agent->mVariance/8;
+	data->isochstats.mBurstIPG = (unsigned int) (agent->mBurstIPG*1000.0);
+	data->isochstats.mBurstInterval = (unsigned int) (1 / agent->mFPS * 1000000);
+      }
 #endif
-        } else {
-            FAIL(1, "Out of Memory!!\n", agent);
-        }
+    } else {
+      FAIL(1, "Out of Memory!!\n", agent);
     }
-    return reporthdr;
+  }
+  return reporthdr;
 }
 
 /*
@@ -1138,12 +1151,14 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
     if (reporthdr->bidirreport && (reporthdr->bidirreport->threads == reporthdr->bidirreport->refcount) && (reporthdr->bidirreport->refcount > 1)) {
 	reporthdr->bidirreport->threads = 0;
 	// output_missed_multireports(&reporthdr->multireport->report, packet);
+	reporthdr->bidirreport->report.packetTime = packet->packetTime;
 	(*reporthdr->bidirreport->output_sum_handler)(&reporthdr->bidirreport->report, 0);
     }
     if (reporthdr->multireport && (reporthdr->multireport->refcount > 1) &&  \
 	(reporthdr->multireport->threads == reporthdr->multireport->refcount))  {
 	reporthdr->multireport->threads = 0;
 	// output_missed_multireports(&reporthdr->multireport->report, packet);
+	reporthdr->multireport->report.packetTime = packet->packetTime;
 	(*reporthdr->multireport->output_sum_handler)(&reporthdr->multireport->report, 0);
     }
     return timeslot_event;
@@ -1224,7 +1239,7 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 	    consumption_detector.accounted_packets--;
 	    // update fields common to TCP and UDP, client and server which is bytes
 	    reporthdr->report.TotalLen += packet->packetLen;
-	    // Check for a final packet event on this packet ring
+	    // Check against a final packet event on this packet ring
 	    if (!(packet->packetID < 0)) {
 		// Check for interval reports
 		if (!TimeZero(reporthdr->report.intervalTime)) {
