@@ -582,7 +582,7 @@ void InitConnectionReport (thread_Settings *mSettings) {
 	data->connection.l2mode = ((isIPV6(mSettings) << 1) | data->connection.l2mode);
     if (isEnhanced(mSettings) && isTxStartTime(mSettings)) {
 	data->connection.epochStartTime.tv_sec = mSettings->txstart_epoch.tv_sec;
-	data->connection.epochStartTime.tv_usec = mSettings->txstart_epoch.tv_usec;
+	data->connection.epochStartTime.tv_usec = mSettings->txstart_epoch.tv_nsec / 1000;
     }
     if (isFQPacing(data) && (data->mThreadMode == kMode_Client)) {
 	char tmpbuf[40];
@@ -1263,6 +1263,11 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 		// Thread is done with the packet ring, signal back to the traffic thread
 		// which will proceed from the EndReport wait, this must be the last thing done
 		reporthdr->packetring->consumerdone = 1;
+		if (reporthdr->multireport)
+		    reporthdr->multireport->report.packetTime = packet->packetTime;
+		if (reporthdr->bidirreport)
+		    reporthdr->bidirreport->report.packetTime = packet->packetTime;
+
 	    }
 	}
     }
@@ -1611,6 +1616,7 @@ static inline void reset_transfer_stats(ReporterData *stats) {
 	    stats->info.sock_callstats.write.WriteErr = 0;
 	    stats->info.sock_callstats.write.WriteErr = 0;
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+	    stats->info.sock_callstats.write.TCPretry = 0;
 	    stats->info.sock_callstats.write.up_to_date = 0;
 #endif
 	} else if (stats->info.mTCP == (char)kMode_Server) {
@@ -1648,6 +1654,7 @@ static inline void reset_transfer_stats_client(ReporterData *stats) {
     stats->info.sock_callstats.write.WriteCnt = 0;
     stats->info.sock_callstats.write.WriteErr = 0;
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+    stats->info.sock_callstats.write.TCPretry = 0;
     stats->info.sock_callstats.write.up_to_date = 0;
 #endif
 }

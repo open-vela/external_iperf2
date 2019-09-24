@@ -129,26 +129,6 @@ Client::Client( thread_Settings *inSettings ) {
 	FAIL_errno( !(mSettings->mFPS > 0.0), "Invalid value for frames per second in the isochronous settings\n", mSettings );
 #endif
 
-#if defined(HAVE_CLOCK_NANOSLEEP) && defined(HAVE_CLOCK_GETTIME)
-    if (isTxStartTime(inSettings)) {
-	int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &inSettings->txstart, NULL);
-        if (rc) {
-	    fprintf(stderr, "failed clock_nanosleep()=%d\n", rc);
-	} else {
-	    // Mark the epoch start time before the bind call
-	    now.setnow();
-	    mSettings->txstart_epoch.tv_sec = now.getSecs();
-	    mSettings->txstart_epoch.tv_usec = now.getUsecs();
-	}
-    }
-    if (isTxHoldback(inSettings)) {
-        now.setnow();
-	now.add(inSettings->txholdbacktime);
-	inSettings->txholdback_ts.tv_sec = now.getSecs();
-        inSettings->txholdback_ts.tv_nsec = (1000 * now.getUsecs());
-    }
-#endif
-
     // let the reporter thread go first in the case of -P greater than 1
     if (mSettings->multihdr) {
         Condition_Lock(reporter_state.await_reporter);
@@ -205,26 +185,42 @@ Client::Client( thread_Settings *inSettings ) {
 	    reportstruct->socket = mSettings->mSock;
 	    reportstruct->packetLen = 0;
 	}
+	// Perform delays between connect() and data xfer
+#if defined(HAVE_CLOCK_NANOSLEEP)
+	if (isTxStartTime(mSettings)) {
+	  int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &mSettings->txstart_epoch, NULL);
+	  if (rc) {
+	    fprintf(stderr, "txstart failed clock_nanosleep()=%d\n", rc);
+	  }
+	}
+	if (isTxHoldback(mSettings)) {
+	  int rc = clock_nanosleep(CLOCK_MONOTONIC, 0, &mSettings->txholdback_timer, NULL);
+	  if (rc) {
+	    fprintf(stderr, "txholdback failed clock_nanosleep()=%d\n", rc);
+	  }
+	}
+#endif
 	if (mSettings->reporthdr && (isDataReport(mSettings) || isConnectionReport(mSettings))) {
 	    ReportHeader *reporthdr = mSettings->reporthdr;
 	    //
 	    // Set the report start times and next report times
 	    //
 
-#ifdef HAVE_THREAD
+
 	    // In the case of parellel clients synchronize them after the connect(),
 	    // i.e. before their traffic run loops
-            if (!isServerReverse(mSettings) && (reporthdr->multireport)) {
+            if (!isServerReverse(mSettings) && !isTxStartTime(mSettings) && reporthdr->multireport) {
 	        // syncronize watches on my mark......
 	        BarrierClient(reporthdr->multireport, 1);
 		reporthdr->report.startTime.tv_sec = reporthdr->multireport->report.startTime.tv_sec;
-		reporthdr->report.startTime.tv_usec =reporthdr->multireport->report.startTime.tv_usec;
-	    } else
-#endif
-	    {
+		reporthdr->report.startTime.tv_usec = reporthdr->multireport->report.startTime.tv_usec;
+	    } else {
 	        now.setnow();
 		reporthdr->report.startTime.tv_sec = now.getSecs();
 		reporthdr->report.startTime.tv_usec = now.getUsecs();
+		if (reporthdr->multireport) {
+		    reporthdr->multireport->report.startTime = reporthdr->report.startTime;
+		}
 	    }
 	    reporthdr->report.nextTime = reporthdr->report.startTime;
 	    TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
@@ -235,13 +231,7 @@ Client::Client( thread_Settings *inSettings ) {
 	}
 	if (mSettings->reporthdr) {
 	    mSettings->reporthdr->report.connection.connecttime = ct;
-	    if (isTxHoldback(inSettings)) {
-	        mSettings->reporthdr->report.connection.txholdbacktime  = inSettings->txholdbacktime - ct;
-		if (mSettings->reporthdr->report.connection.txholdbacktime  < 0.0)
-		    mSettings->reporthdr->report.connection.txholdbacktime  = 0.0;
-	    }
 	}
-
     }
 } // end Client
 
@@ -435,30 +425,6 @@ void Client::Run( void ) {
 
     // Peform common traffic setup
     InitTrafficLoop();
-
-#ifdef HAVE_CLOCK_NANOSLEEP
-    // Add delay between connect and the writes.  Use case is for multiple iperf sessions to
-    // holdback their data xfer phase so other iperf sessions can complete connects
-    if (isTxHoldback(mSettings)) {
-        int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &mSettings->txholdback_ts, NULL);
-        if (rc) {
-	  fprintf(stderr, "failed clock_nanosleep()=%d per --tx-holdback\n", rc);
-        } else {
-	    // This can become a race
-	    ReportHeader *reporthdr = mSettings->reporthdr;
-	    if (reporthdr) {
-	        gettimeofday( &(reporthdr->report.startTime), NULL );
-	        // set next report time
-	        reporthdr->report.nextTime = reporthdr->report.startTime;
-	        TimeAdd( reporthdr->report.nextTime, reporthdr->report.intervalTime );
-	        // push an empty packet thru
-	        reportstruct->packetLen = 0;
-	        reportstruct->packetTime = reporthdr->report.startTime;
-	        ReportPacket( mSettings->reporthdr, reportstruct );
-	    }
-	}
-    }
-#endif
 
     /*
      * UDP specific setup

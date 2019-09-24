@@ -337,9 +337,8 @@ void Settings_Copy( thread_Settings *from, thread_Settings **into ) {
         strcpy( (*into)->mIsochronousStr, from->mIsochronousStr );
     }
 #endif
-#ifdef HAVE_CLOCK_NANOSLEEP
-    (*into)->txstart = from->txstart;
-#endif
+    (*into)->txstart_epoch = from->txstart_epoch;
+
     // Zero out certain entries
     (*into)->mTID = thread_zeroid();
     (*into)->runNext = NULL;
@@ -778,19 +777,19 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
 		match = sscanf(optarg,"%ld.%c%c%c%c%c%c%c%c%c", &seconds, &f0,&f1,&f2,&f3,&f4,&f5,&f6,&f7,&f8);
 		if (match > 1) {
 		    int i;
-		    mExtSettings->txstart.tv_sec = seconds;
-		    i = f0 - '0'; mExtSettings->txstart.tv_nsec  = i * 100000000;
-		    i = f1 - '0'; mExtSettings->txstart.tv_nsec += i * 10000000;
-		    i = f2 - '0'; mExtSettings->txstart.tv_nsec += i * 1000000;
-		    i = f3 - '0'; mExtSettings->txstart.tv_nsec += i * 100000;
-		    i = f4 - '0'; mExtSettings->txstart.tv_nsec += i * 10000;
-		    i = f5 - '0'; mExtSettings->txstart.tv_nsec += i * 1000;
-		    i = f6 - '0'; mExtSettings->txstart.tv_nsec += i * 100;
-		    i = f7 - '0'; mExtSettings->txstart.tv_nsec += i * 10;
-		    i = f8 - '0'; mExtSettings->txstart.tv_nsec += i;
+		    mExtSettings->txstart_epoch.tv_sec = seconds;
+		    i = f0 - '0'; mExtSettings->txstart_epoch.tv_nsec  = i * 100000000;
+		    i = f1 - '0'; mExtSettings->txstart_epoch.tv_nsec += i * 10000000;
+		    i = f2 - '0'; mExtSettings->txstart_epoch.tv_nsec += i * 1000000;
+		    i = f3 - '0'; mExtSettings->txstart_epoch.tv_nsec += i * 100000;
+		    i = f4 - '0'; mExtSettings->txstart_epoch.tv_nsec += i * 10000;
+		    i = f5 - '0'; mExtSettings->txstart_epoch.tv_nsec += i * 1000;
+		    i = f6 - '0'; mExtSettings->txstart_epoch.tv_nsec += i * 100;
+		    i = f7 - '0'; mExtSettings->txstart_epoch.tv_nsec += i * 10;
+		    i = f8 - '0'; mExtSettings->txstart_epoch.tv_nsec += i;
 		} else if (match == 1) {
-		    mExtSettings->txstart.tv_sec = seconds;
-		    mExtSettings->txstart.tv_nsec = 0;
+		    mExtSettings->txstart_epoch.tv_sec = seconds;
+		    mExtSettings->txstart_epoch.tv_nsec = 0;
 		} else {
 		    unsetTxStartTime(mExtSettings);
 		    fprintf(stderr, "WARNING: invalid --txstart-time format\n");
@@ -811,10 +810,14 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
 		txholdback = 0;
 #ifdef HAVE_CLOCK_NANOSLEEP
 	        char *end;
-		mExtSettings->txholdbacktime = strtof( optarg, &end );
+		Timestamp holdbackdelay;
+		double delay = strtof(optarg, &end);
 		if (*end != '\0') {
 		    fprintf (stderr, "Invalid value of '%s' for --tcp-holdback time\n", optarg);
 		} else {
+		    holdbackdelay.set(delay);
+		    mExtSettings->txholdback_timer.tv_sec = holdbackdelay.getSecs();
+		    mExtSettings->txholdback_timer.tv_nsec = (1000 * holdbackdelay.getUsecs());
 		    setTxHoldback(mExtSettings);
 		    setEnhanced( mExtSettings );
 		}
