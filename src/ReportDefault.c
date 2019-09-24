@@ -514,9 +514,6 @@ void reporter_reportsettings( ReporterData *data ) {
  */
 void *reporter_reportpeer( Connection_Info *stats, int ID ) {
     if ( ID > 0 ) {
-	if (stats->epochStartTime.tv_sec) {
-	    printf(client_report_epoch_start, ID,stats->epochStartTime.tv_sec, stats->epochStartTime.tv_usec);
-	}
         // copy the inet_ntop into temp buffers, to avoid overwriting
         char local_addr[ REPORT_ADDRLEN ];
         char remote_addr[ REPORT_ADDRLEN ];
@@ -594,6 +591,9 @@ void *reporter_reportpeer( Connection_Info *stats, int ID ) {
 	                      0),
 #endif
 	         extbuf);
+	if (stats->epochStartTime.tv_sec) {
+	    printf(client_report_epoch_start, ID,stats->epochStartTime.tv_sec, stats->epochStartTime.tv_usec);
+	}
     }
     return NULL;
 }
