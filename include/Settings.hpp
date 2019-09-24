@@ -229,12 +229,13 @@ typedef struct thread_Settings {
     int recvflags; // used to set recv flags,e.g. MSG_TRUNC with L
     double mVariance; //vbr variance
     unsigned int mFQPacingRate;
+#if defined(HAVE_CLOCK_NANOSLEEP)
+    struct timespec txholdback_timer;
+    struct timespec txstart_epoch;
+#else
+    struct timeval txholdback_timer;
     struct timeval txstart_epoch;
-#ifdef HAVE_CLOCK_NANOSLEEP
-    struct timespec txstart;
-    struct timespec txholdback_ts;
 #endif
-    double txholdbacktime;
 } thread_Settings;
 
 /*
