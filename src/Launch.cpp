@@ -226,17 +226,6 @@ void client_init( thread_Settings *clients ) {
     thread_Settings *next = NULL;
 
     itr = clients;
-#ifdef HAVE_CLOCK_NANOSLEEP
-#ifdef HAVE_CLOCK_GETTIME
-    if (isTxStartTime(clients)) {
-        struct timespec t1;
-	clock_gettime(CLOCK_REALTIME, &t1);
-	fprintf(stdout, "Client thread(s) traffic start time %ld.%.9ld current time is %ld.%.9ld (epoch/unix format)\n",\
-		clients->txstart_epoch.tv_sec, clients->txstart_epoch.tv_nsec, t1.tv_sec, t1.tv_nsec);
-	fflush(stdout);
-    }
-#endif
-#endif
     setReport(clients);
     // See if we need to start a listener as well
     Settings_GenerateListenerSettings( clients, &next );

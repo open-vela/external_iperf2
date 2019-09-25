@@ -592,7 +592,14 @@ void *reporter_reportpeer( Connection_Info *stats, int ID ) {
 #endif
 	         extbuf);
 	if (stats->epochStartTime.tv_sec) {
-	    printf(client_report_epoch_start, ID,stats->epochStartTime.tv_sec, stats->epochStartTime.tv_usec);
+#ifdef HAVE_CLOCK_GETTIME
+	  struct timespec t1;
+	  clock_gettime(CLOCK_REALTIME, &t1);
+	  printf(client_report_epoch_start_current, ID,stats->epochStartTime.tv_sec, stats->epochStartTime.tv_usec, t1.tv_sec, t1.tv_nsec);
+#else
+	  printf(client_report_epoch_start, ID,stats->epochStartTime.tv_sec, stats->epochStartTime.tv_usec);
+#endif
+	  fflush(stdout);
 	}
     }
     return NULL;
