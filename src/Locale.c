@@ -107,12 +107,10 @@ const char usage_long2[] = "\
 Client specific:\n\
   -c, --client    <host>   run in client mode, connecting to <host>\n\
   -d, --dualtest           Do a bidirectional test simultaneously (multiple sockets)\n\
-      --bidir              run bidirectional test over same socket (full duplex mode)\n"
-#ifdef HAVE_ISOCHRONOUS
-"      --ipg                set the the interpacket gap (milliseconds) for packets within an isochronous frame\n\
-      --isochronous <frames-per-second>:<mean>,<stddev> send traffic in bursts (frames - emulate video traffic)\n"
-#endif
-"      --incr-dstip         Increment the destination ip with parallel (-P) traffic threads\n\
+      --bidir              run bidirectional test over same socket (full duplex mode)\n\
+      --ipg                set the the interpacket gap (milliseconds) for packets within an isochronous frame\n\
+      --isochronous <frames-per-second>:<mean>,<stddev> send traffic in bursts (frames - emulate video traffic)\n\
+      --incr-dstip         Increment the destination ip with parallel (-P) traffic threads\n\
   -n, --num       #[kmgKMG]    number of bytes to transmit (instead of -t)\n\
   -r, --tradeoff           Do a bidirectional test individually\n\
   -t, --time      #        time in seconds to transmit for (default 10 secs)\n\

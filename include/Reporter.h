@@ -120,7 +120,6 @@ typedef struct WriteStats {
     int up_to_date;
 } WriteStats;
 
-#ifdef HAVE_ISOCHRONOUS
 typedef struct IsochStats {
     int mFPS; //frames per second
     double mMean; //variable bit rate mean
@@ -133,7 +132,6 @@ typedef struct IsochStats {
     unsigned int mBurstIPG; //IPG of packets within the burst
     int frameID;
 } IsochStats;
-#endif
 
 /*
  * This struct contains all important information from the sending or
@@ -172,14 +170,12 @@ typedef struct ReportStruct {
     int l2errors;
     int l2len;
     int expected_l2len;
-#ifdef HAVE_ISOCHRONOUS
     struct timeval isochStartTime;
     intmax_t prevframeID;
     intmax_t frameID;
     intmax_t burstsize;
     intmax_t burstperiod;
     intmax_t remaining;
-#endif
 } ReportStruct;
 
 /*
@@ -225,12 +221,10 @@ typedef struct Transfer_Info {
     int    free;  // A  misnomer - used by summing for a traffic thread counter
     histogram_t *latency_histogram;
     L2Stats l2counts;
-#ifdef HAVE_ISOCHRONOUS
     IsochStats isochstats;
     char   mIsochronous;                 // -e
     TransitStats frame;
     histogram_t *framelatency_histogram;
-#endif
 } Transfer_Info;
 
 typedef struct Connection_Info {
@@ -305,9 +299,7 @@ typedef struct ReporterData {
     struct timeval intervalTime;
     struct timeval IPGstart;
     struct timeval clientStartTime;
-#ifdef HAVE_ISOCHRONOUS
     IsochStats isochstats;
-#endif
     double TxSyncInterval;
     unsigned int FQPacingRate;
 } ReporterData;

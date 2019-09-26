@@ -124,10 +124,8 @@ Client::Client( thread_Settings *inSettings ) {
             unsetFileInput( mSettings );
         }
     }
-#ifdef HAVE_ISOCHRONOUS
-    if (isIsochronous(mSettings) && isUDP(mSettings))
+    if (isIsochronous(mSettings))
 	FAIL_errno( !(mSettings->mFPS > 0.0), "Invalid value for frames per second in the isochronous settings\n", mSettings );
-#endif
 
     // let the reporter thread go first in the case of -P greater than 1
     if (mSettings->multihdr) {
@@ -738,10 +736,6 @@ void Client::RunUDP( void ) {
  * UDP isochronous send loop
  */
 void Client::RunUDPIsochronous (void) {
-#ifndef HAVE_ISOCHRONOUS
-    FAIL_errno(1, "UDP isochronous not supported, recompile after using config --enable-isochronous\n", mSettings );
-    return;
-#else
     struct UDP_datagram* mBuf_UDP = (struct UDP_datagram*) mBuf;
     // skip over the UDP datagram (seq no, timestamp) to reach the isoch fields
     struct client_hdr_udp_isoch_tests *testhdr = (client_hdr_udp_isoch_tests *)(mBuf + sizeof(client_hdr_v1) + sizeof(UDP_datagram));
@@ -884,9 +878,7 @@ void Client::RunUDPIsochronous (void) {
     }
 
     FinishTrafficActions();
-
     DELETE_PTR(fc);
-#endif
 }
 // end RunUDPIsoch
 

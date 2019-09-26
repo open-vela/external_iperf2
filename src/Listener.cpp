@@ -1163,11 +1163,9 @@ int Listener::ReadClientHeader(client_hdr *hdr ) {
 	if ((flags & HEADER_UDPTESTS) != 0) {
 	    testflags = ntohs(hdr->udp.testflags);
 	    // Handle stateless flags
-#ifdef HAVE_ISOCHRONOUS
 	    if ((testflags & HEADER_UDP_ISOCH) != 0) {
 		setIsochronous(server);
 	    }
-#endif
 	    if ((testflags & HEADER_L2ETHPIPV6) != 0) {
 		setIPV6(server);
 	    } else {

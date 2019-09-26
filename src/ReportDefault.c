@@ -149,15 +149,12 @@ void reporter_printstats( Transfer_Info *stats ) {
     } else if ( stats->mUDP == (char)kMode_Client ) {
 	// UDP Client reporting
 	if( !header_printed ) {
-#ifdef HAVE_ISOCHRONOUS
 	    if (stats->mIsochronous)
 		printf( "%s", (stats->mEnhanced ? report_bw_pps_enhanced_isoch_header : report_bw_header));
 	    else
-#endif
-	    printf( "%s", (stats->mEnhanced ? report_bw_pps_enhanced_header : report_bw_header));
+	        printf( "%s", (stats->mEnhanced ? report_bw_pps_enhanced_header : report_bw_header));
 	    header_printed = 1;
 	}
-#ifdef HAVE_ISOCHRONOUS
 	if (stats->mIsochronous)
 	    printf( stats->mEnhanced ? report_bw_pps_enhanced_isoch_format : report_bw_format, stats->transferID,
 		    stats->startTime, stats->endTime,
@@ -168,7 +165,6 @@ void reporter_printstats( Transfer_Info *stats ) {
 		    stats->isochstats.framecnt,
 		    stats->isochstats.framelostcnt, stats->isochstats.slipcnt);
 	else
-#endif
 	    printf( stats->mEnhanced ? report_bw_pps_enhanced_format : report_bw_format, stats->transferID,
 		    stats->startTime, stats->endTime,
 		    buffer, &buffer[sizeof(buffer)/2],
@@ -179,11 +175,9 @@ void reporter_printstats( Transfer_Info *stats ) {
     } else {
         // UDP Server Reporting
         if( !header_printed ) {
-#ifdef HAVE_ISOCHRONOUS
 	    if (stats->mIsochronous)
 		printf("%s", report_bw_jitter_loss_enhanced_isoch_header);
 	    else
-#endif
 		printf( "%s", (stats->mEnhanced ? report_bw_jitter_loss_enhanced_header : report_bw_jitter_loss_header));
             header_printed = 1;
         }
@@ -201,7 +195,6 @@ void reporter_printstats( Transfer_Info *stats ) {
 			    (100.0 * stats->cntError) / stats->cntDatagrams,
 			    (stats->IPGcnt / stats->IPGsum));
 		} else {
-#ifdef HAVE_ISOCHRONOUS
 		    if (stats->mIsochronous) {
 			double meantransit = stats->transit.sumTransit / stats->transit.cntTransit;
 			printf( report_bw_jitter_loss_enhanced_isoch_format, stats->transferID,
@@ -216,9 +209,7 @@ void reporter_printstats( Transfer_Info *stats ) {
 				(stats->IPGcnt / stats->IPGsum),
 				((meantransit > 0.0) ? (NETPOWERCONSTANT * ((double) bytesxfered) / (double) (stats->endTime - stats->startTime) / meantransit) : 0),
 				stats->isochstats.framecnt, stats->isochstats.framelostcnt);
-		    } else
-#endif
-			{
+		    } else {
 			    double meantransit = (stats->transit.sumTransit / stats->transit.cntTransit);
 			    printf( report_bw_jitter_loss_enhanced_format, stats->transferID,
 			    stats->startTime, stats->endTime,
@@ -236,11 +227,9 @@ void reporter_printstats( Transfer_Info *stats ) {
 		if (stats->latency_histogram) {
 		    histogram_print(stats->latency_histogram, stats->startTime, stats->endTime,stats->free);
 		}
-#ifdef HAVE_ISOCHRONOUS
 		if (stats->framelatency_histogram) {
 		    histogram_print(stats->framelatency_histogram, stats->startTime, stats->endTime,stats->free);
 		}
-#endif
 	    } else {
 		printf( report_bw_jitter_loss_suppress_enhanced_format, stats->transferID,
 			stats->startTime, stats->endTime,
@@ -277,12 +266,10 @@ void reporter_printstats( Transfer_Info *stats ) {
 		histogram_delete(stats->latency_histogram);
 		stats->latency_histogram = NULL;
 	    }
-#ifdef HAVE_ISOCHRONOUS
 	    if (stats->framelatency_histogram) {
 		histogram_delete(stats->framelatency_histogram);
 		stats->framelatency_histogram = NULL;
 	    }
-#endif
 	}
     }
 }
@@ -445,7 +432,6 @@ void reporter_reportsettings( ReporterData *data ) {
     }
 
     if (isIsochronous(data)) {
-#ifdef HAVE_ISOCHRONOUS
 	char meanbuf[40];
 	char variancebuf[40];
 	byte_snprintf(meanbuf, sizeof(meanbuf), data->isochstats.mMean, 'a');
@@ -454,9 +440,6 @@ void reporter_reportsettings( ReporterData *data ) {
 	if ((data->isochstats.mMean / data->isochstats.mFPS) < ((double) (sizeof(UDP_datagram) + sizeof(client_hdr_v1) + sizeof(struct client_hdr_udp_isoch_tests)))) {
 	    fprintf(stderr, "Warning: Requested mean too small to carry isoch payload, code will auto adjust payload sizes\n");
 	}
-#else
-	fprintf(stderr, "--isochronous not supportted, try --enable-isochronous during config and remake\n");
-#endif
     } else {
 	if ( isUDP( data ) ) {
 	    if (data->mThreadMode != kMode_Listener) {
