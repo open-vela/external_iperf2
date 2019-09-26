@@ -365,11 +365,9 @@ void FreeReport(ReportHeader *reporthdr) {
 	if (reporthdr->report.info.latency_histogram) {
 	    histogram_delete(reporthdr->report.info.latency_histogram);
 	}
-#ifdef HAVE_ISOCHRONOUS
 	if (reporthdr->report.info.framelatency_histogram) {
 	    histogram_delete(reporthdr->report.info.framelatency_histogram);
 	}
-#endif
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug("Free report hdr %p delay counter=%d", (void *)reporthdr, reporthdr->delaycounter);
 #endif
@@ -502,7 +500,6 @@ void InitDataReport(thread_Settings *mSettings) {
 							       (mSettings->mRXunits ? 1e6 : 1e3), \
 							       mSettings->mRXci_lower, mSettings->mRXci_upper, data->info.transferID, name);
 	    }
-#ifdef HAVE_ISOCHRONOUS
 	    if (isRxHistogram(mSettings) && isIsochronous(mSettings)) {
 		char name[] = "F8";
 		// make sure frame bin size min is 100 microsecond
@@ -513,15 +510,12 @@ void InitDataReport(thread_Settings *mSettings) {
 								    (mSettings->mRXunits ? 1e6 : 1e3), mSettings->mRXci_lower, \
 								    mSettings->mRXci_upper, data->info.transferID, name);
 	    }
-#endif
 	}
-#ifdef HAVE_ISOCHRONOUS
 	if ( isIsochronous( mSettings ) ) {
 	    data->info.mIsochronous = 1;
 	} else {
 	    data->info.mIsochronous = 0;
 	}
-#endif
     } else {
 	FAIL(1, "Out of Memory!!\n", mSettings);
     }
@@ -868,7 +862,6 @@ ReportHeader *ReportSettings( thread_Settings *agent ) {
       data->connection.size_local = agent->size_local;
       data->mUDPRate = agent->mUDPRate;
       data->mUDPRateUnits = agent->mUDPRateUnits;
-#ifdef HAVE_ISOCHRONOUS
       if (isIsochronous(data)) {
 	data->isochstats.mFPS = agent->mFPS;
 	data->isochstats.mMean = agent->mMean/8;
@@ -876,7 +869,6 @@ ReportHeader *ReportSettings( thread_Settings *agent ) {
 	data->isochstats.mBurstIPG = (unsigned int) (agent->mBurstIPG*1000.0);
 	data->isochstats.mBurstInterval = (unsigned int) (1 / agent->mFPS * 1000000);
       }
-#endif
     } else {
       FAIL(1, "Out of Memory!!\n", agent);
     }
@@ -1115,11 +1107,9 @@ void process_report ( ReportHeader *report ) {
 	    if (report->report.info.latency_histogram) {
 		histogram_delete(report->report.info.latency_histogram);
 	    }
-#ifdef HAVE_ISOCHRONOUS
 	    if (report->report.info.framelatency_histogram) {
 		histogram_delete(report->report.info.framelatency_histogram);
 	    }
-#endif
             free( report );
         }
     }
@@ -1359,7 +1349,6 @@ static inline void reporter_handle_packet_udp_transit(ReporterData *data, Transf
     stats->transit.lastTransit = transit;
 }
 
-#ifdef HAVE_ISOCHRONOUS
 static inline void reporter_handle_packet_isochronous(ReporterData *data, Transfer_Info *stats, ReportStruct *packet) {
   //printf("fid=%lu bs=%lu remain=%lu\n", packet->frameID, packet->burstsize, packet->remaining);
   if (packet->frameID && packet->burstsize && packet->remaining) {
@@ -1405,7 +1394,6 @@ static inline void reporter_handle_packet_isochronous(ReporterData *data, Transf
     data->isochstats.frameID = packet->frameID;
   }
 }
-#endif
 
 inline void reporter_handle_packet_server_tcp(ReportHeader *reporthdr, ReportStruct *packet) {
     Transfer_Info *stats = &reporthdr->report.info;
@@ -1635,11 +1623,9 @@ static inline void reset_transfer_stats(ReporterData *stats) {
 	    stats->info.transit.vdTransit = 0;
 	    stats->info.transit.meanTransit = 0;
 	    stats->info.transit.m2Transit = 0;
-#ifdef HAVE_ISOCHRONOUS
 	    stats->info.isochstats.framecnt = 0;
 	    stats->info.isochstats.framelostcnt = 0;
 	    stats->info.isochstats.slipcnt = 0;
-#endif
 	}
     }
 }
@@ -1681,11 +1667,9 @@ static inline void reset_transfer_stats_server_udp(ReporterData *stats) {
     stats->info.transit.vdTransit = 0;
     stats->info.transit.meanTransit = 0;
     stats->info.transit.m2Transit = 0;
-#ifdef HAVE_ISOCHRONOUS
     stats->info.isochstats.framecnt = 0;
     stats->info.isochstats.framelostcnt = 0;
     stats->info.isochstats.slipcnt = 0;
-#endif
     stats->info.IPGcnt = 0;
     stats->info.IPGsum = 0;
     stats->info.l2counts.cnt = 0;
@@ -1943,13 +1927,11 @@ static void output_transfer_final_report_client_tcp(ReporterData *stats) {
 	}
 	stats->info.IPGsum = 1;
         stats->info.free = 1;
-#ifdef HAVE_ISOCHRONOUS
 	if (stats->info.mIsochronous) {
 	    stats->info.isochstats.framecnt = stats->isochstats.framecnt;
 	    stats->info.isochstats.framelostcnt = stats->isochstats.framelostcnt;
 	    stats->info.isochstats.slipcnt = stats->isochstats.slipcnt;
 	}
-#endif
         reporter_print( stats, TRANSFER_REPORT, 1 );
 }
 

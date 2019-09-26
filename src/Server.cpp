@@ -521,7 +521,6 @@ int Server::L2_quintuple_filter(void) {
 }
 
 void Server::Isoch_processing (int rxlen) {
-#ifdef HAVE_ISOCHRONOUS
     // Ignore runt sized isoch packets
     if (rxlen < (int) (sizeof(UDP_datagram) +  sizeof(client_hdr_v1) + sizeof(client_hdr_udp_isoch_tests))) {
 	reportstruct->burstsize = 0;
@@ -538,7 +537,6 @@ void Server::Isoch_processing (int rxlen) {
 	reportstruct->burstperiod = ntohl(mBuf_isoch->burstperiod);
 	reportstruct->remaining = ntohl(mBuf_isoch->remaining);
     }
-#endif
 }
 
 /* -------------------------------------------------------------------
