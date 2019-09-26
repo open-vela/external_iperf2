@@ -68,10 +68,8 @@
 #include "util.h"
 #include "version.h"
 #include "gnu_getopt.h"
-#ifdef HAVE_ISOCHRONOUS
 #include "isochronous.hpp"
 #include "pdfs.h"
-#endif
 
 static int reversetest = 0;
 static int bidirtest = 0;
@@ -86,11 +84,9 @@ static int triptime = 0;
 static int writeack = 0;
 static int infinitetime = 0;
 static int connectonly = 0;
-#ifdef HAVE_ISOCHRONOUS
 static int burstipg = 0;
 static int burstipg_set = 0;
 static int isochronous = 0;
-#endif
 
 extern Mutex groupCond;
 
@@ -167,10 +163,8 @@ const struct option long_options[] =
 {"write-ack", no_argument, &writeack, 1},
 {"connect-only", optional_argument, &connectonly, 1},
 {"bidir", no_argument, &bidirtest, 1},
-#ifdef HAVE_ISOCHRONOUS
 {"ipg", required_argument, &burstipg, 1},
 {"isochronous", optional_argument, &isochronous, 1},
-#endif
 #ifdef WIN32
 {"reverse", no_argument, &reversetest, 1},
 #endif
@@ -330,13 +324,10 @@ void Settings_Copy( thread_Settings *from, thread_Settings **into ) {
 	(*into)->mIfrnametx = new char[ strlen(from->mIfrnametx) + 1];
         strcpy( (*into)->mIfrnametx, from->mIfrnametx );
     }
-
-#ifdef HAVE_ISOCHRONOUS
     if ( from->mIsochronousStr != NULL ) {
 	(*into)->mIsochronousStr = new char[ strlen(from->mIsochronousStr) + 1];
         strcpy( (*into)->mIsochronousStr, from->mIsochronousStr );
     }
-#endif
     (*into)->txstart_epoch = from->txstart_epoch;
 
     // Zero out certain entries
@@ -366,9 +357,7 @@ void Settings_Destroy( thread_Settings *mSettings) {
     DELETE_ARRAY( mSettings->mSSMMulticastStr);
     FREE_ARRAY( mSettings->mIfrname);
     FREE_ARRAY( mSettings->mIfrnametx);
-#ifdef HAVE_ISOCHRONOUS
     DELETE_ARRAY( mSettings->mIsochronousStr );
-#endif
     DELETE_PTR( mSettings );
 } // end ~Settings
 
@@ -876,8 +865,6 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
 		fprintf( stderr, "WARNING: The --fq-rate option is not supported\n");
 #endif
 	    }
-
-#ifdef HAVE_ISOCHRONOUS
 	    if (isochronous) {
 		isochronous = 0;
 		setEnhanced( mExtSettings );
@@ -902,7 +889,6 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
 		    fprintf (stderr, "Invalid value of '%s' for --ipg\n", optarg);
 		}
 	    }
-#endif
 	    break;
         default: // ignore unknown
             break;
@@ -1039,8 +1025,6 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 	}
     }
 
-
-#ifdef HAVE_ISOCHRONOUS
     if (mExtSettings->mBurstIPG > 0.0) {
 	if (!isIsochronous(mExtSettings)) {
 	    fprintf(stderr, "WARNING: option --ipg requires the --isochronous option\n");
@@ -1071,7 +1055,6 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 	    }
 	}
     }
-#endif
     // Check for further mLocalhost (-B) and <dev> requests
     // full addresses look like 192.168.1.1:6001%eth0 or [2001:e30:1401:2:d46e:b891:3082:b939]:6001%eth0
     iperf_sockaddr tmp;
