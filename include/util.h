@@ -174,6 +174,25 @@ intmax_t byte_atoi( const char  *inString );
 unsigned int bitorbyte_atoi( const char *inString );
 void byte_snprintf( char* outString, int inLen, double inNum, char inFormat );
 
+/*
+ * Time macros for C-code (not the include Timestamp.hpp)
+ */
+#define rMillion 1000000
+
+#define TimeZero(timeval) ((timeval.tv_sec == 0) && (timeval.tv_usec == 0))
+
+#define TimeDifference( left, right ) (left.tv_sec  - right.tv_sec) +   \
+        (left.tv_usec - right.tv_usec) / ((double) rMillion)
+
+#define TimeAdd( left, right )  do {                                    \
+                                    left.tv_usec += right.tv_usec;      \
+                                    if ( left.tv_usec > rMillion ) {    \
+                                        left.tv_usec -= rMillion;       \
+                                        left.tv_sec++;                  \
+                                    }                                   \
+                                    left.tv_sec += right.tv_sec;        \
+                                } while ( 0 )
+
 /* -------------------------------------------------------------------
  * redirect the stdout to a specified file
  * stdio.c
