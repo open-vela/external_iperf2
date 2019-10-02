@@ -75,10 +75,6 @@ public:
     /* -------------------------------------------------------------------
      * Copy construcutor
      * ------------------------------------------------------------------- */
-    Timestamp( Timestamp &ts ) {
-        mTime.tv_sec = ts.getSecs();
-        mTime.tv_usec = ts.getUsecs();
-    }
 
     /* -------------------------------------------------------------------
      * Create a timestamp, with the given seconds/microseconds

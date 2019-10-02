@@ -56,7 +56,7 @@
 
 #include "Settings.hpp"
 #include "Timestamp.hpp"
-
+#include "isochronous.hpp"
 
 // Define fatal and nonfatal write errors
 #ifdef WIN32
@@ -97,6 +97,7 @@ private:
     bool InProgress(void);
     inline void WriteSync(void);
     inline void WriteSyncDone(void);
+    void StartSynch(void);
     ReportStruct *reportstruct;
     double delay_lower_bounds;
     intmax_t totLen;
@@ -126,6 +127,7 @@ private:
     Timestamp now;
     char* readAt;
     Timestamp connect_done, connect_start;
+    Isochronous::FrameCounter *framecounter;
 }; // end class Client
 
 #endif // CLIENT_H

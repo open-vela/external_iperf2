@@ -182,12 +182,13 @@ typedef struct ReportStruct {
  * The type field of ReporterData is a bitmask
  * with one or more of the following
  */
-#define    TRANSFER_REPORT      0x00000001
-#define    SERVER_RELAY_REPORT  0x00000002
-#define    SETTINGS_REPORT      0x00000004
-#define    CONNECTION_REPORT    0x00000008
-#define    MULTIPLE_REPORT      0x00000010
-#define    BIDIR_REPORT      0x00000020
+#define    TRANSFER_REPORT       0x00000001
+#define    SERVER_RELAY_REPORT   0x00000002
+#define    SETTINGS_REPORT       0x00000004
+#define    CONNECTION_REPORT     0x00000008
+#define    MULTIPLE_REPORT       0x00000010
+#define    BIDIR_REPORT          0x00000020
+#define    TRANSFER_REPORT_READY 0x00000040
 
 typedef union {
     ReadStats read;
@@ -396,21 +397,6 @@ extern report_statistics multiple_reports[];
 #define SNBUFFERSIZE 120
 extern char buffer[SNBUFFERSIZE]; // Buffer for printing
 
-#define rMillion 1000000
-
-#define TimeZero(timeval) ((timeval.tv_sec == 0) && (timeval.tv_usec == 0))
-
-#define TimeDifference( left, right ) (left.tv_sec  - right.tv_sec) +   \
-        (left.tv_usec - right.tv_usec) / ((double) rMillion)
-
-#define TimeAdd( left, right )  do {                                    \
-                                    left.tv_usec += right.tv_usec;      \
-                                    if ( left.tv_usec > rMillion ) {    \
-                                        left.tv_usec -= rMillion;       \
-                                        left.tv_sec++;                  \
-                                    }                                   \
-                                    left.tv_sec += right.tv_sec;        \
-                                } while ( 0 )
 #ifdef __cplusplus
 } /* end extern "C" */
 #endif

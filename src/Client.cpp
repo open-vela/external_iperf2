@@ -124,9 +124,10 @@ Client::Client( thread_Settings *inSettings ) {
             unsetFileInput( mSettings );
         }
     }
-    if (isIsochronous(mSettings))
+    framecounter = NULL;
+    if (isIsochronous(mSettings)) {
 	FAIL_errno( !(mSettings->mFPS > 0.0), "Invalid value for frames per second in the isochronous settings\n", mSettings );
-
+    }
     // let the reporter thread go first in the case of -P greater than 1
     if (mSettings->multihdr) {
         Condition_Lock(reporter_state.await_reporter);
@@ -138,13 +139,8 @@ Client::Client( thread_Settings *inSettings ) {
 
     // ServerReverse traffic threads don't need a new connect()
     // as they use the session created by the client's connect()
-    if (!isServerReverse(mSettings))
+    if (!isServerReverse(mSettings)) {
         ct = Connect( );
-
-    if (isReport(mSettings)) {
-        ReportHeader *tmp = ReportSettings(mSettings);
-	UpdateConnectionReport(mSettings, tmp);
-	PostReport(tmp);
     }
 
     //  Tests that don't pass packet stats to the reporter thread
@@ -152,30 +148,24 @@ Client::Client( thread_Settings *inSettings ) {
     if (isConnectOnly(mSettings) || (isReverse(mSettings) && !isBidir(mSettings))) {
 	if (!mSettings->reporthdr) {
 	    InitConnectionReport(mSettings);
-	    if (mSettings->reporthdr) {
-	        mSettings->reporthdr->report.connection.connecttime = ct;
-	        PostReport(mSettings->reporthdr);
+	    mSettings->reporthdr->report.connection.connecttime = ct;
+	    myJob = mSettings->reporthdr;
+	    // Post the settings report, the connection report will be posted later
+	    if (isReport(mSettings)) {
+	        ReportHeader *tmp = ReportSettings(mSettings);
+		UpdateConnectionReport(mSettings, tmp);
+		// Post a settings report now
+		PostReport(tmp);
 	    }
-#ifdef HAVE_THREAD
-	    if (mSettings->multihdr && (mSettings->multihdr->multibarrier_cnt > 1)) {
-	        // For the case multilple clients wait on all
-	        // completing the connect() w/o going to close()
-	        // by leveraging this barrier
-#ifdef HAVE_THREAD_DEBUG
-	        thread_debug("Barrier client on condition %p", (void *)&mSettings->multihdr->multibarrier_cond);
-#endif
-	        BarrierClient(mSettings->multihdr, 0);
-	    }
-#endif
 	}
     } else {
 	InitReport(mSettings);
 	// Squirrel this away so the destructor can free the memory
 	// even when mSettings has already destroyed
 	myJob = mSettings->reporthdr;
+	// Initialize things for the packet ring and the connec time
 	if (mSettings->reporthdr) {
 	    mSettings->reporthdr->report.connection.connecttime = ct;
-	    PostReport(mSettings->reporthdr);
 	    reportstruct = &mSettings->reporthdr->packetring->metapacket;
 	    reportstruct->packetID = (isPeerVerDetect(mSettings)) ? 1 : INITIAL_PACKETID;
 	    reportstruct->errwrite=WriteNoErr;
@@ -183,54 +173,27 @@ Client::Client( thread_Settings *inSettings ) {
 	    reportstruct->socket = mSettings->mSock;
 	    reportstruct->packetLen = 0;
 	}
-	// Perform delays between connect() and data xfer
-#if defined(HAVE_CLOCK_NANOSLEEP)
-	if (isTxStartTime(mSettings)) {
-	  int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &mSettings->txstart_epoch, NULL);
-	  if (rc) {
-	    fprintf(stderr, "txstart failed clock_nanosleep()=%d\n", rc);
-	  }
-	}
-	if (isTxHoldback(mSettings)) {
-	  int rc = clock_nanosleep(CLOCK_MONOTONIC, 0, &mSettings->txholdback_timer, NULL);
-	  if (rc) {
-	    fprintf(stderr, "txholdback failed clock_nanosleep()=%d\n", rc);
-	  }
-	}
-#endif
-	if (mSettings->reporthdr && (isDataReport(mSettings) || isConnectionReport(mSettings))) {
-	    ReportHeader *reporthdr = mSettings->reporthdr;
-	    //
-	    // Set the report start times and next report times
-	    //
-
-
-	    // In the case of parellel clients synchronize them after the connect(),
-	    // i.e. before their traffic run loops
-            if (!isServerReverse(mSettings) && !isTxStartTime(mSettings) && reporthdr->multireport) {
-	        // syncronize watches on my mark......
-	        BarrierClient(reporthdr->multireport, 1);
-		reporthdr->report.startTime.tv_sec = reporthdr->multireport->report.startTime.tv_sec;
-		reporthdr->report.startTime.tv_usec = reporthdr->multireport->report.startTime.tv_usec;
-	    } else {
-	        now.setnow();
-		reporthdr->report.startTime.tv_sec = now.getSecs();
-		reporthdr->report.startTime.tv_usec = now.getUsecs();
-		if (reporthdr->multireport) {
-		    reporthdr->multireport->report.startTime = reporthdr->report.startTime;
-		}
-	    }
-	    reporthdr->report.nextTime = reporthdr->report.startTime;
-	    TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
-	    if (reporthdr->bidirreport && TimeZero(reporthdr->bidirreport->report.nextTime)) {
-	        reporthdr->bidirreport->report.startTime = reporthdr->report.startTime;
-	        reporthdr->bidirreport->report.nextTime = reporthdr->report.nextTime;
-	    }
-	}
 	if (mSettings->reporthdr) {
 	    mSettings->reporthdr->report.connection.connecttime = ct;
 	}
+	// Post a settings report
+	if (isReport(mSettings)) {
+	    ReportHeader *tmp = ReportSettings(mSettings);
+	    UpdateConnectionReport(mSettings, tmp);
+	    PostReport(tmp);
+	}
+	if (myJob && isDataReport(mSettings))
+	    PostReport(myJob);
+	// Perform any intial startup delays between the connect() and the data xfer phase
+	// this will also initiliaze the report header timestamps needed by the reporter thread
+	StartSynch();
     }
+
+    // Finally, post this thread's "job report" which the reporter thread
+    // will continuously process as long as there are packets flowing
+    if (myJob)
+        myJob->report.type |= TRANSFER_REPORT_READY;
+
 } // end Client
 
 /* -------------------------------------------------------------------
@@ -305,7 +268,13 @@ double Client::Connect() {
     }
 
     // connect socket
-    if (!isUDP(mSettings) && isEnhanced(mSettings)) {
+    if (!isUDP(mSettings)) {
+        // Synchronize prior to connect() only on a connect-only test
+        // Tests with data xfer will sync after the connect()
+        // and before the writes()
+        if (isConnectOnly(mSettings))
+	    StartSynch();
+
 	connect_start.setnow();
 	rc = connect( mSettings->mSock, (sockaddr*) &mSettings->peer,
 		      SockAddr_get_sizeof_sockaddr( &mSettings->peer ));
@@ -326,6 +295,74 @@ double Client::Connect() {
 
 } // end Connect
 
+// There are multiple startup synchronizations, this code
+// handles them all. The caller decides to apply them
+// either before connect() or after connect() and before writes()
+void Client::StartSynch (void) {
+  ReportHeader *reporthdr = myJob;
+  int barrier_needed = 1;
+  // Perform delays, usually between connect() and data xfer though before connect
+  // if this is a connect only test
+#if defined(HAVE_CLOCK_NANOSLEEP)
+  // check for an epoch based start time
+  if (isTxStartTime(mSettings)) {
+      if (isIsochronous(mSettings)) {
+	Timestamp tmp;
+	tmp.set(mSettings->txstart_epoch.tv_sec, mSettings->txstart_epoch.tv_usec);
+	framecounter = new Isochronous::FrameCounter(mSettings->mFPS, tmp);
+      } else {
+	timespec tmp;
+	tmp.tv_sec = mSettings->txstart_epoch.tv_sec;
+	tmp.tv_nsec = mSettings->txstart_epoch.tv_usec * 1000;
+	int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &tmp, NULL);
+	if (rc) {
+	  fprintf(stderr, "txstart failed clock_nanosleep()=%d\n", rc);
+	} else
+	  barrier_needed = 0;
+      }
+  } else if (isTxHoldback(mSettings) && !isConnectOnly(mSettings)) {
+    timespec tmp;
+    tmp.tv_sec = mSettings->txholdback_timer.tv_sec;
+    tmp.tv_nsec = mSettings->txholdback_timer.tv_usec * 1000;
+    // See if this a delay between connect and data
+    int rc = clock_nanosleep(CLOCK_MONOTONIC, 0, &tmp, NULL);
+    if (rc) {
+      fprintf(stderr, "txholdback failed clock_nanosleep()=%d\n", rc);
+    } else
+      barrier_needed = 0;
+  }
+#endif
+
+  if (!isServerReverse(mSettings) && mSettings->multihdr && (mSettings->multihdr->multibarrier_cnt > 1) && \
+      barrier_needed) {
+      BarrierClient(mSettings->multihdr, 1);
+      reporthdr->report.startTime.tv_sec = reporthdr->multireport->report.startTime.tv_sec;
+      reporthdr->report.startTime.tv_usec = reporthdr->multireport->report.startTime.tv_usec;
+  }
+
+  //
+  // Now the reports are allocated and somewhat initialized,
+  // set the report start times and next report times
+  //
+  // In the case of parellel clients synchronize them after the connect(),
+  // i.e. before their traffic run loops
+  if (TimeZero(reporthdr->report.startTime)) {
+      now.setnow();
+      reporthdr->report.startTime.tv_sec = now.getSecs();
+      reporthdr->report.startTime.tv_usec = now.getUsecs();
+      if (reporthdr->multireport) {
+	reporthdr->multireport->report.startTime = reporthdr->report.startTime;
+      }
+  }
+  if (!TimeZero(reporthdr->report.intervalTime)) {
+    reporthdr->report.nextTime = reporthdr->report.startTime;
+    TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
+  }
+  if (reporthdr->bidirreport && TimeZero(reporthdr->bidirreport->report.nextTime)) {
+      reporthdr->bidirreport->report.startTime = reporthdr->report.startTime;
+      reporthdr->bidirreport->report.nextTime = reporthdr->report.nextTime;
+  }
+}
 
 /* -------------------------------------------------------------------
  * Common traffic loop intializations
@@ -741,8 +778,6 @@ void Client::RunUDPIsochronous (void) {
     struct client_hdr_udp_isoch_tests *testhdr = (client_hdr_udp_isoch_tests *)(mBuf + sizeof(client_hdr_v1) + sizeof(UDP_datagram));
     struct UDP_isoch_payload* mBuf_isoch = &(testhdr->isoch);
 
-    Isochronous::FrameCounter *fc = new Isochronous::FrameCounter(mSettings->mFPS);
-
     double delay_target = mSettings->mBurstIPG * 1000000;  // convert from milliseconds to nanoseconds
     double delay = 0;
     double adjust = 0;
@@ -757,7 +792,7 @@ void Client::RunUDPIsochronous (void) {
 	bytecntmin = 1;
     }
 
-    mBuf_isoch->burstperiod = htonl(fc->period_us());
+    mBuf_isoch->burstperiod = htonl(framecounter->period_us());
 
     int initdone = 0;
     int fatalwrite_err = 0;
@@ -771,13 +806,13 @@ void Client::RunUDPIsochronous (void) {
 	mBuf_isoch->burstsize  = htonl(bytecnt);
 	mBuf_isoch->prevframeid  = htonl(frameid);
 	reportstruct->burstsize=bytecnt;
-	frameid =  fc->wait_tick();
+	frameid =  framecounter->wait_tick();
 	mBuf_isoch->frameid  = htonl(frameid);
 	lastPacketTime.setnow();
 	if (!initdone) {
 	    initdone = 1;
-	    mBuf_isoch->start_tv_sec = htonl(fc->getSecs());
-	    mBuf_isoch->start_tv_usec = htonl(fc->getUsecs());
+	    mBuf_isoch->start_tv_sec = htonl(framecounter->getSecs());
+	    mBuf_isoch->start_tv_usec = htonl(framecounter->getUsecs());
 	}
 
 	while ((bytecnt > 0) && InProgress()) {
@@ -878,7 +913,7 @@ void Client::RunUDPIsochronous (void) {
     }
 
     FinishTrafficActions();
-    DELETE_PTR(fc);
+    DELETE_PTR(framecounter);
 }
 // end RunUDPIsoch
 

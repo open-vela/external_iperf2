@@ -749,43 +749,25 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
 		setIncrDstIP(mExtSettings);
 	    }
 	    if (txstarttime) {
-#ifdef HAVE_CLOCK_NANOSLEEP
 		long seconds;
+		long usecs;
 		int match = 0;
-		char f0 = '0';
-		char f1 = '0';
-		char f2 = '0';
-		char f3 = '0';
-		char f4 = '0';
-		char f5 = '0';
-		char f6 = '0';
-		char f7 = '0';
-		char f8 = '0';
 		txstarttime = 0;
 		setTxStartTime(mExtSettings);
-		match = sscanf(optarg,"%ld.%c%c%c%c%c%c%c%c%c", &seconds, &f0,&f1,&f2,&f3,&f4,&f5,&f6,&f7,&f8);
-		if (match > 1) {
-		    int i;
+		match = sscanf(optarg,"%ld.%6ld", &seconds, &usecs);
+		switch (match) {
+		case 2:
+		    mExtSettings->txstart_epoch.tv_usec = usecs;
 		    mExtSettings->txstart_epoch.tv_sec = seconds;
-		    i = f0 - '0'; mExtSettings->txstart_epoch.tv_nsec  = i * 100000000;
-		    i = f1 - '0'; mExtSettings->txstart_epoch.tv_nsec += i * 10000000;
-		    i = f2 - '0'; mExtSettings->txstart_epoch.tv_nsec += i * 1000000;
-		    i = f3 - '0'; mExtSettings->txstart_epoch.tv_nsec += i * 100000;
-		    i = f4 - '0'; mExtSettings->txstart_epoch.tv_nsec += i * 10000;
-		    i = f5 - '0'; mExtSettings->txstart_epoch.tv_nsec += i * 1000;
-		    i = f6 - '0'; mExtSettings->txstart_epoch.tv_nsec += i * 100;
-		    i = f7 - '0'; mExtSettings->txstart_epoch.tv_nsec += i * 10;
-		    i = f8 - '0'; mExtSettings->txstart_epoch.tv_nsec += i;
-		} else if (match == 1) {
-		    mExtSettings->txstart_epoch.tv_sec = seconds;
-		    mExtSettings->txstart_epoch.tv_nsec = 0;
-		} else {
-		    unsetTxStartTime(mExtSettings);
-		    fprintf(stderr, "WARNING: invalid --txstart-time format\n");
+		    break;
+		case 1:
+		  mExtSettings->txstart_epoch.tv_sec = seconds;
+		  mExtSettings->txstart_epoch.tv_usec = 0;
+		  break;
+		default:
+		  unsetTxStartTime(mExtSettings);
+		  fprintf(stderr, "WARNING: invalid --txstart-time format\n");
 		}
-#else
-	        fprintf(stderr, "WARNING: --txstart-time not supported\n");
-#endif
 	    }
 	    if (writesync) {
 #ifdef HAVE_THREAD
@@ -797,7 +779,6 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
 	    }
 	    if (txholdback) {
 		txholdback = 0;
-#ifdef HAVE_CLOCK_NANOSLEEP
 	        char *end;
 		Timestamp holdbackdelay;
 		double delay = strtof(optarg, &end);
@@ -806,13 +787,10 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
 		} else {
 		    holdbackdelay.set(delay);
 		    mExtSettings->txholdback_timer.tv_sec = holdbackdelay.getSecs();
-		    mExtSettings->txholdback_timer.tv_nsec = (1000 * holdbackdelay.getUsecs());
+		    mExtSettings->txholdback_timer.tv_usec = (holdbackdelay.getUsecs());
 		    setTxHoldback(mExtSettings);
 		    setEnhanced( mExtSettings );
 		}
-#else
-	        fprintf(stderr, "WARNING: --tcp-holdback not supported\n");
-#endif
 	    }
 	    if (triptime) {
 		triptime = 0;
