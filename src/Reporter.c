@@ -278,7 +278,13 @@ void BarrierClient(MultiHeader *multihdr, int starttime) {
 	}
         // last one wake's up everyone else
         Condition_Broadcast(&multihdr->multibarrier_cond);
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug("Barrier BROADCAST on condition %p", (void *)&multihdr->multibarrier_cond);
+#endif
     } else {
+#ifdef HAVE_THREAD_DEBUG
+        thread_debug("Barrier WAIT on condition %p", (void *)&multihdr->multibarrier_cond);
+#endif
         Condition_Wait(&multihdr->multibarrier_cond);
     }
     multihdr->multibarrier_cnt++;
@@ -361,7 +367,9 @@ void FreeReport(ReportHeader *reporthdr) {
         if (reporthdr->delaycounter < 3) {
 	    fprintf(stdout, "WARN: this test was likley CPU bound which may not detecting the underlying network devices\n");
 	}
-	free_packetring(reporthdr->packetring);
+	if (reporthdr->packetring) {
+	    free_packetring(reporthdr->packetring);
+	}
 	if (reporthdr->report.info.latency_histogram) {
 	    histogram_delete(reporthdr->report.info.latency_histogram);
 	}
@@ -369,7 +377,8 @@ void FreeReport(ReportHeader *reporthdr) {
 	    histogram_delete(reporthdr->report.info.framelatency_histogram);
 	}
 #ifdef HAVE_THREAD_DEBUG
-	thread_debug("Free report hdr %p delay counter=%d", (void *)reporthdr, reporthdr->delaycounter);
+	thread_debug("Free report hdr=%p delay counter=%d packering=%p", (void *)reporthdr, \
+		     reporthdr->delaycounter, (void *) reporthdr->packetring);
 #endif
 	Mutex_Unlock( &groupCond );
 	free(reporthdr);
@@ -576,7 +585,7 @@ void InitConnectionReport (thread_Settings *mSettings) {
 	data->connection.l2mode = ((isIPV6(mSettings) << 1) | data->connection.l2mode);
     if (isEnhanced(mSettings) && isTxStartTime(mSettings)) {
 	data->connection.epochStartTime.tv_sec = mSettings->txstart_epoch.tv_sec;
-	data->connection.epochStartTime.tv_usec = mSettings->txstart_epoch.tv_nsec / 1000;
+	data->connection.epochStartTime.tv_usec = mSettings->txstart_epoch.tv_usec;
     }
     if (isFQPacing(data) && (data->mThreadMode == kMode_Client)) {
 	char tmpbuf[40];
@@ -1205,7 +1214,7 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
         reporthdr->report.type &= ~SERVER_RELAY_REPORT;
         return reporter_print( &reporthdr->report, SERVER_RELAY_REPORT, 1 );
     }
-    if ( (reporthdr->report.type & TRANSFER_REPORT) != 0 ) {
+    if ((reporthdr->report.type & (TRANSFER_REPORT | TRANSFER_REPORT_READY)) != 0) {
         // The consumption detector applies delay to the reporter
         // thread when its consumption rate is too low.   This allows
         // the traffic threads to send aggregates vs thrash
