@@ -87,6 +87,7 @@ static int connectonly = 0;
 static int burstipg = 0;
 static int burstipg_set = 0;
 static int isochronous = 0;
+static int noudpfin = 0;
 
 extern Mutex groupCond;
 
@@ -161,6 +162,7 @@ const struct option long_options[] =
 {"fq-rate", required_argument, &fqrate, 1},
 {"trip-time", no_argument, &triptime, 1},
 {"write-ack", no_argument, &writeack, 1},
+{"no-udp-fin", no_argument, &noudpfin, 1},
 {"connect-only", optional_argument, &connectonly, 1},
 {"bidir", no_argument, &bidirtest, 1},
 {"ipg", required_argument, &burstipg, 1},
@@ -800,6 +802,10 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
 		writeack = 0;
 		setWriteAck(mExtSettings);
 	    }
+	    if (noudpfin) {
+		noudpfin = 0;
+		setNoUDPfin(mExtSettings);
+	    }
 	    if (connectonly) {
 		connectonly = 0;
 		setConnectOnly(mExtSettings);
@@ -1333,7 +1339,7 @@ int Settings_GenerateClientHdr( thread_Settings *client, client_hdr *hdr ) {
 	 */
 	hdr->udp.tlvoffset = htons((sizeof(client_hdr_udp_tests) + sizeof(client_hdr_v1) + sizeof(UDP_datagram)));
 
-	if (isL2LengthCheck(client) || isIsochronous(client)) {
+	if (isL2LengthCheck(client) || isIsochronous(client) || isNoUDPfin(client)) {
 	    flags |= HEADER_UDPTESTS;
 	    uint16_t testflags = 0;
 
@@ -1345,6 +1351,9 @@ int Settings_GenerateClientHdr( thread_Settings *client, client_hdr *hdr ) {
 	    if (isIsochronous(client)) {
 		hdr->udp.tlvoffset = htons((sizeof(UDP_isoch_payload) + sizeof(client_hdr_udp_tests) + sizeof(client_hdr_v1) + sizeof(UDP_datagram)));
 		testflags |= HEADER_UDP_ISOCH;
+	    }
+	    if (isNoUDPfin(client)) {
+		testflags |= HEADER_NOUDPFIN;
 	    }
 	    // Write flags to header so the listener can determine the tests requested
 	    hdr->udp.testflags = htons(testflags);
