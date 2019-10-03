@@ -1016,7 +1016,7 @@ void Client::FinishTrafficActions(void) {
      *  For UDP, there is a final handshake between the client and the server,
      *  do that now (unless requested no to)
      */
-    if (isUDP(mSettings) && !isNoUDPfin(mSettings)) {
+    if (isUDP(mSettings)) {
 	FinalUDPHandshake();
     }
     /*
@@ -1048,10 +1048,18 @@ void Client::FinalUDPHandshake(void) {
     WritePacketID(-reportstruct->packetID);
     mBuf_UDP->tv_usec = htonl( reportstruct->packetTime.tv_usec );
 
-    if ( isMulticast( mSettings ) ) {
-	// Multicast threads only sends one negative sequence number packet
-	// and doesn't wait for a server ack
-	write(mSettings->mSock, mBuf, mSettings->mBufLen);
+    if (isMulticast(mSettings) || isNoUDPfin(mSettings)) {
+	// Multicast and no UDP ack sends negative sequence no only, no UDP ack
+	// from server
+	int count = (mSettings->mAmount ? 1 : 10);
+	while (count) {
+	  count--;
+	  WritePacketID(-(reportstruct->packetID++));
+	  // write data
+	  write( mSettings->mSock, mBuf, mSettings->mBufLen );
+	  if (count)
+	    delay_loop(500);
+	}
     } else {
 	// Unicast send and wait for acks
 	write_UDP_FIN();
@@ -1063,12 +1071,10 @@ void Client::write_UDP_FIN (void) {
     fd_set readSet;
     struct timeval timeout;
 
-    int count = 0;
-    while ( count < 10 ) {
-        count++;
+    int count = (mSettings->mAmount ? 1 : 10);
+    while (count) {
+	count--;
 
-        // write data
-        write( mSettings->mSock, mBuf, mSettings->mBufLen );
 	// decrement the packet count
 	//
 	// Note: a negative packet id is used to tell the server
@@ -1078,7 +1084,9 @@ void Client::write_UDP_FIN (void) {
         // If the retries weren't decrement here the server can get out
         // of order packets per these retries actually being received
         // by the server (e.g. -1000, -1000, -1000)
-	WritePacketID(-(++reportstruct->packetID));
+	WritePacketID(-(reportstruct->packetID++));
+        // write data
+        write( mSettings->mSock, mBuf, mSettings->mBufLen );
 
         // wait until the socket is readable, or our timeout expires
         FD_ZERO( &readSet );
