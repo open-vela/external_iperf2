@@ -229,6 +229,7 @@ typedef struct thread_Settings {
     unsigned int mFQPacingRate;
     struct timeval txholdback_timer;
     struct timeval txstart_epoch;
+    struct timeval accept_time;
 } thread_Settings;
 
 /*
