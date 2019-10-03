@@ -594,7 +594,7 @@ void Server::RunUDP( void ) {
     // send a acknowledgement back except when:
     // 1) we're NOT receiving multicast
     // 2) the user requested no final exchange
-    if (!isMulticast(mSettings) || !isNoUDPfin(mSettings)) {
+    if (!isMulticast(mSettings) && !isNoUDPfin(mSettings)) {
 	// send back an acknowledgement of the terminating datagram
 	write_UDP_AckFIN( );
     }
