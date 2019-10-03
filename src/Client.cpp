@@ -86,7 +86,6 @@ Client::Client( thread_Settings *inSettings ) {
     myJob = NULL;
     mySocket = isServerReverse(inSettings) ? inSettings->mSock : INVALID_SOCKET;
     double ct = -1.0;
-    Timestamp now;
 
     if (isCompat(inSettings) && isPeerVerDetect(inSettings)) {
 	fprintf(stderr, "%s", warn_compat_and_peer_exchange);
@@ -332,38 +331,46 @@ void Client::StartSynch (void) {
       barrier_needed = 0;
   }
 #endif
-
   if (!isServerReverse(mSettings) && mSettings->multihdr && (mSettings->multihdr->multibarrier_cnt > 1) && \
       barrier_needed) {
       BarrierClient(mSettings->multihdr, 1);
-      reporthdr->report.startTime.tv_sec = reporthdr->multireport->report.startTime.tv_sec;
-      reporthdr->report.startTime.tv_usec = reporthdr->multireport->report.startTime.tv_usec;
   }
+  SetReportStartTime();
+}
 
+void Client::SetReportStartTime (void) {
+  ReportHeader *reporthdr = myJob;
   //
   // Now the reports are allocated and somewhat initialized,
   // set the report start times and next report times
   //
-  // In the case of parellel clients synchronize them after the connect(),
-  // i.e. before their traffic run loops
   if (TimeZero(reporthdr->report.startTime)) {
-      now.setnow();
+    if (reporthdr->multireport && !TimeZero(reporthdr->multireport->report.startTime)) {
+      reporthdr->report.startTime.tv_sec = reporthdr->multireport->report.startTime.tv_sec;
+      reporthdr->report.startTime.tv_usec = reporthdr->multireport->report.startTime.tv_usec;
+    } else {
+      // Possible feature add - optionally use connect_start if the report timing should include
+      // the TCP 3WHS
+      Timestamp now;
       reporthdr->report.startTime.tv_sec = now.getSecs();
       reporthdr->report.startTime.tv_usec = now.getUsecs();
-      if (reporthdr->multireport) {
+      if (reporthdr->multireport)
 	reporthdr->multireport->report.startTime = reporthdr->report.startTime;
-      }
-  }
-  if (!TimeZero(reporthdr->report.intervalTime)) {
-    reporthdr->report.nextTime = reporthdr->report.startTime;
-    TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
-  }
-  if (reporthdr->bidirreport && TimeZero(reporthdr->bidirreport->report.nextTime)) {
-      reporthdr->bidirreport->report.startTime = reporthdr->report.startTime;
-      reporthdr->bidirreport->report.nextTime = reporthdr->report.nextTime;
+      if (reporthdr->bidirreport && TimeZero(reporthdr->bidirreport->report.startTime))
+	reporthdr->bidirreport->report.startTime = reporthdr->report.startTime;
+
+    }
+    // Now that start times are set, set the next times if interval reporting is requested
+    if (!TimeZero(reporthdr->report.intervalTime)) {
+      reporthdr->report.nextTime = reporthdr->report.startTime;
+      TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
+      if (reporthdr->multireport && TimeZero(reporthdr->multireport->report.nextTime))
+	reporthdr->multireport->report.nextTime = reporthdr->report.nextTime;
+      if (reporthdr->bidirreport && TimeZero(reporthdr->bidirreport->report.nextTime))
+	reporthdr->bidirreport->report.nextTime = reporthdr->report.nextTime;
+    }
   }
 }
-
 /* -------------------------------------------------------------------
  * Common traffic loop intializations
  * ------------------------------------------------------------------- */

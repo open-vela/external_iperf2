@@ -98,6 +98,7 @@ private:
     inline void WriteSync(void);
     inline void WriteSyncDone(void);
     void StartSynch(void);
+    void SetReportStartTime(void);
     ReportStruct *reportstruct;
     double delay_lower_bounds;
     intmax_t totLen;
