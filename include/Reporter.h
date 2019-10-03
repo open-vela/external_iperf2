@@ -188,7 +188,6 @@ typedef struct ReportStruct {
 #define    CONNECTION_REPORT     0x00000008
 #define    MULTIPLE_REPORT       0x00000010
 #define    BIDIR_REPORT          0x00000020
-#define    TRANSFER_REPORT_READY 0x00000040
 
 typedef union {
     ReadStats read;
