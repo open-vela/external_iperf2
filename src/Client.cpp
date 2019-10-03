@@ -190,8 +190,8 @@ Client::Client( thread_Settings *inSettings ) {
 
     // Finally, post this thread's "job report" which the reporter thread
     // will continuously process as long as there are packets flowing
-    if (myJob)
-        myJob->report.type |= TRANSFER_REPORT_READY;
+    // if (myJob)
+    //    myJob->report.type |= TRANSFER_REPORT_READY;
 
 } // end Client
 
@@ -298,7 +298,9 @@ double Client::Connect() {
 // handles them all. The caller decides to apply them
 // either before connect() or after connect() and before writes()
 void Client::StartSynch (void) {
-  ReportHeader *reporthdr = myJob;
+#ifdef HAVE_THREAD_DEBUG
+  thread_debug("Client start sync enterred");
+#endif
   int barrier_needed = 1;
   // Perform delays, usually between connect() and data xfer though before connect
   // if this is a connect only test
@@ -331,11 +333,14 @@ void Client::StartSynch (void) {
       barrier_needed = 0;
   }
 #endif
-  if (!isServerReverse(mSettings) && mSettings->multihdr && (mSettings->multihdr->multibarrier_cnt > 1) && \
+  if (!isServerReverse(mSettings) && mSettings->multihdr && \
       barrier_needed) {
       BarrierClient(mSettings->multihdr, 1);
   }
   SetReportStartTime();
+#ifdef HAVE_THREAD_DEBUG
+  thread_debug("Client start sync exited");
+#endif
 }
 
 void Client::SetReportStartTime (void) {
@@ -442,6 +447,7 @@ inline void Client::WriteSyncDone(void) {
     if (isWriteSync(mSettings) && mSettings->multihdr) {
       Condition_Lock(mSettings->multihdr->multibarrier_cond);
       mSettings->multihdr->multibarrier_cnt--;
+      printf("**here**\n");
       if (mSettings->multihdr->multibarrier_cnt == 0 ) {
           Condition_Broadcast(&mSettings->multihdr->multibarrier_cond);
       }
