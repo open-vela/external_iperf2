@@ -193,8 +193,12 @@ MultiHeader* InitSumReport(thread_Settings *agent, int inID) {
 	    data->mode = agent->mReportMode;
 	    data->info.mFormat = agent->mFormat;
 	    data->info.mTTL = agent->mTTL;
-	    if (data->mThreadMode == kMode_Server)
+	    if (data->mThreadMode == kMode_Server) {
+		struct timeval *start = &data->startTime;
+		start->tv_sec =  agent->accept_time.tv_sec;
+		start->tv_usec =  agent->accept_time.tv_usec;
 		data->info.sock_callstats.read.binsize = data->mBufLen / 8;
+	    }
 	    if ( isEnhanced( agent ) ) {
 		data->info.mEnhanced = 1;
 	    } else {

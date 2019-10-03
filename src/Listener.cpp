@@ -208,7 +208,16 @@ sInterupted == SIGALRM
 		    break;
 		}
             }
-
+	    // Squirrel away the accept time which
+	    // can be used later for reporter start times
+#ifdef HAVE_CLOCK_GETTIME
+	    struct timespec t1;
+	    clock_gettime(CLOCK_REALTIME, &t1);
+	    server->accept_time.tv_sec  = t1.tv_sec;
+	    server->accept_time.tv_usec = t1.tv_nsec / 1000;
+#else
+	    gettimeofday( &server->accept_time, NULL );
+#endif
             // Reset Single Client Stuff
             if ( isSingleClient( mSettings ) && clients == NULL ) {
                 mSettings->peer = server->peer;

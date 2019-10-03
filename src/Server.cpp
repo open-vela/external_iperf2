@@ -244,9 +244,8 @@ void Server::InitTrafficLoop (void) {
 	//
 	// Set the report start times and next report times
 	//
-	Timestamp now;
-	myJob->report.startTime.tv_sec = now.getSecs();
-	myJob->report.startTime.tv_usec = now.getUsecs();
+	myJob->report.startTime.tv_sec = mSettings->accept_time.tv_sec;
+	myJob->report.startTime.tv_usec = mSettings->accept_time.tv_usec;
 	myJob->report.nextTime = myJob->report.startTime;
 	TimeAdd(myJob->report.nextTime, myJob->report.intervalTime);
 	if (mSettings->reporthdr->multireport && TimeZero(mSettings->reporthdr->multireport->report.startTime)) {
