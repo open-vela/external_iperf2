@@ -418,8 +418,10 @@ void InitDataReport(thread_Settings *mSettings) {
 		if (isUDP(mSettings)) {
 		    reporthdr->packet_handler = reporter_handle_packet_server_udp;
 		    reporthdr->output_handler = output_transfer_report_server_udp;
-		    reporthdr->multireport->output_sum_handler = output_transfer_sum_report_server_udp;
-		    reporthdr->bidirreport->output_sum_handler = output_transfer_bidir_report_udp;
+		    if (reporthdr->multireport)
+		      reporthdr->multireport->output_sum_handler = output_transfer_sum_report_server_udp;
+		    if (reporthdr->bidirreport)
+		      reporthdr->bidirreport->output_sum_handler = output_transfer_bidir_report_udp;
 		} else {
 		    reporthdr->packet_handler = reporter_handle_packet_server_tcp;
 		    reporthdr->output_handler = output_transfer_report_server_tcp;
@@ -433,8 +435,10 @@ void InitDataReport(thread_Settings *mSettings) {
 		reporthdr->packet_handler = reporter_handle_packet_client;
 		if (isUDP(mSettings)) {
 		    reporthdr->output_handler = output_transfer_report_client_udp;
-		    reporthdr->multireport->output_sum_handler = output_transfer_sum_report_client_udp;
-		    reporthdr->bidirreport->output_sum_handler = output_transfer_bidir_report_udp;
+		    if (reporthdr->multireport)
+		      reporthdr->multireport->output_sum_handler = output_transfer_sum_report_client_udp;
+		    if (reporthdr->bidirreport)
+		      reporthdr->bidirreport->output_sum_handler = output_transfer_bidir_report_udp;
 		} else {
 		    reporthdr->output_handler = output_transfer_report_client_tcp;
 		    if (reporthdr->multireport)
