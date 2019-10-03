@@ -1064,7 +1064,7 @@ void Client::FinalUDPHandshake(void) {
     if (isMulticast(mSettings) || isNoUDPfin(mSettings)) {
 	// Multicast and no UDP ack sends negative sequence no only, no UDP ack
 	// from server
-	int count = (mSettings->mAmount ? 1 : 10);
+        int count = (isModeTime(mSettings) ? 10 : 1);
 	while (count) {
 	  count--;
 	  WritePacketID(-(reportstruct->packetID++));
@@ -1128,7 +1128,7 @@ void Client::write_UDP_FIN (void) {
         }
     }
 
-    fprintf( stderr, warn_no_ack, mSettings->mSock, count );
+    fprintf( stderr, warn_no_ack, mSettings->mSock, (isModeTime(mSettings) ? 10 : 1));
 }
 // end write_UDP_FIN
 
