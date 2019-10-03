@@ -272,7 +272,14 @@ void BarrierClient(MultiHeader *multihdr, int starttime) {
     if ( multihdr->multibarrier_cnt == 0 ) {
         // store the wake up or start time in the shared multihdr
         if (starttime) {
-	    gettimeofday( &(multihdr->report.startTime), NULL );
+#ifdef HAVE_CLOCK_GETTIME
+            struct timespec t1;
+            clock_gettime(CLOCK_REALTIME, &t1);
+            multihdr->report.startTime.tv_sec  = t1.tv_sec;
+            multihdr->report.startTime.tv_usec = t1.tv_nsec / 1000;
+#else
+            gettimeofday( &multihdr->report.startTime, NULL );
+#endif
 	    multihdr->report.nextTime= multihdr->report.startTime;
 	    TimeAdd(multihdr->report.nextTime, multihdr->report.intervalTime);
 	}
@@ -283,12 +290,16 @@ void BarrierClient(MultiHeader *multihdr, int starttime) {
 #endif
     } else {
 #ifdef HAVE_THREAD_DEBUG
-        thread_debug("Barrier WAIT on condition %p", (void *)&multihdr->multibarrier_cond);
+        thread_debug("Barrier WAIT on condition %p count=%d", (void *)&multihdr->multibarrier_cond, multihdr->multibarrier_cnt);
 #endif
         Condition_Wait(&multihdr->multibarrier_cond);
     }
     multihdr->multibarrier_cnt++;
     Condition_Unlock(multihdr->multibarrier_cond);
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Barrier EXIT on condition %p", (void *)&multihdr->multibarrier_cond);
+#endif
+
 #else
     if (starttime) {
         gettimeofday( &(multihdr->report.startTime), NULL );
@@ -1218,7 +1229,7 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
         reporthdr->report.type &= ~SERVER_RELAY_REPORT;
         return reporter_print( &reporthdr->report, SERVER_RELAY_REPORT, 1 );
     }
-    if ((reporthdr->report.type & (TRANSFER_REPORT | TRANSFER_REPORT_READY)) != 0) {
+    if ((reporthdr->report.type & TRANSFER_REPORT) != 0) {
         // The consumption detector applies delay to the reporter
         // thread when its consumption rate is too low.   This allows
         // the traffic threads to send aggregates vs thrash
