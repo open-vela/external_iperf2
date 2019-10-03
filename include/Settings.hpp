@@ -294,7 +294,8 @@ typedef struct thread_Settings {
 #define FLAG_SERVERREVERSE  0x00040000
 #define FLAG_BIDIR          0x00080000
 #define FLAG_WRITEACK       0x00100000
-#define FLAG_WRITESYNC         0x00200000
+#define FLAG_WRITESYNC      0x00200000
+#define FLAG_NOUDPFIN       0x00400000
 
 #define isBuflenSet(settings)      ((settings->flags & FLAG_BUFLENSET) != 0)
 #define isCompat(settings)         ((settings->flags & FLAG_COMPAT) != 0)
@@ -344,7 +345,8 @@ typedef struct thread_Settings {
 #define isModeAmount(settings)     (!isModeTime(settings) && !isModeInfinite(settings))
 #define isConnectOnly(settings)    ((settings->flags_extend & FLAG_CONNECTONLY) != 0)
 #define isWriteAck(settings)       ((settings->flags_extend & FLAG_WRITEACK) != 0)
-#define isWriteSync(settings)         ((settings->flags_extend & FLAG_WRITESYNC) != 0)
+#define isWriteSync(settings)      ((settings->flags_extend & FLAG_WRITESYNC) != 0)
+#define isNoUDPfin(settings)         ((settings->flags_extend & FLAG_NOUDPFIN) != 0)
 
 #define setBuflenSet(settings)     settings->flags |= FLAG_BUFLENSET
 #define setCompat(settings)        settings->flags |= FLAG_COMPAT
@@ -391,7 +393,8 @@ typedef struct thread_Settings {
 #define setModeInfinite(settings)  settings->flags_extend |= FLAG_MODEINFINITE
 #define setConnectOnly(settings)   settings->flags_extend |= FLAG_CONNECTONLY
 #define setWriteAck(settings)      settings->flags_extend |= FLAG_WRITEACK
-#define setWriteSync(settings)        settings->flags_extend |= FLAG_WRITESYNC
+#define setWriteSync(settings)     settings->flags_extend |= FLAG_WRITESYNC
+#define setNoUDPfin(settings)      settings->flags_extend |= FLAG_NOUDPFIN
 
 #define unsetBuflenSet(settings)   settings->flags &= ~FLAG_BUFLENSET
 #define unsetCompat(settings)      settings->flags &= ~FLAG_COMPAT
@@ -438,7 +441,8 @@ typedef struct thread_Settings {
 #define unsetModeInfinite(settings) settings->flags_extend &= ~FLAG_MODEINFINITE
 #define unsetConnectOnly(settings)  settings->flags_extend &= ~FLAG_CONNECTONLY
 #define unsetWriteAack(settings)    settings->flags_extend &= ~FLAG_WRITEACK
-#define unsetWriteSync(settings)       settings->flags_extend &= ~FLAG_WRITESYNC
+#define unsetWriteSync(settings)    settings->flags_extend &= ~FLAG_WRITESYNC
+#define unsetNoUDPfin(settings)     settings->flags_extend &= ~FLAG_NOUDPFIN
 
 /*
  * Message header flags
@@ -456,6 +460,7 @@ typedef struct thread_Settings {
 #define HEADER_UDP_ISOCH    0x00000001
 #define HEADER_L2ETHPIPV6   0x00000002
 #define HEADER_L2LENCHECK   0x00000004
+#define HEADER_NOUDPFIN     0x00000008
 
 #define RUN_NOW         0x00000001
 // newer flags

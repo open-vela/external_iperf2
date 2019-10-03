@@ -1174,6 +1174,9 @@ int Listener::ReadClientHeader(client_hdr *hdr ) {
 	    if ((testflags & HEADER_L2LENCHECK) != 0) {
 		setL2LengthCheck(server);
 	    }
+	    if ((testflags & HEADER_NOUDPFIN) != 0) {
+		setNoUDPfin(server);
+	    }
 	    reporter_peerversion(server, ntohl(hdr->udp.version_u), ntohl(hdr->udp.version_l));
 	}
     } else {

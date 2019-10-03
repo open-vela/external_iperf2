@@ -1014,15 +1014,17 @@ void Client::FinishTrafficActions(void) {
     WriteSyncDone();
     /*
      *  For UDP, there is a final handshake between the client and the server,
-     *  do that now.
-     *
+     *  do that now (unless requested no to)
+     */
+    if (isUDP(mSettings) && !isNoUDPfin(mSettings)) {
+	FinalUDPHandshake();
+    }
+    /*
      *  For TCP and if not doing interval or enhanced reporting (needed for write accounting),
      *  then report the entire transfer as one big packet
      *
      */
-    if (isUDP(mSettings)) {
-	FinalUDPHandshake();
-    } else if(!isEnhanced(mSettings) && (0.0 == mSettings->mInterval)) {
+    if(!isUDP(mSettings) && !isEnhanced(mSettings) && (0.0 == mSettings->mInterval)) {
 	reportstruct->packetLen = totLen;
 	ReportPacket( mSettings->reporthdr, reportstruct );
     }
