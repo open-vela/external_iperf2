@@ -1378,7 +1378,7 @@ static inline void reporter_handle_packet_udp_transit(ReporterData *data, Transf
 }
 
 static inline void reporter_handle_packet_isochronous(ReporterData *data, Transfer_Info *stats, ReportStruct *packet) {
-  //printf("fid=%lu bs=%lu remain=%lu\n", packet->frameID, packet->burstsize, packet->remaining);
+  printf("fid=%lu bs=%lu remain=%lu\n", packet->frameID, packet->burstsize, packet->remaining);
   if (packet->frameID && packet->burstsize && packet->remaining) {
     int framedelta=0;
     // very first isochronous frame
