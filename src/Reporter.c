@@ -176,6 +176,9 @@ MultiHeader* InitSumReport(thread_Settings *agent, int inID) {
 	if (isMultipleReport(agent)) {
 	    ReporterData *data = &multihdr->report;
 	    data->type = TRANSFER_REPORT;
+	    // Only initialize the interval time here
+	    // The startTime and nextTime for summing reports will be set by
+	    // the reporter thread in realtime
 	    if (agent->mInterval != 0.0) {
 		struct timeval *interval = &data->intervalTime;
 		interval->tv_sec = (long) agent->mInterval;
@@ -195,9 +198,6 @@ MultiHeader* InitSumReport(thread_Settings *agent, int inID) {
 	    data->info.mFormat = agent->mFormat;
 	    data->info.mTTL = agent->mTTL;
 	    if (data->mThreadMode == kMode_Server) {
-		struct timeval *start = &data->startTime;
-		start->tv_sec =  agent->accept_time.tv_sec;
-		start->tv_usec =  agent->accept_time.tv_usec;
 		data->info.sock_callstats.read.binsize = data->mBufLen / 8;
 	    }
 	    if ( isEnhanced( agent ) ) {
@@ -1171,12 +1171,14 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
 	reporthdr->bidirreport->threads = 0;
 	// output_missed_multireports(&reporthdr->multireport->report, packet);
 	(*reporthdr->bidirreport->output_sum_handler)(&reporthdr->bidirreport->report, 0);
+	TimeAdd(reporthdr->bidirreport->report.nextTime, reporthdr->report.intervalTime);
     }
     if (reporthdr->multireport && (reporthdr->multireport->refcount > 1) &&  \
 	(reporthdr->multireport->threads == reporthdr->multireport->refcount))  {
 	reporthdr->multireport->threads = 0;
 	// output_missed_multireports(&reporthdr->multireport->report, packet);
 	(*reporthdr->multireport->output_sum_handler)(&reporthdr->multireport->report, 0);
+	TimeAdd(reporthdr->multireport->report.nextTime, reporthdr->report.intervalTime);
     }
     return timeslot_event;
 }
@@ -1249,46 +1251,65 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 	ReportStruct *packet = NULL;
 	int timeslot_event = 0;
         while (!timeslot_event && (packet = dequeue_packetring(reporthdr))) {
-	    // Increment the total packet count processed by this thread
-	    // this will be used to make decisions on if the reporter
-	    // thread should add some delay to eliminate cpu thread
-	    // thrashing,
-	    consumption_detector.accounted_packets--;
-	    // update fields common to TCP and UDP, client and server which is bytes
-	    reporthdr->report.TotalLen += packet->packetLen;
-	    // Check against a final packet event on this packet ring
-	    if (!(packet->packetID < 0)) {
-		// Check for interval reports
-		if (!TimeZero(reporthdr->report.intervalTime)) {
-		    timeslot_event = condprint_interval_reports(reporthdr, packet);
-		}
-		// Do the packet accounting per the handler type
-		reporthdr->report.packetTime=packet->packetTime;
-		if (reporthdr->packet_handler) {
-		    (*reporthdr->packet_handler)(reporthdr, packet);
-		    if (reporthdr->multireport)
-		      reporthdr->multireport->report.packetTime = packet->packetTime;
-		    if (reporthdr->bidirreport)
-		      reporthdr->bidirreport->report.packetTime = packet->packetTime;
-		}
-	    } else {
-	        // A last packet event was detected
-		// printf("last packet event detected\n"); fflush(stdout);
-	        need_free = 1;
-		reporthdr->delaycounter = consumption_detector.delay_counter;
-		// output final reports
-		reporthdr->report.packetTime=packet->packetTime;
-		ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
-		ReporterData *bidirstats = (reporthdr->bidirreport ? &reporthdr->bidirreport->report : NULL);
-		(*reporthdr->output_handler)(&reporthdr->report, sumstats, bidirstats, 1);
-		// Thread is done with the packet ring, signal back to the traffic thread
-		// which will proceed from the EndReport wait, this must be the last thing done
-		reporthdr->packetring->consumerdone = 1;
-		if (reporthdr->multireport)
-		    reporthdr->multireport->report.packetTime = packet->packetTime;
-		if (reporthdr->bidirreport)
-		    reporthdr->bidirreport->report.packetTime = packet->packetTime;
+	  // Check for a very first packet that needs to be summed
+	  // This has to be done in the reporter thread as these
+	  // reports are shared by multiple traffic threads
+	  if (reporthdr->multireport && TimeZero(reporthdr->multireport->report.startTime)) {
+	    reporthdr->multireport->report.startTime = reporthdr->report.startTime;
+	    reporthdr->multireport->report.nextTime = reporthdr->report.nextTime;
+	  }
+	  if (reporthdr->bidirreport && TimeZero(reporthdr->bidirreport->report.startTime)) {
+	    reporthdr->bidirreport->report.startTime = reporthdr->report.startTime;
+	    reporthdr->bidirreport->report.nextTime = reporthdr->report.nextTime;
+	  }
+	  // Increment the total packet count processed by this thread
+	  // this will be used to make decisions on if the reporter
+	  // thread should add some delay to eliminate cpu thread
+	  // thrashing,
+	  consumption_detector.accounted_packets--;
+	  // update fields common to TCP and UDP, client and server which is bytes
+	  reporthdr->report.TotalLen += packet->packetLen;
+	  // Check against a final packet event on this packet ring
+	  if (!(packet->packetID < 0)) {
+	    // Check to output any interval reports
+	    if (!TimeZero(reporthdr->report.intervalTime)) {
+	      timeslot_event = condprint_interval_reports(reporthdr, packet);
 	    }
+	    // Do the packet accounting per the handler type
+	    reporthdr->report.packetTime=packet->packetTime;
+	    if (reporthdr->packet_handler) {
+	      (*reporthdr->packet_handler)(reporthdr, packet);
+	      // Sum reports update the report header's last
+	      // packet time after the handler. This means
+	      // the report header's packet time will be
+	      // the previous time before the interval
+	      if (reporthdr->multireport)
+		reporthdr->multireport->report.packetTime = packet->packetTime;
+	      if (reporthdr->bidirreport)
+		reporthdr->bidirreport->report.packetTime = packet->packetTime;
+	    }
+	  } else {
+	    // A last packet event was detected
+	    // printf("last packet event detected\n"); fflush(stdout);
+	    need_free = 1;
+	    reporthdr->delaycounter = consumption_detector.delay_counter;
+	    // output final reports
+	    reporthdr->report.packetTime=packet->packetTime;
+	    ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
+	    ReporterData *bidirstats = (reporthdr->bidirreport ? &reporthdr->bidirreport->report : NULL);
+	    (*reporthdr->output_handler)(&reporthdr->report, sumstats, bidirstats, 1);
+	    // Thread is done with the packet ring, signal back to the traffic thread
+	    // which will proceed from the EndReport wait, this must be the last thing done
+	    reporthdr->packetring->consumerdone = 1;
+	    // This is a final report so set the sum report header's packet time
+	    // Note, the last thread to set this will be the actual final value
+	    // The sum report output occurs as part of freeing the sum or bidir
+	    // report per the last reference and not here
+	    if (reporthdr->multireport)
+	      reporthdr->multireport->report.packetTime = packet->packetTime;
+	    if (reporthdr->bidirreport)
+	      reporthdr->bidirreport->report.packetTime = packet->packetTime;
+	  }
 	}
     }
     // need_free is a poor implementation.  It's done this way
@@ -1594,14 +1615,16 @@ static inline void output_missed_multireports(ReporterData *stats, ReportStruct 
     output_missed_reports(stats, packet);
 }
 
-static inline void set_endtime(ReporterData *stats) {
+static inline void set_endtime(ReporterData *stats, int final) {
   // There is a corner case when the first packet is also the last where the start time (which comes
   // from app level syscall) is greater than the packetTime (which come for kernel level SO_TIMESTAMP)
   // For this case set the start and end time to both zero.
   if (TimeDifference(stats->packetTime, stats->startTime) < 0) {
     stats->info.endTime = 0;
-  } else {
+  } else if (!final) {
     stats->info.endTime = TimeDifference(stats->nextTime, stats->startTime);
+  } else {
+    stats->info.endTime = TimeDifference(stats->packetTime, stats->startTime);
   }
 }
 
@@ -1723,7 +1746,7 @@ static inline void reset_transfer_stats_server_udp(ReporterData *stats) {
 
 // These are the output handlers that get the reports ready and then prints them
 static void output_transfer_report_server_udp(ReporterData *stats, ReporterData *sumstats, ReporterData *bidirstats, int final) {
-    set_endtime(stats);
+    set_endtime(stats, final);
     if (sumstats) {
 	sumstats->cntOutofOrder += stats->cntOutofOrder - stats->lastOutofOrder;
 	// assume most of the  time out-of-order packets are not
@@ -1760,7 +1783,7 @@ static void output_transfer_report_server_udp(ReporterData *stats, ReporterData 
     }
 }
 static void output_transfer_sum_report_server_udp(ReporterData *stats, int final) {
-    set_endtime(stats);
+    set_endtime(stats,final);
     if (final) {
 	stats->info.cntOutofOrder = stats->cntOutofOrder;
 	// assume most of the  time out-of-order packets are not
@@ -1783,7 +1806,7 @@ static void output_transfer_sum_report_server_udp(ReporterData *stats, int final
     }
 }
 static void output_transfer_sum_report_client_udp(ReporterData *stats, int final) {
-    set_endtime(stats);
+    set_endtime(stats,final);
     if (final) {
 	stats->info.sock_callstats.write.WriteErr = stats->info.sock_callstats.write.totWriteErr;
 	stats->info.sock_callstats.write.WriteCnt = stats->info.sock_callstats.write.totWriteCnt;
@@ -1799,7 +1822,7 @@ static void output_transfer_sum_report_client_udp(ReporterData *stats, int final
 }
 
 static void output_transfer_report_client_udp(ReporterData *stats, ReporterData *sumstats, ReporterData *bidirstats, int final) {
-    set_endtime(stats);
+    set_endtime(stats,final);
     if (sumstats) {
 	sumstats->TotalLen += stats->TotalLen - stats->lastTotal;
 	sumstats->info.sock_callstats.write.WriteErr += stats->info.sock_callstats.write.WriteErr;
@@ -1831,7 +1854,7 @@ static void output_transfer_report_client_udp(ReporterData *stats, ReporterData 
 }
 
 static void output_transfer_report_server_tcp(ReporterData *stats, ReporterData *sumstats, ReporterData *bidirstats, int final) {
-    set_endtime(stats);
+    set_endtime(stats,final);
     int ix;
     if (sumstats) {
         sumstats->TotalLen += stats->TotalLen - stats->lastTotal;
@@ -1978,7 +2001,7 @@ static void output_transfer_final_report_client_tcp(ReporterData *stats) {
  * Handles summing of threads
  */
 static void output_transfer_sum_report_client_tcp(ReporterData *stats, int final) {
-    set_endtime(stats);
+    set_endtime(stats,final);
     if (final) {
 	stats->info.sock_callstats.write.WriteErr = stats->info.sock_callstats.write.totWriteErr;
 	stats->info.sock_callstats.write.WriteCnt = stats->info.sock_callstats.write.totWriteCnt;
@@ -1994,7 +2017,7 @@ static void output_transfer_sum_report_client_tcp(ReporterData *stats, int final
 }
 
 static void output_transfer_sum_report_server_tcp(ReporterData *stats, int final) {
-    set_endtime(stats);
+    set_endtime(stats,final);
     if (final) {
 	int ix;
 	stats->info.startTime = 0.0;
@@ -2012,7 +2035,7 @@ static void output_transfer_sum_report_server_tcp(ReporterData *stats, int final
 }
 
 static void output_transfer_bidir_report_tcp(ReporterData *stats, int final) {
-    set_endtime(stats);
+    set_endtime(stats,final);
     if (final) {
 	stats->info.TotalLen = stats->TotalLen;
 	stats->info.startTime = 0.0;
