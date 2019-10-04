@@ -804,7 +804,9 @@ void Client::RunUDPIsochronous (void) {
     } else {
 	bytecntmin = 1;
     }
-
+    if (!framecounter) {
+	framecounter = new Isochronous::FrameCounter(mSettings->mFPS);
+    }
     mBuf_isoch->burstperiod = htonl(framecounter->period_us());
 
     int initdone = 0;
@@ -1053,25 +1055,23 @@ void Client::FinishTrafficActions(void) {
  * ------------------------------------------------------------------- */
 void Client::FinalUDPHandshake(void) {
     struct UDP_datagram * mBuf_UDP = (struct UDP_datagram *) mBuf;
+
     // send a final terminating datagram
     // Don't count in the mTotalLen. The server counts this one,
     // but didn't count our first datagram, so we're even now.
     // The negative datagram ID signifies termination to the server.
-
     WritePacketID(-reportstruct->packetID);
     mBuf_UDP->tv_usec = htonl( reportstruct->packetTime.tv_usec );
+    write( mSettings->mSock, mBuf, mSettings->mBufLen );
 
     if (isMulticast(mSettings) || isNoUDPfin(mSettings)) {
 	// Multicast and no UDP ack sends negative sequence no only, no UDP ack
 	// from server
-        int count = (isModeTime(mSettings) ? 10 : 1);
-	while (count) {
-	  count--;
-	  WritePacketID(-(reportstruct->packetID++));
-	  // write data
+        int count = (!isModeTime(mSettings) ? 1 : 10);
+	while (--count >= 0) {
+	  delay_loop(1000);
+	  WritePacketID(-(++reportstruct->packetID));
 	  write( mSettings->mSock, mBuf, mSettings->mBufLen );
-	  if (count)
-	    delay_loop(500);
 	}
     } else {
 	// Unicast send and wait for acks
@@ -1084,34 +1084,31 @@ void Client::write_UDP_FIN (void) {
     fd_set readSet;
     struct timeval timeout;
 
-    int count = (mSettings->mAmount ? 1 : 10);
-    while (count) {
-	count--;
-
-	// decrement the packet count
-	//
-	// Note: a negative packet id is used to tell the server
-        // this UDP stream is terminating.  The server will remove
-        // the sign.  So a decrement will be seen as increments by
-	// the server (e.g, -1000, -1001, -1002 as 1000, 1001, 1002)
-        // If the retries weren't decrement here the server can get out
-        // of order packets per these retries actually being received
-        // by the server (e.g. -1000, -1000, -1000)
-	WritePacketID(-(reportstruct->packetID++));
-        // write data
-        write( mSettings->mSock, mBuf, mSettings->mBufLen );
-
+    int count = 10 ;
+    while (--count >= 0) {
         // wait until the socket is readable, or our timeout expires
         FD_ZERO( &readSet );
         FD_SET( mSettings->mSock, &readSet );
         timeout.tv_sec  = 0;
-        timeout.tv_usec = 250000; // quarter second, 250 ms
+        timeout.tv_usec = (count > 5) ? 5000 : 250000; // 5 millisecond or 0.25 second
 
         rc = select( mSettings->mSock+1, &readSet, NULL, NULL, &timeout );
         FAIL_errno( rc == SOCKET_ERROR, "select", mSettings );
 
+        // rc= zero means select's read timed out
 	if ( rc == 0 ) {
-            // select timed out
+	    // decrement the packet count
+	    //
+	    // Note: a negative packet id is used to tell the server
+	    // this UDP stream is terminating.  The server will remove
+	    // the sign.  So a decrement will be seen as increments by
+	    // the server (e.g, -1000, -1001, -1002 as 1000, 1001, 1002)
+	    // If the retries weren't decrement here the server can get out
+	    // of order packets per these retries actually being received
+	    // by the server (e.g. -1000, -1000, -1000)
+	    WritePacketID(-(++reportstruct->packetID));
+	    // write data
+	    write( mSettings->mSock, mBuf, mSettings->mBufLen );
             continue;
         } else {
             // socket ready to read, this packet size
