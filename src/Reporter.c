@@ -1170,14 +1170,12 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
     if (reporthdr->bidirreport && (reporthdr->bidirreport->threads == reporthdr->bidirreport->refcount) && (reporthdr->bidirreport->refcount > 1)) {
 	reporthdr->bidirreport->threads = 0;
 	// output_missed_multireports(&reporthdr->multireport->report, packet);
-	reporthdr->bidirreport->report.packetTime = packet->packetTime;
 	(*reporthdr->bidirreport->output_sum_handler)(&reporthdr->bidirreport->report, 0);
     }
     if (reporthdr->multireport && (reporthdr->multireport->refcount > 1) &&  \
 	(reporthdr->multireport->threads == reporthdr->multireport->refcount))  {
 	reporthdr->multireport->threads = 0;
 	// output_missed_multireports(&reporthdr->multireport->report, packet);
-	reporthdr->multireport->report.packetTime = packet->packetTime;
 	(*reporthdr->multireport->output_sum_handler)(&reporthdr->multireport->report, 0);
     }
     return timeslot_event;
@@ -1268,6 +1266,10 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 		reporthdr->report.packetTime=packet->packetTime;
 		if (reporthdr->packet_handler) {
 		    (*reporthdr->packet_handler)(reporthdr, packet);
+		    if (reporthdr->multireport)
+		      reporthdr->multireport->report.packetTime = packet->packetTime;
+		    if (reporthdr->bidirreport)
+		      reporthdr->bidirreport->report.packetTime = packet->packetTime;
 		}
 	    } else {
 	        // A last packet event was detected
@@ -1286,7 +1288,6 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 		    reporthdr->multireport->report.packetTime = packet->packetTime;
 		if (reporthdr->bidirreport)
 		    reporthdr->bidirreport->report.packetTime = packet->packetTime;
-
 	    }
 	}
     }
@@ -1594,12 +1595,13 @@ static inline void output_missed_multireports(ReporterData *stats, ReportStruct 
 }
 
 static inline void set_endtime(ReporterData *stats) {
-  stats->info.endTime = TimeDifference(stats->packetTime, stats->startTime);
   // There is a corner case when the first packet is also the last where the start time (which comes
   // from app level syscall) is greater than the packetTime (which come for kernel level SO_TIMESTAMP)
   // For this case set the start and end time to both zero.
-  if (stats->info.endTime < 0) {
+  if (TimeDifference(stats->packetTime, stats->startTime) < 0) {
     stats->info.endTime = 0;
+  } else {
+    stats->info.endTime = TimeDifference(stats->nextTime, stats->startTime);
   }
 }
 
