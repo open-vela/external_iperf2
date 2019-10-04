@@ -64,17 +64,17 @@ FrameCounter::FrameCounter(double value)  : frequency(value) {
 #if defined(HAVE_CLOCK_NANOSLEEP)
 unsigned int FrameCounter::wait_tick(void) {
   Timestamp txslot = next_slot();
-  unsigned int framecounter = get(txslot);
+  unsigned int mycounter = get(txslot);
   timespec txtime_ts;
   txtime_ts.tv_sec = txslot.getSecs();
   txtime_ts.tv_nsec = txslot.getUsecs() * 1000;
   int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &txtime_ts, NULL);
   if (rc) {
     fprintf(stderr, "txstart failed clock_nanosleep()=%d\n", rc);
-  } else if (lastcounter && ((framecounter - lastcounter) > 1))
+  } else if (lastcounter && ((mycounter - lastcounter) > 1))
     slip++;
-  lastcounter = framecounter;
-  return(framecounter);
+  lastcounter = mycounter;
+  return(mycounter);
 }
 #else
 unsigned int FrameCounter::wait_tick(void) {
@@ -124,7 +124,8 @@ inline unsigned int FrameCounter::get(long *ticks_remaining) {
 inline Timestamp FrameCounter::next_slot(void) {
     Timestamp next = startTime;
     slot_counter = get();
-    next.add(slot_counter * period);
+    // period unit is in microseconds, convert to seconds
+    next.add(slot_counter * (period / 1e6));
     return next;
 }
 
