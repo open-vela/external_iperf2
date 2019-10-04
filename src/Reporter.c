@@ -380,8 +380,8 @@ void UpdateMultiHdrRefCounter(MultiHeader *multihdr, int val, int sockfd) {
 
 void FreeReport(ReportHeader *reporthdr) {
     if (reporthdr) {
-        if (reporthdr->delaycounter < 3) {
-	    fprintf(stdout, "WARN: this test was likley CPU bound which may not detecting the underlying network devices\n");
+      if (reporthdr->packetring && (reporthdr->delaycounter < 3)) {
+	    fprintf(stdout, "WARN: this test was likley CPU bound (or may not detecting the underlying network devices)\n");
 	}
 	if (reporthdr->packetring) {
 	    free_packetring(reporthdr->packetring);
@@ -393,7 +393,7 @@ void FreeReport(ReportHeader *reporthdr) {
 	    histogram_delete(reporthdr->report.info.framelatency_histogram);
 	}
 #ifdef HAVE_THREAD_DEBUG
-	thread_debug("Free report hdr=%p delay counter=%d packering=%p", (void *)reporthdr, \
+	thread_debug("Free report hdr=%p delay counter=%d packetring=%p", (void *)reporthdr, \
 		     reporthdr->delaycounter, (void *) reporthdr->packetring);
 #endif
 	Mutex_Unlock( &groupCond );
