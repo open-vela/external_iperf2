@@ -927,8 +927,6 @@ static char * isv4_port(char *v4addr) {
 //  -B local bind port parsing, and when to use the default UDP offered load
 void Settings_ModalOptions( thread_Settings *mExtSettings ) {
     char *results;
-    if (isModeTime(mExtSettings))
-	printf("Mode time\n");
     // Handle default read/write sizes based on v4, v6, UDP or TCP
     if ( !isBuflenSet( mExtSettings ) ) {
 	if (isUDP(mExtSettings)) {
