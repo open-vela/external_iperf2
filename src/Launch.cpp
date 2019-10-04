@@ -157,6 +157,9 @@ void client_spawn( thread_Settings *thread ) {
     theClient = new Client( thread );
     // Code for the normal case
     if (!isReverse(thread) && !isServerReverse(thread)) {
+	// Perform any intial startup delays between the connect() and the data xfer phase
+	// this will also initiliaze the report header timestamps needed by the reporter thread
+	theClient->StartSynch();
 	theClient->InitiateServer();
 	theClient->Run();
 #ifdef HAVE_THREAD_DEBUG
@@ -182,10 +185,15 @@ void client_spawn( thread_Settings *thread ) {
 	reverse_client->bidirhdr = thread->bidirhdr; // reverse_client thread updates the bidir report
 	if (isModeTime(reverse_client)) {
 	    reverse_client->mAmount += (SLOPSECS * 100);  // add 2 sec for slop on reverse, units are 10 ms
+	    if (isTxHoldback(thread)) {
+	      reverse_client->mAmount += (thread->txholdback_timer.tv_sec * 100);
+	      reverse_client->mAmount += (thread->txholdback_timer.tv_usec / 1000000 * 100);
+	    }
         }
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug("Client spawn thread reverse (sock=%d)", thread->mSock);
 #endif
+	theClient->StartSynch();
 	theClient->InitiateServer();
 	// RJM ADD a thread event here so reverse_client is in a known ready state prior to test exchange
 	// Now exchange client's test information with remote server

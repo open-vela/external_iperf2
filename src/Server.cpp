@@ -244,8 +244,15 @@ void Server::InitTrafficLoop (void) {
 	//
 	// Set the report start times and next report times
 	//
-	myJob->report.startTime.tv_sec = mSettings->accept_time.tv_sec;
-	myJob->report.startTime.tv_usec = mSettings->accept_time.tv_usec;
+	if (!isReverse(mSettings)) {
+	  // Servers that aren't full duplex use the accept timestamp for start
+	  myJob->report.startTime.tv_sec = mSettings->accept_time.tv_sec;
+	  myJob->report.startTime.tv_usec = mSettings->accept_time.tv_usec;
+	} else {
+	  now.setnow();
+	  myJob->report.startTime.tv_sec = now.getSecs();
+	  myJob->report.startTime.tv_usec = now.getUsecs();
+	}
 	myJob->report.nextTime = myJob->report.startTime;
 	TimeAdd(myJob->report.nextTime, myJob->report.intervalTime);
 	// Initialze the reportstruct scratchpad

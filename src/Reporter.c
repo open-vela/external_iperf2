@@ -1251,16 +1251,20 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 	ReportStruct *packet = NULL;
 	int timeslot_event = 0;
         while (!timeslot_event && (packet = dequeue_packetring(reporthdr))) {
-	  // Check for a very first packet that needs to be summed
+	  // Check for a very first reported packet that needs to be summed
 	  // This has to be done in the reporter thread as these
 	  // reports are shared by multiple traffic threads
+	  // Note: the first reported packet many not have the earliest
+	  // timestamp but it should be good enough
 	  if (reporthdr->multireport && TimeZero(reporthdr->multireport->report.startTime)) {
 	    reporthdr->multireport->report.startTime = reporthdr->report.startTime;
 	    reporthdr->multireport->report.nextTime = reporthdr->report.nextTime;
+	    reporthdr->multireport->report.packetTime = packet->packetTime;
 	  }
 	  if (reporthdr->bidirreport && TimeZero(reporthdr->bidirreport->report.startTime)) {
 	    reporthdr->bidirreport->report.startTime = reporthdr->report.startTime;
 	    reporthdr->bidirreport->report.nextTime = reporthdr->report.nextTime;
+	    reporthdr->bidirreport->report.packetTime = packet->packetTime;
 	  }
 	  // Increment the total packet count processed by this thread
 	  // this will be used to make decisions on if the reporter
@@ -1276,7 +1280,7 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 	      timeslot_event = condprint_interval_reports(reporthdr, packet);
 	    }
 	    // Do the packet accounting per the handler type
-	    reporthdr->report.packetTime=packet->packetTime;
+	    reporthdr->report.packetTime = packet->packetTime;
 	    if (reporthdr->packet_handler) {
 	      (*reporthdr->packet_handler)(reporthdr, packet);
 	      // Sum reports update the report header's last
