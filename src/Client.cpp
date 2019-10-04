@@ -183,9 +183,6 @@ Client::Client( thread_Settings *inSettings ) {
 	}
 	if (myJob && isDataReport(mSettings))
 	    PostReport(myJob);
-	// Perform any intial startup delays between the connect() and the data xfer phase
-	// this will also initiliaze the report header timestamps needed by the reporter thread
-	StartSynch();
     }
 
     // Finally, post this thread's "job report" which the reporter thread
@@ -350,29 +347,25 @@ void Client::SetReportStartTime (void) {
   // set the report start times and next report times
   //
   if (TimeZero(reporthdr->report.startTime)) {
+    // Note: multireport times can be used here because the barrier
+    // is the only writer per that mutex
     if (reporthdr->multireport && !TimeZero(reporthdr->multireport->report.startTime)) {
       reporthdr->report.startTime.tv_sec = reporthdr->multireport->report.startTime.tv_sec;
       reporthdr->report.startTime.tv_usec = reporthdr->multireport->report.startTime.tv_usec;
     } else {
+      //
+      // Can't set multi or bidir report starttimes here, will be set by the reporter thread
+      //
       // Possible feature add - optionally use connect_start if the report timing should include
       // the TCP 3WHS
       Timestamp now;
       reporthdr->report.startTime.tv_sec = now.getSecs();
       reporthdr->report.startTime.tv_usec = now.getUsecs();
-      if (reporthdr->multireport)
-	reporthdr->multireport->report.startTime = reporthdr->report.startTime;
-      if (reporthdr->bidirreport && TimeZero(reporthdr->bidirreport->report.startTime))
-	reporthdr->bidirreport->report.startTime = reporthdr->report.startTime;
-
     }
     // Now that start times are set, set the next times if interval reporting is requested
     if (!TimeZero(reporthdr->report.intervalTime)) {
       reporthdr->report.nextTime = reporthdr->report.startTime;
       TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
-      if (reporthdr->multireport && TimeZero(reporthdr->multireport->report.nextTime))
-	reporthdr->multireport->report.nextTime = reporthdr->report.nextTime;
-      if (reporthdr->bidirreport && TimeZero(reporthdr->bidirreport->report.nextTime))
-	reporthdr->bidirreport->report.nextTime = reporthdr->report.nextTime;
     }
   }
 }
