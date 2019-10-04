@@ -69,6 +69,7 @@ unsigned int FrameCounter::wait_tick(void) {
   txtime_ts.tv_sec = txslot.getSecs();
   txtime_ts.tv_nsec = txslot.getUsecs() * 1000;
   int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &txtime_ts, NULL);
+  printf("last=%d current=%d\n", lastcounter, mycounter);
   if (rc) {
     fprintf(stderr, "txstart failed clock_nanosleep()=%d\n", rc);
   } else if (lastcounter && ((mycounter - lastcounter) > 1))

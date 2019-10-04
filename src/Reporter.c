@@ -150,7 +150,8 @@ static void output_transfer_bidir_report_tcp(ReporterData *stats, int final);
 static void output_transfer_bidir_report_udp(ReporterData *stats, int final);
 
 static void reset_transfer_stats(ReporterData *stats);
-static inline void reset_transfer_stats_client(ReporterData *stats);
+static inline void reset_transfer_stats_client_tcp(ReporterData *stats);
+static inline void reset_transfer_stats_client_udp(ReporterData *stats);
 static inline void reset_transfer_stats_server_udp(ReporterData *stats);
 static inline void reset_transfer_stats_server_tcp(ReporterData *stats);
 
@@ -1378,49 +1379,49 @@ static inline void reporter_handle_packet_udp_transit(ReporterData *data, Transf
 }
 
 static inline void reporter_handle_packet_isochronous(ReporterData *data, Transfer_Info *stats, ReportStruct *packet) {
-  printf("fid=%lu bs=%lu remain=%lu\n", packet->frameID, packet->burstsize, packet->remaining);
-  if (packet->frameID && packet->burstsize && packet->remaining) {
-    int framedelta=0;
-    // very first isochronous frame
-    if (!data->isochstats.frameID) {
-      data->isochstats.framecnt=packet->frameID;
-      data->isochstats.framecnt=1;
-      stats->isochstats.framecnt=1;
-    }
-    // perform client and server frame based accounting
-    if ((framedelta = (packet->frameID - data->isochstats.frameID))) {
-      data->isochstats.framecnt++;
-      stats->isochstats.framecnt++;
-      if (framedelta > 1) {
-	if (stats->mUDP == kMode_Server) {
-	  int lost = framedelta - (packet->frameID - packet->prevframeID);
-	  stats->isochstats.framelostcnt += lost;
-	  data->isochstats.framelostcnt += lost;
-	} else {
-	  stats->isochstats.framelostcnt += (framedelta-1);
-	  data->isochstats.framelostcnt += (framedelta-1);
-	  stats->isochstats.slipcnt++;
-	  data->isochstats.slipcnt++;
+    // printf("fid=%lu bs=%lu remain=%lu\n", packet->frameID, packet->burstsize, packet->remaining);
+    if (packet->frameID && packet->burstsize && packet->remaining) {
+	int framedelta=0;
+	// very first isochronous frame
+	if (!data->isochstats.frameID) {
+	    data->isochstats.framecnt=packet->frameID;
+	    data->isochstats.framecnt=1;
+	    stats->isochstats.framecnt=1;
 	}
-      }
+	// perform client and server frame based accounting
+	if ((framedelta = (packet->frameID - data->isochstats.frameID))) {
+	    data->isochstats.framecnt++;
+	    stats->isochstats.framecnt++;
+	    if (framedelta > 1) {
+		if (stats->mUDP == kMode_Server) {
+		    int lost = framedelta - (packet->frameID - packet->prevframeID);
+		    stats->isochstats.framelostcnt += lost;
+		    data->isochstats.framelostcnt += lost;
+		} else {
+		    stats->isochstats.framelostcnt += (framedelta-1);
+		    data->isochstats.framelostcnt += (framedelta-1);
+		    stats->isochstats.slipcnt++;
+		    data->isochstats.slipcnt++;
+		}
+	    }
+	}
+	// peform frame latency checks
+	if (stats->framelatency_histogram) {
+	    static int matchframeid=0;
+	    // first packet of a burst and not a duplicate
+	    if ((packet->burstsize == packet->remaining) && (matchframeid!=packet->frameID)) {
+		matchframeid=packet->frameID;
+	    }
+	    if ((packet->packetLen == packet->remaining) && (packet->frameID == matchframeid)) {
+		// last packet of a burst (or first-last in case of a duplicate) and frame id match
+		double frametransit = TimeDifference(packet->packetTime, packet->isochStartTime) \
+		    - ((packet->burstperiod * (packet->frameID - 1)) / 1000000.0);
+		histogram_insert(stats->framelatency_histogram, frametransit);
+		matchframeid = 0;  // reset the matchid so any potential duplicate is ignored
+	    }
+	}
+	data->isochstats.frameID = packet->frameID;
     }
-    // peform frame latency checks
-    if (stats->framelatency_histogram) {
-      static int matchframeid=0;
-      // first packet of a burst and not a duplicate
-      if ((packet->burstsize == packet->remaining) && (matchframeid!=packet->frameID)) {
-	matchframeid=packet->frameID;
-      }
-      if ((packet->packetLen == packet->remaining) && (packet->frameID == matchframeid)) {
-	// last packet of a burst (or first-last in case of a duplicate) and frame id match
-	double frametransit = TimeDifference(packet->packetTime, packet->isochStartTime) \
-	  - ((packet->burstperiod * (packet->frameID - 1)) / 1000000.0);
-	histogram_insert(stats->framelatency_histogram, frametransit);
-	matchframeid = 0;  // reset the matchid so any potential duplicate is ignored
-      }
-    }
-    data->isochstats.frameID = packet->frameID;
-  }
 }
 
 inline void reporter_handle_packet_server_tcp(ReportHeader *reporthdr, ReportStruct *packet) {
@@ -1512,6 +1513,7 @@ void reporter_handle_packet_client(ReportHeader *reporthdr, ReportStruct *packet
     // These are valid packets that need standard iperf accounting
     if (!packet->emptyreport && isUDP(data)) {
 	reporter_handle_packet_pps(data, stats);
+	reporter_handle_packet_isochronous(data, stats, packet);
     }
 }
 
@@ -1662,7 +1664,7 @@ static inline void reset_transfer_stats_bidir(ReporterData *stats) {
     stats->info.startTime = stats->info.endTime;
     stats->lastTotal = stats->TotalLen;
 }
-static inline void reset_transfer_stats_client(ReporterData *stats) {
+static inline void reset_transfer_stats_client_tcp(ReporterData *stats) {
     stats->info.startTime = stats->info.endTime;
     stats->lastTotal = stats->TotalLen;
     stats->info.sock_callstats.write.WriteCnt = 0;
@@ -1671,6 +1673,17 @@ static inline void reset_transfer_stats_client(ReporterData *stats) {
     stats->info.sock_callstats.write.TCPretry = 0;
     stats->info.sock_callstats.write.up_to_date = 0;
 #endif
+}
+static inline void reset_transfer_stats_client_udp(ReporterData *stats) {
+    stats->info.startTime = stats->info.endTime;
+    stats->lastTotal = stats->TotalLen;
+    stats->info.sock_callstats.write.WriteCnt = 0;
+    stats->info.sock_callstats.write.WriteErr = 0;
+    stats->info.isochstats.framecnt = 0;
+    stats->info.isochstats.framelostcnt = 0;
+    stats->info.isochstats.slipcnt = 0;
+    stats->info.IPGcnt = 0;
+    stats->info.IPGsum = 0;
 }
 static inline void reset_transfer_stats_server_tcp(ReporterData *stats) {
     int ix;
@@ -1779,7 +1792,7 @@ static void output_transfer_sum_report_client_udp(ReporterData *stats, int final
     } else {
 	stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
 	reporter_print( stats, MULTIPLE_REPORT, 0 );
-	reset_transfer_stats_client(stats);
+	reset_transfer_stats_client_udp(stats);
     }
 }
 
@@ -1789,10 +1802,8 @@ static void output_transfer_report_client_udp(ReporterData *stats, ReporterData 
 	sumstats->TotalLen += stats->TotalLen - stats->lastTotal;
 	sumstats->info.sock_callstats.write.WriteErr += stats->info.sock_callstats.write.WriteErr;
 	sumstats->info.sock_callstats.write.WriteCnt += stats->info.sock_callstats.write.WriteCnt;
-	sumstats->info.sock_callstats.write.TCPretry += stats->info.sock_callstats.write.TCPretry;
 	sumstats->info.sock_callstats.write.totWriteErr += stats->info.sock_callstats.write.WriteErr;
 	sumstats->info.sock_callstats.write.totWriteCnt += stats->info.sock_callstats.write.WriteCnt;
-	sumstats->info.sock_callstats.write.totTCPretry += stats->info.sock_callstats.write.TCPretry;
 	sumstats->cntDatagrams += stats->cntDatagrams;
 	sumstats->info.IPGsum += stats->info.IPGsum;
 	sumstats->info.IPGcnt += stats->info.IPGcnt;
@@ -1804,7 +1815,6 @@ static void output_transfer_report_client_udp(ReporterData *stats, ReporterData 
 	stats->info.TotalLen = stats->TotalLen;
 	stats->info.sock_callstats.write.WriteErr = stats->info.sock_callstats.write.totWriteErr;
 	stats->info.sock_callstats.write.WriteCnt = stats->info.sock_callstats.write.totWriteCnt;
-	stats->info.sock_callstats.write.TCPretry = stats->info.sock_callstats.write.totTCPretry;
 	stats->info.TotalLen = stats->TotalLen;
 	stats->info.startTime = 0.0;
 	stats->info.endTime = TimeDifference(stats->packetTime, stats->startTime);
@@ -1814,7 +1824,7 @@ static void output_transfer_report_client_udp(ReporterData *stats, ReporterData 
 	stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
 	stats->info.endTime = TimeDifference(stats->nextTime, stats->startTime);
 	reporter_print(stats, TRANSFER_REPORT, 0);
-	reset_transfer_stats_client(stats);
+	reset_transfer_stats_client_udp(stats);
     }
 }
 
@@ -1853,7 +1863,6 @@ static void output_transfer_report_server_tcp(ReporterData *stats, ReporterData 
     }
 }
 
-
 static void output_transfer_report_client_tcp(ReporterData *stats, ReporterData *sumstats, ReporterData *bidirstats, int final) {
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
     if (stats->info.mEnhanced && (stats->info.mTCP == kMode_Client))
@@ -1889,7 +1898,7 @@ static void output_transfer_report_client_tcp(ReporterData *stats, ReporterData 
 	    reporter_print(stats, TRANSFER_REPORT, 0);
 	else if (stats->info.mEnhanced)
 	  reporter_print(stats, TRANSFER_REPORT, 0);
-	reset_transfer_stats_client(stats);
+	reset_transfer_stats_client_tcp(stats);
     }
 }
 
@@ -1978,7 +1987,7 @@ static void output_transfer_sum_report_client_tcp(ReporterData *stats, int final
     } else {
 	stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
 	reporter_print( stats, MULTIPLE_REPORT, 0 );
-	reset_transfer_stats_client(stats);
+	reset_transfer_stats_client_tcp(stats);
     }
 }
 
