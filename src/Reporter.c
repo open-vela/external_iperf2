@@ -1302,12 +1302,14 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 	    // which will proceed from the EndReport wait, this must be the last thing done
 	    reporthdr->packetring->consumerdone = 1;
 	    // This is a final report so set the sum report header's packet time
-	    // Note, the last thread to set this will be the actual final value
-	    // The sum report output occurs as part of freeing the sum or bidir
-	    // report per the last reference and not here
-	    if (reporthdr->multireport)
+	    // Note, the thread with the max value will set this
+	    // Also note, the final sum report output occurs as part of freeing the
+	    // sum or bidir report per the last reference and not here
+	    if (reporthdr->multireport && \
+		(TimeDifference(reporthdr->multireport->report.packetTime, packet->packetTime) > 0))
 	      reporthdr->multireport->report.packetTime = packet->packetTime;
-	    if (reporthdr->bidirreport)
+	    if (reporthdr->bidirreport && \
+		(TimeDifference(reporthdr->bidirreport->report.packetTime, packet->packetTime) > 0))
 	      reporthdr->bidirreport->report.packetTime = packet->packetTime;
 	  }
 	}
