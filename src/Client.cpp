@@ -1064,16 +1064,9 @@ void Client::FinalUDPHandshake(void) {
     mBuf_UDP->tv_usec = htonl( reportstruct->packetTime.tv_usec );
     write( mSettings->mSock, mBuf, mSettings->mBufLen );
 
-    if (isMulticast(mSettings) || isNoUDPfin(mSettings)) {
-	// Multicast and no UDP ack sends negative sequence no only, no UDP ack
-	// from server
-        int count = (!isModeTime(mSettings) ? 1 : 10);
-	while (--count >= 0) {
-	  delay_loop(1000);
-	  WritePacketID(-(++reportstruct->packetID));
-	  write( mSettings->mSock, mBuf, mSettings->mBufLen );
-	}
-    } else {
+    // Handle the acknowledgement and server report for
+    // cases where it's wanted and possible
+    if (!(isMulticast(mSettings) || isNoUDPfin(mSettings))) {
 	// Unicast send and wait for acks
 	write_UDP_FIN();
     }
