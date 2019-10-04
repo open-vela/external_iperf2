@@ -502,6 +502,10 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
             // amount mode (instead of time mode)
             unsetModeTime( mExtSettings );
             mExtSettings->mAmount = byte_atoi( optarg );
+	    if (!(mExtSettings->mAmount > 0)) {
+		fprintf (stderr, "Invalid value for -n amount of '%s'\n", optarg);
+	        exit(1);
+	    }
             break;
 
         case 'o' : // output the report and other messages into the file
@@ -923,6 +927,8 @@ static char * isv4_port(char *v4addr) {
 //  -B local bind port parsing, and when to use the default UDP offered load
 void Settings_ModalOptions( thread_Settings *mExtSettings ) {
     char *results;
+    if (isModeTime(mExtSettings))
+	printf("Mode time\n");
     // Handle default read/write sizes based on v4, v6, UDP or TCP
     if ( !isBuflenSet( mExtSettings ) ) {
 	if (isUDP(mExtSettings)) {
@@ -952,7 +958,6 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 	}
 	if (isModeTime(mExtSettings) && isReverse(mExtSettings))
 	    mExtSettings->mAmount += mExtSettings->mAmount;
-
     }
 
     if (mExtSettings->mThreadMode != kMode_Client) {
@@ -963,7 +968,7 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 	    unsetTxStartTime(mExtSettings);
 	    fprintf(stderr, "WARNING: option of --txstart-time ignored as not supported on the server\n");
 	}
-    } else if (isModeTime(mExtSettings)  && infinitetime) {
+    } else if (isModeTime(mExtSettings) && infinitetime) {
         unsetModeTime(mExtSettings);
 	setModeInfinite(mExtSettings);
 	fprintf(stderr, "WARNING: client will send traffic forever or until an external signal (e.g. SIGINT or SIGTERM) occurs to stop it\n");
