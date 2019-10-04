@@ -73,6 +73,9 @@ unsigned int FrameCounter::wait_tick(void) {
     fprintf(stderr, "txstart failed clock_nanosleep()=%d\n", rc);
   } else if (lastcounter && ((mycounter - lastcounter) > 1))
     slip++;
+#ifdef HAVE_THREAD_DEBUG
+  // thread_debug("Client tick occurred per %ld.%ld", txtime_ts.tv_sec, txtime_ts.tv_nsec / 1000);
+#endif
   lastcounter = mycounter;
   return(mycounter);
 }
