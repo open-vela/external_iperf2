@@ -86,6 +86,7 @@ public:
     // For things like dual tests a server needs to be started by the client,
     // The code in src/launch.cpp will invoke this
     void InitiateServer(void);
+    void StartSynch(void);
 
 private:
     void WritePacketID( intmax_t );
@@ -97,7 +98,6 @@ private:
     bool InProgress(void);
     inline void WriteSync(void);
     inline void WriteSyncDone(void);
-    void StartSynch(void);
     void SetReportStartTime(void);
     ReportStruct *reportstruct;
     double delay_lower_bounds;
