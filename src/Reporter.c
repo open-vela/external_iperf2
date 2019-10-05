@@ -1300,6 +1300,7 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 		need_free = 1;
 		reporthdr->delaycounter = consumption_detector.delay_counter;
 		// output final reports
+		reporthdr->report.TotalLen += packet->packetLen;		
 		reporthdr->report.packetTime=packet->packetTime;
 		ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
 		ReporterData *bidirstats = (reporthdr->bidirreport ? &reporthdr->bidirreport->report : NULL);
