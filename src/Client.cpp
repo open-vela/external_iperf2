@@ -127,19 +127,19 @@ Client::Client( thread_Settings *inSettings ) {
     if (isIsochronous(mSettings)) {
 	FAIL_errno( !(mSettings->mFPS > 0.0), "Invalid value for frames per second in the isochronous settings\n", mSettings );
     }
-    // let the reporter thread go first in the case of -P greater than 1
-    if (mSettings->multihdr) {
-        Condition_Lock(reporter_state.await_reporter);
-	while (!reporter_state.reporter_running) {
-	    Condition_Wait(&reporter_state.await_reporter);
-	}
-        Condition_Unlock(reporter_state.await_reporter);
-    }
 
     // ServerReverse traffic threads don't need a new connect()
     // as they use the session created by the client's connect()
     if (!isServerReverse(mSettings)) {
-        ct = Connect( );
+      // let the reporter thread go first in the case of -P greater than 1
+      if (mSettings->multihdr) {
+        Condition_Lock(reporter_state.await_reporter);
+	while (!reporter_state.reporter_running) {
+	  Condition_Wait(&reporter_state.await_reporter);
+	}
+        Condition_Unlock(reporter_state.await_reporter);
+      }
+      ct = Connect( );
     }
 
     //  Tests that don't pass packet stats to the reporter thread
