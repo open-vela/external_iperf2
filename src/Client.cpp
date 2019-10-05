@@ -199,26 +199,26 @@ Client::Client( thread_Settings *inSettings ) {
 Client::~Client() {
 #if HAVE_THREAD_DEBUG
     thread_debug("Client destructor sock=%d server-reverse=%s bidir=%s", \
-	       mySocket, (isServerReverse(mSettings) ? "true" : "false"), (isBidir(mSettings) ? "true" : "false"));
+		 mySocket, (isServerReverse(mSettings) ? "true" : "false"), (isBidir(mSettings) ? "true" : "false"));
 #endif
     if (!isBidir(mSettings) || (myJob && !myJob->bidirreport)) {
         int rc = close( mySocket );
 	WARN_errno( rc == SOCKET_ERROR, "client close" );
 	mySocket = INVALID_SOCKET;
     }
+    if (isServerReverse(mSettings))
+	Iperf_delete( &(mSettings->peer), &clients );
+    
     if (myJob) {
 	if (myJob->bidirreport) {
 	    UpdateMultiHdrRefCounter(myJob->bidirreport, -1, mySocket);
 	}
-	if (myJob->multireport) {
+	if (myJob->multireport && !isServerReverse(mSettings)) {
 	    UpdateMultiHdrRefCounter(myJob->multireport, -1, 0);
 	}
 	FreeReport(myJob);
     }
     DELETE_ARRAY(mBuf);
-    if (isServerReverse(mSettings))
-	Iperf_delete( &(mSettings->peer), &clients );
-
 } // end ~Client
 
 
