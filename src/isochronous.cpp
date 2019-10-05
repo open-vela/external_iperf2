@@ -55,6 +55,7 @@ using namespace Isochronous;
 FrameCounter::FrameCounter(double value, Timestamp start)  : frequency(value) {
     period = (unsigned int) (1000000 / frequency);
     startTime = start;
+    lastcounter = 0;
 }
 FrameCounter::FrameCounter(double value)  : frequency(value) {
     period = (unsigned int) (1000000 / frequency);
@@ -63,22 +64,22 @@ FrameCounter::FrameCounter(double value)  : frequency(value) {
 
 #if defined(HAVE_CLOCK_NANOSLEEP)
 unsigned int FrameCounter::wait_tick(void) {
-  Timestamp txslot = next_slot();
-  unsigned int mycounter = get(txslot);
-  timespec txtime_ts;
-  txtime_ts.tv_sec = txslot.getSecs();
-  txtime_ts.tv_nsec = txslot.getUsecs() * 1000;
-  int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &txtime_ts, NULL);
-  printf("last=%d current=%d\n", lastcounter, mycounter);
-  if (rc) {
-    fprintf(stderr, "txstart failed clock_nanosleep()=%d\n", rc);
-  } else if (lastcounter && ((mycounter - lastcounter) > 1))
-    slip++;
+    Timestamp txslot = next_slot();
+    unsigned int mycounter = get(txslot);
+    timespec txtime_ts;
+    txtime_ts.tv_sec = txslot.getSecs();
+    txtime_ts.tv_nsec = txslot.getUsecs() * 1000;
+    int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &txtime_ts, NULL);
+    printf("last=%d current=%d\n", lastcounter, mycounter);
+    if (rc) {
+	fprintf(stderr, "txstart failed clock_nanosleep()=%d\n", rc);
+    } else if (lastcounter && ((mycounter - lastcounter) > 1))
+	slip++;
 #ifdef HAVE_THREAD_DEBUG
-  // thread_debug("Client tick occurred per %ld.%ld", txtime_ts.tv_sec, txtime_ts.tv_nsec / 1000);
+    // thread_debug("Client tick occurred per %ld.%ld", txtime_ts.tv_sec, txtime_ts.tv_nsec / 1000);
 #endif
-  lastcounter = mycounter;
-  return(mycounter);
+    lastcounter = mycounter;
+    return(mycounter);
 }
 #else
 unsigned int FrameCounter::wait_tick(void) {
@@ -101,7 +102,7 @@ unsigned int FrameCounter::wait_tick(void) {
 #endif
 inline unsigned int FrameCounter::get(void) {
     Timestamp sampleTime;  // Constructor will initialize timestamp to now
-    long usecs = -startTime.subUsec(sampleTime);
+    long usecs = sampleTime.subUsec(startTime);
     // This will round towards zero per the integer divide
     unsigned int counter = (unsigned int) (usecs / period);
     return(counter + 1); // Frame counter for packets starts at 1
