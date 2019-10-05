@@ -458,6 +458,7 @@ typedef struct thread_Settings {
 
 // Below flags are used to pass test settings in *every* UDP packet
 // and not just during the header exchange
+#define HEADER_EXTEND_V2    0x80000000
 #define HEADER_UDP_ISOCH    0x00000001
 #define HEADER_L2ETHPIPV6   0x00000002
 #define HEADER_L2LENCHECK   0x00000004
