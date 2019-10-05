@@ -64,6 +64,7 @@
 #include "isochronous.hpp"
 #include "pdfs.h"
 #include "version.h"
+#include "List.h"
 
 // const double kSecs_to_usecs = 1e6;
 const double kSecs_to_nsecs = 1e9;
@@ -215,6 +216,9 @@ Client::~Client() {
 	FreeReport(myJob);
     }
     DELETE_ARRAY(mBuf);
+    if (isServerReverse(mSettings))
+	Iperf_delete( &(mSettings->peer), &clients );
+
 } // end ~Client
 
 
