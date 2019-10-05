@@ -409,14 +409,15 @@ void InitDataReport(thread_Settings *mSettings) {
     ReporterData *data = NULL;
 
     if ( reporthdr != NULL ) {
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug("Job report %p uses multireport %p and bidirreport is %p", (void *)mSettings->reporthdr, (void *)mSettings->multihdr, (void *)mSettings->bidirhdr);
+#endif
 	mSettings->reporthdr = reporthdr;
 	reporthdr->multireport = mSettings->multihdr;
 	reporthdr->bidirreport = mSettings->bidirhdr;
-	if (reporthdr->bidirreport)
+	if (reporthdr->bidirreport) {
 	    reporthdr->bidirreport->report.info.transferID = mSettings->mSock;
-#ifdef HAVE_THREAD_DEBUG
-	thread_debug("Job report %p uses multireport %p and bidirreport is %p", (void *)mSettings->reporthdr, (void *)reporthdr->multireport, (void *)reporthdr->bidirreport);
-#endif
+	}
 	data = &reporthdr->report;
 	data->mThreadMode = mSettings->mThreadMode;
 	reporthdr->packet_handler = NULL;
