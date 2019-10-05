@@ -380,7 +380,7 @@ void UpdateMultiHdrRefCounter(MultiHeader *multihdr, int val, int sockfd) {
 
 void FreeReport(ReportHeader *reporthdr) {
     if (reporthdr) {
-	if (reporthdr->packetring && (reporthdr->delaycounter < 3)) {
+	if (reporthdr->packetring && (reporthdr->reporter_thread_suspends < 3)) {
 	    fprintf(stdout, "WARN: this test was likley CPU bound (or may not be detecting the underlying network devices)\n");
 	}
 	if (reporthdr->packetring) {
@@ -393,8 +393,8 @@ void FreeReport(ReportHeader *reporthdr) {
 	    histogram_delete(reporthdr->report.info.framelatency_histogram);
 	}
 #ifdef HAVE_THREAD_DEBUG
-	thread_debug("Free report hdr=%p delay counter=%d packetring=%p", (void *)reporthdr, \
-		     reporthdr->delaycounter, (void *) reporthdr->packetring);
+	thread_debug("Free report hdr=%p reporter thread suspend count=%d packetring=%p", (void *)reporthdr, \
+		     reporthdr->reporter_thread_suspends, (void *) reporthdr->packetring);
 #endif
 	free(reporthdr);
     }
@@ -1003,10 +1003,10 @@ void ReportServerUDP( thread_Settings *agent, server_hdr *server ) {
 typedef struct ConsumptionDetectorType {
     int accounted_packets;
     int accounted_packet_threads;
-    int delay_counter ;
+    int reporter_thread_suspends ;
 } ConsumptionDetectorType;
 ConsumptionDetectorType consumption_detector = \
-  {.accounted_packets = 0, .accounted_packet_threads = 0, .delay_counter = 0};
+  {.accounted_packets = 0, .accounted_packet_threads = 0, .reporter_thread_suspends = 0};
 
 static inline void reset_consumption_detector(void) {
     consumption_detector.accounted_packet_threads = thread_numtrafficthreads();
@@ -1031,7 +1031,7 @@ static inline void apply_consumption_detector(void) {
 	     * which is very noticble on CPU constrained systems.
 	     */
 	    delay_loop(REPORTERDELAY_DURATION);
-	    consumption_detector.delay_counter++;
+	    consumption_detector.reporter_thread_suspends++;
 	    // printf("DEBUG: forced reporter suspend, accounted=%d,  queueue depth after = %d\n", accounted_packets, getcount_packetring(reporthdr));
 	} else {
 	    // printf("DEBUG: no suspend, accounted=%d,  queueue depth after = %d\n", accounted_packets, getcount_packetring(reporthdr));
@@ -1298,9 +1298,9 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 		// A last packet event was detected
 		// printf("last packet event detected\n"); fflush(stdout);
 		need_free = 1;
-		reporthdr->delaycounter = consumption_detector.delay_counter;
+		reporthdr->reporter_thread_suspends = consumption_detector.reporter_thread_suspends;
 		// output final reports
-		reporthdr->report.TotalLen += packet->packetLen;		
+		reporthdr->report.TotalLen += packet->packetLen;
 		reporthdr->report.packetTime=packet->packetTime;
 		ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
 		ReporterData *bidirstats = (reporthdr->bidirreport ? &reporthdr->bidirreport->report : NULL);
