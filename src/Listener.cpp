@@ -313,13 +313,22 @@ sInterupted == SIGALRM
 	    if (isUDP(mSettings) && (isL2LengthCheck(mSettings) || isL2LengthCheck(server))) {
 		if (L2_setup() < 0) {
 		    // L2 not allowed, abort this server try
-		    delete server;
 		    mSettings->mSock = -1;
 		}
 	    }
             // Store entry in connection list
-	    if (mSettings->mSock > 0)
-		Iperf_pushback( listtemp, &clients );
+	    if ((mSettings->mSock > 0) && !isServerReverse(server)) {
+	        Iperf_pushback(listtemp, &clients);
+	    } else {
+	      // Undo things done above
+	      // RJM clean this up later
+	      if (listtemp && listtemp->holder && !isServerReverse(server))
+		free(listtemp->holder);
+	      if (listtemp)
+		free(listtemp);
+	      if (mSettings->mSock < 0)
+		delete server;
+	    }
             Mutex_Unlock( &clients_mutex );
 
             //

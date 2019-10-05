@@ -170,6 +170,7 @@ void client_spawn( thread_Settings *thread ) {
 	thread_debug("Client spawn thread server-reverse (sock=%d)", thread->mSock);
 #endif
         // This is the case of the listener launching a client, no test exchange nor connect
+	theClient->SetReportStartTime();
         theClient->Run();
     } else if (isReverse(thread)) {
 	// This is a client side initiated reverse test,

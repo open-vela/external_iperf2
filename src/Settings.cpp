@@ -289,6 +289,7 @@ void Settings_Initialize( thread_Settings *main ) {
 
 void Settings_Copy( thread_Settings *from, thread_Settings **into ) {
     *into = new thread_Settings;
+    memset(*into, 0, sizeof(thread_Settings));
     memcpy( *into, from, sizeof(thread_Settings) );
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Copy thread settings (malloc) from/to=%p/%p report/multi/bidir %p/%p/%p", \
@@ -331,6 +332,8 @@ void Settings_Copy( thread_Settings *from, thread_Settings **into ) {
         strcpy( (*into)->mIsochronousStr, from->mIsochronousStr );
     }
     (*into)->txstart_epoch = from->txstart_epoch;
+    (*into)->multihdr = from->multihdr;
+    (*into)->bidirhdr = from->bidirhdr;
 
     // Zero out certain entries
     (*into)->mTID = thread_zeroid();
