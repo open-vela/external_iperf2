@@ -263,6 +263,10 @@ sInterupted == SIGALRM
 #endif
 		} else if (isServerReverse(server)) {
 		    server->mThreadMode=kMode_Client;
+		    if (isUDP(server)) {
+			server->mUDPRate = 1024 * 1024;
+			server->mAmount = 1000;
+		    }
 		}
             } else {
 	        tempSettings = NULL;
