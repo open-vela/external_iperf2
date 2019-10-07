@@ -161,7 +161,7 @@ const struct option long_options[] =
 {"write-sync", no_argument, &writesync, 1},
 {"fq-rate", required_argument, &fqrate, 1},
 {"trip-time", no_argument, &triptime, 1},
-{"write-ack", no_argument, &writeack, 1},
+{"write-ack", optional_argument, &writeack, 1},
 {"no-udp-fin", no_argument, &noudpfin, 1},
 {"connect-only", optional_argument, &connectonly, 1},
 {"bidir", no_argument, &bidirtest, 1},
@@ -808,6 +808,11 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
 	    if (writeack) {
 		writeack = 0;
 		setWriteAck(mExtSettings);
+		if (optarg) {
+		    mExtSettings->mWriteAckLen = byte_atoi(optarg);
+		} else {
+		    mExtSettings->mWriteAckLen = mExtSettings->mBufLen;
+		}
 	    }
 	    if (noudpfin) {
 		noudpfin = 0;
