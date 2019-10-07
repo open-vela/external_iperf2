@@ -62,13 +62,14 @@
 #include "List.h"
 
 WriteAck::WriteAck( thread_Settings *inSettings ) {
+  mSettings = inSettings;
 #ifdef HAVE_THREAD_DEBUG
-  thread_debug("Write ack thread started in constructor (%p) (%x/%x)", (void *) inSetting, inSettings->flags, inSettings->flags_extend);
+  thread_debug("Write ack thread started in constructor (%p) (%x/%x)", (void *) inSettings, inSettings->flags, inSettings->flags_extend);
 #endif
 }
 
 WriteAck::~WriteAck() {
 #ifdef HAVE_THREAD_DEBUG
-  thread_debug("Write ack destructor (%p)", (void *) inSettings);
-#ifdef HAVE_THREAD_DEBUG
+  thread_debug("Write ack destructor (%p)", (void *) mSettings);
+#endif
 }

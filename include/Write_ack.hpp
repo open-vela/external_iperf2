@@ -58,7 +58,9 @@ class WriteAck {
 public:
     // stores server hostname, port, UDP/TCP mode, and UDP rate
     WriteAck(thread_Settings *inSettings);
-    ~WriteAck();  
+    ~WriteAck();
+private:
+    thread_Settings *mSettings;
 };
 #endif // WRITEACK_H
   
