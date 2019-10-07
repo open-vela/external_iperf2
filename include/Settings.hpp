@@ -156,6 +156,7 @@ typedef struct thread_Settings {
 #endif
     int Extractor_size;
     int mBufLen;                    // -l
+    int mWriteAckLen;               // --write-ack
     int mMSS;                       // -M
     int mTCPWin;                    // -w
     /*   flags is a BitMask of old bools
