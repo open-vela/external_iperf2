@@ -313,6 +313,16 @@ thread_run_wrapper( void* paramPtr ) {
                 /* Spawn a Server thread with these settings */
                 server_spawn( thread );
             } break;
+        case kMode_WriteAckServer:
+            {
+                /* Spawn a write-ack server thread with these settings */
+                writeack_server_spawn( thread );
+            } break;
+        case kMode_WriteAckClient:
+            {
+                /* Spawn a write-ack server thread with these settings */
+                writeack_client_spawn( thread );
+            } break;
         case kMode_Client:
             {
                 /* Spawn a Client thread with these settings */
@@ -320,9 +330,6 @@ thread_run_wrapper( void* paramPtr ) {
             } break;
         case kMode_Reporter:
         case kMode_ReporterClient:
-        case kMode_ReporterServer:
-        case kMode_ReporterClientFullDuplex:
-        case kMode_ReporterServerFullDuplex:
             {
                 /* Spawn a Reporter thread with these settings */
                 reporter_spawn( thread );
