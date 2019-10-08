@@ -152,6 +152,8 @@ void server_spawn( struct thread_Settings* thread );
 void client_spawn( struct thread_Settings* thread );
 void client_init( struct thread_Settings* clients );
 void listener_spawn( struct thread_Settings* thread );
+void writeack_server_spawn( struct thread_Settings* thread );
+void writeack_client_spawn( struct thread_Settings* thread );
 
 // defined in reporter.c
 void reporter_spawn( struct thread_Settings* thread );

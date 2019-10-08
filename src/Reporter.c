@@ -466,9 +466,6 @@ void InitDataReport(thread_Settings *mSettings) {
 	    case kMode_Unknown :
 	    case kMode_Reporter :
 	    case kMode_ReporterClient :
-	    case kMode_ReporterClientFullDuplex :
-	    case kMode_ReporterServer :
-	    case kMode_ReporterServerFullDuplex :
 	    case kMode_Listener:
 	    default:
 		reporthdr->packet_handler = NULL;

@@ -60,6 +60,7 @@
 #include "Listener.hpp"
 #include "Server.hpp"
 #include "PerfSocket.hpp"
+#include "Write_ack.hpp"
 
 #if HAVE_SCHED_SETSCHEDULER
 #include <sched.h>
@@ -277,4 +278,40 @@ void client_init( thread_Settings *clients ) {
         itr->runNext = next;
     }
 #endif
+}
+
+/*
+ * writeack_server_spawn
+ */
+void writeack_server_spawn(thread_Settings *thread) {
+    WriteAck *theServerAck = NULL;
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Write ack server spawn thread=%p", (void *) thread);
+#endif
+    // set traffic thread to realtime if needed
+    set_scheduler(thread);
+
+    // Start up the server
+    theServerAck = new WriteAck(thread);
+    // Run the thread
+    theServerAck->RunServer();
+    DELETE_PTR( theServerAck);
+}
+
+/*
+ * writeack_server_spawn
+ */
+void writeack_client_spawn(thread_Settings *thread) {
+    WriteAck *theClientAck = NULL;
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Write ack server spawn thread=%p", (void *) thread);
+#endif
+    // set traffic thread to realtime if needed
+    set_scheduler(thread);
+
+    // Start up the server
+    theClientAck = new WriteAck(thread);
+    // Run the thread
+    theClientAck->RunClient();
+    DELETE_PTR( theClientAck);
 }

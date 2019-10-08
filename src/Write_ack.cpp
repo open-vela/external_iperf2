@@ -73,3 +73,9 @@ WriteAck::~WriteAck() {
   thread_debug("Write ack destructor (%p)", (void *) mSettings);
 #endif
 }
+
+void WriteAck::RunServer(void) {
+};
+
+void WriteAck::RunClient(void) {
+};

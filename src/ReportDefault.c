@@ -391,7 +391,6 @@ void reporter_reportsettings( ReporterData *data ) {
     printf( "%s", separator_line );
     switch (data->mThreadMode) {
     case kMode_Listener:
-    case kMode_ReporterServer:
         printf(isEnhanced(data) ? server_pid_port : server_port,
                 (isUDP( data ) ? "UDP" : "TCP"),
                 data->mPort, pid );
