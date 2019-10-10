@@ -185,6 +185,7 @@ typedef struct Transfer_Info {
     intmax_t cntOutofOrder;
     intmax_t cntDatagrams;
     intmax_t IPGcnt;
+    intmax_t IPGcnttot;
     int socket;
     TransitStats transit;
     SendReadStats sock_callstats;
@@ -300,6 +301,7 @@ typedef struct MultiHeader {
     int multibarrier_cnt;
     Mutex refcountlock;
     int refcount;
+    int maxrefcount;
     int sockfd;
     ReporterData report;
     void (*output_sum_handler) (struct ReporterData *stats, int final);

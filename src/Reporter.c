@@ -357,8 +357,9 @@ void UpdateMultiHdrRefCounter(MultiHeader *multihdr, int val, int sockfd) {
 	multihdr->sockfd = sockfd;
     }
     multihdr->refcount += val;
-    if (multihdr->refcount == 0) {
-	if (val < 0) {
+    if (multihdr->refcount > multihdr->maxrefcount)
+      multihdr->maxrefcount = multihdr->refcount;
+    if ((multihdr->maxrefcount > 1) && (multihdr->refcount == 0) && (val < 0)) {
 	    // Output a final report before freeing it
 	    (*multihdr->output_sum_handler)(&multihdr->report, 1);
 	    if (sockfd && (multihdr->sockfd == sockfd)) {
@@ -372,7 +373,6 @@ void UpdateMultiHdrRefCounter(MultiHeader *multihdr, int val, int sockfd) {
 	    thread_debug("Free sum multiheader %p per last reference", (void *)multihdr);
 #endif
 	    free(multihdr);
-	}
     }
     Mutex_Unlock(&multihdr->refcountlock);
 }
@@ -1233,6 +1233,7 @@ static inline void reporter_handle_packet_pps(ReporterData *data, Transfer_Info 
     data->cntDatagrams++;
     stats->IPGsum += TimeDifference(data->packetTime, data->IPGstart);
     stats->IPGcnt++;
+    stats->IPGcnttot++;
     data->IPGstart = data->packetTime;
 }
 
@@ -1664,6 +1665,18 @@ static void output_transfer_report_server_udp(ReporterData *stats, ReporterData 
     if (bidirstats) {
 	bidirstats->TotalLen += stats->TotalLen - stats->lastTotal;
     }
+    // print a interval report and possibly a partial interval report if this a final
+    stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
+    if (!final || (final && stats->info.TotalLen > 0)) {
+	stats->info.cntOutofOrder = stats->cntOutofOrder - stats->lastOutofOrder;
+	// assume most of the  time out-of-order packets are not
+	// duplicate packets, so conditionally subtract them from the lost packets.
+	stats->info.cntError = stats->cntError - stats->lastError;
+	stats->info.cntError -= stats->info.cntOutofOrder;
+	stats->info.cntDatagrams = stats->PacketID - stats->lastDatagrams;
+	reporter_print(stats, TRANSFER_REPORT, 0);
+	reset_transfer_stats_server_udp(stats);
+    }
     if (final) {
 	stats->info.cntOutofOrder = stats->cntOutofOrder;
 	// assume most of the  time out-of-order packets are not
@@ -1671,18 +1684,21 @@ static void output_transfer_report_server_udp(ReporterData *stats, ReporterData 
 	stats->info.cntError = stats->cntError;
 	stats->info.cntError -= stats->info.cntOutofOrder;
 	stats->info.cntDatagrams = stats->PacketID;
+	stats->info.IPGcnt = stats->info.IPGcnttot;
 	stats->info.TotalLen = stats->TotalLen;
+	stats->info.startTime = 0.0;
+	stats->info.l2counts.cnt = stats->info.l2counts.tot_cnt;
+	stats->info.l2counts.unknown = stats->info.l2counts.tot_unknown;
+	stats->info.l2counts.udpcsumerr = stats->info.l2counts.tot_udpcsumerr;
+	stats->info.l2counts.lengtherr = stats->info.l2counts.tot_lengtherr;
+	stats->info.transit.minTransit = stats->info.transit.totminTransit;
+        stats->info.transit.maxTransit = stats->info.transit.totmaxTransit;
+	stats->info.transit.cntTransit = stats->info.transit.totcntTransit;
+	stats->info.transit.sumTransit = stats->info.transit.totsumTransit;
+	stats->info.transit.meanTransit = stats->info.transit.totmeanTransit;
+	stats->info.transit.m2Transit = stats->info.transit.totm2Transit;
+	stats->info.transit.vdTransit = stats->info.transit.totvdTransit;
 	reporter_print(stats, TRANSFER_REPORT, 1);
-    } else {
-	stats->info.cntOutofOrder = stats->cntOutofOrder - stats->lastOutofOrder;
-	// assume most of the  time out-of-order packets are not
-	// duplicate packets, so conditionally subtract them from the lost packets.
-	stats->info.cntError = stats->cntError - stats->lastError;
-	stats->info.cntError -= stats->info.cntOutofOrder;
-	stats->info.cntDatagrams = stats->PacketID - stats->lastDatagrams;
-	stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
-	reporter_print(stats, TRANSFER_REPORT, 0);
-	reset_transfer_stats_server_udp(stats);
     }
 }
 static void output_transfer_sum_report_server_udp(ReporterData *stats, int final) {
