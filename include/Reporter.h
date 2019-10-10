@@ -56,6 +56,7 @@
 #include "headers.h"
 #include "Mutex.h"
 #include "histogram.h"
+#include "packet_ring.h"
 
 struct thread_Settings;
 struct server_hdr;
@@ -159,24 +160,6 @@ typedef struct L2Stats {
     intmax_t tot_lengtherr;
 } L2Stats;
 
-typedef struct ReportStruct {
-    intmax_t packetID;
-    intmax_t packetLen;
-    struct timeval packetTime;
-    struct timeval sentTime;
-    int errwrite;
-    int emptyreport;
-    int socket;
-    int l2errors;
-    int l2len;
-    int expected_l2len;
-    struct timeval isochStartTime;
-    intmax_t prevframeID;
-    intmax_t frameID;
-    intmax_t burstsize;
-    intmax_t burstperiod;
-    intmax_t remaining;
-} ReportStruct;
 
 /*
  * The type field of ReporterData is a bitmask
@@ -321,27 +304,6 @@ typedef struct MultiHeader {
     ReporterData report;
     void (*output_sum_handler) (struct ReporterData *stats, int final);
 } MultiHeader;
-
-typedef struct PacketRing {
-  // producer and consumer
-  // must be an atomic type, e.g. int
-  // otherwise reads/write can be torn
-  int producer;
-  int consumer;
-  int maxcount;
-  int consumerdone;
-  int awaitcounter;
-  ReportStruct metapacket;
-
-  // Use a condition variables
-  // o) await_consumer - producer waits for the consumer thread to
-  //    make space or end (signaled by the consumer)
-  // o) awake_consumer - signal the consumer thread to to run
-  //    (signaled by the producer)
-  Condition await_consumer;
-  Condition *awake_consumer;
-  ReportStruct *data;
-} PacketRing;
 
 typedef struct ReportHeader {
     ReporterData report;
