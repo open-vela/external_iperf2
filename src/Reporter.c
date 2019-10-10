@@ -1667,7 +1667,7 @@ static void output_transfer_report_server_udp(ReporterData *stats, ReporterData 
     }
     // print a interval report and possibly a partial interval report if this a final
     stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
-    if (!final || (final && stats->info.TotalLen > 0)) {
+    if (!final || (final && (stats->info.TotalLen > 0) && !TimeZero(stats->intervalTime))) {
 	stats->info.cntOutofOrder = stats->cntOutofOrder - stats->lastOutofOrder;
 	// assume most of the  time out-of-order packets are not
 	// duplicate packets, so conditionally subtract them from the lost packets.
