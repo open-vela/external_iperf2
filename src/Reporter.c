@@ -1685,6 +1685,7 @@ static void output_transfer_report_server_udp(ReporterData *stats, ReporterData 
 	stats->info.cntError -= stats->info.cntOutofOrder;
 	stats->info.cntDatagrams = stats->PacketID;
 	stats->info.IPGcnt = stats->info.IPGcnttot;
+	stats->info.IPGsum = TimeDifference(stats->packetTime, stats->startTime);
 	stats->info.TotalLen = stats->TotalLen;
 	stats->info.startTime = 0.0;
 	stats->info.l2counts.cnt = stats->info.l2counts.tot_cnt;
