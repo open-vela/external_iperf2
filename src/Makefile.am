@@ -37,6 +37,7 @@ iperf_SOURCES = \
 		service.c \
 		sockets.c \
 		stdio.c \
+		packet_ring.c \
 		tcp_window_size.c \
 		pdfs.c
 iperf_LDADD = $(LIBCOMPAT_LDADDS)

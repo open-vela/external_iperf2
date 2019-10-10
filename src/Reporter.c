@@ -60,6 +60,7 @@
 #include "SocketAddr.h"
 #include "histogram.h"
 #include "delay.h"
+#include "packet_ring.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -159,8 +160,6 @@ static void InitDataReport(struct thread_Settings *mSettings);
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 static void gettcpistats(ReporterData *stats, ReporterData *sumstats, int final);
 #endif
-static PacketRing * init_packetring(int count);
-
 
 MultiHeader* InitSumReport(thread_Settings *agent, int inID) {
     MultiHeader *multihdr = (MultiHeader *) calloc(1, sizeof(MultiHeader));
@@ -424,7 +423,7 @@ void InitDataReport(thread_Settings *mSettings) {
 	    // Create a new packet ring which is used to communicate
 	    // packet stats from the traffic thread to the reporter
 	    // thread.  The reporter thread does all packet accounting
-	    reporthdr->packetring = init_packetring(NUM_REPORT_STRUCTS);
+	    reporthdr->packetring = init_packetring(NUM_REPORT_STRUCTS, &ReportCond);
 	    // Set up the function vectors, there are three
 	    // 1) packet_handler: does packet accounting per the test and protocol
 	    // 2) output_handler: performs output, e.g. interval reports, per the test and protocol
@@ -659,108 +658,6 @@ void PostReport (ReportHeader *reporthdr) {
 #endif
     }
 }
-
-// Work in progress
-
-static PacketRing * init_packetring (int count) {
-    PacketRing *pr = NULL;
-    if ((pr = (PacketRing *) calloc(1, sizeof(PacketRing)))) {
-	pr->data = (ReportStruct *) calloc(count, sizeof(ReportStruct));
-#ifdef HAVE_THREAD_DEBUG
-	thread_debug("Init %d element packet ring %p", count, (void *)pr);
-#endif
-    }
-    if (!pr || !pr->data) {
-	fprintf(stderr, "ERROR: no memory for packet ring\n");
-	exit(1);
-    }
-    pr->producer = 0;
-    pr->consumer = 0;
-    pr->maxcount = count;
-    pr->awake_consumer = &ReportCond;
-    Condition_Initialize(&pr->await_consumer);
-    pr->consumerdone = 0;
-    pr->awaitcounter = 0;
-    return (pr);
-}
-
-static inline void enqueue_packetring(ReportHeader* agent, ReportStruct *metapacket) {
-    PacketRing *pr = agent->packetring;
-    while (((pr->producer == pr->maxcount) && (pr->consumer == 0)) || \
-	   ((pr->producer + 1) == pr->consumer)) {
-	// Signal the consumer thread to process a full queue
-	Condition_Signal(pr->awake_consumer);
-	// Wait for the consumer to create some queue space
-	Condition_Lock(pr->await_consumer);
-	pr->awaitcounter++;
-#ifdef HAVE_THREAD_DEBUG
-	{
-	    struct timeval now;
-	    static struct timeval prev={.tv_sec=0, .tv_usec=0};
-	    gettimeofday( &now, NULL );
-	    if (!prev.tv_sec || (TimeDifference(now, prev) > 1.0)) {
-		prev = now;
-		thread_debug( "Not good, traffic's packet ring %p stalled per %p", (void *)pr, (void *)&pr->await_consumer);
-	    }
-	}
-#endif
-	Condition_TimedWait(&pr->await_consumer, 1);
-	Condition_Unlock(pr->await_consumer);
-    }
-    int writeindex;
-    if ((pr->producer + 1) == pr->maxcount)
-	writeindex = 0;
-    else
-	writeindex = (pr->producer  + 1);
-
-    /* Next two lines must be maintained as is */
-    memcpy((agent->packetring->data + writeindex), metapacket, sizeof(ReportStruct));
-    pr->producer = writeindex;
-}
-
-static inline ReportStruct *dequeue_packetring(ReportHeader* agent) {
-    PacketRing *pr = agent->packetring;
-    ReportStruct *packet = NULL;
-    if (pr->producer == pr->consumer)
-	return NULL;
-
-    int readindex;
-    if ((pr->consumer + 1) == pr->maxcount)
-	readindex = 0;
-    else
-	readindex = (pr->consumer + 1);
-    packet = (agent->packetring->data + readindex);
-    // advance the consumer pointer last
-    pr->consumer = readindex;
-    // Signal the traffic thread assigned to this ring
-    // when the ring goes from having something to empty
-    if (pr->producer == pr->consumer) {
-#ifdef HAVE_THREAD_DEBUG
-      // thread_debug( "Consumer signal packet ring %p empty per %p", (void *)pr, (void *)&pr->await_consumer);
-#endif
-	Condition_Signal(&pr->await_consumer);
-    }
-    return packet;
-}
-
-/*
- * This is an estimate and can be incorrect as these counters
- * done like this is not thread safe.  Use with care as there
- * is no guarantee the return value is accurate
- */
-#ifdef HAVE_THREAD_DEBUG
-static inline int getcount_packetring(ReportHeader *agent) {
-    PacketRing *pr = agent->packetring;
-    int depth = 0;
-    if (pr->producer != pr->consumer) {
-        depth = (pr->producer > pr->consumer) ? \
-	    (pr->producer - pr->consumer) :  \
-	    ((pr->maxcount - pr->consumer) + pr->producer);
-        // printf("DEBUG: Depth=%d for packet ring %p\n", depth, (void *)pr);
-    }
-    return depth;
-}
-#endif
 /*
  * ReportPacket is called by a transfer agent to record
  * the arrival or departure of a "packet" (for TCP it
@@ -772,10 +669,10 @@ void ReportPacket( ReportHeader* agent, ReportStruct *packet ) {
     if ( agent != NULL ) {
 #ifdef HAVE_THREAD_DEBUG
 	if (packet->packetID < 0) {
-	  thread_debug("Reporting last packet for %p  qdepth=%d", (void *) agent, getcount_packetring(agent));
+	  thread_debug("Reporting last packet for %p  qdepth=%d", (void *) agent, getcount_packetring(agent->packetring));
 	}
 #endif
-        enqueue_packetring(agent, packet);
+        enqueue_packetring(agent->packetring, packet);
 #ifndef HAVE_THREAD
         /*
          * Process the report in this thread
@@ -1248,7 +1145,7 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
         // If there are more packets to process then handle them
 	ReportStruct *packet = NULL;
 	int timeslot_event = 0;
-        while (!timeslot_event && (packet = dequeue_packetring(reporthdr))) {
+        while (!timeslot_event && (packet = dequeue_packetring(reporthdr->packetring))) {
 	    // Check for a very first reported packet that needs to be summed
 	    // This has to be done in the reporter thread as these
 	    // reports are shared by multiple traffic threads
