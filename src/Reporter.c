@@ -1785,6 +1785,15 @@ static void output_transfer_report_server_tcp(ReporterData *stats, ReporterData 
     if (bidirstats) {
 	bidirstats->TotalLen += stats->TotalLen - stats->lastTotal;
     }
+    // print a interval report and possibly a partial interval report if this a final
+    stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
+    if (!final || (final && (stats->info.TotalLen > 0) && !TimeZero(stats->intervalTime))) {
+	if (!bidirstats)
+	  reporter_print(stats, TRANSFER_REPORT, 0);
+	else if (stats->info.mEnhanced)
+	  reporter_print(stats, TRANSFER_REPORT, 0);
+	reset_transfer_stats_server_tcp(stats);
+    }
     if (final) {
         stats->info.TotalLen = stats->TotalLen;
 	stats->info.startTime = 0.0;
@@ -1796,14 +1805,6 @@ static void output_transfer_report_server_tcp(ReporterData *stats, ReporterData 
 	  reporter_print(stats, TRANSFER_REPORT, 1);
 	else if (stats->info.mEnhanced)
 	  reporter_print(stats, TRANSFER_REPORT, 1);
-
-    } else {
-        stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
-	if (!bidirstats)
-	  reporter_print(stats, TRANSFER_REPORT, 0);
-	else if (stats->info.mEnhanced)
-	  reporter_print(stats, TRANSFER_REPORT, 0);
-	reset_transfer_stats_server_tcp(stats);
     }
 }
 
