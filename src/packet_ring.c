@@ -128,6 +128,16 @@ inline ReportStruct *dequeue_packetring(PacketRing *pr) {
     return packet;
 }
 
+void free_packetring(PacketRing *pr) {
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Free packet ring %p & condition variable await consumer %p", (void *)pr, (void *)&pr->await_consumer);
+#endif
+    if (pr->awaitcounter > 1000) fprintf(stderr, "WARN: Reporter thread may be too slow, await counter=%d, " \
+					 "consider increasing NUM_REPORT_STRUCTS\n", pr->awaitcounter);
+    Condition_Destroy(&pr->await_consumer);
+    if (pr->data) free(pr->data);
+}
+
 /*
  * This is an estimate and can be incorrect as these counters
  * done like this is not thread safe.  Use with care as there

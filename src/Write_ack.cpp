@@ -50,17 +50,22 @@
 #include "Write_ack.hpp"
 #include "packet_ring.h"
 
-WriteAck::WriteAck( thread_Settings *inSettings ) {
+WriteAck::WriteAck(thread_Settings *inSettings) {
   mSettings = inSettings;
 #ifdef HAVE_THREAD_DEBUG
   thread_debug("Write ack thread started in constructor (%p) (%x/%x)", (void *) inSettings, inSettings->flags, inSettings->flags_extend);
 #endif
+  mSettings->ackring = init_packetring(100, mSettings->awake_producer);
 }
 
 WriteAck::~WriteAck() {
 #ifdef HAVE_THREAD_DEBUG
   thread_debug("Write ack destructor (%p)", (void *) mSettings);
 #endif
+  if (mSettings->ackring) {
+      Condition_Destroy(mSettings->awake_producer);
+      free_packetring(mSettings->ackring);
+  }
 }
 
 void WriteAck::RunServer(void) {
