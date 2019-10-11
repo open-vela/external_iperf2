@@ -333,16 +333,6 @@ void InitReport(thread_Settings *mSettings) {
     }
 }
 
-static void free_packetring(PacketRing *pr) {
-#ifdef HAVE_THREAD_DEBUG
-    thread_debug("Free packet ring %p & condition variable await consumer %p", (void *)pr, (void *)&pr->await_consumer);
-#endif
-    if (pr->awaitcounter > 1000) fprintf(stderr, "WARN: Reporter thread may be too slow, await counter=%d, " \
-					 "consider increasing NUM_REPORT_STRUCTS\n", pr->awaitcounter);
-    Condition_Destroy(&pr->await_consumer);
-    if (pr->data) free(pr->data);
-}
-
 void UpdateMultiHdrRefCounter(MultiHeader *multihdr, int val, int sockfd) {
     if (!multihdr)
 	return;
