@@ -253,9 +253,11 @@ sInterupted == SIGALRM
 		if (isWriteAck(server)) {
 		    thread_Settings *writeackthread;
 		    Settings_Copy(server, &writeackthread);
+		    writeackthread->mThreadMode = kMode_WriteAckServer;
 #if HAVE_THREAD_DEBUG
 		    thread_debug("Write acknowledgements enabled for read bytecount=%d (%p)", server->mWriteAckLen, (void *) writeackthread);
 #endif
+                    thread_start(writeackthread);
 		}
 		// The following will set the tempSettings to NULL if
 		// there is no need for the Listener to start a client
