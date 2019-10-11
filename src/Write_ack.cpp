@@ -46,20 +46,9 @@
  * by Robert J. McMahon (rjmcmahon@rjmcmahon.com, bob.mcmahon@broadcom.com)
  * -------------------------------------------------------------------
  */
-#include <time.h>
 #include "headers.h"
 #include "Write_ack.hpp"
-#include "Thread.h"
-#include "SocketAddr.h"
-#include "PerfSocket.hpp"
-#include "Extractor.h"
-#include "delay.h"
-#include "util.h"
-#include "Locale.h"
-#include "isochronous.hpp"
-#include "pdfs.h"
-#include "version.h"
-#include "List.h"
+#include "packet_ring.h"
 
 WriteAck::WriteAck( thread_Settings *inSettings ) {
   mSettings = inSettings;

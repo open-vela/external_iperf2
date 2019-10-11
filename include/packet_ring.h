@@ -50,6 +50,10 @@
 
 #include "Condition.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct ReportStruct {
     intmax_t packetID;
     intmax_t packetLen;
@@ -93,7 +97,12 @@ typedef struct PacketRing {
 extern PacketRing * init_packetring (int count, Condition *awake_consumer);
 extern void enqueue_packetring(PacketRing *pr, ReportStruct *metapacket);
 extern ReportStruct *dequeue_packetring(PacketRing * pr);
-#ifdef HAVE_THREAD_DEBUG
+  #ifdef HAVE_THREAD_DEBUG
 extern int getcount_packetring(PacketRing *pr);
+  #endif
+
+#ifdef __cplusplus
+} /* end extern "C" */
 #endif
-#endif
+
+#endif // PACKETRINGC_H

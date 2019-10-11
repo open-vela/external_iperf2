@@ -64,7 +64,7 @@ struct server_hdr;
 #include "Settings.hpp"
 
 #define NUM_REPORT_STRUCTS 5000
-#define NUM_MULTI_SLOTS    5
+
 // If the minimum latency exceeds the boundaries below
 // assume the clocks are not synched and suppress the
 // latency output. Units are seconds
