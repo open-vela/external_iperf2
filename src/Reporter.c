@@ -662,7 +662,7 @@ void ReportPacket( ReportHeader* agent, ReportStruct *packet ) {
 	  thread_debug("Reporting last packet for %p  qdepth=%d", (void *) agent, getcount_packetring(agent->packetring));
 	}
 #endif
-        enqueue_packetring(agent->packetring, packet);
+        enqueue_packetring(agent->packetring, packet, 0);
 #ifndef HAVE_THREAD
         /*
          * Process the report in this thread
@@ -1135,7 +1135,7 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
         // If there are more packets to process then handle them
 	ReportStruct *packet = NULL;
 	int timeslot_event = 0;
-        while (!timeslot_event && (packet = dequeue_packetring(reporthdr->packetring))) {
+        while (!timeslot_event && (packet = dequeue_packetring(reporthdr->packetring, 0))) {
 	    // Check for a very first reported packet that needs to be summed
 	    // This has to be done in the reporter thread as these
 	    // reports are shared by multiple traffic threads
