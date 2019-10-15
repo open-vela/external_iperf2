@@ -95,8 +95,8 @@ typedef struct PacketRing {
 } PacketRing;
 
 extern PacketRing * init_packetring (int count, Condition *awake_consumer);
-extern void enqueue_packetring(PacketRing *pr, ReportStruct *metapacket);
-extern ReportStruct *dequeue_packetring(PacketRing * pr);
+extern void enqueue_packetring(PacketRing *pr, ReportStruct *metapacket, int post_cond_signal);
+extern ReportStruct *dequeue_packetring(PacketRing *pr, int tiemout);
 extern void free_packetring(PacketRing *pr);
 #ifdef HAVE_THREAD_DEBUG
 extern int getcount_packetring(PacketRing *pr);
