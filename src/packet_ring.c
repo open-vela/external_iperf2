@@ -71,7 +71,7 @@ PacketRing * init_packetring (int count, Condition *awake_consumer) {
     return (pr);
 }
 
-inline void enqueue_packetring(PacketRing *pr, ReportStruct *metapacket) {
+inline void enqueue_packetring(PacketRing *pr, ReportStruct *metapacket, int post_cond_signal) {
     while (((pr->producer == pr->maxcount) && (pr->consumer == 0)) || \
 	   ((pr->producer + 1) == pr->consumer)) {
 	// Signal the consumer thread to process a full queue
@@ -102,12 +102,22 @@ inline void enqueue_packetring(PacketRing *pr, ReportStruct *metapacket) {
     /* Next two lines must be maintained as is */
     memcpy((pr->data + writeindex), metapacket, sizeof(ReportStruct));
     pr->producer = writeindex;
+    if (post_cond_signal)
+	Condition_Signal(pr->awake_consumer);
 }
 
-inline ReportStruct *dequeue_packetring(PacketRing *pr) {
+// timeout units is seconds and timer is up to timeout seconds and can be less
+inline ReportStruct *dequeue_packetring(PacketRing *pr, int timeout) {
     ReportStruct *packet = NULL;
-    if (pr->producer == pr->consumer)
-	return NULL;
+    while (pr->producer == pr->consumer) {
+	if (timeout > 0) {
+           Condition_Lock(pr->await_consumer);
+	   Condition_TimedWait(&pr->await_consumer, timeout);
+	   Condition_Unlock(pr->await_consumer);
+	}
+	if (pr->producer == pr->consumer)
+	    return NULL;
+    }
 
     int readindex;
     if ((pr->consumer + 1) == pr->maxcount)
