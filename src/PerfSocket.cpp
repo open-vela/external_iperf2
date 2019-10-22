@@ -85,7 +85,7 @@
  * These are optional performance tuning factors.
  * ------------------------------------------------------------------- */
 
-void SetSocketOptions( thread_Settings *inSettings ) {
+void SetSocketOptions( struct thread_Settings *inSettings ) {
     // set the TCP window size (socket buffer sizes)
     // also the UDP buffer size
     // must occur before call to accept() for large window sizes
@@ -209,7 +209,7 @@ void SetSocketOptions( thread_Settings *inSettings ) {
 #endif /* HAVE_SO_MAX_PACING_RATE */
 }
 
-void SetSocketOptionsSendTimeout( thread_Settings *mSettings, int timer) {
+void SetSocketOptionsSendTimeout( struct thread_Settings *mSettings, int timer) {
     if (timer > 0) {
 #ifdef WIN32
 	// Windows SO_SNDTIMEO uses ms

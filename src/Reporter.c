@@ -76,12 +76,12 @@ extern "C" {
   instance the provided CSV format does not have a settings
   report so it uses settings_notimpl.
   */
-void* connection_notimpl( Connection_Info * nused, int nuse ) {
+void* connection_notimpl( struct ConnectionInfo * nused, int nuse ) {
     return NULL;
 }
-void settings_notimpl( ReporterData * nused ) { }
-void statistics_notimpl( Transfer_Info * nused ) { }
-void serverstatistics_notimpl( Connection_Info *nused1, Transfer_Info *nused2 ) { }
+void settings_notimpl( struct ReporterData * nused ) { }
+void statistics_notimpl( struct TransferInfo * nused ) { }
+void serverstatistics_notimpl( struct ConnectionInfo *nused1, struct TransferInfo *nused2 ) { }
 
 // To add a reporting style include its header here.
 #include "report_default.h"
@@ -122,47 +122,46 @@ report_statistics bidir_reports[kReport_MAXIMUM] = {
 };
 
 char buffer[SNBUFFERSIZE]; // Buffer for printing
-ReportHeader *ReportRoot = NULL;
-extern Condition ReportCond;
-int reporter_process_report ( ReportHeader *report );
-void process_report ( ReportHeader *report );
-int reporter_print( ReporterData *stats, int type, int end );
-void PrintMSS( ReporterData *stats );
+struct ReportHeader *ReportRoot = NULL;
+int reporter_process_report ( struct ReportHeader *report );
+void process_report ( struct ReportHeader *report );
+int reporter_print( struct ReporterData *stats, int type, int end );
+void PrintMSS( struct ReporterData *stats );
 
 // Private routines
 // Packet accounting:
-static void reporter_handle_packet_server_udp(ReportHeader *report, ReportStruct *packet);
-static void reporter_handle_packet_server_tcp(ReportHeader *report, ReportStruct *packet);
-static void reporter_handle_packet_client(ReportHeader *report, ReportStruct *packet);
+static void reporter_handle_packet_server_udp(struct ReportHeader *report, struct ReportStruct *packet);
+static void reporter_handle_packet_server_tcp(struct ReportHeader *report, struct ReportStruct *packet);
+static void reporter_handle_packet_client(struct ReportHeader *report, struct ReportStruct *packet);
 
 // Reporter ouput
-static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *packet);
-static void output_missed_reports(ReporterData *stats, ReportStruct *packet);
-static void output_missed_multireports(ReporterData *stats, ReportStruct *packet);
-static void output_transfer_report_client_tcp(ReporterData *stats, ReporterData *sumstats, ReporterData *bidirstats, int final);
-static void output_transfer_report_client_udp(ReporterData *stats, ReporterData *sumstats, ReporterData *bidirstats, int final);
-static void output_transfer_report_server_tcp(ReporterData *stats, ReporterData *sumstats, ReporterData *bidirstats, int final);
-static void output_transfer_report_server_udp(ReporterData *stats, ReporterData *sumstats, ReporterData *bidirstats, int final);
-static void output_transfer_sum_report_client_tcp(ReporterData *stats, int final);
-static void output_transfer_sum_report_server_tcp(ReporterData *stats, int final);
-static void output_transfer_sum_report_client_udp(ReporterData *stats, int final);
-static void output_transfer_sum_report_server_udp(ReporterData *stats, int final);
-static void output_transfer_bidir_report_tcp(ReporterData *stats, int final);
-static void output_transfer_bidir_report_udp(ReporterData *stats, int final);
+static int condprint_interval_reports (struct ReportHeader *reporthdr, struct ReportStruct *packet);
+static void output_missed_reports(struct ReporterData *stats, struct ReportStruct *packet);
+static void output_missed_multireports(struct ReporterData *stats, struct ReportStruct *packet);
+static void output_transfer_report_client_tcp(struct ReporterData *stats, struct ReporterData *sumstats, struct ReporterData *bidirstats, int final);
+static void output_transfer_report_client_udp(struct ReporterData *stats, struct ReporterData *sumstats, struct ReporterData *bidirstats, int final);
+static void output_transfer_report_server_tcp(struct ReporterData *stats, struct ReporterData *sumstats, struct ReporterData *bidirstats, int final);
+static void output_transfer_report_server_udp(struct ReporterData *stats, struct ReporterData *sumstats, struct ReporterData *bidirstats, int final);
+static void output_transfer_sum_report_client_tcp(struct ReporterData *stats, int final);
+static void output_transfer_sum_report_server_tcp(struct ReporterData *stats, int final);
+static void output_transfer_sum_report_client_udp(struct ReporterData *stats, int final);
+static void output_transfer_sum_report_server_udp(struct ReporterData *stats, int final);
+static void output_transfer_bidir_report_tcp(struct ReporterData *stats, int final);
+static void output_transfer_bidir_report_udp(struct ReporterData *stats, int final);
 
-static void reset_transfer_stats(ReporterData *stats);
-static inline void reset_transfer_stats_client_tcp(ReporterData *stats);
-static inline void reset_transfer_stats_client_udp(ReporterData *stats);
-static inline void reset_transfer_stats_server_udp(ReporterData *stats);
-static inline void reset_transfer_stats_server_tcp(ReporterData *stats);
+static void reset_transfer_stats(struct ReporterData *stats);
+static inline void reset_transfer_stats_client_tcp(struct ReporterData *stats);
+static inline void reset_transfer_stats_client_udp(struct ReporterData *stats);
+static inline void reset_transfer_stats_server_udp(struct ReporterData *stats);
+static inline void reset_transfer_stats_server_tcp(struct ReporterData *stats);
 
 static void InitDataReport(struct thread_Settings *mSettings);
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-static void gettcpistats(ReporterData *stats, ReporterData *sumstats, int final);
+static void gettcpistats(struct ReporterData *stats, struct ReporterData *sumstats, int final);
 #endif
 
-MultiHeader* InitSumReport(thread_Settings *agent, int inID) {
-    MultiHeader *multihdr = (MultiHeader *) calloc(1, sizeof(MultiHeader));
+struct MultiHeader* InitSumReport(struct thread_Settings *agent, int inID) {
+    struct MultiHeader *multihdr = (struct MultiHeader *) calloc(1, sizeof(struct MultiHeader));
     if ( multihdr != NULL ) {
 #ifdef HAVE_THREAD_DEBUG
         thread_debug("Init multiheader sum report %p id=%d", (void *)multihdr, inID);
@@ -173,7 +172,7 @@ MultiHeader* InitSumReport(thread_Settings *agent, int inID) {
 	Mutex_Initialize(&multihdr->refcountlock);
 	multihdr->threads = 0;
 	if (isMultipleReport(agent)) {
-	    ReporterData *data = &multihdr->report;
+	    struct ReporterData *data = &multihdr->report;
 	    data->type = TRANSFER_REPORT;
 	    // Only initialize the interval time here
 	    // The startTime and nextTime for summing reports will be set by
@@ -216,8 +215,8 @@ MultiHeader* InitSumReport(thread_Settings *agent, int inID) {
     return multihdr;
 }
 
-MultiHeader* InitBiDirReport(thread_Settings *agent, int inID) {
-    MultiHeader *multihdr = (MultiHeader *) calloc(1, sizeof(MultiHeader));
+struct MultiHeader* InitBiDirReport(struct thread_Settings *agent, int inID) {
+    struct MultiHeader *multihdr = (struct MultiHeader *) calloc(1, sizeof(struct MultiHeader));
     if ( multihdr != NULL ) {
 #ifdef HAVE_THREAD_DEBUG
         thread_debug("Init multiheader bidir report %p id=%d", (void *)multihdr, inID);
@@ -227,7 +226,7 @@ MultiHeader* InitBiDirReport(thread_Settings *agent, int inID) {
 	multihdr->refcount = 0;
 	Mutex_Initialize(&multihdr->refcountlock);
 	if (isMultipleReport(agent)) {
-	    ReporterData *data = &multihdr->report;
+	    struct ReporterData *data = &multihdr->report;
 	    data->type = TRANSFER_REPORT;
 	    if (agent->mInterval != 0.0) {
 		struct timeval *interval = &data->intervalTime;
@@ -268,7 +267,7 @@ MultiHeader* InitBiDirReport(thread_Settings *agent, int inID) {
 /*
  * BarrierClient allows for multiple stream clients to be syncronized
  */
-void BarrierClient(MultiHeader *multihdr, int starttime) {
+void BarrierClient(struct MultiHeader *multihdr, int starttime) {
 #ifdef HAVE_THREAD
     assert(multihdr == NULL);
     Condition_Lock(multihdr->multibarrier_cond);
@@ -321,7 +320,7 @@ void BarrierClient(MultiHeader *multihdr, int starttime) {
  * synchronize on compeleting their connect()
  */
 
-void InitReport(thread_Settings *mSettings) {
+void InitReport(struct thread_Settings *mSettings) {
     // Note, this must be called in order as
     // the data report structures need to be
     // initialized first
@@ -333,7 +332,7 @@ void InitReport(thread_Settings *mSettings) {
     }
 }
 
-void UpdateMultiHdrRefCounter(MultiHeader *multihdr, int val, int sockfd) {
+void UpdateMultiHdrRefCounter(struct MultiHeader *multihdr, int val, int sockfd) {
     if (!multihdr)
 	return;
     // decrease the reference counter for mutliheaders
@@ -367,7 +366,7 @@ void UpdateMultiHdrRefCounter(MultiHeader *multihdr, int val, int sockfd) {
     Mutex_Unlock(&multihdr->refcountlock);
 }
 
-void FreeReport(ReportHeader *reporthdr) {
+void FreeReport(struct ReportHeader *reporthdr) {
     if (reporthdr) {
 	if (reporthdr->packetring && (reporthdr->reporter_thread_suspends < 3)) {
 	    fprintf(stdout, "WARN: this test was likley CPU bound (or may not be detecting the underlying network devices)\n");
@@ -389,12 +388,12 @@ void FreeReport(ReportHeader *reporthdr) {
     }
 }
 
-void InitDataReport(thread_Settings *mSettings) {
+void InitDataReport(struct thread_Settings *mSettings) {
     /*
      * Create in one big chunk
      */
-    ReportHeader *reporthdr = (ReportHeader *) calloc(1, sizeof(ReportHeader));
-    ReporterData *data = NULL;
+    struct ReportHeader *reporthdr = (struct ReportHeader *) calloc(1, sizeof(struct ReportHeader));
+    struct ReporterData *data = NULL;
 
     if ( reporthdr != NULL ) {
 #ifdef HAVE_THREAD_DEBUG
@@ -468,7 +467,7 @@ void InitDataReport(thread_Settings *mSettings) {
 	    }
 	}
 #ifdef HAVE_THREAD_DEBUG
-	thread_debug("Init data report %p size %ld using packetring %p", (void *)reporthdr, sizeof(ReportHeader), (void *)(reporthdr->packetring));
+	thread_debug("Init data report %p size %ld using packetring %p", (void *)reporthdr, sizeof(struct ReportHeader), (void *)(reporthdr->packetring));
 #endif
 	data->lastError = INITIAL_PACKETID;
 	data->lastDatagrams = INITIAL_PACKETID;
@@ -556,9 +555,9 @@ void InitDataReport(thread_Settings *mSettings) {
  * to achieve this.  Such code will be easier to maintain
  * and to extend.
  */
-void InitConnectionReport (thread_Settings *mSettings) {
-    ReportHeader *reporthdr = mSettings->reporthdr;
-    ReporterData *data = NULL;
+void InitConnectionReport (struct thread_Settings *mSettings) {
+    struct ReportHeader *reporthdr = mSettings->reporthdr;
+    struct ReporterData *data = NULL;
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Init connection report %p", reporthdr);
 #endif
@@ -568,7 +567,7 @@ void InitConnectionReport (thread_Settings *mSettings) {
 	 * We don't have a Data Report structure in which to hang
 	 * the connection report so allocate a minimal one
 	 */
-	reporthdr = calloc( sizeof(ReportHeader), sizeof(char*) );
+	reporthdr = calloc( sizeof(struct ReportHeader), sizeof(char*) );
 	if (reporthdr == NULL ) {
 	    FAIL(1, "Out of Memory!!\n", mSettings);
 	}
@@ -609,9 +608,9 @@ void InitConnectionReport (thread_Settings *mSettings) {
 }
 
 // Read the actual socket window size data
-void UpdateConnectionReport(thread_Settings *mSettings, ReportHeader *reporthdr) {
+void UpdateConnectionReport(struct thread_Settings *mSettings, struct ReportHeader *reporthdr) {
     if (reporthdr != NULL) {
-        ReporterData *data = &reporthdr->report;
+        struct ReporterData *data = &reporthdr->report;
 	data->info.transferID = mSettings->mSock;
 	if (mSettings && (mSettings->mSock > 0)) {
 	    data->connection.winsize = getsock_tcp_windowsize(mSettings->mSock, \
@@ -625,7 +624,7 @@ void UpdateConnectionReport(thread_Settings *mSettings, ReportHeader *reporthdr)
     }
 }
 
-void PostReport (ReportHeader *reporthdr) {
+void PostReport (struct ReportHeader *reporthdr) {
 #ifdef HAVE_THREAD_DEBUG
     thread_debug( "Post report %p (0x%X)", reporthdr, reporthdr->report.type);
 #endif
@@ -655,14 +654,14 @@ void PostReport (ReportHeader *reporthdr) {
  * be as simple and fast as possible as it gets called for
  * every "packet".
  */
-void ReportPacket( ReportHeader* agent, ReportStruct *packet ) {
+void ReportPacket( struct ReportHeader* agent, struct ReportStruct *packet ) {
     if ( agent != NULL ) {
 #ifdef HAVE_THREAD_DEBUG
 	if (packet->packetID < 0) {
 	  thread_debug("Reporting last packet for %p  qdepth=%d", (void *) agent, getcount_packetring(agent->packetring));
 	}
 #endif
-        enqueue_packetring(agent->packetring, packet, 0);
+        enqueue_packetring(agent->packetring, packet);
 #ifndef HAVE_THREAD
         /*
          * Process the report in this thread
@@ -676,9 +675,9 @@ void ReportPacket( ReportHeader* agent, ReportStruct *packet ) {
  * CloseReport is called by a transfer agent to finalize
  * the report and signal transfer is over.
  */
-void CloseReport(ReportHeader *agent, ReportStruct *finalpacket) {
+void CloseReport(struct ReportHeader *agent, struct ReportStruct *finalpacket) {
     if ( agent != NULL) {
-	ReportStruct packet;
+	struct ReportStruct packet;
         /*
          * Using PacketID of -1 ends reporting
          * It pushes a "special packet" through
@@ -698,7 +697,7 @@ void CloseReport(ReportHeader *agent, ReportStruct *finalpacket) {
  * in the report. Calls to GetReport will no longer be
  * filled
  */
-void EndReport( ReportHeader *agent ) {
+void EndReport( struct ReportHeader *agent ) {
     if ( agent != NULL ) {
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug( "Traffic thread awaiting reporter to be done with %p", (void *)agent);
@@ -726,8 +725,8 @@ void EndReport( ReportHeader *agent ) {
  * to get the final stats generated by the reporterthread
  * so make sure the reporter thread is indeed done
  */
-Transfer_Info *GetReport( ReportHeader *agent ) {
-    Transfer_Info *final = NULL;
+struct TransferInfo *GetReport( struct ReportHeader *agent ) {
+    struct TransferInfo *final = NULL;
     if ( agent != NULL ) {
         EndReport(agent);
         final = &agent->report.info;
@@ -739,17 +738,17 @@ Transfer_Info *GetReport( ReportHeader *agent ) {
  * ReportSettings will generate a summary report for
  * settings being used with Listeners or Clients
  */
-ReportHeader *ReportSettings( thread_Settings *agent ) {
-    ReportHeader *reporthdr = NULL;
+struct ReportHeader *ReportSettings( struct thread_Settings *agent ) {
+    struct ReportHeader *reporthdr = NULL;
     if ( isSettingsReport( agent ) ) {
 	/*
 	 * Populate and create a new settings report
 	 */
-	if ((reporthdr = ( ReportHeader *) calloc(sizeof(ReportHeader), sizeof(char*)))) {
+	if ((reporthdr = ( struct ReportHeader *) calloc(sizeof(struct ReportHeader), sizeof(char*)))) {
 #ifdef HAVE_THREAD_DEBUG
 	    thread_debug("Init settings report %p", reporthdr);
 #endif
-	    ReporterData *data = &reporthdr->report;
+	    struct ReporterData *data = &reporthdr->report;
 	    data->info.transferID = agent->mSock;
 	    data->info.groupID = -1;
 	    data->mHost = agent->mHost;
@@ -794,21 +793,21 @@ ReportHeader *ReportSettings( thread_Settings *agent ) {
  * statistics as reported by the server on the client
  * side.
  */
-void ReportServerUDP( thread_Settings *agent, server_hdr *server ) {
+void ReportServerUDP( struct thread_Settings *agent, struct server_hdr *server ) {
     unsigned int flags = ntohl(server->base.flags);
     // printf("Server flags = 0x%X\n", flags);
     if (isServerReport(agent) && ((flags & HEADER_VERSION1) != 0)) {
 	/*
 	 * Create in one big chunk
 	 */
-	ReportHeader *reporthdr = calloc( sizeof(ReportHeader), sizeof(char*));
-	Transfer_Info *stats = &reporthdr->report.info;
+	struct ReportHeader *reporthdr = calloc( sizeof(struct ReportHeader), sizeof(char*));
+	struct TransferInfo *stats = &reporthdr->report.info;
 
 	if ( !reporthdr ) {
 	    FAIL(1, "Out of Memory!!\n", agent);
 	}
 #ifdef HAVE_THREAD_DEBUG
-	thread_debug("Init server relay report %p size %ld\n", (void *)reporthdr, sizeof(ReportHeader));
+	thread_debug("Init server relay report %p size %ld\n", (void *)reporthdr, sizeof(struct ReportHeader));
 #endif
 
 	stats->transferID = agent->mSock;
@@ -927,7 +926,7 @@ static inline void apply_consumption_detector(void) {
  * This function is called only when the reporter thread
  * This function is the loop that the reporter thread processes
  */
-void reporter_spawn( thread_Settings *thread ) {
+void reporter_spawn( struct thread_Settings *thread ) {
 #ifdef HAVE_THREAD_DEBUG
     thread_debug( "Reporter thread started");
 #endif
@@ -959,7 +958,7 @@ void reporter_spawn( thread_Settings *thread ) {
 
       again:
         if ( ReportRoot != NULL ) {
-            ReportHeader *tmp = ReportRoot;
+            struct ReportHeader *tmp = ReportRoot;
 	    // Report process report returns true
 	    // if the report header is done and needs
 	    // to be freed.  The common case will return false
@@ -975,7 +974,7 @@ void reporter_spawn( thread_Settings *thread ) {
                     ReportRoot = tmp->next;
                 } else {
                     // new reports added
-                    ReportHeader *itr = ReportRoot;
+                    struct ReportHeader *itr = ReportRoot;
                     while ( itr->next != tmp ) {
                         itr = itr->next;
                     }
@@ -1014,7 +1013,7 @@ void reporter_spawn( thread_Settings *thread ) {
 /*
  * Used for single threaded reporting
  */
-void process_report ( ReportHeader *report ) {
+void process_report ( struct ReportHeader *report ) {
     if ( report != NULL ) {
         if ( reporter_process_report( report ) ) {
 	    if (report->report.info.latency_histogram) {
@@ -1028,7 +1027,7 @@ void process_report ( ReportHeader *report ) {
     }
 }
 
-static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *packet) {
+static int condprint_interval_reports (struct ReportHeader *reporthdr, struct ReportStruct *packet) {
     int timeslot_event = 0;
     // Print a report if packet time exceeds the next report interval time,
     // Also signal to the caller to move to the next report (or packet ring)
@@ -1037,8 +1036,8 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
         // In the (hopefully unlikely event) the reporter fell behind
         // ouput the missed reports to catch up
         // output_missed_reports(&reporthdr->report, packet);
-	ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
-	ReporterData *bidirstats = (reporthdr->bidirreport ? &reporthdr->bidirreport->report : NULL);
+	struct ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
+	struct ReporterData *bidirstats = (reporthdr->bidirreport ? &reporthdr->bidirreport->report : NULL);
 	WARN(!*reporthdr->output_handler, "Transfer output handler is not set:");
 	(*reporthdr->output_handler)(&reporthdr->report, sumstats, bidirstats, 0);
 	TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
@@ -1071,7 +1070,7 @@ static int condprint_interval_reports (ReportHeader *reporthdr, ReportStruct *pa
 /*
  * Process reports starting with "reporthdr"
  */
-int reporter_process_report ( ReportHeader *reporthdr ) {
+int reporter_process_report ( struct ReportHeader *reporthdr ) {
     int need_free = 0;
 
     // Recursively process reports
@@ -1085,7 +1084,7 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 	    // settings reports. Clean all of this up
 	    // with a c++ based reporter implementation
 	    // and live with it for now
-            ReportHeader *tmp = reporthdr->next;
+            struct ReportHeader *tmp = reporthdr->next;
             reporthdr->next = reporthdr->next->next;
 #ifdef HAVE_THREAD_DEBUG
 	    thread_debug( "Remove %p from reporter job queue in rpr", (void *) tmp);
@@ -1133,9 +1132,9 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
         // becoming a CPU bound test vs a network i/o bound test
 	apply_consumption_detector();
         // If there are more packets to process then handle them
-	ReportStruct *packet = NULL;
+	struct ReportStruct *packet = NULL;
 	int timeslot_event = 0;
-        while (!timeslot_event && (packet = dequeue_packetring(reporthdr->packetring, 0))) {
+        while (!timeslot_event && (packet = dequeue_packetring(reporthdr->packetring))) {
 	    // Check for a very first reported packet that needs to be summed
 	    // This has to be done in the reporter thread as these
 	    // reports are shared by multiple traffic threads
@@ -1186,8 +1185,8 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
 		// output final reports
 		reporthdr->report.TotalLen += packet->packetLen;
 		reporthdr->report.packetTime=packet->packetTime;
-		ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
-		ReporterData *bidirstats = (reporthdr->bidirreport ? &reporthdr->bidirreport->report : NULL);
+		struct ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
+		struct ReporterData *bidirstats = (reporthdr->bidirreport ? &reporthdr->bidirreport->report : NULL);
 		(*reporthdr->output_handler)(&reporthdr->report, sumstats, bidirstats, 1);
 		// Thread is done with the packet ring, signal back to the traffic thread
 		// which will proceed from the EndReport wait, this must be the last thing done
@@ -1219,7 +1218,7 @@ int reporter_process_report ( ReportHeader *reporthdr ) {
  */
 #define L2DROPFILTERCOUNTER 100
 
-static inline void reporter_handle_packet_pps(ReporterData *data, Transfer_Info *stats) {
+static inline void reporter_handle_packet_pps(struct ReporterData *data, struct TransferInfo *stats) {
     data->cntDatagrams++;
     stats->IPGsum += TimeDifference(data->packetTime, data->IPGstart);
     stats->IPGcnt++;
@@ -1227,7 +1226,7 @@ static inline void reporter_handle_packet_pps(ReporterData *data, Transfer_Info 
     data->IPGstart = data->packetTime;
 }
 
-static inline void reporter_handle_packet_udp_transit(ReporterData *data, Transfer_Info *stats, ReportStruct *packet) {
+static inline void reporter_handle_packet_udp_transit(struct ReporterData *data, struct TransferInfo *stats, struct ReportStruct *packet) {
     // Transit or latency updates done inline below
     double transit;
     transit = TimeDifference(packet->packetTime, packet->sentTime);
@@ -1294,7 +1293,7 @@ static inline void reporter_handle_packet_udp_transit(ReporterData *data, Transf
     stats->transit.lastTransit = transit;
 }
 
-static inline void reporter_handle_packet_isochronous(ReporterData *data, Transfer_Info *stats, ReportStruct *packet) {
+static inline void reporter_handle_packet_isochronous(struct ReporterData *data, struct TransferInfo *stats, struct ReportStruct *packet) {
     // printf("fid=%lu bs=%lu remain=%lu\n", packet->frameID, packet->burstsize, packet->remaining);
     if (packet->frameID && packet->burstsize && packet->remaining) {
 	int framedelta=0;
@@ -1340,8 +1339,8 @@ static inline void reporter_handle_packet_isochronous(ReporterData *data, Transf
     }
 }
 
-inline void reporter_handle_packet_server_tcp(ReportHeader *reporthdr, ReportStruct *packet) {
-    Transfer_Info *stats = &reporthdr->report.info;
+inline void reporter_handle_packet_server_tcp(struct ReportHeader *reporthdr, struct ReportStruct *packet) {
+    struct TransferInfo *stats = &reporthdr->report.info;
     if (packet->packetLen > 0) {
 	int bin;
 	// mean min max tests
@@ -1355,9 +1354,9 @@ inline void reporter_handle_packet_server_tcp(ReportHeader *reporthdr, ReportStr
     }
 }
 
-inline void reporter_handle_packet_server_udp(ReportHeader *reporthdr, ReportStruct *packet) {
-    ReporterData *data = &reporthdr->report;
-    Transfer_Info *stats = &reporthdr->report.info;
+inline void reporter_handle_packet_server_udp(struct ReportHeader *reporthdr, struct ReportStruct *packet) {
+    struct ReporterData *data = &reporthdr->report;
+    struct TransferInfo *stats = &reporthdr->report.info;
 
     data->packetTime = packet->packetTime;
     stats->socket = packet->socket;
@@ -1411,9 +1410,9 @@ inline void reporter_handle_packet_server_udp(ReportHeader *reporthdr, ReportStr
     reporter_handle_packet_isochronous(data, stats, packet);
 }
 
-void reporter_handle_packet_client(ReportHeader *reporthdr, ReportStruct *packet) {
-    ReporterData *data = &reporthdr->report;
-    Transfer_Info *stats = &reporthdr->report.info;
+void reporter_handle_packet_client(struct ReportHeader *reporthdr, struct ReportStruct *packet) {
+    struct ReporterData *data = &reporthdr->report;
+    struct TransferInfo *stats = &reporthdr->report.info;
 
     data->packetTime = packet->packetTime;
     stats->socket = packet->socket;
@@ -1435,7 +1434,7 @@ void reporter_handle_packet_client(ReportHeader *reporthdr, ReportStruct *packet
 
 
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-static void gettcpistats (ReporterData *stats, ReporterData *sumstats, int final) {
+static void gettcpistats (struct ReporterData *stats, struct ReporterData *sumstats, int final) {
     static int cnt = 0;
     struct tcp_info tcp_internal;
     socklen_t tcp_info_length = sizeof(struct tcp_info);
@@ -1481,7 +1480,7 @@ static void gettcpistats (ReporterData *stats, ReporterData *sumstats, int final
  */
 
 // If reports were missed, catch up now
-static inline void output_missed_reports(ReporterData *stats, ReportStruct *packet) {
+static inline void output_missed_reports(struct ReporterData *stats, struct ReportStruct *packet) {
     while ((stats->intervalTime.tv_sec != 0 || \
 	    stats->intervalTime.tv_usec != 0) && \
 	   TimeDifference(stats->nextTime, stats->packetTime ) < 0 ) {
@@ -1489,8 +1488,8 @@ static inline void output_missed_reports(ReporterData *stats, ReportStruct *pack
 	stats->info.endTime = TimeDifference( stats->nextTime, stats->startTime );
 	TimeAdd(stats->nextTime, stats->intervalTime);
 	if (TimeDifference(stats->nextTime, stats->packetTime) < 0) {
-	    ReporterData emptystats;
-	    memset(&emptystats, 0, sizeof(ReporterData));
+	    struct ReporterData emptystats;
+	    memset(&emptystats, 0, sizeof(struct ReporterData));
 	    emptystats.info.startTime = stats->info.startTime;
 	    emptystats.info.endTime = stats->info.endTime;
 	    emptystats.info.mFormat = stats->info.mFormat;
@@ -1505,11 +1504,11 @@ static inline void output_missed_reports(ReporterData *stats, ReportStruct *pack
     }
 }
 // If reports were missed, catch up now
-static inline void output_missed_multireports(ReporterData *stats, ReportStruct *packet) {
+static inline void output_missed_multireports(struct ReporterData *stats, struct ReportStruct *packet) {
     output_missed_reports(stats, packet);
 }
 
-static inline void set_endtime(ReporterData *stats, int final) {
+static inline void set_endtime(struct ReporterData *stats, int final) {
   // There is a corner case when the first packet is also the last where the start time (which comes
   // from app level syscall) is greater than the packetTime (which come for kernel level SO_TIMESTAMP)
   // For this case set the start and end time to both zero.
@@ -1523,7 +1522,7 @@ static inline void set_endtime(ReporterData *stats, int final) {
 }
 
 // Actions required after an interval report has been outputted
-static inline void reset_transfer_stats(ReporterData *stats) {
+static inline void reset_transfer_stats(struct ReporterData *stats) {
     stats->info.startTime = stats->info.endTime;
     stats->lastOutofOrder = stats->cntOutofOrder;
     if (stats->info.cntError < 0) {
@@ -1579,11 +1578,11 @@ static inline void reset_transfer_stats(ReporterData *stats) {
     }
 }
 
-static inline void reset_transfer_stats_bidir(ReporterData *stats) {
+static inline void reset_transfer_stats_bidir(struct ReporterData *stats) {
     stats->info.startTime = stats->info.endTime;
     stats->lastTotal = stats->TotalLen;
 }
-static inline void reset_transfer_stats_client_tcp(ReporterData *stats) {
+static inline void reset_transfer_stats_client_tcp(struct ReporterData *stats) {
     stats->info.startTime = stats->info.endTime;
     stats->lastTotal = stats->TotalLen;
     stats->info.sock_callstats.write.WriteCnt = 0;
@@ -1593,7 +1592,7 @@ static inline void reset_transfer_stats_client_tcp(ReporterData *stats) {
     stats->info.sock_callstats.write.up_to_date = 0;
 #endif
 }
-static inline void reset_transfer_stats_client_udp(ReporterData *stats) {
+static inline void reset_transfer_stats_client_udp(struct ReporterData *stats) {
     stats->info.startTime = stats->info.endTime;
     stats->lastTotal = stats->TotalLen;
     stats->info.sock_callstats.write.WriteCnt = 0;
@@ -1604,7 +1603,7 @@ static inline void reset_transfer_stats_client_udp(ReporterData *stats) {
     stats->info.IPGcnt = 0;
     stats->info.IPGsum = 0;
 }
-static inline void reset_transfer_stats_server_tcp(ReporterData *stats) {
+static inline void reset_transfer_stats_server_tcp(struct ReporterData *stats) {
     int ix;
     stats->info.startTime = stats->info.endTime;
     stats->lastTotal = stats->TotalLen;
@@ -1613,7 +1612,7 @@ static inline void reset_transfer_stats_server_tcp(ReporterData *stats) {
 	stats->info.sock_callstats.read.bins[ix] = 0;
     }
 }
-static inline void reset_transfer_stats_server_udp(ReporterData *stats) {
+static inline void reset_transfer_stats_server_udp(struct ReporterData *stats) {
     // Reset the enhanced stats for the next report interval
     stats->info.startTime = stats->info.endTime;
     stats->lastTotal = stats->TotalLen;
@@ -1639,7 +1638,7 @@ static inline void reset_transfer_stats_server_udp(ReporterData *stats) {
 }
 
 // These are the output handlers that get the reports ready and then prints them
-static void output_transfer_report_server_udp(ReporterData *stats, ReporterData *sumstats, ReporterData *bidirstats, int final) {
+static void output_transfer_report_server_udp(struct ReporterData *stats, struct ReporterData *sumstats, struct ReporterData *bidirstats, int final) {
     set_endtime(stats, final);
     if (sumstats) {
 	sumstats->cntOutofOrder += stats->cntOutofOrder - stats->lastOutofOrder;
@@ -1692,7 +1691,7 @@ static void output_transfer_report_server_udp(ReporterData *stats, ReporterData 
 	reporter_print(stats, TRANSFER_REPORT, 1);
     }
 }
-static void output_transfer_sum_report_server_udp(ReporterData *stats, int final) {
+static void output_transfer_sum_report_server_udp(struct ReporterData *stats, int final) {
     set_endtime(stats,final);
     if (final) {
 	stats->info.cntOutofOrder = stats->cntOutofOrder;
@@ -1715,7 +1714,7 @@ static void output_transfer_sum_report_server_udp(ReporterData *stats, int final
 	reset_transfer_stats_server_udp(stats);
     }
 }
-static void output_transfer_sum_report_client_udp(ReporterData *stats, int final) {
+static void output_transfer_sum_report_client_udp(struct ReporterData *stats, int final) {
     set_endtime(stats,final);
     if (final) {
 	stats->info.sock_callstats.write.WriteErr = stats->info.sock_callstats.write.totWriteErr;
@@ -1731,7 +1730,7 @@ static void output_transfer_sum_report_client_udp(ReporterData *stats, int final
     }
 }
 
-static void output_transfer_report_client_udp(ReporterData *stats, ReporterData *sumstats, ReporterData *bidirstats, int final) {
+static void output_transfer_report_client_udp(struct ReporterData *stats, struct ReporterData *sumstats, struct ReporterData *bidirstats, int final) {
     set_endtime(stats,final);
     if (sumstats) {
 	sumstats->TotalLen += stats->TotalLen - stats->lastTotal;
@@ -1763,7 +1762,7 @@ static void output_transfer_report_client_udp(ReporterData *stats, ReporterData 
     }
 }
 
-static void output_transfer_report_server_tcp(ReporterData *stats, ReporterData *sumstats, ReporterData *bidirstats, int final) {
+static void output_transfer_report_server_tcp(struct ReporterData *stats, struct ReporterData *sumstats, struct ReporterData *bidirstats, int final) {
     set_endtime(stats,final);
     int ix;
     if (sumstats) {
@@ -1799,7 +1798,7 @@ static void output_transfer_report_server_tcp(ReporterData *stats, ReporterData 
     }
 }
 
-static void output_transfer_report_client_tcp(ReporterData *stats, ReporterData *sumstats, ReporterData *bidirstats, int final) {
+static void output_transfer_report_client_tcp(struct ReporterData *stats, struct ReporterData *sumstats, struct ReporterData *bidirstats, int final) {
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
     if (stats->info.mEnhanced && (stats->info.mTCP == kMode_Client))
 	gettcpistats(stats, sumstats, 0);
@@ -1838,7 +1837,7 @@ static void output_transfer_report_client_tcp(ReporterData *stats, ReporterData 
     }
 }
 
-static void output_transfer_final_report_client_tcp(ReporterData *stats) {
+static void output_transfer_final_report_client_tcp(struct ReporterData *stats) {
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
     if ((stats->info.mEnhanced && stats->info.mTCP == kMode_Client) && (!stats->info.sock_callstats.write.up_to_date))
         gettcpistats(stats, NULL, 1);
@@ -1911,7 +1910,7 @@ static void output_transfer_final_report_client_tcp(ReporterData *stats) {
 /*
  * Handles summing of threads
  */
-static void output_transfer_sum_report_client_tcp(ReporterData *stats, int final) {
+static void output_transfer_sum_report_client_tcp(struct ReporterData *stats, int final) {
     set_endtime(stats,final);
     if (final) {
 	stats->info.sock_callstats.write.WriteErr = stats->info.sock_callstats.write.totWriteErr;
@@ -1927,7 +1926,7 @@ static void output_transfer_sum_report_client_tcp(ReporterData *stats, int final
     }
 }
 
-static void output_transfer_sum_report_server_tcp(ReporterData *stats, int final) {
+static void output_transfer_sum_report_server_tcp(struct ReporterData *stats, int final) {
     set_endtime(stats,final);
     if (final) {
 	int ix;
@@ -1945,7 +1944,7 @@ static void output_transfer_sum_report_server_tcp(ReporterData *stats, int final
     }
 }
 
-static void output_transfer_bidir_report_tcp(ReporterData *stats, int final) {
+static void output_transfer_bidir_report_tcp(struct ReporterData *stats, int final) {
     set_endtime(stats,final);
     if (final) {
 	stats->info.TotalLen = stats->TotalLen;
@@ -1958,14 +1957,14 @@ static void output_transfer_bidir_report_tcp(ReporterData *stats, int final) {
     }
 }
 
-static void output_transfer_bidir_report_udp(ReporterData *stats, int final) {
+static void output_transfer_bidir_report_udp(struct ReporterData *stats, int final) {
 }
 
 /*
  * This function handles multiple format printing by sending to the
  * appropriate dispatch function
  */
-int reporter_print( ReporterData *stats, int type, int end ) {
+int reporter_print( struct ReporterData *stats, int type, int end ) {
     switch ( type ) {
         case TRANSFER_REPORT:
             statistics_reports[stats->mode]( &stats->info );
@@ -2005,7 +2004,7 @@ int reporter_print( ReporterData *stats, int type, int end ) {
 
 #define checkMSS_MTU( inMSS, inMTU ) (inMTU-40) >= inMSS  &&  inMSS >= (inMTU-80)
 
-void PrintMSS( ReporterData *stats ) {
+void PrintMSS( struct ReporterData *stats ) {
     int inMSS = getsock_tcp_mss( stats->info.transferID );
 
     if ( inMSS <= 0 ) {

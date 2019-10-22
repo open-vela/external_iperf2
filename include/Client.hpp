@@ -121,7 +121,7 @@ private:
 #else
     int mySocket;
 #endif
-    ReportHeader *myJob;
+    struct ReportHeader *myJob;
     char* mBuf;
     Timestamp mEndTime;
     Timestamp lastPacketTime;

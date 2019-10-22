@@ -59,9 +59,9 @@
 #include "Mutex.h"
 #include "Settings.hpp"
 
-    void SetSocketOptions( thread_Settings *inSettings );
+    void SetSocketOptions( struct thread_Settings *inSettings );
 
-    void SetSocketOptionsSendTimeout( thread_Settings *inSettings, int timer);
+    void SetSocketOptionsSendTimeout( struct thread_Settings *inSettings, int timer);
 
     // handle interupts
     void Sig_Interupt( int inSigno );
