@@ -49,7 +49,7 @@
 #include "Condition.h"
 #include "Thread.h"
 
-struct PacketRing * init_packetring (int count, struct Condition *awake_consumer) {
+struct PacketRing * init_packetring (int count, struct Condition *awake_consumer, struct Condition *awake_producer) {
     struct PacketRing *pr = NULL;
     if ((pr = (struct PacketRing *) calloc(1, sizeof(struct PacketRing)))) {
 	pr->data = (struct ReportStruct *) calloc(count, sizeof(struct ReportStruct));
@@ -65,7 +65,7 @@ struct PacketRing * init_packetring (int count, struct Condition *awake_consumer
     pr->consumer = 0;
     pr->maxcount = count;
     pr->awake_consumer = awake_consumer;
-    Condition_Initialize(&pr->awake_producer);
+    pr->awake_producer = awake_producer;
     pr->consumerdone = 0;
     pr->awaitcounter = 0;
     return (pr);
@@ -78,7 +78,8 @@ inline void enqueue_packetring(struct PacketRing *pr, struct ReportStruct *metap
 	// Signal the consumer thread to process a full queue
 	Condition_Signal(pr->awake_consumer);
 	// Wait for the consumer to create some queue space
-	Condition_Lock(pr->awake_producer);
+	struct Condition tmp = *(pr->awake_producer);
+	Condition_Lock(tmp);
 	pr->awaitcounter++;
 #ifdef HAVE_THREAD_DEBUG
 	{
@@ -91,8 +92,8 @@ inline void enqueue_packetring(struct PacketRing *pr, struct ReportStruct *metap
 	    }
 	}
 #endif
-	Condition_TimedWait(&pr->awake_producer, 1);
-	Condition_Unlock(pr->awake_producer);
+	Condition_TimedWait(pr->awake_producer, 1);
+	Condition_Unlock(tmp);
     }
     int writeindex;
     if ((pr->producer + 1) == pr->maxcount)
@@ -124,7 +125,7 @@ inline struct ReportStruct *dequeue_packetring(struct PacketRing *pr) {
 #ifdef HAVE_THREAD_DEBUG
       // thread_debug( "Consumer signal packet ring %p empty per %p", (void *)pr, (void *)&pr->awake_producer);
 #endif
-	Condition_Signal(&pr->awake_producer);
+	Condition_Signal(pr->awake_producer);
     }
     return packet;
 }
@@ -135,7 +136,7 @@ void free_packetring(struct PacketRing *pr) {
 #endif
     if (pr->awaitcounter > 1000) fprintf(stderr, "WARN: Reporter thread may be too slow, await counter=%d, " \
 					 "consider increasing NUM_REPORT_STRUCTS\n", pr->awaitcounter);
-    Condition_Destroy(&pr->awake_producer);
+    Condition_Destroy(pr->awake_producer);
     if (pr->data) free(pr->data);
 }
 

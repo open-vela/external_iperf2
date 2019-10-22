@@ -55,7 +55,6 @@ WriteAck::WriteAck(thread_Settings *inSettings) {
 #ifdef HAVE_THREAD_DEBUG
   thread_debug("Write ack thread started in constructor (%p) (%x/%x)", (void *) inSettings, inSettings->flags, inSettings->flags_extend);
 #endif
-  mSettings->ackring = init_packetring(100, mSettings->awake_producer);
 }
 
 WriteAck::~WriteAck() {
@@ -63,7 +62,6 @@ WriteAck::~WriteAck() {
   thread_debug("Write ack destructor (%p)", (void *) mSettings);
 #endif
   if (mSettings->ackring) {
-      Condition_Destroy(mSettings->awake_producer);
       free_packetring(mSettings->ackring);
   }
 }
