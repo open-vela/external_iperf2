@@ -80,7 +80,7 @@ extern "C" {
 #define SLOPSECS 2
 
 // server/client mode
-typedef enum ThreadMode {
+enum ThreadMode {
     kMode_Unknown = 0,
     kMode_Server,
     kMode_Client,
@@ -89,29 +89,29 @@ typedef enum ThreadMode {
     kMode_WriteAckServer,
     kMode_WriteAckClient,
     kMode_Listener
-} ThreadMode;
+};
 
 // report mode
-typedef enum ReportMode {
+enum ReportMode {
     kReport_Default = 0,
     kReport_CSV,
     //kReport_XML,
     kReport_MAXIMUM
-} ReportMode;
+};
 
 // test mode
-typedef enum TestMode {
+enum TestMode {
     kTest_Normal = 0,
     kTest_DualTest,
     kTest_TradeOff,
     kTest_Unknown
-} TestMode;
+};
 
 // rate request units
-typedef enum RateUnits {
+enum RateUnits {
     kRate_BW = 0,
     kRate_PPS
-} RateUnits;
+};
 
 #include "Reporter.h"
 
@@ -127,7 +127,7 @@ typedef enum RateUnits {
  * by either C or C++.
  */
 #define PEERBUFSIZE 80
-typedef struct thread_Settings {
+struct thread_Settings {
     // Pointers
     char*  mFileName;               // -F
     char*  mHost;                   // -c
@@ -139,9 +139,9 @@ typedef struct thread_Settings {
     char*  mIsochronousStr;         // --isochronous
     char*  mRxHistogramStr;         // --udp-histogram
     FILE*  Extractor_file;
-    ReportHeader*  reporthdr;
-    MultiHeader*   multihdr;
-    MultiHeader*   bidirhdr;
+    struct ReportHeader*  reporthdr;
+    struct MultiHeader*   multihdr;
+    struct MultiHeader*   bidirhdr;
     struct thread_Settings *runNow;
     struct thread_Settings *runNext;
     // int's
@@ -185,12 +185,12 @@ typedef struct thread_Settings {
     int flags;
     int flags_extend;
     // enums (which should be special int's)
-    ThreadMode mThreadMode;         // -s or -c
-    ReportMode mReportMode;
-    TestMode mMode;                 // -r or -d
+    enum ThreadMode mThreadMode;         // -s or -c
+    enum ReportMode mReportMode;
+    enum TestMode mMode;                 // -r or -d
     // Hopefully int64_t's
     intmax_t mUDPRate;            // -b or -u
-    RateUnits mUDPRateUnits;        // -b is either bw or pps
+    enum RateUnits mUDPRateUnits;        // -b is either bw or pps
     uintmax_t mAmount;             // -n or -t
     // doubles
     double mInterval;               // -i
@@ -232,10 +232,10 @@ typedef struct thread_Settings {
     struct timeval txholdback_timer;
     struct timeval txstart_epoch;
     struct timeval accept_time;
-    Condition awake_me;
-    Condition *awake_producer;
-    PacketRing *ackring;
-} thread_Settings;
+    struct Condition awake_me;
+    struct Condition *awake_producer;
+    struct PacketRing *ackring;
+};
 
 /*
  * Thread based flags
@@ -486,12 +486,12 @@ typedef struct thread_Settings {
  * Structures used for test messages which
  * are exchanged between the client and the Server/Listener
  */
-typedef enum MsgType {
+enum MsgType {
     CLIENTHDR = 0x1,
     CLIENTHDRACK,
     SERVERHDR,
     SERVERHDRACK
-} MsgType;
+};
 
 /*
  * Structures below will be passed as network i/o
@@ -500,30 +500,30 @@ typedef enum MsgType {
  * Align on 32 bits (4 bytes)
  */
 #pragma pack(push,4)
-typedef struct UDP_datagram {
+struct UDP_datagram {
 // used to reference the 4 byte ID number we place in UDP datagrams
 // Support 64 bit seqno on machines that support them
     uint32_t id;
     uint32_t tv_sec;
     uint32_t tv_usec;
     uint32_t id2;
-} UDP_datagram;
+};
 
-typedef struct hdr_typelen {
+struct hdr_typelen {
     int32_t type;
     int32_t length;
-} hdr_typelen;
+};
 
-typedef struct TCP_datagram {
+struct TCP_datagram {
 // used to reference write ids and timestamps in TCP payloads
-    hdr_typelen typelen;
+    struct hdr_typelen typelen;
     uint32_t id;
     uint32_t id2;
     uint32_t tv_sec;
     uint32_t tv_usec;
     uint32_t reserved1;
     uint32_t reserved2;
-} TCP_datagram;
+};
 
 
 /*
@@ -533,7 +533,7 @@ typedef struct TCP_datagram {
  * future releases for backward compatibility.
  * 1.7 has flags, numThreads, mPort, and bufferlen
  */
-typedef struct client_hdr_v1 {
+struct client_hdr_v1 {
     /*
      * flags is a bitmap for different options
      * the most significant bits are for determining
@@ -552,12 +552,12 @@ typedef struct client_hdr_v1 {
     int32_t bufferlen;
     int32_t mWinBand;
     int32_t mAmount;
-} client_hdr_v1;
+};
 
 // This is used for tests that require
 // the initial handshake
-typedef struct client_hdrext {
-    hdr_typelen typelen;
+struct client_hdrext {
+    struct hdr_typelen typelen;
     int32_t flags;
     int32_t version_u;
     int32_t version_l;
@@ -565,7 +565,7 @@ typedef struct client_hdrext {
     int32_t mRate;
     int32_t mUDPRateUnits;
     int32_t mRealtime;
-} client_hdrext;
+};
 
 
 /*
@@ -618,7 +618,7 @@ typedef struct client_hdrext {
  *
  */
 
-typedef struct UDP_isoch_payload {
+struct UDP_isoch_payload {
     uint32_t burstperiod; //period units microseconds
     uint32_t start_tv_sec;
     uint32_t start_tv_usec;
@@ -627,41 +627,41 @@ typedef struct UDP_isoch_payload {
     uint32_t burstsize;
     uint32_t remaining;
     uint32_t reserved;
-} UDP_isoch_payload;
+};
 
 // This is used for UDP tests that don't
 // require any handshake, i.e they are stateless
-typedef struct client_hdr_udp_tests {
+struct client_hdr_udp_tests {
 // for 32 bit systems, skip over this field
 // so it remains interoperable with 64 bit peers
     int16_t testflags;
     int16_t tlvoffset;
     uint32_t version_u;
     uint32_t version_l;
-} client_hdr_udp_tests;
+};
 
 
-typedef struct client_hdr_udp_isoch_tests {
-    client_hdr_udp_tests udptests;
-    UDP_isoch_payload isoch;
-} client_hdr_udp_isoch_tests;
+struct client_hdr_udp_isoch_tests {
+    struct client_hdr_udp_tests udptests;
+    struct UDP_isoch_payload isoch;
+};
 
-typedef struct client_hdr_ack {
-    hdr_typelen typelen;
+struct client_hdr_ack {
+    struct hdr_typelen typelen;
     int32_t flags;
     int32_t version_u;
     int32_t version_l;
     int32_t reserved1;
     int32_t reserved2;
-} client_hdr_ack;
+};
 
-typedef struct client_hdr {
-    client_hdr_v1 base;
+struct client_hdr {
+    struct client_hdr_v1 base;
     union {
-	client_hdrext extend;
-	client_hdr_udp_tests udp;
+	struct client_hdrext extend;
+	struct client_hdr_udp_tests udp;
     };
-} client_hdr;
+};
 
 /*
  * The server_hdr structure facilitates the server
@@ -669,7 +669,7 @@ typedef struct client_hdr {
  * It piggy_backs on the existing clear to close
  * packet.
  */
-typedef struct server_hdr_v1 {
+struct server_hdr_v1 {
     /*
      * flags is a bitmap for different options
      * the most significant bits are for determining
@@ -689,9 +689,9 @@ typedef struct server_hdr_v1 {
     int32_t datagrams;
     int32_t jitter1;
     int32_t jitter2;
-} server_hdr_v1;
+};
 
-typedef struct server_hdr_extension {
+struct server_hdr_extension {
     int32_t minTransit1;
     int32_t minTransit2;
     int32_t maxTransit1;
@@ -707,42 +707,42 @@ typedef struct server_hdr_extension {
     int32_t cntTransit;
     int32_t IPGcnt;
     int32_t IPGsum;
-} server_hdr_extension;
+};
 
   // Extension for 64bit datagram counts
-typedef struct server_hdr_extension2 {
+struct server_hdr_extension2 {
     int32_t error_cnt2;
     int32_t outorder_cnt2;
     int32_t datagrams2;
-} server_hdr_extension2;
+};
 
-typedef struct server_hdr {
-    server_hdr_v1 base;
-    server_hdr_extension extend;
-    server_hdr_extension2 extend2;
-} server_hdr;
+struct server_hdr {
+    struct server_hdr_v1 base;
+    struct server_hdr_extension extend;
+    struct server_hdr_extension2 extend2;
+};
 
 #pragma pack(pop)
 
-#define SIZEOF_UDPCLIENTMSG (sizeof(client_hdr) + sizeof(UDP_datagram))
-#define SIZEOF_TCPHDRMSG (int) ((sizeof(client_hdr) > sizeof(server_hdr)) ? (int) sizeof(client_hdr) : (int) sizeof(server_hdr))
+#define SIZEOF_UDPCLIENTMSG (sizeof(struct client_hdr) + sizeof(UDP_datagram))
+#define SIZEOF_TCPHDRMSG (int) ((sizeof(struct client_hdr) > sizeof(server_hdr)) ? (int) sizeof(struct client_hdr) : (int) sizeof(server_hdr))
 #define SIZEOF_UDPHDRMSG (int) ((SIZEOF_UDPCLIENTMSG > sizeof(server_hdr)) ? SIZEOF_UDPCLIENTMSG : sizeof(server_hdr))
 #define SIZEOF_MAXHDRMSG (int) ((SIZEOF_TCPHDRMSG > SIZEOF_UDPHDRMSG) ? SIZEOF_TCPHDRMSG : SIZEOF_UDPHDRMSG)
 
 // set to defaults
-void Settings_Initialize( thread_Settings* main );
+void Settings_Initialize( struct thread_Settings* main );
 
 // copy structure
-void Settings_Copy( thread_Settings* from, thread_Settings** into );
+void Settings_Copy( struct thread_Settings* from, struct thread_Settings** into );
 
 // free associated memory
-void Settings_Destroy( thread_Settings *mSettings );
+void Settings_Destroy( struct thread_Settings *mSettings );
 
 // parse settings from user's environment variables
-void Settings_ParseEnvironment( thread_Settings *mSettings );
+void Settings_ParseEnvironment( struct thread_Settings *mSettings );
 
 // parse settings from app's command line
-void Settings_ParseCommandLine( int argc, char **argv, thread_Settings *mSettings );
+void Settings_ParseCommandLine( int argc, char **argv, struct thread_Settings *mSettings );
 
 // convert to lower case for [KMG]bits/sec
 void Settings_GetLowerCaseArg(const char *,char *);
@@ -751,15 +751,15 @@ void Settings_GetLowerCaseArg(const char *,char *);
 void Settings_GetUpperCaseArg(const char *,char *);
 
 // generate settings for listener instance
-void Settings_GenerateListenerSettings( thread_Settings *client, thread_Settings **listener);
+void Settings_GenerateListenerSettings( struct thread_Settings *client, struct thread_Settings **listener);
 
 // generate settings for speaker instance
-void Settings_GenerateClientSettings( thread_Settings *server,
-				      thread_Settings **client,
-                                      client_hdr *hdr );
+void Settings_GenerateClientSettings( struct thread_Settings *server,
+				      struct thread_Settings **client,
+                                      struct client_hdr *hdr );
 
 // generate client header for server
-int Settings_GenerateClientHdr( thread_Settings *client, client_hdr *hdr );
+int Settings_GenerateClientHdr( struct thread_Settings *client, struct client_hdr *hdr );
 
 #ifdef __cplusplus
 } /* end extern "C" */

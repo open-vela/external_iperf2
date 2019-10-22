@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------
- * Copyright (c) 2017
+ * Copyrighta (c) 2017
  * Broadcom Corporation
  * All Rights Reserved.
  *---------------------------------------------------------------
@@ -48,7 +48,7 @@
 #ifndef HISTOGRAMC_H
 #define HISTOGRAMC_H
 
-typedef struct histogram_t {
+struct histogram {
     unsigned int id;
     unsigned int *mybins;
     unsigned int bincount;
@@ -62,14 +62,14 @@ typedef struct histogram_t {
     float units;
     double ci_lower;
     double ci_upper;
-    struct histogram_t *prev;
-} histogram_t;
+    struct histogram *prev;
+};
 
-extern histogram_t *histogram_init(unsigned int bincount, unsigned int binwidth, float offset,\
+extern struct histogram *histogram_init(unsigned int bincount, unsigned int binwidth, float offset,\
 				   float units, double ci_lower, double ci_upper, unsigned int id, char *name);
-extern void histogram_delete(histogram_t *h);
-extern int histogram_insert(histogram_t *h, float value);
-extern void histogram_clear(histogram_t *h);
-extern void histogram_add(histogram_t *to, histogram_t *from);
-extern void histogram_print(histogram_t *h, double, double, int);
+extern void histogram_delete(struct histogram *h);
+extern int histogram_insert(struct histogram *h, float value);
+extern void histogram_clear(struct histogram *h);
+extern void histogram_add(struct histogram *to, struct histogram *from);
+extern void histogram_print(struct histogram *h, double, double, int);
 #endif // HISTOGRAMC_H

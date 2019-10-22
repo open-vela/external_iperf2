@@ -659,7 +659,7 @@ void Server::write_UDP_AckFIN( ) {
 #ifdef HAVE_INT64_T
 	    flags |=  HEADER_SEQNO64B;
 #endif
-            Transfer_Info *stats = GetReport( mSettings->reporthdr );
+            struct TransferInfo *stats = GetReport( mSettings->reporthdr );
             hdr = (server_hdr*) (UDP_Hdr+1);
 	    hdr->base.flags        = htonl((long) flags);
 #ifdef HAVE_INT64_T

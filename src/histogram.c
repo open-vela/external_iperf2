@@ -48,9 +48,9 @@
 #include "headers.h"
 #include "histogram.h"
 
-histogram_t *histogram_init(unsigned int bincount, unsigned int binwidth, float offset, float units,\
+struct histogram *histogram_init(unsigned int bincount, unsigned int binwidth, float offset, float units,\
 			    double ci_lower, double ci_upper, unsigned int id, char *name) {
-    histogram_t *this = (histogram_t *) malloc(sizeof(histogram_t));
+    struct histogram *this = (struct histogram *) malloc(sizeof(struct histogram));
     this->mybins = (unsigned int *) malloc(sizeof(unsigned int) * bincount);
     this->myname = (char *) malloc(sizeof(strlen(name)));
     this->outbuf = (char *) malloc(120 + (32*bincount) + strlen(name));
@@ -75,7 +75,7 @@ histogram_t *histogram_init(unsigned int bincount, unsigned int binwidth, float 
     return this;
 }
 
-void histogram_delete(histogram_t *h) {
+void histogram_delete(struct histogram *h) {
     if (h->prev)
 	histogram_delete(h->prev);
     if (h->mybins)
@@ -86,7 +86,7 @@ void histogram_delete(histogram_t *h) {
 }
 
 // value is units seconds
-int histogram_insert(histogram_t *h, float value) {
+int histogram_insert(struct histogram *h, float value) {
     int bin;
     // calculate the bin, convert the value units from seconds to units of interest
     bin = (int) (h->units  * (value - h->offset) / h->binwidth);
@@ -104,7 +104,7 @@ int histogram_insert(histogram_t *h, float value) {
     }
 }
 
-void histogram_clear(histogram_t *h) {
+void histogram_clear(struct histogram *h) {
     memset(h->mybins, 0, (h->bincount * sizeof(unsigned int)));
     h->populationcnt = 0;
     h->cntloweroutofbounds=0;
@@ -114,14 +114,14 @@ void histogram_clear(histogram_t *h) {
     h->prev = NULL;
 }
 
-void histogram_add(histogram_t *to, histogram_t *from) {
+void histogram_add(struct histogram *to, struct histogram *from) {
     int ix;
     for (ix=0; ix < to->bincount; ix ++) {
 	to->mybins[ix] += from->mybins[ix];
     }
 }
 
-void histogram_print(histogram_t *h, double start, double end, int final) {
+void histogram_print(struct histogram *h, double start, double end, int final) {
     if (final && h->prev) {
 	histogram_clear(h->prev);
     }

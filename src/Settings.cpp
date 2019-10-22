@@ -91,9 +91,9 @@ static int noudpfin = 0;
 
 extern Mutex groupCond;
 
-void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtSettings );
+void Settings_Interpret( char option, const char *optarg, struct thread_Settings *mExtSettings );
 // apply compound settings after the command line has been fully parsed
-void Settings_ModalOptions( thread_Settings *mExtSettings );
+void Settings_ModalOptions( struct thread_Settings *mExtSettings );
 
 
 /* -------------------------------------------------------------------
@@ -237,11 +237,11 @@ const int kDefault_TCPBufLen = 128 * 1024; // TCP default read/write size
  * Initialize all settings to defaults.
  * ------------------------------------------------------------------- */
 
-void Settings_Initialize( thread_Settings *main ) {
+void Settings_Initialize( struct thread_Settings *main ) {
     // Everything defaults to zero or NULL with
     // this memset. Only need to set non-zero values
     // below.
-    memset( main, 0, sizeof(thread_Settings) );
+    memset( main, 0, sizeof(struct thread_Settings) );
     main->mSock = INVALID_SOCKET;
     main->mReportMode = kReport_Default;
     // option, defaults
@@ -287,10 +287,10 @@ void Settings_Initialize( thread_Settings *main ) {
 
 } // end Settings
 
-void Settings_Copy( thread_Settings *from, thread_Settings **into ) {
-    *into = new thread_Settings;
-    memset(*into, 0, sizeof(thread_Settings));
-    memcpy( *into, from, sizeof(thread_Settings) );
+void Settings_Copy( struct thread_Settings *from, struct thread_Settings **into ) {
+    *into = new struct thread_Settings;
+    memset(*into, 0, sizeof(struct thread_Settings));
+    memcpy( *into, from, sizeof(struct thread_Settings) );
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Copy thread settings (malloc) from/to=%p/%p report/multi/bidir %p/%p/%p", \
 		 (void *)from, (void *)*into, (void *)(*into)->reporthdr, (void *)(*into)->multihdr, (void *)(*into)->bidirhdr);
@@ -350,7 +350,7 @@ void Settings_Copy( thread_Settings *from, thread_Settings **into ) {
  * Delete memory: Does not clean up open file pointers or ptr_parents
  * ------------------------------------------------------------------- */
 
-void Settings_Destroy( thread_Settings *mSettings) {
+void Settings_Destroy( struct thread_Settings *mSettings) {
 #if HAVE_THREAD_DEBUG
     thread_debug("Free thread settings=%p", mSettings);
 #endif
@@ -369,7 +369,7 @@ void Settings_Destroy( thread_Settings *mSettings) {
 /* -------------------------------------------------------------------
  * Parses settings from user's environment variables.
  * ------------------------------------------------------------------- */
-void Settings_ParseEnvironment( thread_Settings *mSettings ) {
+void Settings_ParseEnvironment( struct thread_Settings *mSettings ) {
     char *theVariable;
 
     int i = 0;
@@ -386,7 +386,7 @@ void Settings_ParseEnvironment( thread_Settings *mSettings ) {
  * Parse settings from app's command line.
  * ------------------------------------------------------------------- */
 
-void Settings_ParseCommandLine( int argc, char **argv, thread_Settings *mSettings ) {
+void Settings_ParseCommandLine( int argc, char **argv, struct thread_Settings *mSettings ) {
     int option;
     gnu_opterr = 1; // Fail on an unrecognized command line option
     while ( (option =
@@ -408,7 +408,7 @@ void Settings_ParseCommandLine( int argc, char **argv, thread_Settings *mSetting
  * or from environment variables.
  * ------------------------------------------------------------------- */
 
-void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtSettings ) {
+void Settings_Interpret( char option, const char *optarg, struct thread_Settings *mExtSettings ) {
     char *results;
     switch ( option ) {
         case '1': // Single Client
@@ -933,7 +933,7 @@ static char * isv4_port(char *v4addr) {
 //
 //  Other things that need this are multicast socket or not,
 //  -B local bind port parsing, and when to use the default UDP offered load
-void Settings_ModalOptions( thread_Settings *mExtSettings ) {
+void Settings_ModalOptions( struct thread_Settings *mExtSettings ) {
     char *results;
     // Handle default read/write sizes based on v4, v6, UDP or TCP
     if ( !isBuflenSet( mExtSettings ) ) {
@@ -1153,14 +1153,14 @@ void Settings_GetLowerCaseArg(const char *inarg, char *outarg) {
  * Called to generate the settings to be passed to the Listener
  * instance that will handle dual testings from the client side
  * this should only return an instance if it was called on
- * the thread_Settings instance generated from the command line
+ * the struct thread_settings instance generated from the command line
  * for client side execution
  */
-void Settings_GenerateListenerSettings( thread_Settings *client, thread_Settings **listener ) {
+void Settings_GenerateListenerSettings( struct thread_Settings *client, struct thread_Settings **listener ) {
     if ( !isCompat( client ) && \
          (client->mMode == kTest_DualTest || client->mMode == kTest_TradeOff) ) {
-        *listener = new thread_Settings;
-        memcpy(*listener, client, sizeof( thread_Settings ));
+        *listener = new struct thread_Settings;
+        memcpy(*listener, client, sizeof( struct thread_Settings ));
 	setCompat((*listener));
         unsetDaemon( (*listener) );
         if ( client->mListenPort != 0 ) {
@@ -1198,8 +1198,8 @@ void Settings_GenerateListenerSettings( thread_Settings *client, thread_Settings
  * per things like dual tests.
  *
  */
-void Settings_GenerateClientSettings( thread_Settings *server,
-                                      thread_Settings **client,
+void Settings_GenerateClientSettings( struct thread_Settings *server,
+                                      struct thread_Settings **client,
                                       client_hdr *hdr ) {
     int extendflags = 0;
     if (!server || !hdr)
@@ -1207,7 +1207,7 @@ void Settings_GenerateClientSettings( thread_Settings *server,
     int flags = ntohl(hdr->base.flags);
     if ((flags & HEADER_EXTEND) != 0 ) {
 	extendflags = ntohl(hdr->extend.flags);
-	thread_Settings *fullduplex = NULL;
+	struct thread_Settings *fullduplex = NULL;
 	if (((extendflags & BIDIR) == BIDIR) ||	 \
 	    ((extendflags & REVERSE) == REVERSE)) {
 	    if ((extendflags & BIDIR) == BIDIR) {
@@ -1246,8 +1246,8 @@ void Settings_GenerateClientSettings( thread_Settings *server,
 	    }
 	}
     } else if ( (flags & HEADER_VERSION1) != 0 ) {
-        *client = new thread_Settings;
-        memcpy(*client, server, sizeof( thread_Settings ));
+        *client = new struct thread_Settings;
+        memcpy(*client, server, sizeof( struct thread_Settings ));
         setCompat( (*client) );
         (*client)->mTID = thread_zeroid();
         (*client)->mPort       = (unsigned short) ntohl(hdr->base.mPort);
@@ -1315,7 +1315,7 @@ void Settings_GenerateClientSettings( thread_Settings *server,
  *
  * Returns hdr flags set
  */
-int Settings_GenerateClientHdr( thread_Settings *client, client_hdr *hdr ) {
+int Settings_GenerateClientHdr( struct thread_Settings *client, client_hdr *hdr ) {
     uint32_t flags = 0, extendflags = 0;
     if (isPeerVerDetect(client) || (client->mMode != kTest_Normal && isBWSet(client))) {
 	flags |= HEADER_EXTEND;

@@ -102,7 +102,7 @@ private:
     int mySocket;
     int myDropSocket;
 #endif
-    ReportHeader *myJob;
+    struct ReportHeader *myJob;
 
 #if HAVE_DECL_SO_TIMESTAMP
     // Structures needed for recvmsg

@@ -54,7 +54,7 @@
 extern "C" {
 #endif
 
-typedef struct ReportStruct {
+struct ReportStruct {
     intmax_t packetID;
     intmax_t packetLen;
     struct timeval packetTime;
@@ -71,9 +71,9 @@ typedef struct ReportStruct {
     intmax_t burstsize;
     intmax_t burstperiod;
     intmax_t remaining;
-} ReportStruct;
+};
 
-typedef struct PacketRing {
+struct PacketRing {
   // producer and consumer
   // must be an atomic type, e.g. int
   // otherwise reads/write can be torn
@@ -82,24 +82,24 @@ typedef struct PacketRing {
   int maxcount;
   int consumerdone;
   int awaitcounter;
-  ReportStruct metapacket;
+  struct ReportStruct metapacket;
 
   // Use a condition variables
   // o) await_consumer - producer waits for the consumer thread to
   //    make space or end (signaled by the consumer)
   // o) awake_consumer - signal the consumer thread to to run
   //    (signaled by the producer)
-  Condition await_consumer;
-  Condition *awake_consumer;
-  ReportStruct *data;
-} PacketRing;
+  struct Condition await_consumer;
+  struct Condition *awake_consumer;
+  struct ReportStruct *data;
+};
 
-extern PacketRing * init_packetring (int count, Condition *awake_consumer);
-extern void enqueue_packetring(PacketRing *pr, ReportStruct *metapacket, int post_cond_signal);
-extern ReportStruct *dequeue_packetring(PacketRing *pr, int tiemout);
-extern void free_packetring(PacketRing *pr);
+extern struct PacketRing * init_packetring (int count, struct Condition *awake_consumer);
+extern void enqueue_packetring(struct PacketRing *pr, struct ReportStruct *metapacket);
+extern struct ReportStruct *dequeue_packetring(struct PacketRing * pr);
+extern void free_packetring(struct PacketRing *pr);
 #ifdef HAVE_THREAD_DEBUG
-extern int getcount_packetring(PacketRing *pr);
+extern int getcount_packetring(struct PacketRing *pr);
 #endif
 
 #ifdef __cplusplus

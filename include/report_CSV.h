@@ -54,9 +54,9 @@
 #ifndef REPORT_CSV_H
 #define REPORT_CSV_H
 
-void CSV_stats( Transfer_Info *stats );
-void *CSV_peer( Connection_Info *stats, int ID);
-void CSV_serverstats( Connection_Info *conn, Transfer_Info *stats );
+void CSV_stats(struct TransferInfo *stats );
+void *CSV_peer(struct ConnectionInfo *stats, int ID);
+void CSV_serverstats(struct ConnectionInfo *conn, struct TransferInfo *stats );
 
 
 #endif // REPORT_CSV_H

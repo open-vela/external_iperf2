@@ -57,7 +57,7 @@
 #include "Locale.h"
 
 
-void CSV_stats( Transfer_Info *stats ) {
+void CSV_stats(struct TransferInfo *stats) {
     // $TIMESTAMP,$ID,$INTERVAL,$BYTE,$SPEED,$JITTER,$LOSS,$PACKET,$%LOSS
     intmax_t speed = (intmax_t) ((stats->TotalLen > 0) ? (((double)stats->TotalLen * 8.0) / (stats->endTime -  stats->startTime)) : 0);
     char timestamp[160];
@@ -110,7 +110,7 @@ void CSV_stats( Transfer_Info *stats ) {
     }
 }
 
-void *CSV_peer( Connection_Info *stats, int ID ) {
+void *CSV_peer(struct ConnectionInfo *stats, int ID) {
 
     // copy the inet_ntop into temp buffers, to avoid overwriting
     char local_addr[ REPORT_ADDRLEN ];
@@ -159,7 +159,7 @@ void *CSV_peer( Connection_Info *stats, int ID ) {
     return buf;
 }
 
-void CSV_serverstats( Connection_Info *conn, Transfer_Info *stats ) {
+void CSV_serverstats(struct ConnectionInfo *conn, struct TransferInfo *stats ) {
     stats->reserved_delay = CSV_peer( conn, stats->transferID );
     stats->free = 1;
     CSV_stats( stats );

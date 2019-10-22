@@ -58,9 +58,9 @@
 #include "histogram.h"
 #include "packet_ring.h"
 
+// forward declarations found in Settings.hpp
 struct thread_Settings;
 struct server_hdr;
-
 #include "Settings.hpp"
 
 #define NUM_REPORT_STRUCTS 5000
@@ -75,12 +75,14 @@ struct server_hdr;
 extern "C" {
 #endif
 
+extern struct Condition ReportCond;
+
 /*
  *
  * Used for end/end latency measurements
  *
  */
-typedef struct TransitStats {
+struct TransitStats {
     double maxTransit;
     double minTransit;
     double sumTransit;
@@ -96,18 +98,18 @@ typedef struct TransitStats {
     double totmeanTransit;
     double totm2Transit;
     double totvdTransit;
-} TransitStats;
+};
 
 #define TCPREADBINCOUNT 8
-typedef struct ReadStats {
+struct ReadStats {
     int cntRead;
     int totcntRead;
     int bins[TCPREADBINCOUNT];
     int totbins[TCPREADBINCOUNT];
     int binsize;
-} ReadStats;
+};
 
-typedef struct WriteStats {
+struct WriteStats {
     int WriteCnt;
     int WriteErr;
     int TCPretry;
@@ -119,9 +121,9 @@ typedef struct WriteStats {
     int rtt;
     double meanrtt;
     int up_to_date;
-} WriteStats;
+};
 
-typedef struct IsochStats {
+struct IsochStats {
     int mFPS; //frames per second
     double mMean; //variable bit rate mean
     double mVariance; //vbr variance
@@ -132,7 +134,7 @@ typedef struct IsochStats {
     unsigned int mBurstInterval;
     unsigned int mBurstIPG; //IPG of packets within the burst
     int frameID;
-} IsochStats;
+};
 
 /*
  * This struct contains all important information from the sending or
@@ -142,14 +144,14 @@ typedef struct IsochStats {
 #define L2LENERR   0x02
 #define L2CSUMERR  0x04
 
-typedef enum WriteErrType {
+enum WriteErrType {
     WriteNoErr  = 0,
     WriteErrAccount,
     WriteErrFatal,
     WriteErrNoAccount,
-} WriteErrType;
+};
 
-typedef struct L2Stats {
+struct L2Stats {
     intmax_t cnt;
     intmax_t unknown;
     intmax_t udpcsumerr;
@@ -158,7 +160,7 @@ typedef struct L2Stats {
     intmax_t tot_unknown;
     intmax_t tot_udpcsumerr;
     intmax_t tot_lengtherr;
-} L2Stats;
+};
 
 
 /*
@@ -172,12 +174,12 @@ typedef struct L2Stats {
 #define    MULTIPLE_REPORT       0x00000010
 #define    BIDIR_REPORT          0x00000020
 
-typedef union {
-    ReadStats read;
-    WriteStats write;
-} SendReadStats;
+union SendReadStats {
+    struct ReadStats read;
+    struct WriteStats write;
+};
 
-typedef struct Transfer_Info {
+struct TransferInfo {
     void *reserved_delay;
     int transferID;
     int groupID;
@@ -187,8 +189,8 @@ typedef struct Transfer_Info {
     intmax_t IPGcnt;
     intmax_t IPGcnttot;
     int socket;
-    TransitStats transit;
-    SendReadStats sock_callstats;
+    struct TransitStats transit;
+    union SendReadStats sock_callstats;
     // Hopefully int64_t's
     uintmax_t TotalLen;
     double jitter;
@@ -203,15 +205,15 @@ typedef struct Transfer_Info {
     char   mUDP;
     char   mTCP;
     int    free;  // A  misnomer - used by summing for a traffic thread counter
-    histogram_t *latency_histogram;
-    L2Stats l2counts;
-    IsochStats isochstats;
+    struct histogram *latency_histogram;
+    struct L2Stats l2counts;
+    struct IsochStats isochstats;
     char   mIsochronous;                 // -e
-    TransitStats frame;
-    histogram_t *framelatency_histogram;
-} Transfer_Info;
+    struct TransitStats frame;
+    struct histogram *framelatency_histogram;
+};
 
-typedef struct Connection_Info {
+struct ConnectionInfo {
     iperf_sockaddr peer;
     Socklen_t size_peer;
     iperf_sockaddr local;
@@ -226,9 +228,9 @@ typedef struct Connection_Info {
     int flags;
     int flags_extend;
     char mFormat;
-} Connection_Info;
+};
 
-typedef struct ReporterData {
+struct ReporterData {
     char*  mHost;                   // -c
     char*  mLocalhost;              // -B
     char*  mIfrname;
@@ -250,7 +252,7 @@ typedef struct ReporterData {
     int mMSS;                       // -M
     int mTCPWin;                    // -w
     intmax_t mUDPRate;            // -b or -u
-    RateUnits mUDPRateUnits;        // -b is either bw or pps
+    enum RateUnits mUDPRateUnits;        // -b is either bw or pps
     /*   flags is a BitMask of old bools
         bool   mBufLenSet;              // -l
         bool   mCompat;                 // -C
@@ -268,93 +270,87 @@ typedef struct ReporterData {
     int flags;
     int flags_extend;
     // enums (which should be special int's)
-    ThreadMode mThreadMode;         // -s or -c
-    ReportMode mode;
+    enum ThreadMode mThreadMode;         // -s or -c
+    enum ReportMode mode;
 
     // doubles
     // shorts
     unsigned short mPort;           // -p
     // structs or miscellaneous
-    Transfer_Info info;
-    Connection_Info connection;
+    struct TransferInfo info;
+    struct ConnectionInfo connection;
     struct timeval startTime;
     struct timeval packetTime;
     struct timeval nextTime;
     struct timeval intervalTime;
     struct timeval IPGstart;
     struct timeval clientStartTime;
-    IsochStats isochstats;
+    struct IsochStats isochstats;
     double TxSyncInterval;
     unsigned int FQPacingRate;
-} ReporterData;
+};
 
-
-typedef struct ReporterMutex {
-    Condition await_reporter;
+struct ReporterMutex {
+    struct Condition await_reporter;
     int reporter_running;
-} ReporterMutex;
+};
 
-typedef struct MultiHeader {
+struct MultiHeader {
     int groupID;
     int threads;
-    Condition multibarrier_cond;
+    struct Condition multibarrier_cond;
     int multibarrier_cnt;
     Mutex refcountlock;
     int refcount;
     int maxrefcount;
     int sockfd;
-    ReporterData report;
+    struct ReporterData report;
     void (*output_sum_handler) (struct ReporterData *stats, int final);
-} MultiHeader;
+};
 
-typedef struct ReportHeader {
-    ReporterData report;
+struct ReportHeader {
+    struct ReporterData report;
     // function pointer for per packet processing
-    void (*packet_handler) (struct ReportHeader *report, ReportStruct *packet);
-    void (*output_handler) (struct ReporterData *stats, ReporterData *sumstats, ReporterData *bidirstats, int final);
+    void (*packet_handler) (struct ReportHeader *report, struct ReportStruct *packet);
+    void (*output_handler) (struct ReporterData *stats, struct ReporterData *sumstats, struct ReporterData *bidirstats, int final);
     void (*output_sum_handler) (struct ReporterData *stats, int final);
     void (*output_bidir_handler) (struct ReporterData *stats, int final);
-    MultiHeader *multireport;
-    MultiHeader *bidirreport;
+    struct MultiHeader *multireport;
+    struct MultiHeader *bidirreport;
     struct ReportHeader *next;
     int reporter_thread_suspends; // used to detect CPU bound systems
-    PacketRing *packetring;
-} ReportHeader;
+    struct PacketRing *packetring;
+};
 
-typedef void* (* report_connection)( Connection_Info*, int );
-typedef void (* report_settings)( ReporterData* );
-typedef void (* report_statistics)( Transfer_Info* );
-typedef void (* report_serverstatistics)( Connection_Info*, Transfer_Info* );
+typedef void* (* report_connection)( struct ConnectionInfo*, int );
+typedef void (* report_settings)( struct ReporterData* );
+typedef void (* report_statistics)( struct TransferInfo* );
+typedef void (* report_serverstatistics)( struct ConnectionInfo *, struct TransferInfo* );
 
-MultiHeader* InitSumReport( struct thread_Settings *agent, int inID);
-MultiHeader* InitBiDirReport( struct thread_Settings *agent, int inID);
+struct MultiHeader* InitSumReport( struct thread_Settings *agent, int inID);
+struct MultiHeader* InitBiDirReport( struct thread_Settings *agent, int inID);
 void InitReport( struct thread_Settings *agent );
 void InitConnectionReport( struct thread_Settings *agent );
-void UpdateConnectionReport(struct thread_Settings *mSettings, ReportHeader *reporthdr);
-void BarrierClient(MultiHeader *agent, int timeflag);
-void PostReport(ReportHeader *agent);
-void ReportPacket( ReportHeader *agent, ReportStruct *packet );
-void CloseReport( ReportHeader *agent,  ReportStruct *packet);
-void EndReport( ReportHeader *agent );
-void FreeReport(ReportHeader *agent);
-Transfer_Info* GetReport( ReportHeader *agent );
-void ReportServerUDP( struct thread_Settings *agent, struct server_hdr *server );
-ReportHeader *ReportSettings( struct thread_Settings *agent );
-void ReportConnections( struct thread_Settings *agent );
+void UpdateConnectionReport(struct thread_Settings *mSettings, struct ReportHeader *reporthdr);
+void BarrierClient(struct MultiHeader *agent, int timeflag);
+void PostReport(struct ReportHeader *agent);
+void ReportPacket(struct ReportHeader *agent, struct ReportStruct *packet);
+void CloseReport(struct ReportHeader *agent,  struct ReportStruct *packet);
+void EndReport(struct ReportHeader *agent);
+void FreeReport(struct ReportHeader *agent);
+struct TransferInfo* GetReport(struct ReportHeader *agent);
+void ReportServerUDP(struct thread_Settings *agent, struct server_hdr *server);
+struct ReportHeader *ReportSettings(struct thread_Settings *agent);
+void ReportConnections(struct thread_Settings *agent );
 void reporter_peerversion (struct thread_Settings *inSettings, int upper, int lower);
 
-extern ReporterMutex reporter_state;
-
-extern void UpdateMultiHdrRefCounter(MultiHeader *reporthdr, int val, int sockfd);
+extern struct ReporterMutex reporter_state;
+extern void UpdateMultiHdrRefCounter(struct MultiHeader *reporthdr, int val, int sockfd);
 
 extern report_connection connection_reports[];
-
 extern report_settings settings_reports[];
-
 extern report_statistics statistics_reports[];
-
 extern report_serverstatistics serverstatistics_reports[];
-
 extern report_statistics multiple_reports[];
 
 #define SNBUFFERSIZE 120

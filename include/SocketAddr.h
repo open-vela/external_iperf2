@@ -60,8 +60,8 @@
 extern "C" {
 #endif
 /* ------------------------------------------------------------------- */
-    void SockAddr_localAddr( thread_Settings *inSettings );
-    void SockAddr_remoteAddr( thread_Settings *inSettings );
+    void SockAddr_localAddr( struct thread_Settings *inSettings );
+    void SockAddr_remoteAddr( struct thread_Settings *inSettings );
 
     void SockAddr_setHostname( const char* inHostname,
                                iperf_sockaddr *inSockAddr,
@@ -98,7 +98,7 @@ extern "C" {
 
     void SockAddr_zeroAddress( iperf_sockaddr *inSockAddr );
     void SockAddr_incrAddress( iperf_sockaddr *inSockAddr, int value);
-    int SockAddr_Ifrname(thread_Settings *inSettings);
+    int SockAddr_Ifrname(struct thread_Settings *inSettings);
 #ifdef HAVE_LINUX_FILTER_H
     int SockAddr_Accept_BPF(int socket, uint16_t port);
     int SockAddr_Drop_All_BPF(int socket);

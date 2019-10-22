@@ -59,20 +59,20 @@
 #include "util.h"
 
 #if   defined( HAVE_POSIX_THREAD )
-typedef struct Condition {
+struct Condition {
     pthread_cond_t mCondition;
     pthread_mutex_t mMutex;
-} Condition;
+};
 #elif defined( HAVE_WIN32_THREAD )
-typedef struct Condition {
+struct Condition {
     HANDLE mCondition;
     HANDLE mMutex;
-} Condition;
+};
 #else
-typedef struct Condition {
+struct Condition {
     int mCondition;
     int mMutex;
-} Condition;
+};
 #endif
 
 #define Condition_Lock( Cond ) Mutex_Lock( &Cond.mMutex )

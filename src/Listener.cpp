@@ -1059,7 +1059,7 @@ void Listener::UDPSingleServer( ) {
                         server_hdr *hdr;
 
                         UDP_Hdr = (UDP_datagram*) mBuf;
-                        Transfer_Info *stats = GetReport( exist->server->reporthdr );
+                        struct TransferInfo *stats = GetReport( exist->server->reporthdr );
                         hdr = (server_hdr*) (UDP_Hdr+1);
 
                         hdr->base.flags        = htonl( HEADER_VERSION1 );

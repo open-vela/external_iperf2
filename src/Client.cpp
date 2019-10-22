@@ -152,7 +152,7 @@ Client::Client( thread_Settings *inSettings ) {
 	    myJob = mSettings->reporthdr;
 	    // Post the settings report, the connection report will be posted later
 	    if (isReport(mSettings)) {
-	        ReportHeader *tmp = ReportSettings(mSettings);
+	        struct ReportHeader *tmp = ReportSettings(mSettings);
 		UpdateConnectionReport(mSettings, tmp);
 		// Post a settings report now
 		PostReport(tmp);
@@ -178,7 +178,7 @@ Client::Client( thread_Settings *inSettings ) {
 	}
 	// Post a settings report
 	if (isReport(mSettings)) {
-	    ReportHeader *tmp = ReportSettings(mSettings);
+	    struct ReportHeader *tmp = ReportSettings(mSettings);
 	    UpdateConnectionReport(mSettings, tmp);
 	    PostReport(tmp);
 	}
@@ -345,7 +345,7 @@ void Client::StartSynch (void) {
 }
 
 void Client::SetReportStartTime (void) {
-  ReportHeader *reporthdr = myJob;
+  struct ReportHeader *reporthdr = myJob;
   //
   // Now the reports are allocated and somewhat initialized,
   // set the report start times and next report times
