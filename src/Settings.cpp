@@ -342,6 +342,8 @@ void Settings_Copy( struct thread_Settings *from, struct thread_Settings **into 
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
     (*into)->mSockDrop = INVALID_SOCKET;
 #endif
+
+    Condition_Initialize(&(*into)->awake_me);
     // default copied settings to no reporter reporting
     unsetReport((*into));
 }
