@@ -94,6 +94,7 @@ struct PacketRing {
   struct ReportStruct *data;
 };
 
+
 extern struct PacketRing * init_packetring (int count, struct Condition *awake_consumer);
 extern void enqueue_packetring(struct PacketRing *pr, struct ReportStruct *metapacket);
 extern struct ReportStruct *dequeue_packetring(struct PacketRing * pr);
