@@ -54,6 +54,8 @@
 extern "C" {
 #endif
 
+#define ACKRING_DEFAULTSIZE 100
+
 struct ReportStruct {
     intmax_t packetID;
     intmax_t packetLen;
@@ -89,13 +91,12 @@ struct PacketRing {
   //    make space or end (signaled by the consumer)
   // o) awake_consumer - signal the consumer thread to to run
   //    (signaled by the producer)
-  struct Condition awake_producer;
+  struct Condition *awake_producer;
   struct Condition *awake_consumer;
   struct ReportStruct *data;
 };
 
-
-extern struct PacketRing * init_packetring (int count, struct Condition *awake_consumer);
+extern struct PacketRing * init_packetring (int count, struct Condition *awake_consumer, struct Condition *awake_producer);
 extern void enqueue_packetring(struct PacketRing *pr, struct ReportStruct *metapacket);
 extern struct ReportStruct *dequeue_packetring(struct PacketRing * pr);
 extern void free_packetring(struct PacketRing *pr);

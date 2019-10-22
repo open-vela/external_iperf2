@@ -233,7 +233,6 @@ struct thread_Settings {
     struct timeval txstart_epoch;
     struct timeval accept_time;
     struct Condition awake_me;
-    struct Condition *awake_producer;
     struct PacketRing *ackring;
 };
 

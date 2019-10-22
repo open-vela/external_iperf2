@@ -412,7 +412,7 @@ void InitDataReport(struct thread_Settings *mSettings) {
 	    // Create a new packet ring which is used to communicate
 	    // packet stats from the traffic thread to the reporter
 	    // thread.  The reporter thread does all packet accounting
-	    reporthdr->packetring = init_packetring(NUM_REPORT_STRUCTS, &ReportCond);
+	    reporthdr->packetring = init_packetring(NUM_REPORT_STRUCTS, &ReportCond, &mSettings->awake_me);
 	    // Set up the function vectors, there are three
 	    // 1) packet_handler: does packet accounting per the test and protocol
 	    // 2) output_handler: performs output, e.g. interval reports, per the test and protocol
@@ -702,12 +702,13 @@ void EndReport( struct ReportHeader *agent ) {
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug( "Traffic thread awaiting reporter to be done with %p", (void *)agent);
 #endif
-        Condition_Lock (agent->packetring->awake_producer);
+	struct Condition tmp = *(agent->packetring->awake_producer);
+        Condition_Lock(tmp);
 	while (!agent->packetring->consumerdone) {
-	    Condition_TimedWait(&agent->packetring->awake_producer, 1);
+	    Condition_TimedWait(agent->packetring->awake_producer, 1);
 	    // printf("Consumer done may be stuck\n");
 	}
-        Condition_Unlock (agent->packetring->awake_producer);
+        Condition_Unlock(tmp);
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug( "Traffic thread thinks reporter is done with %p", (void *)agent);
 #endif
