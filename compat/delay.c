@@ -141,7 +141,7 @@ static void timespec_add_ulong (struct timespec *tv0, unsigned long value) {
 // accuracy over a minimum guaranteed delay by
 // prediciting the delay error. This is
 // the basic recursive algorithm.
-static void kalman_update (kalman_state *state, double measurement) {
+static void kalman_update (struct kalman_state *state, double measurement) {
     //prediction update
     state->p = state->p + state->q;
     //measurement update
@@ -207,7 +207,7 @@ void delay_busyloop (unsigned long usec) {
 void delay_kalman (unsigned long usec) {
     struct timespec t1, t2, finishtime, requested={0,0}, remaining;
     double nsec_adjusted, err;
-    static kalman_state kalmanerr={
+    static struct kalman_state kalmanerr={
 	0.00001, //q process noise covariance
 	0.1, //r measurement noise covariance
 	0.0, //x value, error predictio (units nanoseconds)
@@ -290,7 +290,7 @@ void delay_kalman (unsigned long usec) {
     struct timeval t1, t2, finishtime;
     long usec_adjusted;
     double err;
-    static kalman_state kalmanerr={
+    static struct kalman_state kalmanerr={
 	0.00001, //q process noise covariance
 	0.1, //r measurement noise covariance
 	0.0, //x value, error predictio (units nanoseconds)

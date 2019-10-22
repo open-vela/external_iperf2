@@ -67,7 +67,7 @@ extern "C" {
  * if that is what is desired.
  * ------------------------------------------------------------------- */
 
-void SockAddr_remoteAddr( thread_Settings *inSettings ) {
+void SockAddr_remoteAddr( struct thread_Settings *inSettings ) {
     SockAddr_zeroAddress( &inSettings->peer );
     if ( inSettings->mHost != NULL ) {
         SockAddr_setHostname( inSettings->mHost, &inSettings->peer,
@@ -97,7 +97,7 @@ void SockAddr_remoteAddr( thread_Settings *inSettings ) {
 }
 // end SocketAddr
 
-void SockAddr_localAddr( thread_Settings *inSettings ) {
+void SockAddr_localAddr( struct thread_Settings *inSettings ) {
     SockAddr_zeroAddress( &inSettings->local );
     inSettings->peerversion[0] = '\0';
 
@@ -520,7 +520,7 @@ int SockAddr_Hostare_Equal( struct sockaddr* first, struct sockaddr* second ) {
  * Store (and cache) the results in the thread settings structure
  * Return 0 if set, -1 if not
  * ------------------------------------------------------------------- */
-int SockAddr_Ifrname(thread_Settings *inSettings) {
+int SockAddr_Ifrname(struct thread_Settings *inSettings) {
 #ifdef HAVE_IFADDRS_H
     if (inSettings->mIfrname == NULL) {
 	struct sockaddr_storage myaddr;

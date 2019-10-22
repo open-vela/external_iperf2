@@ -68,7 +68,7 @@ extern "C" {
 /*
  * Prints transfer reports in default style
  */
-void reporter_printstats( Transfer_Info *stats ) {
+void reporter_printstats(struct TransferInfo *stats) {
     static char header_printed = 0;
     double bytesxfered;
 
@@ -278,7 +278,7 @@ void reporter_printstats( Transfer_Info *stats ) {
 /*
  * Prints multiple transfer reports in default style
  */
-void reporter_multistats( Transfer_Info *stats ) {
+void reporter_multistats(struct TransferInfo *stats) {
 
     byte_snprintf( buffer, sizeof(buffer)/2, (double) stats->TotalLen,
                    toupper( (int)stats->mFormat));
@@ -355,7 +355,7 @@ void reporter_multistats( Transfer_Info *stats ) {
 /*
  * Prints bidir sum transfer reports in default style
  */
-void reporter_bidirstats( Transfer_Info *stats ) {
+void reporter_bidirstats(struct TransferInfo *stats) {
     byte_snprintf( buffer, sizeof(buffer)/2, (double) stats->TotalLen,
 		   toupper( (int)stats->mFormat));
     byte_snprintf( &buffer[sizeof(buffer)/2], sizeof(buffer)/2,
@@ -377,7 +377,7 @@ void reporter_bidirstats( Transfer_Info *stats ) {
 /*
  * Prints server transfer reports in default style
  */
-void reporter_serverstats( Connection_Info *nused, Transfer_Info *stats ) {
+void reporter_serverstats(struct ConnectionInfo *nused, struct TransferInfo *stats) {
     printf( server_reporting, stats->transferID );
     reporter_printstats( stats );
 }
@@ -385,7 +385,7 @@ void reporter_serverstats( Connection_Info *nused, Transfer_Info *stats ) {
 /*
  * Report the client or listener Settings in default style
  */
-void reporter_reportsettings( ReporterData *data ) {
+void reporter_reportsettings(struct ReporterData *data) {
     int pid =  (int)  getpid();
 
     printf( "%s", separator_line );
@@ -436,7 +436,7 @@ void reporter_reportsettings( ReporterData *data ) {
 	byte_snprintf(meanbuf, sizeof(meanbuf), data->isochstats.mMean, 'a');
 	byte_snprintf(variancebuf, sizeof(variancebuf), data->isochstats.mVariance, 'a');
 	printf(client_udp_isochronous, data->isochstats.mFPS, meanbuf, variancebuf, (data->isochstats.mBurstInterval/1000.0), (data->isochstats.mBurstIPG/1000.0));
-	if ((data->isochstats.mMean / data->isochstats.mFPS) < ((double) (sizeof(UDP_datagram) + sizeof(client_hdr_v1) + sizeof(struct client_hdr_udp_isoch_tests)))) {
+	if ((data->isochstats.mMean / data->isochstats.mFPS) < ((double) (sizeof(struct UDP_datagram) + sizeof(struct client_hdr_v1) + sizeof(struct client_hdr_udp_isoch_tests)))) {
 	    fprintf(stderr, "Warning: Requested mean too small to carry isoch payload, code will auto adjust payload sizes\n");
 	}
     } else {
@@ -494,7 +494,7 @@ void reporter_reportsettings( ReporterData *data ) {
 /*
  * Report a socket's peer IP address in default style
  */
-void *reporter_reportpeer( Connection_Info *stats, int ID ) {
+void *reporter_reportpeer(struct ConnectionInfo *stats, int ID) {
     if ( ID > 0 ) {
         // copy the inet_ntop into temp buffers, to avoid overwriting
         char local_addr[ REPORT_ADDRLEN ];
@@ -588,7 +588,7 @@ void *reporter_reportpeer( Connection_Info *stats, int ID ) {
 }
 // end ReportPeer
 
-void reporter_peerversion (thread_Settings *inSettings, int upper, int lower) {
+void reporter_peerversion (struct thread_Settings *inSettings, int upper, int lower) {
     int rel, major, minor, alpha;
     inSettings->peerversion[0] = '\0';
 
@@ -626,7 +626,7 @@ void reporter_peerversion (thread_Settings *inSettings, int upper, int lower) {
 
 #define checkMSS_MTU( inMSS, inMTU ) (inMTU-40) >= inMSS  &&  inMSS >= (inMTU-80)
 
-void reporter_reportMSS( int inMSS, thread_Settings *inSettings ) {
+void reporter_reportMSS(int inMSS, struct thread_Settings *inSettings) {
     if ( inMSS <= 0 ) {
         printf( report_mss_unsupported, inSettings->mSock );
     } else {

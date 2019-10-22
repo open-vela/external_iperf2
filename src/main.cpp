@@ -95,7 +95,7 @@ extern "C" {
     // Condition used to signal the reporter thread
     // when a packet ring is full.  Shouldn't really
     // be needed but is "belts and suspeners"
-    Condition ReportCond;
+    struct Condition ReportCond;
     // Initialize reporter thread mutex
     ReporterMutex reporter_state;
 }

@@ -138,7 +138,7 @@ int thread_trfcrx_sNum = 0;
 int nonterminating_num = 0;
 // condition to protect updating the above and alerting on
 // changes to above
-Condition thread_sNum_cond;
+struct Condition thread_sNum_cond;
 
 
 /* -------------------------------------------------------------------
