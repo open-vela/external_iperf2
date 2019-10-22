@@ -253,7 +253,8 @@ sInterupted == SIGALRM
 		if (isWriteAck(server)) {
 		    thread_Settings *writeackthread;
 		    Settings_Copy(server, &writeackthread);
-		    writeackthread->awake_producer = &server->awake_me;
+		    server->ackring = init_packetring(ACKRING_DEFAULTSIZE, &server->awake_me, &writeackthread->awake_me);
+		    writeackthread->ackring = server->ackring;
 		    writeackthread->mThreadMode = kMode_WriteAckServer;
 #if HAVE_THREAD_DEBUG
 		    thread_debug("Write acknowledgements enabled for read bytecount=%d (%p)", server->mWriteAckLen, (void *) writeackthread);
