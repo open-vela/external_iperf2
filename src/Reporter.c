@@ -702,12 +702,12 @@ void EndReport( struct ReportHeader *agent ) {
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug( "Traffic thread awaiting reporter to be done with %p", (void *)agent);
 #endif
-        Condition_Lock (agent->packetring->await_consumer);
+        Condition_Lock (agent->packetring->awake_producer);
 	while (!agent->packetring->consumerdone) {
-	    Condition_TimedWait(&agent->packetring->await_consumer, 1);
+	    Condition_TimedWait(&agent->packetring->awake_producer, 1);
 	    // printf("Consumer done may be stuck\n");
 	}
-        Condition_Unlock (agent->packetring->await_consumer);
+        Condition_Unlock (agent->packetring->awake_producer);
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug( "Traffic thread thinks reporter is done with %p", (void *)agent);
 #endif

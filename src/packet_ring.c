@@ -65,7 +65,7 @@ struct PacketRing * init_packetring (int count, struct Condition *awake_consumer
     pr->consumer = 0;
     pr->maxcount = count;
     pr->awake_consumer = awake_consumer;
-    Condition_Initialize(&pr->await_consumer);
+    Condition_Initialize(&pr->awake_producer);
     pr->consumerdone = 0;
     pr->awaitcounter = 0;
     return (pr);
@@ -78,7 +78,7 @@ inline void enqueue_packetring(struct PacketRing *pr, struct ReportStruct *metap
 	// Signal the consumer thread to process a full queue
 	Condition_Signal(pr->awake_consumer);
 	// Wait for the consumer to create some queue space
-	Condition_Lock(pr->await_consumer);
+	Condition_Lock(pr->awake_producer);
 	pr->awaitcounter++;
 #ifdef HAVE_THREAD_DEBUG
 	{
@@ -87,12 +87,12 @@ inline void enqueue_packetring(struct PacketRing *pr, struct ReportStruct *metap
 	    gettimeofday( &now, NULL );
 	    if (!prev.tv_sec || (TimeDifference(now, prev) > 1.0)) {
 		prev = now;
-		thread_debug( "Not good, traffic's packet ring %p stalled per %p", (void *)pr, (void *)&pr->await_consumer);
+		thread_debug( "Not good, traffic's packet ring %p stalled per %p", (void *)pr, (void *)&pr->awake_producer);
 	    }
 	}
 #endif
-	Condition_TimedWait(&pr->await_consumer, 1);
-	Condition_Unlock(pr->await_consumer);
+	Condition_TimedWait(&pr->awake_producer, 1);
+	Condition_Unlock(pr->awake_producer);
     }
     int writeindex;
     if ((pr->producer + 1) == pr->maxcount)
@@ -122,20 +122,20 @@ inline struct ReportStruct *dequeue_packetring(struct PacketRing *pr) {
     // when the ring goes from having something to empty
     if (pr->producer == pr->consumer) {
 #ifdef HAVE_THREAD_DEBUG
-      // thread_debug( "Consumer signal packet ring %p empty per %p", (void *)pr, (void *)&pr->await_consumer);
+      // thread_debug( "Consumer signal packet ring %p empty per %p", (void *)pr, (void *)&pr->awake_producer);
 #endif
-	Condition_Signal(&pr->await_consumer);
+	Condition_Signal(&pr->awake_producer);
     }
     return packet;
 }
 
 void free_packetring(struct PacketRing *pr) {
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Free packet ring %p & condition variable await consumer %p", (void *)pr, (void *)&pr->await_consumer);
+    thread_debug("Free packet ring %p & condition variable await consumer %p", (void *)pr, (void *)&pr->awake_producer);
 #endif
     if (pr->awaitcounter > 1000) fprintf(stderr, "WARN: Reporter thread may be too slow, await counter=%d, " \
 					 "consider increasing NUM_REPORT_STRUCTS\n", pr->awaitcounter);
-    Condition_Destroy(&pr->await_consumer);
+    Condition_Destroy(&pr->awake_producer);
     if (pr->data) free(pr->data);
 }
 

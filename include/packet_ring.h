@@ -85,11 +85,11 @@ struct PacketRing {
   struct ReportStruct metapacket;
 
   // Use a condition variables
-  // o) await_consumer - producer waits for the consumer thread to
+  // o) awake_producer - producer waits for the consumer thread to
   //    make space or end (signaled by the consumer)
   // o) awake_consumer - signal the consumer thread to to run
   //    (signaled by the producer)
-  struct Condition await_consumer;
+  struct Condition awake_producer;
   struct Condition *awake_consumer;
   struct ReportStruct *data;
 };
