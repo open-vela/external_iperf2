@@ -184,6 +184,9 @@ void Server::RunTCP( void ) {
 	      reportstruct->packetLen = currLen;
 	      ReportPacket( mSettings->reporthdr, reportstruct );
 	    }
+	    if (isWriteAck(mSettings)) {
+	      enqueue_ackring(mSettings->ackring, reportstruct);
+	    }
 	    // Check for reverse and amount where
 	    // the server stops after receiving
 	    // the expected byte count

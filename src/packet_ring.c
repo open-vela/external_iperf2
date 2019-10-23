@@ -138,11 +138,18 @@ inline void enqueue_ackring(struct PacketRing *pr, struct ReportStruct *metapack
 }
 
 inline struct ReportStruct *dequeue_ackring(struct PacketRing *pr) {
-  struct ReportStruct *packet = dequeue_packetring(pr);
+  struct ReportStruct *packet = NULL;
+  struct Condition tmp = *(pr->awake_producer);
+
+  Condition_Lock(tmp);
+  while ((packet = dequeue_packetring(pr)) == NULL) {
+      Condition_TimedWait(pr->awake_producer, 1);
+      Condition_Unlock(tmp);
+  }
   if (packet) {
-	// Signal the producer thread for low latency
-        // of space available
-	Condition_Signal(pr->awake_producer);
+    // Signal the producer thread for low latency
+    // of space available
+    Condition_Signal(pr->awake_producer);
   }
   return packet;
 }
