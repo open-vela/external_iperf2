@@ -75,6 +75,12 @@ WriteAck::~WriteAck() {
 }
 
 void WriteAck::RunServer(void) {
+  struct ReportStruct *packet = NULL;
+  while ((packet = dequeue_ackring(mSettings->ackring))) {
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Write ack got packet %p (%p)", (void *) packet, (void *) mSettings);
+#endif
+  }
 };
 
 void WriteAck::RunClient(void) {
