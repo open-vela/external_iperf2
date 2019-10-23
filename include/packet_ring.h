@@ -99,6 +99,8 @@ struct PacketRing {
 extern struct PacketRing * init_packetring (int count, struct Condition *awake_consumer, struct Condition *awake_producer);
 extern void enqueue_packetring(struct PacketRing *pr, struct ReportStruct *metapacket);
 extern struct ReportStruct *dequeue_packetring(struct PacketRing * pr);
+extern void enqueue_ackring(struct PacketRing *pr, struct ReportStruct *metapacket);
+extern struct ReportStruct *dequeue_ackring(struct PacketRing * pr);
 extern void free_packetring(struct PacketRing *pr);
 #ifdef HAVE_THREAD_DEBUG
 extern int getcount_packetring(struct PacketRing *pr);

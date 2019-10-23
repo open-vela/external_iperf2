@@ -130,6 +130,23 @@ inline struct ReportStruct *dequeue_packetring(struct PacketRing *pr) {
     return packet;
 }
 
+inline void enqueue_ackring(struct PacketRing *pr, struct ReportStruct *metapacket) {
+    enqueue_packetring(pr, metapacket);
+    // Keep the latency low by signaling the consumer thread
+    // per each enqueue
+    Condition_Signal(pr->awake_consumer);
+}
+
+inline struct ReportStruct *dequeue_ackring(struct PacketRing *pr) {
+  struct ReportStruct *packet = dequeue_packetring(pr);
+  if (packet) {
+	// Signal the producer thread for low latency
+        // of space available
+	Condition_Signal(pr->awake_producer);
+  }
+  return packet;
+}
+
 void free_packetring(struct PacketRing *pr) {
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Free packet ring %p & condition variable await consumer %p", (void *)pr, (void *)&pr->awake_producer);
