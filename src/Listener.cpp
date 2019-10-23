@@ -1306,11 +1306,13 @@ int Listener::ClientHeaderAck(void) {
 	if ((rc = setsockopt( server->mSock, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout))) < 0 ) {
 	    WARN_errno( rc < 0, "setsockopt SO_SNDTIMEO");
 	}
+#ifdef TCP_NODELAY
 	optflag=1;
 	// Disable Nagle to reduce latency of this intial message
 	if ((rc = setsockopt( server->mSock, IPPROTO_TCP, TCP_NODELAY, (char *)&optflag, sizeof(int))) < 0 ) {
 	    WARN_errno(rc < 0, "tcpnodelay" );
 	}
+#endif
     }
     if (isUDP(server) && (server->mBufLen < (int) sizeof(client_hdr_ack))) {
         fprintf( stderr, warn_len_too_small_peer_exchange, "Server", server->mBufLen, sizeof(client_hdr_ack));
