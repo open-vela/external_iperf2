@@ -208,7 +208,7 @@ Client::~Client() {
     }
     if (isServerReverse(mSettings))
 	Iperf_delete( &(mSettings->peer), &clients );
-    
+
     if (myJob) {
 	if (myJob->bidirreport) {
 	    UpdateMultiHdrRefCounter(myJob->bidirreport, -1, mySocket);
@@ -1169,10 +1169,12 @@ void Client::HdrXchange(int flags) {
 	    mBuf_UDP->tv_usec = htonl(now.getUsecs());
 	} else {
 	    len = sizeof(client_hdr);
+#ifdef TCP_NODELAY
 	    // Disable Nagle to reduce latency of this intial message
 	    optflag=1;
 	    if(setsockopt( mSettings->mSock, IPPROTO_TCP, TCP_NODELAY, (char *)&optflag, sizeof(int)) < 0 )
 		WARN_errno(0, "tcpnodelay" );
+#endif
 	}
 	currLen = send( mSettings->mSock, mBuf, len, 0 );
 	if ( currLen < 0 ) {

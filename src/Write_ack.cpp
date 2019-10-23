@@ -55,6 +55,14 @@ WriteAck::WriteAck(thread_Settings *inSettings) {
 #ifdef HAVE_THREAD_DEBUG
   thread_debug("Write ack thread started in constructor (%p) (%x/%x)", (void *) inSettings, inSettings->flags, inSettings->flags_extend);
 #endif
+#ifdef TCP_NODELAY
+  int optflag=1;
+  int rc;
+  // Disable Nagle to reduce latency of this intial message
+  if ((rc = setsockopt( mSettings->mSock, IPPROTO_TCP, TCP_NODELAY, (char *)&optflag, sizeof(int))) < 0 ) {
+    WARN_errno(rc < 0, "tcpnodelay write-ack" );
+  }
+#endif
 }
 
 WriteAck::~WriteAck() {
