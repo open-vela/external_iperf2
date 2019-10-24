@@ -59,6 +59,7 @@ public:
     // stores server hostname, port, UDP/TCP mode, and UDP rate
     WriteAck(thread_Settings *inSettings);
     ~WriteAck();
+    static void Close(PacketRing *pr);
     void RunServer(void);
     void RunClient(void);
 private:
