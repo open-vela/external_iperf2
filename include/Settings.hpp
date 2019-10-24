@@ -445,7 +445,7 @@ struct thread_Settings {
 #define unsetTripTime(settings)     settings->flags_extend &= ~FLAG_TRIPTIME
 #define unsetModeInfinite(settings) settings->flags_extend &= ~FLAG_MODEINFINITE
 #define unsetConnectOnly(settings)  settings->flags_extend &= ~FLAG_CONNECTONLY
-#define unsetWriteAack(settings)    settings->flags_extend &= ~FLAG_WRITEACK
+#define unsetWriteAck(settings)    settings->flags_extend &= ~FLAG_WRITEACK
 #define unsetWriteSync(settings)    settings->flags_extend &= ~FLAG_WRITESYNC
 #define unsetNoUDPfin(settings)     settings->flags_extend &= ~FLAG_NOUDPFIN
 
