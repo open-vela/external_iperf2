@@ -158,7 +158,7 @@ void client_spawn( thread_Settings *thread ) {
     // that should be fixed as a clean up
     theClient = new Client( thread );
     // Code for the normal case
-    if (!isReverse(thread) && !isServerReverse(thread)) {
+    if (!isReverse(thread) && !isServerReverse(thread) && !isWriteAck(thread)) {
 	// Perform any intial startup delays between the connect() and the data xfer phase
 	// this will also initiliaze the report header timestamps needed by the reporter thread
 	theClient->StartSynch();
@@ -174,7 +174,7 @@ void client_spawn( thread_Settings *thread ) {
         // This is the case of the listener launching a client, no test exchange nor connect
 	theClient->SetReportStartTime();
         theClient->Run();
-    } else if (isReverse(thread)) {
+    } else if (isReverse(thread) || isWriteAck(thread)) {
 	// This is a client side initiated reverse test,
 	// Could be bidir or reverse only
 	// Create thread setting for the reverse_client (i.e. client as server)
@@ -200,6 +200,7 @@ void client_spawn( thread_Settings *thread ) {
 	theClient->InitiateServer();
 	// RJM ADD a thread event here so reverse_client is in a known ready state prior to test exchange
 	// Now exchange client's test information with remote server
+	unsetWriteAck(reverse_client);
 	thread_start(reverse_client);
 	// Now handle bidir vs reverse-only for client side invocation
         if (!isBidir(thread)) {
