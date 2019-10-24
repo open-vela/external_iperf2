@@ -111,7 +111,8 @@ void listener_spawn( thread_Settings *thread ) {
 void server_spawn(thread_Settings *thread) {
     Server *theServer = NULL;
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Server spawn thread=%p multihdr=%p", (void *) thread, (void *)thread->multihdr);
+    thread_debug("Server spawn settings=%p multihdr=%p sock=%d", \
+		 (void *) thread, (void *)thread->multihdr, thread->mSock);
 #endif
     // set traffic thread to realtime if needed
     set_scheduler(thread);
@@ -286,7 +287,7 @@ void client_init( thread_Settings *clients ) {
 void writeack_server_spawn(thread_Settings *thread) {
     WriteAck *theServerAck = NULL;
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Write ack server spawn thread=%p", (void *) thread);
+    thread_debug("Write ack server spawn settings=%p sock=%d", (void *) thread, thread->mSock);
 #endif
     // set traffic thread to realtime if needed
     set_scheduler(thread);

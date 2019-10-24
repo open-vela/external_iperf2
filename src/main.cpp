@@ -259,6 +259,13 @@ int main( int argc, char **argv ) {
     // wait for other (client, server) threads to complete
     thread_joinall();
 
+    // done actions
+    // Destroy global mutexes and conditions
+    Condition_Destroy ( &ReportCond );
+    Mutex_Destroy( &groupCond );
+    Mutex_Destroy( &clients_mutex );
+    Condition_Destroy(&reporter_state.await_reporter);
+
     // all done!
     return 0;
 } // end main

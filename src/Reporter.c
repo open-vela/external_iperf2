@@ -700,15 +700,14 @@ void CloseReport(struct ReportHeader *agent, struct ReportStruct *finalpacket) {
 void EndReport( struct ReportHeader *agent ) {
     if ( agent != NULL ) {
 #ifdef HAVE_THREAD_DEBUG
-	thread_debug( "Traffic thread awaiting reporter to be done with %p", (void *)agent);
+        thread_debug( "Traffic thread awaiting reporter to be done with %p and cond %p", (void *)agent, (void *) agent->packetring->awake_producer);
 #endif
-	struct Condition tmp = *(agent->packetring->awake_producer);
-        Condition_Lock(tmp);
+        Condition_Lock((*(agent->packetring->awake_producer)));
 	while (!agent->packetring->consumerdone) {
 	    Condition_TimedWait(agent->packetring->awake_producer, 1);
 	    // printf("Consumer done may be stuck\n");
 	}
-        Condition_Unlock(tmp);
+        Condition_Unlock((*(agent->packetring->awake_producer)));
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug( "Traffic thread thinks reporter is done with %p", (void *)agent);
 #endif
@@ -990,6 +989,13 @@ void reporter_spawn( struct thread_Settings *thread ) {
 		    thread_debug("Free %p in rs", (void *) tmp);
 #endif
 		    free(tmp);
+		} else {
+#ifdef HAVE_THREAD_DEBUG
+		  thread_debug("Signal producer to free report %p and cond %p in rpr", (void *) tmp, (void *) tmp->packetring->awake_producer);
+#endif
+		  // Signal the producer (traffic thread) that the consumer (reporter thread)
+		  // it is done with this report
+		  Condition_Signal(tmp->packetring->awake_producer);
 		}
                 Condition_Unlock ( ReportCond );
                 if (ReportRoot) {
@@ -1074,7 +1080,6 @@ static int condprint_interval_reports (struct ReportHeader *reporthdr, struct Re
 int reporter_process_report ( struct ReportHeader *reporthdr ) {
     int need_free = 0;
 
-    // Recursively process reports
     if ( reporthdr->next != NULL ) {
         if (reporter_process_report(reporthdr->next)) {
             // Remove the report from the reporter job
@@ -1103,6 +1108,14 @@ int reporter_process_report ( struct ReportHeader *reporthdr ) {
 		thread_debug("Free %p in rpr", (void *) tmp);
 #endif
 		free(tmp);
+	    } else {
+#ifdef HAVE_THREAD_DEBUG
+		thread_debug("Signal producer to free report %p in rpr", (void *) tmp);
+#endif
+		// Signal the producer (traffic thread) that the consumer (reporter thread)
+		// it is done with this report
+		struct Condition tmpcond = *(tmp->packetring->awake_producer);
+		Condition_Signal(&tmpcond);
 	    }
         }
     }

@@ -63,6 +63,7 @@
 #include "Locale.h"
 #include "delay.h"
 #include "PerfSocket.hpp"
+#include "Write_ack.hpp"
 #include "SocketAddr.h"
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
 #include "checksums.h"
@@ -185,7 +186,7 @@ void Server::RunTCP( void ) {
 	      ReportPacket( mSettings->reporthdr, reportstruct );
 	    }
 	    if (isWriteAck(mSettings)) {
-	      enqueue_ackring(mSettings->ackring, reportstruct);
+	        enqueue_ackring(mSettings->ackring, reportstruct);
 	    }
 	    // Check for reverse and amount where
 	    // the server stops after receiving
@@ -210,6 +211,9 @@ void Server::RunTCP( void ) {
     }
     CloseReport( mSettings->reporthdr, reportstruct );
     EndReport( mSettings->reporthdr );
+    if (isWriteAck(mSettings)) {
+        WriteAck::Close(mSettings->ackring);
+    }
 }
 
 void Server::InitKernelTimeStamping (void) {
