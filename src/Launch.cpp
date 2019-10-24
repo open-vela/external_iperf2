@@ -306,7 +306,7 @@ void writeack_server_spawn(thread_Settings *thread) {
 void writeack_client_spawn(thread_Settings *thread) {
     WriteAck *theClientAck = NULL;
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Write ack server spawn thread=%p", (void *) thread);
+    thread_debug("Write ack client spawn settings=%p sock=%d", (void *) thread, thread->mSock);
 #endif
     // set traffic thread to realtime if needed
     set_scheduler(thread);
