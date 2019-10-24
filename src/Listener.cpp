@@ -250,6 +250,9 @@ sInterupted == SIGALRM
 		    close( server->mSock );
 		    continue;
 		}
+		// The following will set the tempSettings to NULL if
+		// there is no need for the Listener to start a client
+                Settings_GenerateClientSettings( server, &tempSettings, hdr );
 		if (isWriteAck(server)) {
 		    thread_Settings *writeackthread;
 		    Settings_Copy(server, &writeackthread);
@@ -261,9 +264,6 @@ sInterupted == SIGALRM
 #endif
                     thread_start(writeackthread);
 		}
-		// The following will set the tempSettings to NULL if
-		// there is no need for the Listener to start a client
-                Settings_GenerateClientSettings( server, &tempSettings, hdr );
 		if (tempSettings && isBidir(tempSettings)) {
 		    setBidir(server);
 		    tempSettings->bidirhdr = InitBiDirReport( server, groupID);

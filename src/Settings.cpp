@@ -1210,6 +1210,8 @@ void Settings_GenerateClientSettings( struct thread_Settings *server,
     if ((flags & HEADER_EXTEND) != 0 ) {
 	extendflags = ntohl(hdr->extend.flags);
 	struct thread_Settings *fullduplex = NULL;
+	if (extendflags & WRITEACK)
+	    setWriteAck(server);
 	if (((extendflags & BIDIR) == BIDIR) ||	 \
 	    ((extendflags & REVERSE) == REVERSE)) {
 	    if ((extendflags & BIDIR) == BIDIR) {
@@ -1384,6 +1386,10 @@ int Settings_GenerateClientHdr( struct thread_Settings *client, client_hdr *hdr 
     if (isBidir(client)) {
 	flags |= HEADER_EXTEND;
         extendflags |= BIDIR;
+    }
+    if (isWriteAck(client)) {
+	flags |= HEADER_EXTEND;
+        extendflags |= WRITEACK;
     }
     hdr->base.flags = htonl(flags);
     if (flags & HEADER_EXTEND) {
