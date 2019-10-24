@@ -520,6 +520,10 @@ void *reporter_reportpeer(struct ConnectionInfo *stats, int ID) {
 	    snprintf(b, PEERBUFSIZE-strlen(b), "(reverse)");
 	    b += strlen(b);
 	}
+	if (isWriteAck(stats)) {
+	    snprintf(b, PEERBUFSIZE-strlen(b), " (acks)");
+	    b += strlen(b);
+	}
 	if (stats->l2mode) {
 	    snprintf(b, PEERBUFSIZE-strlen(b), " (%s=0x%X)", "l2mode", stats->l2mode);
 	    b += strlen(b);
