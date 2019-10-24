@@ -80,7 +80,7 @@ inline void enqueue_packetring(struct PacketRing *pr, struct ReportStruct *metap
 	// Wait for the consumer to create some queue space
 	Condition_Lock((*(pr->awake_producer)));
 	pr->awaitcounter++;
-#ifdef HAVE_THREAD_DEBUG
+#ifdef HAVE_THREAD_DEBUG_PERF
 	{
 	    struct timeval now;
 	    static struct timeval prev={.tv_sec=0, .tv_usec=0};
