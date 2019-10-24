@@ -101,11 +101,12 @@ void WriteAck::Close(PacketRing *pr) {
 void WriteAck::RunServer(void) {
   struct ReportStruct *packet = NULL;
   while ((packet = dequeue_ackring(mSettings->ackring))) {
-#ifdef HAVE_THREAD_DEBUG
-    // thread_debug("Write ack got packet %p (%p)", (void *) packet, (void *) mSettings);
-#endif
     if (packet->packetID < 0)
       break;
+    int len = write(mSettings->mSock, packet, sizeof(ReportStruct));
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Write ack sent %p (%p)", (void *) packet, (void *) mSettings);
+#endif
   }
 #ifdef HAVE_THREAD_DEBUG
   thread_debug("Write ack got final packet %p so signal cond %p (%p)", (void *) packet, \
