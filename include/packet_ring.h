@@ -102,6 +102,7 @@ extern struct ReportStruct *dequeue_packetring(struct PacketRing * pr);
 extern void enqueue_ackring(struct PacketRing *pr, struct ReportStruct *metapacket);
 extern struct ReportStruct *dequeue_ackring(struct PacketRing * pr);
 extern void free_packetring(struct PacketRing *pr);
+extern void free_ackring(struct PacketRing *pr);
 #ifdef HAVE_THREAD_DEBUG
 extern int getcount_packetring(struct PacketRing *pr);
 #endif
