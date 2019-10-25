@@ -150,6 +150,7 @@ void Server::RunTCP( void ) {
 
     InitTrafficLoop();
 
+    int burstsize = 1024 * 1024;
     while (InProgress() && !err) {
 	reportstruct->emptyreport=0;
 	// perform read
@@ -185,8 +186,13 @@ void Server::RunTCP( void ) {
 	      reportstruct->packetLen = currLen;
 	      ReportPacket( mSettings->reporthdr, reportstruct );
 	    }
-	    if (isWriteAck(mSettings) && currLen) {
-	        enqueue_ackring(mSettings->ackring, reportstruct);
+
+	    if (isWriteAck(mSettings)) {
+	        burstsize -= currLen;
+		if (burstsize <= 0) {
+		  enqueue_ackring(mSettings->ackring, reportstruct);
+		  burstsize = 1024 * 1024;
+		}
 	    }
 	    // Check for reverse and amount where
 	    // the server stops after receiving
