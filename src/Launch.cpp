@@ -185,7 +185,8 @@ void client_spawn( thread_Settings *thread ) {
 	reverse_client->mSock = thread->mSock; // use the same socket for both directions
 	reverse_client->mThreadMode = kMode_Server;
 	setServerReverse(reverse_client); // cause the connection report to show reverse
-	reverse_client->bidirhdr = thread->bidirhdr; // reverse_client thread updates the bidir report
+	if (!isWriteAck(thread))
+	    reverse_client->bidirhdr = thread->bidirhdr; // reverse_client thread updates the bidir report
 	if (isModeTime(reverse_client)) {
 	    reverse_client->mAmount += (SLOPSECS * 100);  // add 2 sec for slop on reverse, units are 10 ms
 	    if (isTxHoldback(thread)) {
@@ -201,9 +202,10 @@ void client_spawn( thread_Settings *thread ) {
 	// RJM ADD a thread event here so reverse_client is in a known ready state prior to test exchange
 	// Now exchange client's test information with remote server
 	unsetWriteAck(reverse_client);
+	setReverse(reverse_client);
 	thread_start(reverse_client);
 	// Now handle bidir vs reverse-only for client side invocation
-        if (!isBidir(thread)) {
+        if (!isBidir(thread) && !isWriteAck(thread)) {
 	    // Reverse only, client thread waits on reverse_server and never runs any traffic
 	    if (!thread_equalid(reverse_client->mTID, thread_zeroid())) {
 #ifdef HAVE_THREAD_DEBUG
