@@ -529,7 +529,11 @@ void Client::RunTCP( void ) {
 	}
 	// perform write
 	WriteSync();
-	reportstruct->packetLen = write( mSettings->mSock, mBuf, reportstruct->packetLen);
+
+	int len = write( mSettings->mSock, mBuf, reportstruct->packetLen);
+	if (isWriteAck(mSettings) && (len != reportstruct->packetLen))
+	    fprintf(stderr, "Warn: write size mismatch request=%d actual=%d\n", reportstruct->packetLen, len);
+	reportstruct->packetLen = len;
         if ( reportstruct->packetLen < 0 ) {
 	    if (NONFATALTCPWRITERR(errno)) {
 	        reportstruct->errwrite=WriteErrAccount;
