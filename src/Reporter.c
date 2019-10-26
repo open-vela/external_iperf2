@@ -603,6 +603,7 @@ void InitConnectionReport (struct thread_Settings *mSettings) {
     data->connection.flags = mSettings->flags;
     data->connection.flags_extend = mSettings->flags_extend;
     data->connection.mFormat = mSettings->mFormat;
+    data->connection.WriteAckLen = (mSettings->mWriteAckLen > 0) ? mSettings->mWriteAckLen : mSettings->mBufLen;
     if (mSettings->mSock > 0)
       UpdateConnectionReport(mSettings, reporthdr);
 }

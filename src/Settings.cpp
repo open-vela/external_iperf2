@@ -812,8 +812,6 @@ void Settings_Interpret( char option, const char *optarg, struct thread_Settings
 		setWriteAck(mExtSettings);
 		if (optarg) {
 		    mExtSettings->mWriteAckLen = byte_atoi(optarg);
-		} else {
-		    mExtSettings->mWriteAckLen = mExtSettings->mBufLen;
 		}
 	    }
 	    if (noudpfin) {
@@ -1052,6 +1050,11 @@ void Settings_ModalOptions( struct thread_Settings *mExtSettings ) {
 	    }
 	}
     }
+    // See if the Write ack size should equal the write size (vs a configured or a burst size)
+    if (isWriteAck(mExtSettings) && !mExtSettings->mWriteAckLen && \
+	(mExtSettings->mThreadMode == kMode_Client) && !isIsochronous(mExtSettings))
+      mExtSettings->mWriteAckLen = mExtSettings->mBufLen;
+
     // Check for further mLocalhost (-B) and <dev> requests
     // full addresses look like 192.168.1.1:6001%eth0 or [2001:e30:1401:2:d46e:b891:3082:b939]:6001%eth0
     iperf_sockaddr tmp;

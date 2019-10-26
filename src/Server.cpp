@@ -150,7 +150,8 @@ void Server::RunTCP( void ) {
 
     InitTrafficLoop();
 
-    int burstsize = 1024 * 1024;
+    int burst_nleft = (mSettings->mWriteAckLen > 0) ? mSettings->mWriteAckLen : mSettings->mBufLen;
+
     while (InProgress() && !err) {
 	reportstruct->emptyreport=0;
 	// perform read
@@ -160,7 +161,7 @@ void Server::RunTCP( void ) {
 	    time1 = time2;
 	}
 	if (tokens >= 0.0) {
-	    currLen = recv( mSettings->mSock, mBuf, mSettings->mBufLen, 0 );
+	    currLen = recv(mSettings->mSock, mBuf, ((mSettings->mBufLen < burst_nleft) ? mSettings->mBufLen : burst_nleft), 0);
 	    now.setnow();
 	    reportstruct->packetTime.tv_sec = now.getSecs();
 	    reportstruct->packetTime.tv_usec = now.getUsecs();
@@ -187,12 +188,13 @@ void Server::RunTCP( void ) {
 	      ReportPacket( mSettings->reporthdr, reportstruct );
 	    }
 
-	    if (isWriteAck(mSettings)) {
-	        burstsize -= currLen;
-		if (burstsize <= 0) {
+	    if (isWriteAck(mSettings) && (currLen > 0)) {
+	      burst_nleft = burst_nleft - currLen;
+	      while (burst_nleft <= 0) {
 		  enqueue_ackring(mSettings->ackring, reportstruct);
-		  burstsize = 1024 * 1024;
-		}
+		  // RJM fix this for variable burst sizes
+		  burst_nleft = ((mSettings->mWriteAckLen > 0) ? mSettings->mWriteAckLen : mSettings->mBufLen) + burst_nleft;
+	      }
 	    }
 	    // Check for reverse and amount where
 	    // the server stops after receiving
