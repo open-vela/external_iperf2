@@ -183,7 +183,10 @@ void client_spawn( thread_Settings *thread ) {
 	Settings_Copy(thread, &reverse_client);
 	FAIL((!reverse_client || !(thread->mSock > 0)), "Reverse test failed to start per thread settings or socket problem",  thread);
 	reverse_client->mSock = thread->mSock; // use the same socket for both directions
-	reverse_client->mThreadMode = kMode_Server;
+	if (isWriteAck(thread))
+	    reverse_client->mThreadMode = kMode_WriteAckClient;
+	else
+	    reverse_client->mThreadMode = kMode_Server;
 	setServerReverse(reverse_client); // cause the connection report to show reverse
 	if (!isWriteAck(thread))
 	    reverse_client->bidirhdr = thread->bidirhdr; // reverse_client thread updates the bidir report
@@ -201,9 +204,8 @@ void client_spawn( thread_Settings *thread ) {
 	theClient->InitiateServer();
 	// RJM ADD a thread event here so reverse_client is in a known ready state prior to test exchange
 	// Now exchange client's test information with remote server
-	unsetWriteAck(reverse_client);
 	setReverse(reverse_client);
-	thread_start(reverse_client);
+        thread_start(reverse_client);
 	// Now handle bidir vs reverse-only for client side invocation
         if (!isBidir(thread) && !isWriteAck(thread)) {
 	    // Reverse only, client thread waits on reverse_server and never runs any traffic
@@ -220,7 +222,7 @@ void client_spawn( thread_Settings *thread ) {
 		}
 	    }
 	} else {
-	    // bidir case, start the client traffic
+	    // bidir case or Write akc case, start the client traffic
 	    theClient->Run();
 	}
     }
@@ -306,16 +308,22 @@ void writeack_server_spawn(thread_Settings *thread) {
  * writeack_server_spawn
  */
 void writeack_client_spawn(thread_Settings *thread) {
+    Server *theServer = NULL;
     WriteAck *theClientAck = NULL;
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Write ack client spawn settings=%p sock=%d", (void *) thread, thread->mSock);
 #endif
     // set traffic thread to realtime if needed
     set_scheduler(thread);
-
+    // the client side server doesn't do write acks
+    unsetWriteAck(thread);
     // Start up the server
-    theClientAck = new WriteAck(thread);
-    // Run the thread
-    theClientAck->RunClient();
-    DELETE_PTR( theClientAck);
+    theServer = new Server( thread );
+    // Run the test
+    if ( isUDP( thread ) ) {
+        theServer->RunUDP();
+    } else {
+        theServer->RunTCP();
+    }
+    DELETE_PTR( theServer);
 }
