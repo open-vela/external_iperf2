@@ -228,6 +228,7 @@ struct ConnectionInfo {
     int flags;
     int flags_extend;
     char mFormat;
+    unsigned int WriteAckLen;
 };
 
 struct ReporterData {

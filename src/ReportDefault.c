@@ -521,8 +521,14 @@ void *reporter_reportpeer(struct ConnectionInfo *stats, int ID) {
 	    b += strlen(b);
 	}
 	if (isWriteAck(stats)) {
-	    snprintf(b, PEERBUFSIZE-strlen(b), " (acks)");
+	  int spaceleft = PEERBUFSIZE-strlen(b);
+	  if (spaceleft > 10) {
+	    char tmpbuf[spaceleft];
+	    byte_snprintf(tmpbuf, sizeof(tmpbuf), stats->WriteAckLen, 'A');
+	    tmpbuf[spaceleft-1]='\0';
+	    snprintf(b, PEERBUFSIZE-strlen(b), " (acks=%s)", tmpbuf);
 	    b += strlen(b);
+	  }
 	}
 	if (stats->l2mode) {
 	    snprintf(b, PEERBUFSIZE-strlen(b), " (%s=0x%X)", "l2mode", stats->l2mode);
