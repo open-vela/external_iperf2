@@ -128,6 +128,9 @@ void process_report ( struct ReportHeader *report );
 int reporter_print( struct ReporterData *stats, int type, int end );
 void PrintMSS( struct ReporterData *stats );
 
+static void reporter_handle_packet_null(struct ReportHeader *report, struct ReportStruct *packet) {return;}
+static void output_transfer_report_null(struct ReporterData *stats, struct ReporterData *sumstats, struct ReporterData *bidirstats, int final){return;}
+
 // Private routines
 // Packet accounting:
 static void reporter_handle_packet_server_udp(struct ReportHeader *report, struct ReportStruct *packet);
@@ -450,6 +453,10 @@ void InitDataReport(struct thread_Settings *mSettings) {
 		    if (reporthdr->bidirreport)
 		        reporthdr->bidirreport->output_sum_handler = output_transfer_bidir_report_tcp;
 		}
+		break;
+	    case kMode_WriteAckClient :
+	        reporthdr->packet_handler = reporter_handle_packet_null;
+		reporthdr->output_handler = output_transfer_report_null;
 		break;
 	    case kMode_Unknown :
 	    case kMode_Reporter :
