@@ -83,7 +83,7 @@
 #include "version.h"
 #include "Locale.h"
 #include "SocketAddr.h"
-
+#include "payloads.h"
 #if (defined HAVE_SSM_MULTICAST) && (defined HAVE_NET_IF_H)
 #include <net/if.h>
 #endif

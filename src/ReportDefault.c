@@ -59,6 +59,7 @@
 #include "Locale.h"
 #include "PerfSocket.hpp"
 #include "SocketAddr.h"
+#include "payloads.h"
 
 #ifdef __cplusplus
 extern "C" {

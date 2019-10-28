@@ -70,6 +70,7 @@
 #include "gnu_getopt.h"
 #include "isochronous.hpp"
 #include "pdfs.h"
+#include "payloads.h"
 
 static int reversetest = 0;
 static int bidirtest = 0;
