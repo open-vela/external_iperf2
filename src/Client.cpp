@@ -65,6 +65,7 @@
 #include "pdfs.h"
 #include "version.h"
 #include "List.h"
+#include "payloads.h"
 
 // const double kSecs_to_usecs = 1e6;
 const double kSecs_to_nsecs = 1e9;
@@ -525,7 +526,7 @@ void Client::RunTCP( void ) {
 	    reportstruct->packetLen = mSettings->mBufLen;
 	}
 	if (!isTripTime(mSettings)) {
-	    WriteTcpHdr(reportstruct);
+	    WriteTcpTxHdr(reportstruct);
 	}
 	// perform write
 	WriteSync();
@@ -601,7 +602,7 @@ void Client::RunRateLimitedTCP ( void ) {
 	        reportstruct->packetLen = mSettings->mBufLen;
 	    }
 	    if (!isTripTime(mSettings)) {
-	        WriteTcpHdr(reportstruct);
+	        WriteTcpTxHdr(reportstruct);
 	    }
 	    // perform write
 	    WriteSync();
@@ -958,7 +959,7 @@ void Client::WritePacketID (intmax_t packetID) {
 #endif
 }
 
-void Client::WriteTcpHdr (ReportStruct *reportstruct) {
+void Client::WriteTcpTxHdr (ReportStruct *reportstruct) {
     struct TCP_datagram * mBuf_TCP = (struct TCP_datagram *) mBuf;
     // store packet ID into buffer
 #ifdef HAVE_INT64_T
@@ -1144,7 +1145,7 @@ void Client::InitiateServer(void) {
 	    HdrXchange(flags);
 	}
 	if (isTripTime(mSettings)) {
-	      WriteTcpHdr(reportstruct);
+	      WriteTcpTxHdr(reportstruct);
 	      int currLen = send( mSettings->mSock, mBuf, (sizeof(struct TCP_datagram)), 0 );
 	      WARN_errno( currLen < 0, "send connect/tcp timestamps" );
 	}
