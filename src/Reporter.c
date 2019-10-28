@@ -61,6 +61,7 @@
 #include "histogram.h"
 #include "delay.h"
 #include "packet_ring.h"
+#include "payloads.h"
 
 #ifdef __cplusplus
 extern "C" {
