@@ -531,6 +531,10 @@ void *reporter_reportpeer(struct ConnectionInfo *stats, int ID) {
 	    b += strlen(b);
 	  }
 	}
+	if (isTripTime(stats)) {
+	    snprintf(b, PEERBUFSIZE-strlen(b), " (trip-times)");
+	    b += strlen(b);
+	}
 	if (stats->l2mode) {
 	    snprintf(b, PEERBUFSIZE-strlen(b), " (%s=0x%X)", "l2mode", stats->l2mode);
 	    b += strlen(b);

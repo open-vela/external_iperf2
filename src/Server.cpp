@@ -146,6 +146,7 @@ void Server::RunTCP( void ) {
     long currLen;
     intmax_t totLen = 0;
     bool err  = 0;
+    struct TCP_burst_payload burst_info;
 
     Timestamp time1, time2;
     double tokens=0.000004;
@@ -163,6 +164,16 @@ void Server::RunTCP( void ) {
 	    time1 = time2;
 	}
 	if (tokens >= 0.0) {
+	    if (isWriteAck(mSettings)) {
+	      int n;
+	      if ((n = recvn(mSettings->mSock, (char *)&burst_info, sizeof(struct TCP_burst_payload), 0)) == sizeof(struct TCP_burst_payload)) {
+		// printf("got header\n");
+		burst_info.typelen.type = ntohl(burst_info.typelen.type);
+		burst_info.typelen.length = ntohl(burst_info.typelen.length);
+		burst_info.flags = ntohl(burst_info.flags);
+		burst_info.burst_size = ntohl(burst_info.burst_size);
+	      }
+	    }
 	    currLen = recv(mSettings->mSock, mBuf, ((mSettings->mBufLen < burst_nleft) ? mSettings->mBufLen : burst_nleft), 0);
 	    now.setnow();
 	    reportstruct->packetTime.tv_sec = now.getSecs();
@@ -326,7 +337,7 @@ void Server::InitTrafficLoop (void) {
         mEndTime.setnow();
         mEndTime.add( mSettings->mAmount / 100.0 );
     }
-
+    // RJM fix this
     if (isTripTime(mSettings)) {
 	int n, len=3;
 	uint32_t buf[len];
