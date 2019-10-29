@@ -1,4 +1,4 @@
-`/*---------------------------------------------------------------
+/*---------------------------------------------------------------
  * Copyrighta (c) 2019
  * Broadcom Corporation
  * All Rights Reserved.
@@ -90,6 +90,7 @@ extern "C" {
 enum MsgType {
     CLIENTHDR = 0x1,
     CLIENTHDRACK,
+    CLIENTTCPHDR,
     SERVERHDR,
     SERVERHDRACK
 };
@@ -176,46 +177,57 @@ struct client_hdrext {
  *                +--------+--------+--------+--------+
  *            2   |        len                        |
  *                +--------+--------+--------+--------+
- *            3   |        isoch burst period (s)     |
+ *            3   |        flags                      |
  *                +--------+--------+--------+--------+
- *            4   |        isoch burst period (us)    |
+ *            4   |        isoch burst period (s)     |
  *                +--------+--------+--------+--------+
- *            5   |        isoch start timestamp (s)  |
+ *            5   |        isoch burst period (us)    |
  *                +--------+--------+--------+--------+
- *            6   |        isoch start timestamp (us) |
+ *            6   |        isoch start timestamp (s)  |
  *                +--------+--------+--------+--------+
- *            7   |        burst id                   |
+ *            7   |        isoch start timestamp (us) |
  *                +--------+--------+--------+--------+
- *            8   |        burtsize                   |
+ *            8   |        burst id                   |
  *                +--------+--------+--------+--------+
- *            9   |        burst bytes remaining      |
+ *            9   |        burtsize                   |
  *                +--------+--------+--------+--------+
- *           10   |        seqno lower                |
+ *           10   |        burst bytes remaining      |
  *                +--------+--------+--------+--------+
- *           11   |        seqno upper                |
+ *           11   |        seqno lower                |
  *                +--------+--------+--------+--------+
- *           12   |        tv_sec (write)             |
+ *           12   |        seqno upper                |
  *                +--------+--------+--------+--------+
- *           13   |        tv_usec (write)            |
+ *           13   |        tv_sec (write)             |
  *                +--------+--------+--------+--------+
- *           14   |        tv_sec (read)              |
+ *           14   |        tv_usec (write)            |
  *                +--------+--------+--------+--------+
- *           15   |        tv_usec (read)             |
+ *           15   |        tv_sec (read)              |
  *                +--------+--------+--------+--------+
- *           16   |        tv_sec (write-ack)         |
+ *           16   |        tv_usec (read)             |
  *                +--------+--------+--------+--------+
- *           17   |        tv_usec (write-ack)        |
+ *           17   |        tv_sec (write-ack)         |
  *                +--------+--------+--------+--------+
- *           18   |        tv_sec (read-ack)          |
+ *           18   |        tv_usec (write-ack)        |
  *                +--------+--------+--------+--------+
- *           19   |        tv_usec (read-ack)         |
+ *           19   |        tv_sec (read-ack)          |
+ *                +--------+--------+--------+--------+
+ *           20   |        tv_usec (read-ack)         |
+ *                +--------+--------+--------+--------+
+ *           21   |        reserved                   |
+ *                +--------+--------+--------+--------+
+ *           22   |        reserved                   |
+ *                +--------+--------+--------+--------+
+ *           23   |        reserved                   |
+ *                +--------+--------+--------+--------+
+ *           24   |        reserved                   |
  *                +--------+--------+--------+--------+
  *
  */
-struct TCP_bust_payload {
+struct TCP_burst_payload {
     struct hdr_typelen typelen;
-    uint32_t burstperiod_s;
-    uint32_t burstperiod_us;
+    uint32_t flags;
+    uint32_t burst_period_s;
+    uint32_t burst_period_us;
     uint32_t start_tv_sec;
     uint32_t start_tv_usec;
     uint32_t burst_id;
@@ -231,7 +243,10 @@ struct TCP_bust_payload {
     uint32_t writeack_tv_usec;
     uint32_t readack_tv_sec;
     uint32_t readack_tv_usec;
-    uint32_t reserved;
+    uint32_t reserved1;
+    uint32_t reserved2;
+    uint32_t reserved3;
+    uint32_t reserved4;
 };
 
 
