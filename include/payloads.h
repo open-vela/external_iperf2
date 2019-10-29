@@ -1,4 +1,4 @@
-/*---------------------------------------------------------------
+`/*---------------------------------------------------------------
  * Copyrighta (c) 2019
  * Broadcom Corporation
  * All Rights Reserved.
@@ -51,6 +51,48 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+/*
+ * Message header flags
+ *
+ * base flags, keep compatible with older versions
+ */
+#define HEADER_VERSION1 0x80000000
+#define HEADER_EXTEND   0x40000000
+#define HEADER_UDPTESTS 0x20000000
+#define HEADER_TIMESTAMP 0x10000000
+#define HEADER_SEQNO64B  0x08000000
+
+// Below flags are used to pass test settings in *every* UDP packet
+// and not just during the header exchange
+#define HEADER_EXTEND_V2    0x80000000
+#define HEADER_UDP_ISOCH    0x00000001
+#define HEADER_L2ETHPIPV6   0x00000002
+#define HEADER_L2LENCHECK   0x00000004
+#define HEADER_NOUDPFIN     0x00000008
+
+#define RUN_NOW         0x00000001
+// newer flags
+#define UNITS_PPS             0x00000001
+#define SEQNO64B              0x00000002
+#define REALTIME              0x00000004
+#define REVERSE               0x00000008
+#define BIDIR                 0x00000010
+#define WRITEACK              0x00000020
+
+// later features
+#define HDRXACKMAX 2500000 // default 2.5 seconds, units microseconds
+#define HDRXACKMIN   10000 // default 10 ms, units microseconds
+
+/*
+ * Structures used for test messages which
+ * are exchanged between the client and the Server/Listener
+ */
+enum MsgType {
+    CLIENTHDR = 0x1,
+    CLIENTHDRACK,
+    SERVERHDR,
+    SERVERHDRACK
+};
 
 /*
  * Structures below will be passed as network i/o
@@ -83,7 +125,6 @@ struct TCP_datagram {
     uint32_t reserved1;
     uint32_t reserved2;
 };
-
 
 /*
  * The client_hdr structure is sent from clients
@@ -126,9 +167,76 @@ struct client_hdrext {
     int32_t mRealtime;
 };
 
+/*
+ * TCP Isoch/burst payload structure
+ *
+ *                 0      7 8     15 16    23 24    31
+ *                +--------+--------+--------+--------+
+ *            1   |        type                       |
+ *                +--------+--------+--------+--------+
+ *            2   |        len                        |
+ *                +--------+--------+--------+--------+
+ *            3   |        isoch burst period (s)     |
+ *                +--------+--------+--------+--------+
+ *            4   |        isoch burst period (us)    |
+ *                +--------+--------+--------+--------+
+ *            5   |        isoch start timestamp (s)  |
+ *                +--------+--------+--------+--------+
+ *            6   |        isoch start timestamp (us) |
+ *                +--------+--------+--------+--------+
+ *            7   |        burst id                   |
+ *                +--------+--------+--------+--------+
+ *            8   |        burtsize                   |
+ *                +--------+--------+--------+--------+
+ *            9   |        burst bytes remaining      |
+ *                +--------+--------+--------+--------+
+ *           10   |        seqno lower                |
+ *                +--------+--------+--------+--------+
+ *           11   |        seqno upper                |
+ *                +--------+--------+--------+--------+
+ *           12   |        tv_sec (write)             |
+ *                +--------+--------+--------+--------+
+ *           13   |        tv_usec (write)            |
+ *                +--------+--------+--------+--------+
+ *           14   |        tv_sec (read)              |
+ *                +--------+--------+--------+--------+
+ *           15   |        tv_usec (read)             |
+ *                +--------+--------+--------+--------+
+ *           16   |        tv_sec (write-ack)         |
+ *                +--------+--------+--------+--------+
+ *           17   |        tv_usec (write-ack)        |
+ *                +--------+--------+--------+--------+
+ *           18   |        tv_sec (read-ack)          |
+ *                +--------+--------+--------+--------+
+ *           19   |        tv_usec (read-ack)         |
+ *                +--------+--------+--------+--------+
+ *
+ */
+struct TCP_bust_payload {
+    struct hdr_typelen typelen;
+    uint32_t burstperiod_s;
+    uint32_t burstperiod_us;
+    uint32_t start_tv_sec;
+    uint32_t start_tv_usec;
+    uint32_t burst_id;
+    uint32_t burst_size;
+    uint32_t burst_remaining;
+    uint32_t seqno_lower;
+    uint32_t seqno_upper;
+    uint32_t write_tv_sec;
+    uint32_t write_tv_usec;
+    uint32_t read_tv_sec;
+    uint32_t read_tv_usec;
+    uint32_t writeack_tv_sec;
+    uint32_t writeack_tv_usec;
+    uint32_t readack_tv_sec;
+    uint32_t readack_tv_usec;
+    uint32_t reserved;
+};
+
 
 /*
- * Isoch payload structure
+ * UDP Isoch payload structure
  *
  *                 0      7 8     15 16    23 24    31
  *                +--------+--------+--------+--------+
@@ -291,5 +399,5 @@ struct server_hdr {
 #ifdef __cplusplus
 } /* end extern "C" */
 #endif
-  
+
 #endif // PAYLOADS
