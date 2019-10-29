@@ -519,14 +519,27 @@ void Client::Run( void ) {
 
 
 void Client::RunTCP( void ) {
+    int burst_size = (mSettings->mWriteAckLen > 0) ? mSettings->mWriteAckLen : mSettings->mBufLen;
+    int burst_remaining = burst_size;
+
+    if (isTripTime(mSettings) || isWriteAck(mSettings)) {
+      struct TCP_burst_payload * mBuf_burst = (struct TCP_burst_payload *) mBuf;
+      mBuf_burst->typelen.type = htonl(CLIENTTCPHDR);
+      mBuf_burst->typelen.length =  htonl(sizeof(struct TCP_burst_payload));
+      mBuf_burst->flags = (HEADER_TIMESTAMP | HEADER_SEQNO64B);
+      now.setnow();
+      mBuf_burst->start_tv_sec = htonl(now.getSecs());
+      mBuf_burst->start_tv_usec = htonl(now.getUsecs());
+    }
+
     while (InProgress()) {
         if (isModeAmount(mSettings)) {
 	    reportstruct->packetLen = ((mSettings->mAmount < (unsigned) mSettings->mBufLen) ? mSettings->mAmount : mSettings->mBufLen);
 	} else {
 	    reportstruct->packetLen = mSettings->mBufLen;
 	}
-	if (!isTripTime(mSettings)) {
-	    WriteTcpTxHdr(reportstruct);
+	if ((isTripTime(mSettings) || isWriteAck(mSettings) && (burst_size==burst_remaining))) {
+	    WriteTcpTxHdr(reportstruct, burst_size);
 	}
 	// perform write
 	WriteSync();
@@ -602,7 +615,7 @@ void Client::RunRateLimitedTCP ( void ) {
 	        reportstruct->packetLen = mSettings->mBufLen;
 	    }
 	    if (!isTripTime(mSettings)) {
-	        WriteTcpTxHdr(reportstruct);
+	       WriteTcpTxHdr(reportstruct, 0);
 	    }
 	    // perform write
 	    WriteSync();
@@ -959,9 +972,10 @@ void Client::WritePacketID (intmax_t packetID) {
 #endif
 }
 
-void Client::WriteTcpTxHdr (ReportStruct *reportstruct) {
-    struct TCP_datagram * mBuf_TCP = (struct TCP_datagram *) mBuf;
+void Client::WriteTcpTxHdr (ReportStruct *reportstruct, int burst_size) {
+    struct TCP_burst_payload * mBuf_burst = (struct TCP_burst_payload *) mBuf;
     // store packet ID into buffer
+    reportstruct->packetID += burst_size;
 #ifdef HAVE_INT64_T
     // Pack signed 64bit packetID into unsigned 32bit id1 + unsigned
     // 32bit id2.  A legacy server reading only id1 will still be able
@@ -970,24 +984,22 @@ void Client::WriteTcpTxHdr (ReportStruct *reportstruct) {
     id1 = reportstruct->packetID & 0xFFFFFFFFLL;
     id2 = (reportstruct->packetID  & 0xFFFFFFFF00000000LL) >> 32;
 
-    mBuf_TCP->id = htonl(id1);
-    mBuf_TCP->id2 = htonl(id2);
+    mBuf_burst->seqno_lower = htonl(id1);
+    mBuf_burst->seqno_upper = htonl(id2);
 
 #ifdef SHOW_PACKETID
     printf("id %" PRIdMAX " (0x%" PRIxMAX ") -> 0x%x, 0x%x\n",
 	   packetID, packetID, id1, id2);
 #endif
 #else
-    mBuf_TCP->id = htonl((reportstruct->packetID));
-    mBuf_TCP->id2 = htonl(0x0);
+    mBuf_burst->seqno_lower = htonl((reportstruct->packetID));
+    mBuf_burst->seqno_upper = htonl(0x0);
 #endif
-    mBuf_TCP->reserved1 = htonl(0x0);
-    mBuf_TCP->reserved2 = htonl(0x0);
-    mBuf_TCP->typelen.type = htonl(HEADER_TIMESTAMP);
-    mBuf_TCP->typelen.length = htonl(reportstruct->packetLen);
-    mBuf_TCP->tv_sec  = htonl(reportstruct->packetTime.tv_sec);
-    mBuf_TCP->tv_usec  = htonl(reportstruct->packetTime.tv_usec);
-    reportstruct->packetID++;
+    mBuf_burst->write_tv_sec  = htonl(reportstruct->packetTime.tv_sec);
+    mBuf_burst->write_tv_usec  = htonl(reportstruct->packetTime.tv_usec);
+    mBuf_burst->burst_remaining  = htonl(burst_size);
+    mBuf_burst->burst_period_s  = htonl(0x0);
+    mBuf_burst->burst_period_us  = htonl(0x0);
     return;
 }
 
@@ -1144,10 +1156,11 @@ void Client::InitiateServer(void) {
 	    //  between the client and server/listener
 	    HdrXchange(flags);
 	}
+	// rjm fix this
 	if (isTripTime(mSettings)) {
-	      WriteTcpTxHdr(reportstruct);
-	      int currLen = send( mSettings->mSock, mBuf, (sizeof(struct TCP_datagram)), 0 );
-	      WARN_errno( currLen < 0, "send connect/tcp timestamps" );
+	  WriteTcpTxHdr(reportstruct, 0);
+	  int currLen = send( mSettings->mSock, mBuf, (sizeof(struct TCP_datagram)), 0 );
+	  WARN_errno( currLen < 0, "send connect/tcp timestamps" );
 	}
     }
 }
