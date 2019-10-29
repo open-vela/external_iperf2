@@ -1395,6 +1395,7 @@ int Settings_GenerateClientHdr( struct thread_Settings *client, client_hdr *hdr 
 	flags |= HEADER_EXTEND;
         extendflags |= WRITEACK;
     }
+    // Note, flags for header timestamps set in the client's run()
     hdr->base.flags = htonl(flags);
     if (flags & HEADER_EXTEND) {
 	if (isBWSet(client)) {
