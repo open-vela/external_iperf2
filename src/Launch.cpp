@@ -305,7 +305,7 @@ void writeack_server_spawn(thread_Settings *thread) {
 }
 
 /*
- * writeack_server_spawn
+ * writeack_client_spawn
  */
 void writeack_client_spawn(thread_Settings *thread) {
     Server *theServer = NULL;
