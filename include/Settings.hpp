@@ -449,48 +449,6 @@ struct thread_Settings {
 #define unsetWriteSync(settings)    settings->flags_extend &= ~FLAG_WRITESYNC
 #define unsetNoUDPfin(settings)     settings->flags_extend &= ~FLAG_NOUDPFIN
 
-/*
- * Message header flags
- *
- * base flags, keep compatible with older versions
- */
-#define HEADER_VERSION1 0x80000000
-#define HEADER_EXTEND   0x40000000
-#define HEADER_UDPTESTS 0x20000000
-#define HEADER_TIMESTAMP 0x10000000
-#define HEADER_SEQNO64B  0x08000000
-
-// Below flags are used to pass test settings in *every* UDP packet
-// and not just during the header exchange
-#define HEADER_EXTEND_V2    0x80000000
-#define HEADER_UDP_ISOCH    0x00000001
-#define HEADER_L2ETHPIPV6   0x00000002
-#define HEADER_L2LENCHECK   0x00000004
-#define HEADER_NOUDPFIN     0x00000008
-
-#define RUN_NOW         0x00000001
-// newer flags
-#define UNITS_PPS             0x00000001
-#define SEQNO64B              0x00000002
-#define REALTIME              0x00000004
-#define REVERSE               0x00000008
-#define BIDIR                 0x00000010
-#define WRITEACK              0x00000020
-
-// later features
-#define HDRXACKMAX 2500000 // default 2.5 seconds, units microseconds
-#define HDRXACKMIN   10000 // default 10 ms, units microseconds
-
-/*
- * Structures used for test messages which
- * are exchanged between the client and the Server/Listener
- */
-enum MsgType {
-    CLIENTHDR = 0x1,
-    CLIENTHDRACK,
-    SERVERHDR,
-    SERVERHDRACK
-};
 
 // set to defaults
 void Settings_Initialize( struct thread_Settings* main );
