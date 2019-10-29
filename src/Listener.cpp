@@ -1226,6 +1226,9 @@ int Listener::ReadClientHeader(client_hdr *hdr ) {
 	} else if (isModeTime(mSettings)) {
 	    sorcvtimer = (mSettings->mAmount * 1000) / 2;
 	}
+	// set the recvn timer min to 2 seconds
+	if (sorcvtimer < 2)
+	    sorcvtimer = 2;
 	if (sorcvtimer > 0) {
 #ifdef WIN32
 	    // Windows SO_RCVTIMEO uses ms
@@ -1249,12 +1252,15 @@ int Listener::ReadClientHeader(client_hdr *hdr ) {
 		len = sizeof(client_hdr);
 	    } else if ((flags & HEADER_VERSION1) != 0) {
 		len = sizeof(client_hdr_v1);
-	    } else if ((flags & HEADER_TIMESTAMP) != 0 ) {
+	    }
+	    if ((flags & HEADER_TIMESTAMP) != 0 ) {
 		setTripTime(server);
 	    }
 	    if (len && ((n = recvn(server->mSock, p, len, MSG_PEEK)) != len)) {
 		return -1;
 	    }
+	} else {
+	    WARN_errno(0, "recvn timeout on test exchange" );
 	}
     }
     // Handle flags that require an ack back to the client
