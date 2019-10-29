@@ -428,6 +428,16 @@ void Client::InitTrafficLoop (void) {
 
     lastPacketTime.setnow();
     readAt = mBuf;
+
+    // Set up trip time values that don't change
+    if (isTripTime(mSettings) || isWriteAck(mSettings)) {
+      struct TCP_burst_payload * mBuf_burst = (struct TCP_burst_payload *) mBuf;
+      mBuf_burst->typelen.type = htonl(CLIENTTCPHDR);
+      mBuf_burst->typelen.length =  htonl(sizeof(struct TCP_burst_payload));
+      mBuf_burst->flags = htonl(HEADER_TIMESTAMP | HEADER_SEQNO64B);
+      mBuf_burst->start_tv_sec = htonl(myJob->report.startTime.tv_sec);
+      mBuf_burst->start_tv_usec = htonl(myJob->report.startTime.tv_usec);
+    }
 }
 
 inline void Client::WriteSync(void) {
@@ -521,16 +531,6 @@ void Client::Run( void ) {
 void Client::RunTCP( void ) {
     int burst_size = (mSettings->mWriteAckLen > 0) ? mSettings->mWriteAckLen : mSettings->mBufLen;
     int burst_remaining = burst_size;
-
-    if (isTripTime(mSettings) || isWriteAck(mSettings)) {
-      struct TCP_burst_payload * mBuf_burst = (struct TCP_burst_payload *) mBuf;
-      mBuf_burst->typelen.type = htonl(CLIENTTCPHDR);
-      mBuf_burst->typelen.length =  htonl(sizeof(struct TCP_burst_payload));
-      mBuf_burst->flags = (HEADER_TIMESTAMP | HEADER_SEQNO64B);
-      now.setnow();
-      mBuf_burst->start_tv_sec = htonl(now.getSecs());
-      mBuf_burst->start_tv_usec = htonl(now.getUsecs());
-    }
 
     while (InProgress()) {
         if (isModeAmount(mSettings)) {
@@ -995,8 +995,8 @@ void Client::WriteTcpTxHdr (ReportStruct *reportstruct, int burst_size) {
     mBuf_burst->seqno_lower = htonl((reportstruct->packetID));
     mBuf_burst->seqno_upper = htonl(0x0);
 #endif
-    mBuf_burst->write_tv_sec  = htonl(reportstruct->packetTime.tv_sec);
-    mBuf_burst->write_tv_usec  = htonl(reportstruct->packetTime.tv_usec);
+    mBuf_burst->send_tt.write_tv_sec  = htonl(reportstruct->packetTime.tv_sec);
+    mBuf_burst->send_tt.write_tv_usec  = htonl(reportstruct->packetTime.tv_usec);
     mBuf_burst->burst_remaining  = htonl(burst_size);
     mBuf_burst->burst_period_s  = htonl(0x0);
     mBuf_burst->burst_period_us  = htonl(0x0);
@@ -1155,12 +1155,6 @@ void Client::InitiateServer(void) {
 	    //  The extended headers require an exchange
 	    //  between the client and server/listener
 	    HdrXchange(flags);
-	}
-	// rjm fix this
-	if (isTripTime(mSettings)) {
-	  WriteTcpTxHdr(reportstruct, 0);
-	  int currLen = send( mSettings->mSock, mBuf, (sizeof(struct TCP_datagram)), 0 );
-	  WARN_errno( currLen < 0, "send connect/tcp timestamps" );
 	}
     }
 }

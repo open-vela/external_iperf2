@@ -71,7 +71,7 @@ extern "C" {
 #define HEADER_NOUDPFIN     0x00000008
 
 #define RUN_NOW         0x00000001
-// newer flags
+// newer flags available per HEADER_EXTEND
 #define UNITS_PPS             0x00000001
 #define SEQNO64B              0x00000002
 #define REALTIME              0x00000004
@@ -223,26 +223,26 @@ struct client_hdrext {
  *                +--------+--------+--------+--------+
  *
  */
+struct TCP_oneway_triptime {
+    uint32_t write_tv_sec;
+    uint32_t write_tv_usec;
+    uint32_t read_tv_sec;
+    uint32_t read_tv_usec;
+};
 struct TCP_burst_payload {
-    struct hdr_typelen typelen;
     uint32_t flags;
-    uint32_t burst_period_s;
-    uint32_t burst_period_us;
+    struct hdr_typelen typelen;
     uint32_t start_tv_sec;
     uint32_t start_tv_usec;
+    struct TCP_oneway_triptime send_tt;
+    uint32_t burst_period_s;
+    uint32_t burst_period_us;
     uint32_t burst_id;
     uint32_t burst_size;
     uint32_t burst_remaining;
     uint32_t seqno_lower;
     uint32_t seqno_upper;
-    uint32_t write_tv_sec;
-    uint32_t write_tv_usec;
-    uint32_t read_tv_sec;
-    uint32_t read_tv_usec;
-    uint32_t writeack_tv_sec;
-    uint32_t writeack_tv_usec;
-    uint32_t readack_tv_sec;
-    uint32_t readack_tv_usec;
+    struct TCP_oneway_triptime writeacktt;
     uint32_t reserved1;
     uint32_t reserved2;
     uint32_t reserved3;
