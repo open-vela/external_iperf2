@@ -239,7 +239,6 @@ struct TCP_burst_payload {
     uint32_t burst_period_us;
     uint32_t burst_id;
     uint32_t burst_size;
-    uint32_t burst_remaining;
     uint32_t seqno_lower;
     uint32_t seqno_upper;
     struct TCP_oneway_triptime writeacktt;
