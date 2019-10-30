@@ -184,7 +184,7 @@ int recvn( int inSock, char *outBuf, int inLen, int flags ) {
                 return -1;  /* error */
 	    }
 	} else if ( nread == 0 ) {
-	    WARN_errno( 1, "recvn abort" );
+	  // WARN_errno( 1, "recvn abort" );
             break;        /* EOF */
 	}
         nleft -= nread;
