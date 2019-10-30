@@ -530,7 +530,7 @@ void Client::Run( void ) {
 
 void Client::RunTCP( void ) {
     int burst_size = (mSettings->mWriteAckLen > 0) ? mSettings->mWriteAckLen : mSettings->mBufLen;
-    int burst_remaining = burst_size;
+    int burst_remaining = 0;
 
     while (InProgress()) {
         if (isModeAmount(mSettings)) {
@@ -538,15 +538,29 @@ void Client::RunTCP( void ) {
 	} else {
 	    reportstruct->packetLen = mSettings->mBufLen;
 	}
-	if ((isTripTime(mSettings) || isWriteAck(mSettings) && (burst_size==burst_remaining))) {
-	    WriteTcpTxHdr(reportstruct, burst_size);
-	}
-	// perform write
+
+	// Sychronize threads if requested
 	WriteSync();
 
+	if (isTripTime(mSettings) || isWriteAck(mSettings)) {
+	    if (reportstruct->packetLen > burst_remaining) {
+		reportstruct->packetLen = burst_remaining;
+	    }
+	    if (burst_remaining == 0) {
+		WriteTcpTxHdr(reportstruct, burst_size);
+		burst_remaining = burst_size;
+		now.setnow();
+		reportstruct->packetTime.tv_sec = now.getSecs();
+		reportstruct->packetTime.tv_usec = now.getUsecs();
+	    }
+	}
+	// perform write
 	int len = write( mSettings->mSock, mBuf, reportstruct->packetLen);
-	if (isWriteAck(mSettings) && (len != reportstruct->packetLen))
-	    fprintf(stderr, "Warn: write size mismatch request=%d actual=%d\n", reportstruct->packetLen, len);
+	if (isTripTime(mSettings) || isWriteAck(mSettings)) {
+	    if (len != reportstruct->packetLen)
+		fprintf(stderr, "Warn: write size mismatch request=%d actual=%d\n", reportstruct->packetLen, len);
+	    burst_remaining -= len;
+	}
 	reportstruct->packetLen = len;
         if ( reportstruct->packetLen < 0 ) {
 	    if (NONFATALTCPWRITERR(errno)) {
