@@ -234,8 +234,6 @@ double Client::Connect() {
 
     SockAddr_remoteAddr( mSettings );
 
-    assert( mSettings->mHost != NULL );
-
     // create an internet socket
     int type = ( isUDP( mSettings )  ?  SOCK_DGRAM : SOCK_STREAM);
 
@@ -531,6 +529,7 @@ void Client::Run( void ) {
 void Client::RunTCP( void ) {
     int burst_size = (mSettings->mWriteAckLen > 0) ? mSettings->mWriteAckLen : mSettings->mBufLen;
     int burst_remaining = 0;
+    int burst_id = 1;
 
     while (InProgress()) {
         if (isModeAmount(mSettings)) {
@@ -541,28 +540,28 @@ void Client::RunTCP( void ) {
 
 	// Sychronize threads if requested
 	WriteSync();
-
+        int n = 0;
 	if (isTripTime(mSettings) || isWriteAck(mSettings)) {
-	    if (reportstruct->packetLen > burst_remaining) {
-		reportstruct->packetLen = burst_remaining;
-	    }
 	    if (burst_remaining == 0) {
-		WriteTcpTxHdr(reportstruct, burst_size);
+	        WriteTcpTxHdr(reportstruct, burst_size, burst_id++);
 		burst_remaining = burst_size;
 		now.setnow();
 		reportstruct->packetTime.tv_sec = now.getSecs();
 		reportstruct->packetTime.tv_usec = now.getUsecs();
+		// perform write
+		n = writen(mSettings->mSock, mBuf, sizeof(struct TCP_burst_payload));
+		WARN(n != sizeof(struct TCP_burst_payload), "burst hdr write failed");
+		burst_remaining -= n;
+		reportstruct->packetLen -= n;
+		// thread_debug("***write burst header %d id=%d", burst_size, (burst_id - 1));
+	    } else if (reportstruct->packetLen > burst_remaining) {
+		reportstruct->packetLen = burst_remaining;
 	    }
 	}
 	// perform write
-	int len = write( mSettings->mSock, mBuf, reportstruct->packetLen);
-	if (isTripTime(mSettings) || isWriteAck(mSettings)) {
-	    if (len != reportstruct->packetLen)
-		fprintf(stderr, "Warn: write size mismatch request=%d actual=%d\n", reportstruct->packetLen, len);
-	    burst_remaining -= len;
-	}
-	reportstruct->packetLen = len;
-        if ( reportstruct->packetLen < 0 ) {
+	WARN(reportstruct->packetLen <= 0, "invalid write req size");
+	int len = write(mSettings->mSock, mBuf, reportstruct->packetLen);
+        if (len < 0) {
 	    if (NONFATALTCPWRITERR(errno)) {
 	        reportstruct->errwrite=WriteErrAccount;
 	    } else if (FATALTCPWRITERR(errno)) {
@@ -572,11 +571,15 @@ void Client::RunTCP( void ) {
 	    } else {
 	        reportstruct->errwrite=WriteErrNoAccount;
 	    }
-	    reportstruct->packetLen = 0;
+	    len = 0;
 	} else {
-	    totLen += reportstruct->packetLen;
+	    totLen += len;
 	    reportstruct->errwrite=WriteNoErr;
+	    WARN(len != reportstruct->packetLen, "write size mismatch");
 	}
+	if (isTripTime(mSettings) || isWriteAck(mSettings))
+	    burst_remaining -= len;
+	reportstruct->packetLen = len + n;
 	now.setnow();
 	reportstruct->packetTime.tv_sec = now.getSecs();
 	reportstruct->packetTime.tv_usec = now.getUsecs();
@@ -629,7 +632,7 @@ void Client::RunRateLimitedTCP ( void ) {
 	        reportstruct->packetLen = mSettings->mBufLen;
 	    }
 	    if (isTripTime(mSettings)) {
-	       WriteTcpTxHdr(reportstruct, 0);
+	        WriteTcpTxHdr(reportstruct, 0, 1);
 	    }
 	    // perform write
 	    WriteSync();
@@ -986,7 +989,7 @@ void Client::WritePacketID (intmax_t packetID) {
 #endif
 }
 
-void Client::WriteTcpTxHdr (ReportStruct *reportstruct, int burst_size) {
+void Client::WriteTcpTxHdr (ReportStruct *reportstruct, int burst_size, int burst_id) {
     struct TCP_burst_payload * mBuf_burst = (struct TCP_burst_payload *) mBuf;
     // store packet ID into buffer
     reportstruct->packetID += burst_size;
@@ -1011,6 +1014,7 @@ void Client::WriteTcpTxHdr (ReportStruct *reportstruct, int burst_size) {
 #endif
     mBuf_burst->send_tt.write_tv_sec  = htonl(reportstruct->packetTime.tv_sec);
     mBuf_burst->send_tt.write_tv_usec  = htonl(reportstruct->packetTime.tv_usec);
+    mBuf_burst->burst_id  = htonl((uint32_t)burst_id);
     mBuf_burst->burst_size  = htonl((uint32_t)burst_size);
     mBuf_burst->burst_period_s  = htonl(0x0);
     mBuf_burst->burst_period_us  = htonl(0x0);
