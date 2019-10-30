@@ -153,7 +153,7 @@ void Server::RunTCP( void ) {
 
     InitTrafficLoop();
 
-    int burst_nleft = (mSettings->mWriteAckLen > 0) ? mSettings->mWriteAckLen : mSettings->mBufLen;
+    int burst_nleft = 0;
 
     while (InProgress() && !err) {
 	reportstruct->emptyreport=0;
@@ -164,17 +164,25 @@ void Server::RunTCP( void ) {
 	    time1 = time2;
 	}
 	if (tokens >= 0.0) {
-	    if (isWriteAck(mSettings)) {
-	      int n;
-	      if ((n = recvn(mSettings->mSock, (char *)&burst_info, sizeof(struct TCP_burst_payload), 0)) == sizeof(struct TCP_burst_payload)) {
-		// printf("got header\n");
-		burst_info.typelen.type = ntohl(burst_info.typelen.type);
-		burst_info.typelen.length = ntohl(burst_info.typelen.length);
-		burst_info.flags = ntohl(burst_info.flags);
-		burst_info.burst_size = ntohl(burst_info.burst_size);
-	      }
+	    if (isWriteAck(mSettings) || isTripTime(mSettings)) {
+		int n = 0;
+		if (burst_nleft == 0) {
+		    if ((n = recvn(mSettings->mSock, (char *)&burst_info, sizeof(struct TCP_burst_payload), 0)) == sizeof(struct TCP_burst_payload)) {
+			// printf("got header\n");
+			burst_info.typelen.type = ntohl(burst_info.typelen.type);
+			burst_info.typelen.length = ntohl(burst_info.typelen.length);
+			burst_info.flags = ntohl(burst_info.flags);
+			burst_info.burst_size = ntohl(burst_info.burst_size);
+			burst_nleft = burst_info.burst_size - sizeof(struct TCP_burst_payload);
+		    }
+		}
+		currLen = recv(mSettings->mSock, mBuf, ((mSettings->mBufLen < burst_nleft) ? mSettings->mBufLen : burst_nleft), 0);
+		currLen += n;
+		burst_nleft -= currLen;
+		printf("currlen = %d, n=%d, burst_nleft=%d\n", currLen, n, burst_nleft);
+	    } else {
+		currLen = recv(mSettings->mSock, mBuf, mSettings->mBufLen, 0);
 	    }
-	    currLen = recv(mSettings->mSock, mBuf, ((mSettings->mBufLen < burst_nleft) ? mSettings->mBufLen : burst_nleft), 0);
 	    now.setnow();
 	    reportstruct->packetTime.tv_sec = now.getSecs();
 	    reportstruct->packetTime.tv_usec = now.getUsecs();
