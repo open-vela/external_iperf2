@@ -201,9 +201,9 @@ int recvn( int inSock, char *outBuf, int inLen, int flags ) {
  * from Stevens, 1998, section 3.9
  * ------------------------------------------------------------------- */
 
-ssize_t writen( int inSock, const void *inBuf, size_t inLen ) {
-    size_t  nleft;
-    ssize_t nwritten;
+int writen( int inSock, const void *inBuf, int inLen ) {
+    int nleft;
+    int nwritten;
     const char *ptr;
 
     assert( inSock >= 0 );
