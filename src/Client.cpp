@@ -543,11 +543,11 @@ void Client::RunTCP( void ) {
         int n = 0;
 	if (isTripTime(mSettings) || isWriteAck(mSettings)) {
 	    if (burst_remaining == 0) {
-	        WriteTcpTxHdr(reportstruct, burst_size, burst_id++);
-		burst_remaining = burst_size;
 		now.setnow();
 		reportstruct->packetTime.tv_sec = now.getSecs();
 		reportstruct->packetTime.tv_usec = now.getUsecs();
+	        WriteTcpTxHdr(reportstruct, burst_size, burst_id++);
+		burst_remaining = burst_size;
 		// perform write
 		n = writen(mSettings->mSock, mBuf, sizeof(struct TCP_burst_payload));
 		WARN(n != sizeof(struct TCP_burst_payload), "burst hdr write failed");
