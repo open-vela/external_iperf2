@@ -154,6 +154,7 @@ void Server::RunTCP( void ) {
     InitTrafficLoop();
 
     int burst_nleft = 0;
+    int firsthdr = 1;
 
     while (InProgress() && !err) {
 	reportstruct->emptyreport=0;
@@ -164,28 +165,36 @@ void Server::RunTCP( void ) {
 	    time1 = time2;
 	}
 	if (tokens >= 0.0) {
+	    int n = 0;
 	    if (isWriteAck(mSettings) || isTripTime(mSettings)) {
-		int n = 0;
 		if (burst_nleft == 0) {
+		    if (isWriteAck(mSettings)) {
+		        if (!firsthdr) {
+			    enqueue_ackring(mSettings->ackring, reportstruct);
+			} else {
+			    firsthdr = 0;
+			}
+		    }
 		    if ((n = recvn(mSettings->mSock, (char *)&burst_info, sizeof(struct TCP_burst_payload), 0)) == sizeof(struct TCP_burst_payload)) {
 			burst_info.typelen.type = ntohl(burst_info.typelen.type);
 			burst_info.typelen.length = ntohl(burst_info.typelen.length);
 			burst_info.flags = ntohl(burst_info.flags);
 			burst_info.burst_size = ntohl(burst_info.burst_size);
-			burst_nleft = burst_info.burst_size - sizeof(struct TCP_burst_payload);
-			// printf("got header for burst of %d\n", burst_info.burst_size);
+			burst_info.burst_id = ntohl(burst_info.burst_id);
+			burst_nleft = burst_info.burst_size - n;
+			// thread_debug("***read burst header size %d id=%d", burst_info.burst_size, burst_info.burst_id);
+		    } else {
+		        goto end;
 		    }
 		}
+		WARN(burst_nleft <= 0, "invalid burst read req size");
 		currLen = recv(mSettings->mSock, mBuf, ((mSettings->mBufLen < burst_nleft) ? mSettings->mBufLen : burst_nleft), 0);
-		currLen += n;
 		burst_nleft -= currLen;
-		printf("currlen = %d, n=%d, burst_nleft=%d\n", currLen, n, burst_nleft);
+		WARN(burst_nleft < 0, "invalid burst read size");
+		// printf("currlen = %d, n=%d, burst_nleft=%d\n", currLen, n, burst_nleft);
 	    } else {
-		currLen = recv(mSettings->mSock, mBuf, mSettings->mBufLen, 0);
+	        currLen = recv(mSettings->mSock, mBuf, mSettings->mBufLen, 0);
 	    }
-	    now.setnow();
-	    reportstruct->packetTime.tv_sec = now.getSecs();
-	    reportstruct->packetTime.tv_usec = now.getUsecs();
 	    if (currLen <= 0) {
 		reportstruct->emptyreport=1;
 		// End loop on 0 read or socket error
@@ -201,6 +210,10 @@ void Server::RunTCP( void ) {
 		}
 		currLen = 0;
 	    }
+	    currLen += n;
+	    now.setnow();
+	    reportstruct->packetTime.tv_sec = now.getSecs();
+	    reportstruct->packetTime.tv_usec = now.getUsecs();
 	    totLen += currLen;
 	    if (isBWSet(mSettings))
 		tokens -= currLen;
@@ -209,14 +222,6 @@ void Server::RunTCP( void ) {
 	      ReportPacket( mSettings->reporthdr, reportstruct );
 	    }
 
-	    if (isWriteAck(mSettings) && (currLen > 0)) {
-	      burst_nleft = burst_nleft - currLen;
-	      while (burst_nleft <= 0) {
-		  enqueue_ackring(mSettings->ackring, reportstruct);
-		  // RJM fix this for variable burst sizes
-		  burst_nleft = ((mSettings->mWriteAckLen > 0) ? mSettings->mWriteAckLen : mSettings->mBufLen) + burst_nleft;
-	      }
-	    }
 	    // Check for reverse and amount where
 	    // the server stops after receiving
 	    // the expected byte count
@@ -228,7 +233,7 @@ void Server::RunTCP( void ) {
 	    delay_loop(4);
 	}
     }
-
+ end:
     // stop timing
     now.setnow();
     reportstruct->packetTime.tv_sec = now.getSecs();
