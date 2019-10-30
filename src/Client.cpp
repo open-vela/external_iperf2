@@ -628,7 +628,7 @@ void Client::RunRateLimitedTCP ( void ) {
 	    } else {
 	        reportstruct->packetLen = mSettings->mBufLen;
 	    }
-	    if (!isTripTime(mSettings)) {
+	    if (isTripTime(mSettings)) {
 	       WriteTcpTxHdr(reportstruct, 0);
 	    }
 	    // perform write
@@ -1011,7 +1011,7 @@ void Client::WriteTcpTxHdr (ReportStruct *reportstruct, int burst_size) {
 #endif
     mBuf_burst->send_tt.write_tv_sec  = htonl(reportstruct->packetTime.tv_sec);
     mBuf_burst->send_tt.write_tv_usec  = htonl(reportstruct->packetTime.tv_usec);
-    mBuf_burst->burst_size  = htonl(burst_size);
+    mBuf_burst->burst_size  = htonl((uint32_t)burst_size);
     mBuf_burst->burst_period_s  = htonl(0x0);
     mBuf_burst->burst_period_us  = htonl(0x0);
     return;
