@@ -168,12 +168,18 @@ void Server::RunTCP( void ) {
 	    int n = 0;
 	    if (isWriteAck(mSettings) || isTripTime(mSettings)) {
 		if (burst_nleft == 0) {
-		    if (isWriteAck(mSettings)) {
-		        if (!firsthdr) {
+		    if (!firsthdr) {
+		        if (isWriteAck(mSettings)) {
 			    enqueue_ackring(mSettings->ackring, reportstruct);
-			} else {
-			    firsthdr = 0;
 			}
+			now.setnow();
+			timeval s;
+		        s.tv_sec = burst_info.send_tt.write_tv_sec;
+		        s.tv_usec = burst_info.send_tt.write_tv_usec;
+			long burst_latency = now.subUsec(s);
+			// printf("diff = %ldus s=%ld.%ld e=%ld.%ld\n", burst_latency, s.tv_sec, s.tv_usec, now.getSecs(), now.getUsecs());
+		    } else {
+		        firsthdr = 0;
 		    }
 		    if ((n = recvn(mSettings->mSock, (char *)&burst_info, sizeof(struct TCP_burst_payload), 0)) == sizeof(struct TCP_burst_payload)) {
 			burst_info.typelen.type = ntohl(burst_info.typelen.type);
@@ -181,6 +187,8 @@ void Server::RunTCP( void ) {
 			burst_info.flags = ntohl(burst_info.flags);
 			burst_info.burst_size = ntohl(burst_info.burst_size);
 			burst_info.burst_id = ntohl(burst_info.burst_id);
+			burst_info.send_tt.write_tv_sec  = ntohl(burst_info.send_tt.write_tv_sec);
+			burst_info.send_tt.write_tv_usec  = ntohl(burst_info.send_tt.write_tv_usec);
 			burst_nleft = burst_info.burst_size - n;
 			// thread_debug("***read burst header size %d id=%d", burst_info.burst_size, burst_info.burst_id);
 		    } else {
