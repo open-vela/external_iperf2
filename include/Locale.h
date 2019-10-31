@@ -152,6 +152,10 @@ extern const char report_sum_bw_enhanced_format[];
 
 extern const char report_bw_read_enhanced_header[];
 
+extern const char report_bw_read_enhanced_netpwr_header[];
+
+extern const char report_bw_read_enhanced_netpwr_format[];
+
 extern const char report_bw_read_enhanced_format[];
 
 extern const char report_sum_bw_read_enhanced_format[];
