@@ -305,6 +305,65 @@ example, the bins are 0-1K, 1K-2K, .., 7K-8K.
 
 .PP
 
+.B TCP tests (server with --trip-time on client)
+
+.B
+iperf -s -e -i 1 and client enables trip-time (e.g. iperf -c 10.19.87.7 --trip-time)
+
+.br
+------------------------------------------------------------
+.br
+Server listening on TCP port 5001 with pid 1327
+.br
+Read buffer size:  128 KByte
+.br
+TCP window size: 85.3 KByte (default)
+.br
+------------------------------------------------------------
+.br
+[  4] local 10.19.87.7 port 5001 connected with 10.19.87.10 port 59030 (trip-times)
+.br
+[ ID] Interval        Transfer    Bandwidth       Reads   Dist(bin=16.0K)     Latency avg/min/max/stdev inP NetPwr
+.br
+[  4] 0.00-1.00 sec   112 MBytes   941 Mbits/sec  7626    2480:5145:0:0:1:0:0:0  9.476/ 1.610/11.617/ 1.084 ms 1114050 bytes 12406.18
+.br
+[  4] 1.00-2.00 sec   112 MBytes   942 Mbits/sec  7690    2604:5086:0:0:0:0:0:0  9.508/ 1.610/11.721/ 1.032 ms 1119079 bytes 12378.11
+.br
+[  4] 2.00-3.00 sec   112 MBytes   941 Mbits/sec  7321    2001:5320:0:0:0:0:0:0  9.507/ 1.610/11.731/ 1.014 ms 1118724 bytes 12376.86
+.br
+[  4] 3.00-4.00 sec   112 MBytes   941 Mbits/sec  8001    3020:4981:0:0:0:0:0:0  9.513/ 1.610/11.731/ 1.001 ms 1119523 bytes 12369.55
+.br
+[  4] 4.00-5.00 sec   112 MBytes   941 Mbits/sec  7797    2714:5083:0:0:0:0:0:0  9.509/ 1.610/11.731/ 0.995 ms 1118990 bytes 12375.14
+.br
+[  4] 5.00-6.00 sec   112 MBytes   942 Mbits/sec  8077    3269:4808:0:0:0:0:0:0  9.513/ 1.610/11.731/ 0.990 ms 1119553 bytes 12372.26
+.br
+[  4] 6.00-7.00 sec   112 MBytes   941 Mbits/sec  7680    2446:5234:0:0:0:0:0:0  9.514/ 1.610/11.776/ 0.988 ms 1119494 bytes 12368.05
+.br
+[  4] 7.00-8.00 sec   112 MBytes   942 Mbits/sec  7734    2575:5159:0:0:0:0:0:0  9.511/ 1.610/11.776/ 0.985 ms 1119320 bytes 12374.84
+.br
+[  4] 8.00-9.00 sec   112 MBytes   941 Mbits/sec  7699    2509:5190:0:0:0:0:0:0  9.505/ 1.610/11.776/ 0.984 ms 1118470 bytes 12380.29
+.br
+[  4] 9.00-10.00 sec   112 MBytes   941 Mbits/sec  8022    3002:5020:0:0:0:0:0:0  9.498/ 1.610/11.776/ 0.984 ms 1117755 bytes 12390.03
+.br
+[  4] 10.00-10.01 sec   841 KBytes   931 Mbits/sec  54    15:39:0:0:0:0:0:0  9.498/ 1.610/11.776/ 0.984 ms 1105174 bytes 12251.26
+.br
+[  4] 0.00-10.01 sec  1.10 GBytes   941 Mbits/sec  77701    26635:51065:0:0:1:0:0:0  9.498/ 1.610/11.776/ 0.984 ms 1117592 bytes 12388.92
+.TP
+.B where (per -e,)
+.B Latency
+One way TCP write to read latency in mean/minimum/maximum/standard deviation format
+(Note: requires the client's and server's system clocks to be
+synchronized to a common reference, e.g. using precision time protocol
+PTP.  A GPS disciplined OCXO is a recommended reference.)
+.br
+.B inP
+inP, short for in progress, is the average number of bytes in progress or in flight. This is taken from an application write to read perspective. See Little's law, a theorem by John Little which states that the long-term average number L of customers in a stationary system is equal to the long-term average effective arrival rate (lambda) multiplied by the average time W that a customer spends in the system. (L = lambda * W)
+.br
+.B NetPwr
+Network power defined as (throughput / one way latency)
+
+.PP
+
 .B UDP tests (client)
 
 .B iperf -c <host> -e -i 1 -u -b 10m
