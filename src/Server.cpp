@@ -154,8 +154,7 @@ void Server::RunTCP( void ) {
     InitTrafficLoop();
 
     int burst_nleft = 0;
-    long burst_latency;
-    int prevburstid = 0;
+    burst_info.burst_id = 0;
 
     while (InProgress() && !err) {
 	reportstruct->emptyreport=0;
@@ -169,7 +168,7 @@ void Server::RunTCP( void ) {
 	    int n = 0;
 	    if (isWriteAck(mSettings) || isTripTime(mSettings)) {
 		if (burst_nleft == 0) {
-		    if (prevburstid) {
+		    if (burst_info.burst_id) {
 		        if (isWriteAck(mSettings)) {
 			    enqueue_ackring(mSettings->ackring, reportstruct);
 			}
@@ -178,7 +177,7 @@ void Server::RunTCP( void ) {
 		        reportstruct->sentTime.tv_usec = burst_info.send_tt.write_tv_usec;
 		        reportstruct->packetTime.tv_sec = now.getSecs();
 		        reportstruct->packetTime.tv_sec = now.getUsecs();
-			reportstruct->prevframeID = burst_info.burst_id;
+			reportstruct->prevframeID = reportstruct->frameID;
 			reportstruct->frameID = burst_info.burst_id;
 			// printf("diff = %ldus s=%ld.%ld e=%ld.%ld\n", burst_latency, s.tv_sec, s.tv_usec, now.getSecs(), now.getUsecs());
 		    }
@@ -187,7 +186,6 @@ void Server::RunTCP( void ) {
 			burst_info.typelen.length = ntohl(burst_info.typelen.length);
 			burst_info.flags = ntohl(burst_info.flags);
 			burst_info.burst_size = ntohl(burst_info.burst_size);
-			prevburstid = burst_info.burst_id;
 			burst_info.burst_id = ntohl(burst_info.burst_id);
 			burst_info.send_tt.write_tv_sec  = ntohl(burst_info.send_tt.write_tv_sec);
 			burst_info.send_tt.write_tv_usec  = ntohl(burst_info.send_tt.write_tv_usec);

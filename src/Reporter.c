@@ -393,7 +393,7 @@ void FreeReport(struct ReportHeader *reporthdr) {
 }
 
 void InitDataReport(struct thread_Settings *mSettings) {
-    /*
+     /*
      * Create in one big chunk
      */
     struct ReportHeader *reporthdr = (struct ReportHeader *) calloc(1, sizeof(struct ReportHeader));
@@ -515,6 +515,7 @@ void InitDataReport(struct thread_Settings *mSettings) {
 	} else {
 	    data->info.mEnhanced = 0;
 	}
+	data->info.flags_extend = mSettings->flags_extend;
 	if (data->mThreadMode == kMode_Server) {
 	    if (isRxHistogram(mSettings)) {
 		char name[] = "T8";
@@ -1249,7 +1250,7 @@ static inline void reporter_handle_packet_pps(struct ReporterData *data, struct 
     data->IPGstart = data->packetTime;
 }
 
-static inline void reporter_handle_packet_udp_transit(struct ReporterData *data, struct TransferInfo *stats, struct ReportStruct *packet) {
+static inline void reporter_handle_packet_oneway_transit(struct ReporterData *data, struct TransferInfo *stats, struct ReportStruct *packet) {
     // Transit or latency updates done inline below
     double transit;
     transit = TimeDifference(packet->packetTime, packet->sentTime);
@@ -1317,8 +1318,10 @@ static inline void reporter_handle_packet_udp_transit(struct ReporterData *data,
 }
 
 static inline void reporter_handle_burst_tcp_transit(struct ReporterData *data, struct TransferInfo *stats, struct ReportStruct *packet) {
-    if (packet->frameID)
-	reporter_handle_packet_udp_transit(data, stats, packet);
+  if ((packet->frameID) && (packet->prevframeID != packet->frameID)) {
+	reporter_handle_packet_oneway_transit(data, stats, packet);
+	// printf("***Burst id = %ld, transit = %f\n", packet->frameID, stats->transit.lastTransit);
+  }
 }
 
 static inline void reporter_handle_packet_isochronous(struct ReporterData *data, struct TransferInfo *stats, struct ReportStruct *packet) {
@@ -1435,7 +1438,7 @@ inline void reporter_handle_packet_server_udp(struct ReportHeader *reporthdr, st
     }
     // These are valid packets that need standard iperf accounting
     reporter_handle_packet_pps(data, stats);
-    reporter_handle_packet_udp_transit(data, stats, packet);
+    reporter_handle_packet_oneway_transit(data, stats, packet);
     reporter_handle_packet_isochronous(data, stats, packet);
 }
 

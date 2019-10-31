@@ -96,11 +96,15 @@ void reporter_printstats(struct TransferInfo *stats) {
 		   buffer, &buffer[sizeof(buffer)/2]);
 	} else {
 	    if( !header_printed ) {
-		printf((stats->mTCP == (char)kMode_Server ? report_bw_read_enhanced_header : report_bw_write_enhanced_header), (stats->sock_callstats.read.binsize/1024.0));
+	        if (!isTripTime(stats))
+		    printf((stats->mTCP == (char)kMode_Server ? report_bw_read_enhanced_header : report_bw_write_enhanced_header), (stats->sock_callstats.read.binsize/1024.0));
+		else
+		    printf((stats->mTCP == (char)kMode_Server ? report_bw_read_enhanced_netpwr_header : report_bw_write_enhanced_header), (stats->sock_callstats.read.binsize/1024.0));
 		header_printed = 1;
 	    }
 	    if (stats->mTCP == (char)kMode_Server) {
-		printf(report_bw_read_enhanced_format,
+		double meantransit = (stats->transit.sumTransit / stats->transit.cntTransit);
+		printf((!isTripTime(stats) ? report_bw_read_enhanced_format : report_bw_read_enhanced_netpwr_format),
 		       stats->transferID, stats->startTime, stats->endTime,
 		       buffer, &buffer[sizeof(buffer)/2],
 		       stats->sock_callstats.read.cntRead,
@@ -111,13 +115,13 @@ void reporter_printstats(struct TransferInfo *stats) {
 		       stats->sock_callstats.read.bins[4],
 		       stats->sock_callstats.read.bins[5],
 		       stats->sock_callstats.read.bins[6],
-		       stats->sock_callstats.read.bins[7]);
-		if (stats->tripTime > 0)
-		    printf(report_triptime_enhanced_format,
-		       stats->transferID, stats->startTime, stats->endTime,
-		       buffer, &buffer[sizeof(buffer)/2],
-		       stats->tripTime);
-
+		       stats->sock_callstats.read.bins[7],
+		       (meantransit * 1e3),
+		       stats->transit.minTransit*1e3,
+		       stats->transit.maxTransit*1e3,
+		       (stats->transit.cntTransit < 2) ? 0 : sqrt(stats->transit.m2Transit / (stats->transit.cntTransit - 1)) / 1e3,
+		       (meantransit > 0.0) ? (((double) bytesxfered) / (double) (stats->endTime - stats->startTime) * meantransit) : NAN,
+		       (meantransit > 0.0) ? (NETPOWERCONSTANT * ((double) bytesxfered) / (double) (stats->endTime - stats->startTime) / meantransit) : NAN);
 	    } else {
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 	        double netpower = 0;
