@@ -1830,6 +1830,8 @@ static void output_transfer_report_server_tcp(struct ReporterData *stats, struct
         for (ix = 0; ix < TCPREADBINCOUNT; ix++) {
 	    stats->info.sock_callstats.read.bins[ix] = stats->info.sock_callstats.read.totbins[ix];
         }
+	stats->info.transit.sumTransit = stats->info.transit.totsumTransit;
+	stats->info.transit.cntTransit = stats->info.transit.totcntTransit;
 	if (!bidirstats)
 	  reporter_print(stats, TRANSFER_REPORT, 1);
 	else if (stats->info.mEnhanced)
