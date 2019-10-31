@@ -211,6 +211,7 @@ struct TransferInfo {
     char   mIsochronous;                 // -e
     struct TransitStats frame;
     struct histogram *framelatency_histogram;
+    int flags_extend; // rjm, clean up flags in reports with C++
 };
 
 struct ConnectionInfo {
