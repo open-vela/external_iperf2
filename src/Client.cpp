@@ -573,7 +573,7 @@ void Client::RunTCP( void ) {
 	    }
 	    len = 0;
 	} else {
-	    totLen += len;
+	    totLen += len + n;
 	    reportstruct->errwrite=WriteNoErr;
 	    WARN(len != reportstruct->packetLen, "write size mismatch");
 	}
@@ -606,6 +606,9 @@ void Client::RunTCP( void ) {
 void Client::RunRateLimitedTCP ( void ) {
     double tokens = 0;
     Timestamp time1, time2;
+    int burst_size = (mSettings->mWriteAckLen > 0) ? mSettings->mWriteAckLen : mSettings->mBufLen;
+    int burst_remaining = 0;
+    int burst_id = 1;
 
     int var_rate = mSettings->mUDPRate;
     int fatalwrite_err = 0;
@@ -631,13 +634,29 @@ void Client::RunRateLimitedTCP ( void ) {
 	    } else {
 	        reportstruct->packetLen = mSettings->mBufLen;
 	    }
-	    if (isTripTime(mSettings)) {
-	        WriteTcpTxHdr(reportstruct, 0, 1);
-	    }
 	    // perform write
 	    WriteSync();
-	    reportstruct->packetLen = write( mSettings->mSock, mBuf, reportstruct->packetLen);
-	    if ( reportstruct->packetLen < 0 ) {
+	    int n = 0;
+	    if (isTripTime(mSettings) || isWriteAck(mSettings)) {
+	      if (burst_remaining == 0) {
+		now.setnow();
+		reportstruct->packetTime.tv_sec = now.getSecs();
+		reportstruct->packetTime.tv_usec = now.getUsecs();
+	        WriteTcpTxHdr(reportstruct, burst_size, burst_id++);
+		burst_remaining = burst_size;
+		// perform write
+		n = writen(mSettings->mSock, mBuf, sizeof(struct TCP_burst_payload));
+		WARN(n != sizeof(struct TCP_burst_payload), "burst hdr write failed");
+		burst_remaining -= n;
+		reportstruct->packetLen -= n;
+		// thread_debug("***write burst header %d id=%d", burst_size, (burst_id - 1));
+	      } else if (reportstruct->packetLen > burst_remaining) {
+		reportstruct->packetLen = burst_remaining;
+	      }
+	    }
+
+	    int len = write( mSettings->mSock, mBuf, reportstruct->packetLen);
+	    if ( len < 0 ) {
 	        if (NONFATALTCPWRITERR(errno)) {
 		    reportstruct->errwrite=WriteErrAccount;
 		} else if (FATALTCPWRITERR(errno)) {
@@ -648,14 +667,18 @@ void Client::RunRateLimitedTCP ( void ) {
 		} else {
 		    reportstruct->errwrite=WriteErrNoAccount;
 	        }
-		reportstruct->packetLen	 = 0;
+		len = 0;
 	    } else {
 	      // Consume tokens per the transmit
-	        tokens -= reportstruct->packetLen;
-	        totLen += reportstruct->packetLen;
+	        tokens -= (len + n);
+	        totLen += (len + n);;
 		reportstruct->errwrite=WriteNoErr;
 	    }
+	    if (isTripTime(mSettings) || isWriteAck(mSettings))
+	      burst_remaining -= len;
+
 	    time2.setnow();
+	    reportstruct->packetLen = len + n;
 	    reportstruct->packetTime.tv_sec = time2.getSecs();
 	    reportstruct->packetTime.tv_usec = time2.getUsecs();
 
