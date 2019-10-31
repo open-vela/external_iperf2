@@ -1252,9 +1252,9 @@ static inline void reporter_handle_packet_pps(struct ReporterData *data, struct 
 
 static inline void reporter_handle_packet_oneway_transit(struct ReporterData *data, struct TransferInfo *stats, struct ReportStruct *packet) {
     // Transit or latency updates done inline below
-    double transit;
-    transit = TimeDifference(packet->packetTime, packet->sentTime);
+    double transit = TimeDifference(packet->packetTime, packet->sentTime);
     double usec_transit = transit * 1e6;
+
     if (stats->latency_histogram) {
 	histogram_insert(stats->latency_histogram, transit);
     }
@@ -1318,10 +1318,10 @@ static inline void reporter_handle_packet_oneway_transit(struct ReporterData *da
 }
 
 static inline void reporter_handle_burst_tcp_transit(struct ReporterData *data, struct TransferInfo *stats, struct ReportStruct *packet) {
-  if ((packet->frameID) && (packet->prevframeID != packet->frameID)) {
-	reporter_handle_packet_oneway_transit(data, stats, packet);
-	// printf("***Burst id = %ld, transit = %f\n", packet->frameID, stats->transit.lastTransit);
-  }
+    if (packet->frameID && packet->transit_ready) {
+        reporter_handle_packet_oneway_transit(data, stats, packet);
+       // printf("***Burst id = %ld, transit = %f\n", packet->frameID, stats->transit.lastTransit);
+    }
 }
 
 static inline void reporter_handle_packet_isochronous(struct ReporterData *data, struct TransferInfo *stats, struct ReportStruct *packet) {
@@ -1643,6 +1643,13 @@ static inline void reset_transfer_stats_server_tcp(struct ReporterData *stats) {
     for (ix = 0; ix < 8; ix++) {
 	stats->info.sock_callstats.read.bins[ix] = 0;
     }
+    stats->info.transit.minTransit=stats->info.transit.lastTransit;
+    stats->info.transit.maxTransit=stats->info.transit.lastTransit;
+    stats->info.transit.sumTransit = stats->info.transit.lastTransit;
+    stats->info.transit.cntTransit = 0;
+    stats->info.transit.vdTransit = 0;
+    stats->info.transit.meanTransit = 0;
+    stats->info.transit.m2Transit = 0;
 }
 static inline void reset_transfer_stats_server_udp(struct ReporterData *stats) {
     // Reset the enhanced stats for the next report interval

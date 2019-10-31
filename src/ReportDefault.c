@@ -104,7 +104,7 @@ void reporter_printstats(struct TransferInfo *stats) {
 	    }
 	    if (stats->mTCP == (char)kMode_Server) {
 		double meantransit = (stats->transit.sumTransit / stats->transit.cntTransit);
-		printf((!isTripTime(stats) ? report_bw_read_enhanced_format : report_bw_read_enhanced_netpwr_format),
+		printf(((!isTripTime(stats) || !bytesxfered) ? report_bw_read_enhanced_format : report_bw_read_enhanced_netpwr_format),
 		       stats->transferID, stats->startTime, stats->endTime,
 		       buffer, &buffer[sizeof(buffer)/2],
 		       stats->sock_callstats.read.cntRead,
