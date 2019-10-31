@@ -1316,6 +1316,11 @@ static inline void reporter_handle_packet_udp_transit(struct ReporterData *data,
     stats->transit.lastTransit = transit;
 }
 
+static inline void reporter_handle_burst_tcp_transit(struct ReporterData *data, struct TransferInfo *stats, struct ReportStruct *packet) {
+    if (packet->frameID)
+	reporter_handle_packet_udp_transit(data, stats, packet);
+}
+
 static inline void reporter_handle_packet_isochronous(struct ReporterData *data, struct TransferInfo *stats, struct ReportStruct *packet) {
     // printf("fid=%lu bs=%lu remain=%lu\n", packet->frameID, packet->burstsize, packet->remaining);
     if (packet->frameID && packet->burstsize && packet->remaining) {
@@ -1375,6 +1380,7 @@ inline void reporter_handle_packet_server_tcp(struct ReportHeader *reporthdr, st
 	    stats->sock_callstats.read.totbins[bin]++;
 	}
     }
+    reporter_handle_burst_tcp_transit(&reporthdr->report, stats, packet);
 }
 
 inline void reporter_handle_packet_server_udp(struct ReportHeader *reporthdr, struct ReportStruct *packet) {
