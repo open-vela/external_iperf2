@@ -120,6 +120,8 @@ void reporter_printstats(struct TransferInfo *stats) {
 		       stats->transit.minTransit*1e3,
 		       stats->transit.maxTransit*1e3,
 		       (stats->transit.cntTransit < 2) ? 0 : sqrt(stats->transit.m2Transit / (stats->transit.cntTransit - 1)) / 1e3,
+		       stats->transit.cntTransit,
+		       stats->transit.cntTransit ? ((int) bytesxfered / stats->transit.cntTransit) : 0,
 		       (meantransit > 0.0) ? (((double) bytesxfered) / (double) (stats->endTime - stats->startTime) * meantransit) : NAN,
 		       (meantransit > 0.0) ? (NETPOWERCONSTANT * ((double) bytesxfered) / (double) (stats->endTime - stats->startTime) / meantransit) : NAN);
 	    } else {
