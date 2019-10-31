@@ -310,10 +310,9 @@ example, the bins are 0-1K, 1K-2K, .., 7K-8K.
 .B
 iperf -s -e -i 1 and client enables trip-time (e.g. iperf -c 10.19.87.7 --trip-time)
 
-.br
 ------------------------------------------------------------
 .br
-Server listening on TCP port 5001 with pid 1327
+Server listening on TCP port 5001 with pid 30369
 .br
 Read buffer size:  128 KByte
 .br
@@ -321,43 +320,49 @@ TCP window size: 85.3 KByte (default)
 .br
 ------------------------------------------------------------
 .br
-[  4] local 10.19.87.7 port 5001 connected with 10.19.87.10 port 59030 (trip-times)
+[  4] local 10.19.87.7 port 5001 connected with 10.19.87.10 port 43338 (trip-times)
 .br
-[ ID] Interval        Transfer    Bandwidth       Reads   Dist(bin=16.0K)     Latency avg/min/max/stdev inP NetPwr
+[ ID] Interval        Transfer    Bandwidth       Reads   Dist(bin=16.0K)     Burst Latency avg/min/max/stdev (cnt/size) inP NetPwr
 .br
-[  4] 0.00-1.00 sec   112 MBytes   941 Mbits/sec  7626    2480:5145:0:0:1:0:0:0  9.476/ 1.610/11.617/ 1.084 ms 1114050 bytes 12406.18
+[  4] 0.00-1.00 sec   112 MBytes   941 Mbits/sec  7000    1552:5447:1:0:0:0:0:0     8.749/ 1.583/10.340/ 1.011 ms (897/131127) 1029057 bytes 13444.08
 .br
-[  4] 1.00-2.00 sec   112 MBytes   942 Mbits/sec  7690    2604:5086:0:0:0:0:0:0  9.508/ 1.610/11.721/ 1.032 ms 1119079 bytes 12378.11
+[  4] 1.00-2.00 sec   112 MBytes   941 Mbits/sec  7015    1562:5453:0:0:0:0:0:0     8.790/ 7.131/10.443/ 0.878 ms (898/131050) 1034467 bytes 13387.92
 .br
-[  4] 2.00-3.00 sec   112 MBytes   941 Mbits/sec  7321    2001:5320:0:0:0:0:0:0  9.507/ 1.610/11.731/ 1.014 ms 1118724 bytes 12376.86
+[  4] 2.00-3.00 sec   112 MBytes   941 Mbits/sec  7009    1543:5466:0:0:0:0:0:0     8.799/ 7.050/10.389/ 0.869 ms (897/131170) 1035306 bytes 13371.80
 .br
-[  4] 3.00-4.00 sec   112 MBytes   941 Mbits/sec  8001    3020:4981:0:0:0:0:0:0  9.513/ 1.610/11.731/ 1.001 ms 1119523 bytes 12369.55
+[  4] 3.00-4.00 sec   112 MBytes   941 Mbits/sec  7032    1589:5442:1:0:0:0:0:0     8.810/ 7.128/10.437/ 0.877 ms (898/131047) 1036818 bytes 13356.91
 .br
-[  4] 4.00-5.00 sec   112 MBytes   941 Mbits/sec  7797    2714:5083:0:0:0:0:0:0  9.509/ 1.610/11.731/ 0.995 ms 1118990 bytes 12375.14
+[  4] 4.00-5.00 sec   112 MBytes   941 Mbits/sec  7013    1556:5457:0:0:0:0:0:0     8.805/ 7.244/10.352/ 0.874 ms (898/131050) 1036239 bytes 13365.03
 .br
-[  4] 5.00-6.00 sec   112 MBytes   942 Mbits/sec  8077    3269:4808:0:0:0:0:0:0  9.513/ 1.610/11.731/ 0.990 ms 1119553 bytes 12372.26
+[  4] 5.00-6.00 sec   112 MBytes   941 Mbits/sec  6999    1554:5440:3:1:0:0:0:1    10.384/ 7.257/12.712/ 1.284 ms (898/131050) 1222077 bytes 11332.64
 .br
-[  4] 6.00-7.00 sec   112 MBytes   941 Mbits/sec  7680    2446:5234:0:0:0:0:0:0  9.514/ 1.610/11.776/ 0.988 ms 1119494 bytes 12368.05
+[  4] 6.00-7.00 sec   112 MBytes   941 Mbits/sec  7015    1568:5447:0:0:0:0:0:0    10.682/ 8.714/12.711/ 1.121 ms (898/131045) 1257085 bytes 11016.23
 .br
-[  4] 7.00-8.00 sec   112 MBytes   942 Mbits/sec  7734    2575:5159:0:0:0:0:0:0  9.511/ 1.610/11.776/ 0.985 ms 1119320 bytes 12374.84
+[  4] 7.00-8.00 sec   112 MBytes   941 Mbits/sec  7010    1557:5453:0:0:0:0:0:0    10.683/ 8.681/12.695/ 1.125 ms (898/131050) 1257237 bytes 11015.71
 .br
-[  4] 8.00-9.00 sec   112 MBytes   941 Mbits/sec  7699    2509:5190:0:0:0:0:0:0  9.505/ 1.610/11.776/ 0.984 ms 1118470 bytes 12380.29
+[  4] 8.00-9.00 sec   112 MBytes   941 Mbits/sec  7016    1570:5446:0:0:0:0:0:0    10.674/ 8.704/12.679/ 1.128 ms (897/131193) 1256177 bytes 11024.46
 .br
-[  4] 9.00-10.00 sec   112 MBytes   941 Mbits/sec  8022    3002:5020:0:0:0:0:0:0  9.498/ 1.610/11.776/ 0.984 ms 1117755 bytes 12390.03
+[  4] 9.00-10.00 sec   112 MBytes   941 Mbits/sec  7062    1624:5438:0:0:0:0:0:0    10.693/ 8.624/12.681/ 1.127 ms (898/131047) 1258342 bytes 11005.49
 .br
-[  4] 10.00-10.01 sec   841 KBytes   931 Mbits/sec  54    15:39:0:0:0:0:0:0  9.498/ 1.610/11.776/ 0.984 ms 1105174 bytes 12251.26
+[  4] 10.00-10.01 sec  1.28 MBytes   939 Mbits/sec  80    17:63:0:0:0:0:0:0    11.582/ 8.761/12.361/ 1.191 ms (11/121860) 1359148 bytes 10131.78
 .br
-[  4] 0.00-10.01 sec  1.10 GBytes   941 Mbits/sec  77701    26635:51065:0:0:1:0:0:0  9.498/ 1.610/11.776/ 0.984 ms 1117592 bytes 12388.92
+[  4] 0.00-10.01 sec  1.10 GBytes   941 Mbits/sec  70251    15692:54552:5:1:0:0:0:1     9.699/11.582/11.582/ 0.000 ms (8988/131072) 1141261 bytes 12133.03
 .TP
 .B where (per -e,)
-.B Latency
-One way TCP write to read latency in mean/minimum/maximum/standard deviation format
+.B Burst Latency
+One way TCP write() to read() latency in mean/minimum/maximum/standard deviation format
 (Note: requires the client's and server's system clocks to be
 synchronized to a common reference, e.g. using precision time protocol
 PTP.  A GPS disciplined OCXO is a recommended reference.)
 .br
+.B cnt
+Number of completed bursts received and used for the burst latency calculations
+.br
+.B size
+Average burst size in bytes (computed average and estimate only)
+.br
 .B inP
-inP, short for in progress, is the average number of bytes in progress or in flight. This is taken from an application write to read perspective. See Little's law, a theorem by John Little which states that the long-term average number L of customers in a stationary system is equal to the long-term average effective arrival rate (lambda) multiplied by the average time W that a customer spends in the system. (L = lambda * W)
+inP, short for in progress, is the average number of bytes in progress or in flight. This is taken from an application write to read perspective. (See Little's law in NOTES.)
 .br
 .B NetPwr
 Network power defined as (throughput / one way latency)
@@ -473,7 +478,7 @@ PTP.  A GPS disciplined OCXO is a recommended reference.)
 Received packet rate in packets per second
 .br
 .B inP
-inP, short for in progress, is the average number of packets in progress or in flight. This is taken from an application write to read perspective. See Little's law, a theorem by John Little which states that the long-term average number L of customers in a stationary system is equal to the long-term average effective arrival rate (lambda) multiplied by the average time W that a customer spends in the system. (L = lambda * W)
+inP, short for in progress, is the average number of packets in progress or in flight. This is taken from an application write to read perspective. (See Little's law in NOTES.)
 .br
 .B NetPwr
 Network power defined as (throughput / latency)
@@ -630,6 +635,8 @@ client when the -e (--enhancedreports) option is set. Look for the
 ct=<value> in the connected message, e.g.in '[ 3] local 192.168.1.4
 port 48736 connected with 192.168.1.1 port 5001 \fB(ct=1.84 ms)\fR'
 shows the 3WHS took 1.84 milliseconds.
+.P
+\fBLittle's Law\fR in queueing theory is a theorem that determines the average number of items (L) in a stationary queuing system based on the average waiting time (W) of an item within a system and the average number of items arriving at the system per unit of time (lambda). Mathematically, it's L = lambda * W. As used here, the TCP item units are bytes the UDP units are packets.
 .P
 The network power (NetPwr) metric is \fBexperimental\fR.  It's a
 convenience function defined as throughput/delay.  For TCP, the delay
