@@ -167,28 +167,19 @@ void Server::RunTCP( void ) {
 	if (tokens >= 0.0) {
 	    int n = 0;
 	    if (isWriteAck(mSettings) || isTripTime(mSettings)) {
+		reportstruct->transit_ready = 0;
 		if (burst_nleft == 0) {
-		    if (burst_info.burst_id) {
-		        if (isWriteAck(mSettings)) {
-			    enqueue_ackring(mSettings->ackring, reportstruct);
-			}
-			now.setnow();
-		        reportstruct->sentTime.tv_sec = burst_info.send_tt.write_tv_sec;
-		        reportstruct->sentTime.tv_usec = burst_info.send_tt.write_tv_usec;
-		        reportstruct->packetTime.tv_sec = now.getSecs();
-		        reportstruct->packetTime.tv_sec = now.getUsecs();
-			reportstruct->prevframeID = reportstruct->frameID;
-			reportstruct->frameID = burst_info.burst_id;
-			// printf("diff = %ldus s=%ld.%ld e=%ld.%ld\n", burst_latency, s.tv_sec, s.tv_usec, now.getSecs(), now.getUsecs());
-		    }
 		    if ((n = recvn(mSettings->mSock, (char *)&burst_info, sizeof(struct TCP_burst_payload), 0)) == sizeof(struct TCP_burst_payload)) {
 			burst_info.typelen.type = ntohl(burst_info.typelen.type);
 			burst_info.typelen.length = ntohl(burst_info.typelen.length);
 			burst_info.flags = ntohl(burst_info.flags);
 			burst_info.burst_size = ntohl(burst_info.burst_size);
 			burst_info.burst_id = ntohl(burst_info.burst_id);
+			reportstruct->frameID = burst_info.burst_id;
 			burst_info.send_tt.write_tv_sec  = ntohl(burst_info.send_tt.write_tv_sec);
 			burst_info.send_tt.write_tv_usec  = ntohl(burst_info.send_tt.write_tv_usec);
+		        reportstruct->sentTime.tv_sec = burst_info.send_tt.write_tv_sec;
+		        reportstruct->sentTime.tv_usec = burst_info.send_tt.write_tv_usec;
 			burst_nleft = burst_info.burst_size - n;
 			// thread_debug("***read burst header size %d id=%d", burst_info.burst_size, burst_info.burst_id);
 		    } else {
@@ -197,8 +188,15 @@ void Server::RunTCP( void ) {
 		}
 		WARN(burst_nleft <= 0, "invalid burst read req size");
 		currLen = recv(mSettings->mSock, mBuf, ((mSettings->mBufLen < burst_nleft) ? mSettings->mBufLen : burst_nleft), 0);
-		burst_nleft -= currLen;
-		WARN(burst_nleft < 0, "invalid burst read size");
+		if (currLen > 0) {
+		    burst_nleft -= currLen;
+		    if ((burst_nleft == 0) && burst_info.burst_id) {
+		        if (isWriteAck(mSettings)) {
+			    enqueue_ackring(mSettings->ackring, reportstruct);
+			}
+			reportstruct->transit_ready = 1;
+		    }
+		}
 		// printf("currlen = %d, n=%d, burst_nleft=%d\n", currLen, n, burst_nleft);
 	    } else {
 	        currLen = recv(mSettings->mSock, mBuf, mSettings->mBufLen, 0);

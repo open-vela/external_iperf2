@@ -73,6 +73,7 @@ struct ReportStruct {
     intmax_t burstsize;
     intmax_t burstperiod;
     intmax_t remaining;
+  int transit_ready;
 };
 
 struct PacketRing {
