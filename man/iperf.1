@@ -361,42 +361,46 @@ Transmit packet rate in packets per second
 
 .B UDP tests (server)
 
-.B iperf -s -e -i 1 -u
+.B iperf -s -u -e -i 1
 .br
 ------------------------------------------------------------
 .br
-Server listening on UDP port 5001 with pid 13496
+Server listening on UDP port 5001 with pid 20157
 .br
 Receiving 1470 byte datagrams
 .br
 UDP buffer size:  208 KByte (default)
 .br
 ------------------------------------------------------------
-[  3] local 45.33.58.123 port 5001 connected with 45.56.85.133 port 32943
 .br
-[ ID] Interval        Transfer     Bandwidth        Jitter   Lost/Total  Latency avg/min/max/stdev PPS  NetPwr
+[  3] local 10.19.87.7 port 5001 connected with 10.19.87.10 port 46039
 .br
-[  3] 0.00-1.00 sec  1.19 MBytes  10.0 Mbits/sec   0.057 ms    0/  851 (0%)  0.475/ 0.408/ 1.898/ 0.090 ms  851 pps  2633.56
+[ ID] Interval        Transfer     Bandwidth        Jitter   Lost/Total  Latency avg/min/max/stdev PPS  inP NetPwr
 .br
-[  3] 1.00-2.00 sec  1.19 MBytes  10.0 Mbits/sec   0.039 ms    0/  851 (0%)  0.669/ 0.405/16.256/ 1.375 ms  850 pps  1869.32
+[  3] 0.00-1.00 sec   114 MBytes   957 Mbits/sec   0.021 ms    0/81398 (0%)  0.934/ 0.160/ 1.322/ 0.179 ms 81450 pps 76 pkts 128057.25
 .br
-[  3] 2.00-3.00 sec  1.19 MBytes  10.0 Mbits/sec   0.038 ms    0/  850 (0%)  0.795/ 0.395/23.657/ 2.138 ms  850 pps  1572.05
+[  3] 1.00-2.00 sec   114 MBytes   957 Mbits/sec   0.009 ms    0/81379 (0%)  0.955/ 0.547/ 1.352/ 0.178 ms 81377 pps 78 pkts 125210.07
 .br
-[  3] 3.00-4.00 sec  1.19 MBytes  10.0 Mbits/sec   0.045 ms    0/  850 (0%)  0.475/ 0.403/ 3.477/ 0.148 ms  850 pps  2628.58
+[  3] 2.00-3.00 sec   114 MBytes   957 Mbits/sec   0.023 ms    0/81372 (0%)  0.978/ 0.549/ 1.400/ 0.175 ms 81378 pps 80 pkts 122284.93
 .br
-[  3] 4.00-5.00 sec  1.19 MBytes  10.0 Mbits/sec   0.043 ms    0/  851 (0%)  0.463/ 0.400/ 1.458/ 0.068 ms  850 pps  2699.88
+[  3] 3.00-4.00 sec   114 MBytes   957 Mbits/sec   0.014 ms    0/81381 (0%)  1.007/ 0.549/ 1.376/ 0.177 ms 81371 pps 82 pkts 118749.65
 .br
-[  3] 5.00-6.00 sec  1.19 MBytes  10.0 Mbits/sec   0.032 ms    0/  850 (0%)  0.486/ 0.404/ 2.658/ 0.154 ms  850 pps  2572.21
+[  3] 4.00-5.00 sec   114 MBytes   957 Mbits/sec   0.023 ms    0/81381 (0%)  1.028/ 0.596/ 1.400/ 0.173 ms 81383 pps 84 pkts 116410.04
 .br
-[  3] 6.00-7.00 sec  1.19 MBytes  10.0 Mbits/sec   0.055 ms    0/  850 (0%)  0.469/ 0.404/ 2.768/ 0.108 ms  850 pps  2664.82
+[  3] 5.00-6.00 sec   114 MBytes   957 Mbits/sec   0.010 ms    0/81372 (0%)  1.048/ 0.670/ 1.430/ 0.178 ms 81376 pps 85 pkts 114176.71
 .br
-[  3] 7.00-8.00 sec  1.19 MBytes  10.0 Mbits/sec   0.039 ms    0/  851 (0%)  0.571/ 0.400/12.452/ 0.855 ms  850 pps  2192.68
+[  3] 6.00-7.00 sec   114 MBytes   957 Mbits/sec   0.019 ms    0/81380 (0%)  1.066/ 0.637/ 1.428/ 0.179 ms 81376 pps 87 pkts 112262.49
 .br
-[  3] 8.00-9.00 sec  1.19 MBytes  10.0 Mbits/sec   0.083 ms    0/  850 (0%)  0.475/ 0.392/ 3.702/ 0.196 ms  850 pps  2628.29
+[  3] 7.00-8.00 sec   114 MBytes   957 Mbits/sec   0.036 ms    0/81369 (0%)  1.087/ 0.666/ 1.456/ 0.177 ms 81377 pps 88 pkts 110028.41
 .br
-[  3] 9.00-10.00 sec  1.19 MBytes  10.0 Mbits/sec   0.047 ms    0/  850 (0%)  0.493/ 0.396/ 6.010/ 0.343 ms  850 pps  2534.89
+[  3] 8.00-9.00 sec   114 MBytes   957 Mbits/sec   0.037 ms    0/81383 (0%)  1.107/ 0.703/ 1.489/ 0.176 ms 81377 pps 90 pkts 108088.86
 .br
-[  3] 0.00-10.00 sec  11.9 MBytes  10.0 Mbits/sec   0.047 ms    0/ 8504 (0%)  0.537/ 0.392/23.657/ 0.867 ms  850 pps  2329.37
+[  3] 9.00-10.00 sec   114 MBytes   957 Mbits/sec   0.009 ms    0/81370 (0%)  1.137/ 0.745/ 1.616/ 0.178 ms 81377 pps 93 pkts 105169.54
+.br
+[  3] 10.00-10.00 sec  84.7 KBytes  1.03 Gbits/sec   0.048 ms    0/   59 (0%)  1.197/ 0.892/ 1.489/ 0.195 ms 72571 pps 87 pkts 107979.27
+.br
+[  3] 0.00-10.00 sec  1.11 GBytes   957 Mbits/sec   0.048 ms    0/813844 (0%)  1.035/ 0.160/ 1.616/ 0.188 ms 81379 pps 84 pkts 115609.26
+.br
 
 .TP
 .B where (per -e,)
@@ -408,6 +412,9 @@ PTP.  A GPS disciplined OCXO is a recommended reference.)
 .br
 .B PPS
 Received packet rate in packets per second
+.br
+.B inP
+inP, short for in progress, is the average number of packets in progress or in flight. This is taken from an application write to read perspective. See Little's law, a theorem by John Little which states that the long-term average number L of customers in a stationary system is equal to the long-term average effective arrival rate (lambda) multiplied by the average time W that a customer spends in the system. (L = lambda * W)
 .br
 .B NetPwr
 Network power defined as (throughput / latency)
