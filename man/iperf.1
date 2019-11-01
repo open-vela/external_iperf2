@@ -151,7 +151,7 @@ a reversed test, server-to-client
 .BR -t ", " --time " \fIn\fR"
 time in seconds to listen for new traffic connections, receive traffic or transmit traffic (Defaults: transmit is 10 secs while listen and receive are indefinite)
 .TP
-.BR "    --trip-time "
+.BR "    --trip-times "
 enable measurement of the write latency (or data transfer) per a TCP test (client/server clocks must be synchronized)
 .TP
 .BR "    --txdelay-time "
@@ -305,10 +305,10 @@ example, the bins are 0-1K, 1K-2K, .., 7K-8K.
 
 .PP
 
-.B TCP tests (server with --trip-time on client)
+.B TCP tests (server with --trip-times on client)
 
 .B
-iperf -s -e -i 1 and client enables trip-time (e.g. iperf -c 10.19.87.7 --trip-time)
+iperf -s -e -i 1 and client enables trip-times (e.g. iperf -c 10.19.87.7 --trip-times)
 
 ------------------------------------------------------------
 .br
