@@ -160,7 +160,7 @@ const struct option long_options[] =
 {"txdelay-time", required_argument, &txholdback, 1},
 {"write-sync", no_argument, &writesync, 1},
 {"fq-rate", required_argument, &fqrate, 1},
-{"trip-time", no_argument, &triptime, 1},
+{"trip-times", no_argument, &triptime, 1},
 {"write-ack", optional_argument, &writeack, 1},
 {"no-udp-fin", no_argument, &noudpfin, 1},
 {"connect-only", optional_argument, &connectonly, 1},
