@@ -385,8 +385,9 @@ void FreeReport(struct ReportHeader *reporthdr) {
 	    histogram_delete(reporthdr->report.info.framelatency_histogram);
 	}
 #ifdef HAVE_THREAD_DEBUG
-	thread_debug("Free report hdr=%p reporter thread suspend count=%d packetring=%p", (void *)reporthdr, \
-		     reporthdr->reporter_thread_suspends, (void *) reporthdr->packetring);
+	thread_debug("Free report hdr=%p reporter thread suspend count=%d packetring=%p histo=%p frame histo=%p", \
+		     (void *)reporthdr, reporthdr->reporter_thread_suspends, (void *) reporthdr->packetring, \
+		     (void *)reporthdr->report.info.latency_histogram, (void *) reporthdr->report.info.framelatency_histogram);
 #endif
 	free(reporthdr);
     }
@@ -517,18 +518,15 @@ void InitDataReport(struct thread_Settings *mSettings) {
 	}
 	data->info.flags_extend = mSettings->flags_extend;
 	if (data->mThreadMode == kMode_Server) {
-	    if (isRxHistogram(mSettings)) {
+	    if (isRxHistogram(mSettings) && isUDP(mSettings)) {
 		char name[] = "T8";
 		data->info.latency_histogram =  histogram_init(mSettings->mRXbins,mSettings->mRXbinsize,0,\
 							       (mSettings->mRXunits ? 1e6 : 1e3), \
 							       mSettings->mRXci_lower, mSettings->mRXci_upper, data->info.transferID, name);
 	    }
-	    if (isRxHistogram(mSettings) && isIsochronous(mSettings)) {
+	    if (isRxHistogram(mSettings) && (isIsochronous(mSettings) || isTripTime(mSettings))) {
 		char name[] = "F8";
 		// make sure frame bin size min is 100 microsecond
-		if (mSettings->mRXunits && (mSettings->mRXbinsize < 100))
-		    mSettings->mRXbinsize = 100;
-		mSettings->mRXunits = 1;
 		data->info.framelatency_histogram =  histogram_init(mSettings->mRXbins,mSettings->mRXbinsize,0, \
 								    (mSettings->mRXunits ? 1e6 : 1e3), mSettings->mRXci_lower, \
 								    mSettings->mRXci_upper, data->info.transferID, name);
@@ -1250,7 +1248,7 @@ static inline void reporter_handle_packet_pps(struct ReporterData *data, struct 
     data->IPGstart = data->packetTime;
 }
 
-static inline void reporter_handle_packet_oneway_transit(struct ReporterData *data, struct TransferInfo *stats, struct ReportStruct *packet) {
+static inline double reporter_handle_packet_oneway_transit(struct ReporterData *data, struct TransferInfo *stats, struct ReportStruct *packet) {
     // Transit or latency updates done inline below
     double transit = TimeDifference(packet->packetTime, packet->sentTime);
     double usec_transit = transit * 1e6;
@@ -1315,11 +1313,15 @@ static inline void reporter_handle_packet_oneway_transit(struct ReporterData *da
 	stats->transit.totm2Transit = stats->transit.totm2Transit + (stats->transit.totvdTransit * (usec_transit - stats->transit.totmeanTransit));
     }
     stats->transit.lastTransit = transit;
+    return (transit);
 }
 
 static inline void reporter_handle_burst_tcp_transit(struct ReporterData *data, struct TransferInfo *stats, struct ReportStruct *packet) {
     if (packet->frameID && packet->transit_ready) {
-        reporter_handle_packet_oneway_transit(data, stats, packet);
+        double transit = reporter_handle_packet_oneway_transit(data, stats, packet);
+	if (stats->framelatency_histogram) {
+	    histogram_insert(stats->framelatency_histogram, transit);
+	}
        // printf("***Burst id = %ld, transit = %f\n", packet->frameID, stats->transit.lastTransit);
     }
 }
@@ -1832,9 +1834,9 @@ static void output_transfer_report_server_tcp(struct ReporterData *stats, struct
         }
 	stats->info.transit.sumTransit = stats->info.transit.totsumTransit;
 	stats->info.transit.cntTransit = stats->info.transit.totcntTransit;
-	if (!bidirstats)
+	if (!bidirstats) {
 	  reporter_print(stats, TRANSFER_REPORT, 1);
-	else if (stats->info.mEnhanced)
+	} else if (stats->info.mEnhanced)
 	  reporter_print(stats, TRANSFER_REPORT, 1);
     }
 }
@@ -2008,7 +2010,8 @@ static void output_transfer_bidir_report_udp(struct ReporterData *stats, int fin
 int reporter_print( struct ReporterData *stats, int type, int end ) {
     switch ( type ) {
         case TRANSFER_REPORT:
-            statistics_reports[stats->mode]( &stats->info );
+	    stats->info.free = end;
+	    statistics_reports[stats->mode]( &stats->info);
             if ( end != 0 && isPrintMSS( stats ) && !isUDP( stats ) ) {
                 PrintMSS( stats );
             }

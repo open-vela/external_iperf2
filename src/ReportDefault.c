@@ -124,6 +124,9 @@ void reporter_printstats(struct TransferInfo *stats) {
 		       stats->transit.cntTransit ? ((int) bytesxfered / stats->transit.cntTransit) : 0,
 		       (meantransit > 0.0) ? (((double) bytesxfered) / (double) (stats->endTime - stats->startTime) * meantransit) : NAN,
 		       (meantransit > 0.0) ? (NETPOWERCONSTANT * ((double) bytesxfered) / (double) (stats->endTime - stats->startTime) / meantransit) : NAN);
+		if (stats->framelatency_histogram) {
+		    histogram_print(stats->framelatency_histogram, stats->startTime, stats->endTime, stats->free);
+		}
 	    } else {
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 	        double netpower = 0;
@@ -234,10 +237,10 @@ void reporter_printstats(struct TransferInfo *stats) {
 			}
 		}
 		if (stats->latency_histogram) {
-		    histogram_print(stats->latency_histogram, stats->startTime, stats->endTime,stats->free);
+		    histogram_print(stats->latency_histogram, stats->startTime, stats->endTime, stats->free);
 		}
 		if (stats->framelatency_histogram) {
-		    histogram_print(stats->framelatency_histogram, stats->startTime, stats->endTime,stats->free);
+		    histogram_print(stats->framelatency_histogram, stats->startTime, stats->endTime, stats->free);
 		}
 	    } else {
 		printf( report_bw_jitter_loss_suppress_enhanced_format, stats->transferID,
@@ -270,15 +273,6 @@ void reporter_printstats(struct TransferInfo *stats) {
     if ( stats->free == 1) {
 	if (stats->mUDP == (char)kMode_Client ) {
 	    printf( report_datagrams, stats->transferID, stats->cntDatagrams );
-	} else {
-	    if (stats->latency_histogram) {
-		histogram_delete(stats->latency_histogram);
-		stats->latency_histogram = NULL;
-	    }
-	    if (stats->framelatency_histogram) {
-		histogram_delete(stats->framelatency_histogram);
-		stats->framelatency_histogram = NULL;
-	    }
 	}
     }
 }
