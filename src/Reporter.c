@@ -1072,7 +1072,7 @@ static int condprint_interval_reports (struct ReportHeader *reporthdr, struct Re
 	(*reporthdr->bidirreport->output_sum_handler)(&reporthdr->bidirreport->report, 0);
 	TimeAdd(reporthdr->bidirreport->report.nextTime, reporthdr->report.intervalTime);
     }
-    if (reporthdr->multireport && (reporthdr->multireport->refcount > 1) &&  \
+    if (reporthdr->multireport && (reporthdr->multireport->refcount > (reporthdr->bidirreport ? 2 : 1)) && \
 	(reporthdr->multireport->threads == reporthdr->multireport->refcount))  {
 	reporthdr->multireport->threads = 0;
 	// output_missed_multireports(&reporthdr->multireport->report, packet);
