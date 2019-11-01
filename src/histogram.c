@@ -47,16 +47,35 @@
  */
 #include "headers.h"
 #include "histogram.h"
-
+// needed for thread_debug
+#include "Thread.h"
 struct histogram *histogram_init(unsigned int bincount, unsigned int binwidth, float offset, float units,\
 			    double ci_lower, double ci_upper, unsigned int id, char *name) {
     struct histogram *this = (struct histogram *) malloc(sizeof(struct histogram));
+    if (!this) {
+        fprintf(stderr,"Malloc failure in histogram init\n");
+        return(NULL);
+    }
     this->mybins = (unsigned int *) malloc(sizeof(unsigned int) * bincount);
+    if (!this->mybins) {
+        fprintf(stderr,"Malloc failure in histogram init b\n");
+        free(this);
+        return(NULL);
+    }
     this->myname = (char *) malloc(sizeof(strlen(name)));
+    if (!this->myname) {
+        fprintf(stderr,"Malloc failure in histogram init n\n");
+        free(this->mybins);
+        free(this);
+        return(NULL);
+    }
     this->outbuf = (char *) malloc(120 + (32*bincount) + strlen(name));
-    if (!this->outbuf || !this || !this->mybins || !this->myname) {
-	fprintf(stderr,"Malloc failure in histogram init\n");
-	return(NULL);
+    if (!this->outbuf) {
+        fprintf(stderr,"Malloc failure in histogram init o\n");
+        free(this->myname);
+        free(this->mybins);
+        free(this);
+        return(NULL);
     }
     memset(this->mybins, 0, bincount * sizeof(unsigned int));
     strcpy(this->myname, name);
@@ -71,11 +90,17 @@ struct histogram *histogram_init(unsigned int bincount, unsigned int binwidth, f
     this->ci_lower = ci_lower;
     this->ci_upper = ci_upper;
     this->prev = NULL;
-    // printf("histogram init\n");
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("histo create %p", (void *) this);
+#endif
     return this;
 }
 
 void histogram_delete(struct histogram *h) {
+#ifdef HAVE_THREAD_DEBUG
+  thread_debug("histo delete %p", (void *) h);
+#endif
+  if (h) {
     if (h->prev)
 	histogram_delete(h->prev);
     if (h->mybins)
@@ -83,6 +108,7 @@ void histogram_delete(struct histogram *h) {
     if (h->myname)
 	free(h->myname);
     free(h);
+  }
 }
 
 // value is units seconds
@@ -128,7 +154,7 @@ void histogram_print(struct histogram *h, double start, double end, int final) {
     if (!h->prev) {
 	h->prev = histogram_init(h->bincount, h->binwidth, h->offset, h->units, h->ci_lower, h->ci_upper, h->id, h->myname);
     }
-    int n = 0, ix, delta, lowerci, upperci, outliercnt, fence_lower, fence_upper;
+    int n = 0, ix, delta, lowerci, upperci, outliercnt, fence_lower, fence_upper, upper3stdev;
     int running=0;
     int intervalpopulation, oob_u, oob_l;
     intervalpopulation = h->populationcnt - h->prev->populationcnt;
@@ -137,6 +163,7 @@ void histogram_print(struct histogram *h, double start, double end, int final) {
     n = strlen(h->outbuf);
     lowerci=0;
     upperci=0;
+    upper3stdev = 0;
     outliercnt=0;
     fence_lower = 0;
     fence_upper = 0;
@@ -168,6 +195,9 @@ void histogram_print(struct histogram *h, double start, double end, int final) {
 	    if (!upperci && ((float)running/intervalpopulation > h->ci_upper/100.0)) {
 		upperci = ix+1;
 	    }
+	    if (!upper3stdev && ((float)running/intervalpopulation > 99.7/100.0)) {
+		upper3stdev = ix+1;
+	    }
 	    n += sprintf(h->outbuf + n,"%d:%d,", ix+1, delta);
 	    h->prev->mybins[ix] = h->mybins[ix];
 	}
@@ -175,5 +205,12 @@ void histogram_print(struct histogram *h, double start, double end, int final) {
     h->outbuf[strlen(h->outbuf)-1] = '\0';
     if (!upperci)
        upperci=h->bincount;
-    fprintf(stdout, "%s (%.2f/%.2f%%=%d/%d,Outliers=%d,obl/obu=%d/%d)\n", h->outbuf, h->ci_lower, h->ci_upper, lowerci, upperci, outliercnt, oob_l, oob_u);
+    if (!upper3stdev)
+       upper3stdev=h->bincount;
+    if (h->ci_upper > 99.7)
+      fprintf(stdout, "%s (%.2f/99.7/%.2f/%%=%d/%d/%d,Outliers=%d,obl/obu=%d/%d)\n", \
+	      h->outbuf, h->ci_lower, h->ci_upper, lowerci, upper3stdev, upperci, outliercnt, oob_l, oob_u);
+    else
+      fprintf(stdout, "%s (%.2f/%.2f/99.7%%=%d/%d/%d,Outliers=%d,obl/obu=%d/%d)\n", \
+	      h->outbuf, h->ci_lower, h->ci_upper, lowerci, upperci, upper3stdev, outliercnt, oob_l, oob_u);
 }

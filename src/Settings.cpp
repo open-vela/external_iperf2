@@ -153,7 +153,7 @@ const struct option long_options[] =
 {"suggest_win_size", no_argument, NULL, 'W'},
 {"peer-detect",      no_argument, NULL, 'X'},
 {"linux-congestion", required_argument, NULL, 'Z'},
-{"histogram", optional_argument, &rxhistogram, 1},
+{"histograms", optional_argument, &rxhistogram, 1},
 {"l2checks", no_argument, &l2checks, 1},
 {"incr-dstip", no_argument, &incrdstip, 1},
 {"txstart-time", required_argument, &txstarttime, 1},
@@ -981,7 +981,7 @@ void Settings_ModalOptions( struct thread_Settings *mExtSettings ) {
     }
 
     // UDP histogram settings
-    if (isRxHistogram(mExtSettings) && isUDP(mExtSettings) && \
+    if (isRxHistogram(mExtSettings) && \
 	(mExtSettings->mThreadMode != kMode_Client) && mExtSettings->mRxHistogramStr) {
 	if (((results = strtok(mExtSettings->mRxHistogramStr, ",")) != NULL) && !strcmp(results,mExtSettings->mRxHistogramStr)) {
 	    char *tmp = new char [strlen(results) + 1];
