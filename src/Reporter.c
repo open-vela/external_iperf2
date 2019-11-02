@@ -521,14 +521,14 @@ void InitDataReport(struct thread_Settings *mSettings) {
 	    if (isRxHistogram(mSettings) && isUDP(mSettings)) {
 		char name[] = "T8";
 		data->info.latency_histogram =  histogram_init(mSettings->mRXbins,mSettings->mRXbinsize,0,\
-							       (mSettings->mRXunits ? 1e6 : 1e3), \
+							       pow(10,mSettings->mRXunits), \
 							       mSettings->mRXci_lower, mSettings->mRXci_upper, data->info.transferID, name);
 	    }
 	    if (isRxHistogram(mSettings) && (isIsochronous(mSettings) || isTripTime(mSettings))) {
 		char name[] = "F8";
 		// make sure frame bin size min is 100 microsecond
 		data->info.framelatency_histogram =  histogram_init(mSettings->mRXbins,mSettings->mRXbinsize,0, \
-								    (mSettings->mRXunits ? 1e6 : 1e3), mSettings->mRXci_lower, \
+								    pow(10,mSettings->mRXunits), mSettings->mRXci_lower, \
 								    mSettings->mRXci_upper, data->info.transferID, name);
 	    }
 	}

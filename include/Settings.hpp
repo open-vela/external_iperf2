@@ -137,7 +137,7 @@ struct thread_Settings {
     char*  mIfrnametx;              // %<device> name (for tx)
     char*  mSSMMulticastStr;        // --ssm-host
     char*  mIsochronousStr;         // --isochronous
-    char*  mRxHistogramStr;         // --udp-histogram
+    char*  mRxHistogramStr;         // --histograms (packets)
     FILE*  Extractor_file;
     struct ReportHeader*  reporthdr;
     struct MultiHeader*   multihdr;
@@ -214,7 +214,7 @@ struct thread_Settings {
     char peerversion[PEERBUFSIZE];
     int mRXbins;
     int mRXbinsize;
-    unsigned short mRXunits;
+    int mRXunits;
     double mRXci_lower;
     double mRXci_upper;
 #if defined( HAVE_WIN32_THREAD )

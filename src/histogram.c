@@ -47,8 +47,10 @@
  */
 #include "headers.h"
 #include "histogram.h"
+#ifdef HAVE_THREAD_DEBUG
 // needed for thread_debug
 #include "Thread.h"
+#endif
 struct histogram *histogram_init(unsigned int bincount, unsigned int binwidth, float offset, float units,\
 			    double ci_lower, double ci_upper, unsigned int id, char *name) {
     struct histogram *this = (struct histogram *) malloc(sizeof(struct histogram));
