@@ -832,10 +832,10 @@ void Settings_Interpret( char option, const char *optarg, struct thread_Settings
 		rxhistogram = 0;
 		setRxHistogram( mExtSettings );
 		setEnhanced( mExtSettings );
-		// The following are default values which
+		// set default histogram settings, milliseconds bins between 0 and 1 secs
 		mExtSettings->mRXbins = 1000;
 		mExtSettings->mRXbinsize = 1;
-		mExtSettings->mRXunits = 0;
+		mExtSettings->mRXunits = 3;
 		mExtSettings->mRXci_lower = 5;
 		mExtSettings->mRXci_upper = 95;
 		if (optarg) {
@@ -980,28 +980,33 @@ void Settings_ModalOptions( struct thread_Settings *mExtSettings ) {
 	fprintf(stderr, "WARNING: client will send traffic forever or until an external signal (e.g. SIGINT or SIGTERM) occurs to stop it\n");
     }
 
-    // UDP histogram settings
-    if (isRxHistogram(mExtSettings) && \
-	(mExtSettings->mThreadMode != kMode_Client) && mExtSettings->mRxHistogramStr) {
-	if (((results = strtok(mExtSettings->mRxHistogramStr, ",")) != NULL) && !strcmp(results,mExtSettings->mRxHistogramStr)) {
-	    char *tmp = new char [strlen(results) + 1];
-	    strcpy(tmp, results);
-	    // scan for microseconds as units
-	    if ((strtok(tmp, "u") != NULL) && strcmp(results,tmp)) {
-		mExtSettings->mRXunits = 1;
-	    }
-	    mExtSettings->mRXbinsize = atoi(tmp);
-	    delete [] tmp;
-	    if ((results = strtok(results+strlen(results)+1, ",")) != NULL) {
-		mExtSettings->mRXbins = byte_atoi(results);
-		if ((results = strtok(NULL, ",")) != NULL) {
-		    mExtSettings->mRXci_lower = atof(results);
-		    if ((results = strtok(NULL, ",")) != NULL) {
-			mExtSettings->mRXci_upper = atof(results);
-		    }
-		}
-	    }
+    // UDP histogram optional settings
+    if (isRxHistogram(mExtSettings) && (mExtSettings->mThreadMode != kMode_Client) && mExtSettings->mRxHistogramStr) {
+      // check for optional arguments to change histogram settings
+      if (((results = strtok(mExtSettings->mRxHistogramStr, ",")) != NULL) && !strcmp(results,mExtSettings->mRxHistogramStr)) {
+	// scan for unit specifier
+	char *tmp = new char [strlen(results) + 1];
+	strcpy(tmp, results);
+	if ((strtok(tmp, "u") != NULL) && strcmp(results,tmp)) {
+	  mExtSettings->mRXunits = 6;  // units is microseconds
+	} else {
+	  strcpy(tmp, results);
+	  if ((strtok(tmp, "m") != NULL) && strcmp(results,tmp)) {
+	    mExtSettings->mRXunits = 3;  // units is milliseconds
+	  }
 	}
+	mExtSettings->mRXbinsize = atoi(tmp);
+	delete [] tmp;
+	if ((results = strtok(results+strlen(results)+1, ",")) != NULL) {
+	  mExtSettings->mRXbins = byte_atoi(results);
+	  if ((results = strtok(NULL, ",")) != NULL) {
+	    mExtSettings->mRXci_lower = atof(results);
+	    if ((results = strtok(NULL, ",")) != NULL) {
+	      mExtSettings->mRXci_upper = atof(results);
+	    }
+	  }
+	}
+      }
     }
     // L2 settings
     if (l2checks && isUDP(mExtSettings)) {
