@@ -1253,7 +1253,7 @@ int Listener::ReadClientHeader(client_hdr *hdr ) {
 	    } else if ((flags & HEADER_VERSION1) != 0) {
 		len = sizeof(client_hdr_v1);
 	    }
-	    if ((flags & HEADER_TIMESTAMP) != 0 ) {
+	    if ((flags & HEADER_TRIPTIME) != 0 ) {
 		setTripTime(server);
 	    }
 	    if (len && ((n = recvn(server->mSock, p, len, MSG_PEEK)) != len)) {

@@ -432,7 +432,7 @@ void Client::InitTrafficLoop (void) {
       struct TCP_burst_payload * mBuf_burst = (struct TCP_burst_payload *) mBuf;
       mBuf_burst->typelen.type = htonl(CLIENTTCPHDR);
       mBuf_burst->typelen.length =  htonl(sizeof(struct TCP_burst_payload));
-      mBuf_burst->flags = htonl(HEADER_TIMESTAMP | HEADER_SEQNO64B);
+      mBuf_burst->flags = htonl(HEADER_TRIPTIME | HEADER_SEQNO64B);
       mBuf_burst->start_tv_sec = htonl(myJob->report.startTime.tv_sec);
       mBuf_burst->start_tv_usec = htonl(myJob->report.startTime.tv_usec);
     }
