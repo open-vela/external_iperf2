@@ -59,7 +59,7 @@ extern "C" {
 #define HEADER_VERSION1 0x80000000
 #define HEADER_EXTEND   0x40000000
 #define HEADER_UDPTESTS 0x20000000
-#define HEADER_TIMESTAMP 0x10000000
+#define HEADER_TRIPTIME 0x10000000
 #define HEADER_SEQNO64B  0x08000000
 
 // Below flags are used to pass test settings in *every* UDP packet
