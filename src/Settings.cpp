@@ -1333,6 +1333,8 @@ int Settings_GenerateClientHdr( struct thread_Settings *client, client_hdr *hdr 
 	flags |= HEADER_EXTEND;
     }
     flags |= HEADER_SEQNO64B;
+    if (isTripTime(client))
+	flags |= HEADER_TRIPTIME;
     if ((client->mMode != kTest_Normal) || isReverse(client)) {
 	flags |= HEADER_VERSION1;
 	if ( isBuflenSet( client ) ) {
