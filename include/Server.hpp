@@ -87,6 +87,7 @@ private:
 
     void InitKernelTimeStamping (void);
     void InitTrafficLoop (void);
+    int AlignPayloads (void);
     int ReadWithRxTimestamp (int *readerr);
     bool ReadPacketID (void);
     void L2_processing (void);
