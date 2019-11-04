@@ -155,6 +155,7 @@ void Server::RunTCP( void ) {
 
     int burst_nleft = 0;
     burst_info.burst_id = 0;
+    int alignbytes = AlignPayloads();
 
     while (InProgress() && !err) {
 	reportstruct->emptyreport=0;
@@ -216,6 +217,10 @@ void Server::RunTCP( void ) {
 		}
 		currLen = 0;
 	    }
+	    if (alignbytes) {
+	      currLen += alignbytes;
+	      alignbytes = 0;
+	    }
 	    currLen += n;
 	    now.setnow();
 	    reportstruct->packetTime.tv_sec = now.getSecs();
@@ -274,6 +279,26 @@ void Server::InitKernelTimeStamping (void) {
 	WARN_errno( mSettings->mSock == SO_TIMESTAMP, "socket" );
     }
 #endif
+}
+
+int Server::AlignPayloads (void) {
+  int len=0;
+  int n;
+  uint32_t flags;
+  // align the burst header
+  if (isTripTime(mSettings) && !isUDP(mSettings) && \
+      ((n = recvn(mSettings->mSock, mBuf, 4, MSG_PEEK)) == 4)) {
+    flags = ntohl((uint32_t) * mBuf);
+    if ((flags & HEADER_EXTEND) != 0) {
+      len = sizeof(client_hdr);
+    } else if ((flags & HEADER_VERSION1) != 0) {
+      len = sizeof(client_hdr_v1);
+    }
+    if (len && ((n = recvn(mSettings->mSock, mBuf, len, 0)) != len)) {
+      len = 0;
+    }
+  }
+  return len;
 }
 
 void Server::InitTrafficLoop (void) {
@@ -355,17 +380,6 @@ void Server::InitTrafficLoop (void) {
 #endif
         mEndTime.setnow();
         mEndTime.add( mSettings->mAmount / 100.0 );
-    }
-    // RJM fix this
-    if (isTripTime(mSettings)) {
-	int n, len=3;
-	uint32_t buf[len];
-	if (len && ((n = recvn(mSettings->mSock, (char *)&buf[0], sizeof(buf), MSG_PEEK)) != (int) sizeof(buf))) {
-	    fprintf(stdout,"Warn: socket trip time read error\n");
-	} else {
-	    myJob->report.clientStartTime.tv_sec = ntohl(buf[1]);
-	    myJob->report.clientStartTime.tv_usec = ntohl(buf[2]);
-	}
     }
 }
 
