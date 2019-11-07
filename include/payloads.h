@@ -78,6 +78,7 @@ extern "C" {
 #define REVERSE               0x00000008
 #define BIDIR                 0x00000010
 #define WRITEACK              0x00000020
+#define TCP_ISOCH             0x00000040
 
 // later features
 #define HDRXACKMAX 2500000 // default 2.5 seconds, units microseconds
