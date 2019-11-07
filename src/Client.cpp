@@ -453,7 +453,6 @@ inline void Client::WriteSyncDone(void) {
     if (isWriteSync(mSettings) && mSettings->multihdr) {
       Condition_Lock(mSettings->multihdr->multibarrier_cond);
       mSettings->multihdr->multibarrier_cnt--;
-      printf("**here**\n");
       if (mSettings->multihdr->multibarrier_cnt == 0 ) {
           Condition_Broadcast(&mSettings->multihdr->multibarrier_cond);
       }
@@ -546,15 +545,16 @@ void Client::RunTCP( void ) {
 	// Sychronize threads if requested
 	WriteSync();
         int n = 0;
-	if (isTripTime(mSettings) || isWriteAck(mSettings)) {
+	if (isTripTime(mSettings) || isWriteAck(mSettings) || isIsochronous(mSettings)) {
 	    if (burst_remaining == 0) {
-		now.setnow();
-		reportstruct->packetTime.tv_sec = now.getSecs();
-		reportstruct->packetTime.tv_usec = now.getUsecs();
 		if (framecounter) {
 		    burst_size = (int) (lognormal(mSettings->mMean,mSettings->mVariance)) / (mSettings->mFPS * 8);
 		    burst_id =  framecounter->wait_tick();
 		}
+		// RJM fix below, consider using the timer value vs re-reading the clock
+		now.setnow();
+		reportstruct->packetTime.tv_sec = now.getSecs();
+		reportstruct->packetTime.tv_usec = now.getUsecs();
 	        WriteTcpTxHdr(reportstruct, burst_size, burst_id++);
 		burst_remaining = burst_size;
 		// perform write
@@ -586,7 +586,7 @@ void Client::RunTCP( void ) {
 	    reportstruct->errwrite=WriteNoErr;
 	    WARN(len != reportstruct->packetLen, "write size mismatch");
 	}
-	if (isTripTime(mSettings) || isWriteAck(mSettings))
+	if (isTripTime(mSettings) || isWriteAck(mSettings) || isIsochronous(mSettings))
 	    burst_remaining -= len;
 	reportstruct->packetLen = len + n;
 	now.setnow();
