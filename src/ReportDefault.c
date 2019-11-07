@@ -519,8 +519,12 @@ void *reporter_reportpeer(struct ConnectionInfo *stats, int ID) {
 	      snprintf(b, PEERBUFSIZE, " (WARN: winsize=%s req=%s)", tmpbuf, tmpbuf2);
 	}
 	b += strlen(b);
+	if (isIsochronous(stats)) {
+	    snprintf(b, PEERBUFSIZE-strlen(b), " (isoch)");
+	    b += strlen(b);
+	}
 	if (isServerReverse(stats)) {
-	    snprintf(b, PEERBUFSIZE-strlen(b), "(reverse)");
+	    snprintf(b, PEERBUFSIZE-strlen(b), " (reverse)");
 	    b += strlen(b);
 	}
 	if (isWriteAck(stats)) {
@@ -613,11 +617,7 @@ void reporter_peerversion (struct thread_Settings *inSettings, int upper, int lo
     major = (upper & 0x0000FFFF);
     minor = (lower & 0xFFFF0000) >> 16;
     alpha = (lower & 0x0000000F);
-    if (!isIsochronous(inSettings)) {
-	sprintf(inSettings->peerversion," (peer %d.%d.%d)", rel, major, minor);
-    } else {
-	sprintf(inSettings->peerversion," isoch (peer %d.%d.%d)", rel, major, minor);
-    }
+    sprintf(inSettings->peerversion," (peer %d.%d.%d)", rel, major, minor);
     switch(alpha) {
     case 0:
 	sprintf(inSettings->peerversion + strlen(inSettings->peerversion) - 1,"-alpha)");

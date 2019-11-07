@@ -126,7 +126,7 @@ enum RateUnits {
  * and contains only C elements so it can be manipulated
  * by either C or C++.
  */
-#define PEERBUFSIZE 80
+#define PEERBUFSIZE 128
 struct thread_Settings {
     // Pointers
     char*  mFileName;               // -F

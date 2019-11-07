@@ -815,7 +815,7 @@ void ReportServerUDP( struct thread_Settings *agent, struct server_hdr *server )
 	    FAIL(1, "Out of Memory!!\n", agent);
 	}
 #ifdef HAVE_THREAD_DEBUG
-	thread_debug("Init server relay report %p size %ld\n", (void *)reporthdr, sizeof(struct ReportHeader));
+	thread_debug("Init server relay report %p size %ld", (void *)reporthdr, sizeof(struct ReportHeader));
 #endif
 
 	stats->transferID = agent->mSock;
