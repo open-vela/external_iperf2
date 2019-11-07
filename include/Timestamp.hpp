@@ -75,6 +75,10 @@ public:
     /* -------------------------------------------------------------------
      * Copy construcutor
      * ------------------------------------------------------------------- */
+    Timestamp(const Timestamp &t2) {
+        mTime.tv_sec = t2.mTime.tv_sec;
+        mTime.tv_usec = t2.mTime.tv_usec;
+    }
 
     /* -------------------------------------------------------------------
      * Create a timestamp, with the given seconds/microseconds
@@ -225,6 +229,17 @@ public:
             mTime.tv_sec++;
         }
 
+        assert( mTime.tv_usec >= 0  &&
+                mTime.tv_usec <  kMillion );
+    }
+
+    /* -------------------------------------------------------------------
+     * add micro seconds to my timestamp.
+     * ------------------------------------------------------------------- */
+    void add(unsigned int usec ) {
+        mTime.tv_usec += usec;
+	mTime.tv_sec += mTime.tv_usec / kMillion;
+	mTime.tv_usec = mTime.tv_usec % kMillion;
         assert( mTime.tv_usec >= 0  &&
                 mTime.tv_usec <  kMillion );
     }

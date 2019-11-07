@@ -55,31 +55,40 @@ using namespace Isochronous;
 FrameCounter::FrameCounter(double value, Timestamp start)  : frequency(value) {
     period = (unsigned int) (1000000 / frequency);
     startTime = start;
+    nextslotTime=start;
     lastcounter = 0;
+    slot_counter = 0;
 }
 FrameCounter::FrameCounter(double value)  : frequency(value) {
     period = (unsigned int) (1000000 / frequency);
     lastcounter = 0;
+    slot_counter = 0;
 }
 
 #if defined(HAVE_CLOCK_NANOSLEEP)
 unsigned int FrameCounter::wait_tick(void) {
-    Timestamp txslot = next_slot();
-    unsigned int mycounter = get(txslot);
+    Timestamp now;
+    if (!now.before(nextslotTime)) {
+        nextslotTime.add(period);
+	slot_counter++;
+    }
     timespec txtime_ts;
-    txtime_ts.tv_sec = txslot.getSecs();
-    txtime_ts.tv_nsec = txslot.getUsecs() * 1000;
+    txtime_ts.tv_sec = nextslotTime.getSecs();
+    txtime_ts.tv_nsec = nextslotTime.getUsecs() * 1000;
     int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &txtime_ts, NULL);
-    // printf("last=%d current=%d\n", lastcounter, mycounter);
     if (rc) {
 	fprintf(stderr, "txstart failed clock_nanosleep()=%d\n", rc);
-    } else if (lastcounter && ((mycounter - lastcounter) > 1))
+    } else if (lastcounter && ((slot_counter - lastcounter) > 1)) {
+#ifdef HAVE_THREAD_DEBUG
+      thread_debug("Client tick slip occurred per %ld.%ld %d %d", txtime_ts.tv_sec, txtime_ts.tv_nsec / 1000, lastcounter, slot_counter);
+#endif
 	slip++;
+    }
 #ifdef HAVE_THREAD_DEBUG
     // thread_debug("Client tick occurred per %ld.%ld", txtime_ts.tv_sec, txtime_ts.tv_nsec / 1000);
 #endif
-    lastcounter = mycounter;
-    return(mycounter);
+    lastcounter = slot_counter;
+    return(slot_counter);
 }
 #else
 unsigned int FrameCounter::wait_tick(void) {
@@ -101,18 +110,12 @@ unsigned int FrameCounter::wait_tick(void) {
 }
 #endif
 inline unsigned int FrameCounter::get(void) {
-    Timestamp sampleTime;  // Constructor will initialize timestamp to now
-    long usecs = sampleTime.subUsec(startTime);
-    // This will round towards zero per the integer divide
-    unsigned int counter = (unsigned int) (usecs / period);
-    return(counter + 1); // Frame counter for packets starts at 1
+    Timestamp now;
+    return slot_counter + 1;
 }
 
 inline unsigned int FrameCounter::get(Timestamp slot) {
-    long usecs = -startTime.subUsec(slot);
-    // This will round towards zero per the integer divide
-    unsigned int counter = (unsigned int) (usecs / period);
-    return(counter + 1); // Frame counter for packets starts at 1
+    return(slot_counter + 1); // Frame counter for packets starts at 1
 }
 
 inline unsigned int FrameCounter::get(long *ticks_remaining) {
