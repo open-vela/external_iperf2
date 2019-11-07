@@ -68,21 +68,27 @@ FrameCounter::FrameCounter(double value)  : frequency(value) {
 #if defined(HAVE_CLOCK_NANOSLEEP)
 unsigned int FrameCounter::wait_tick(void) {
     Timestamp now;
-    if (!now.before(nextslotTime)) {
+    if (!slot_counter) {
+      slot_counter = 1;
+      nextslotTime = now;
+    } else {
+      while (!now.before(nextslotTime)) {
         nextslotTime.add(period);
 	slot_counter++;
+      }
     }
     timespec txtime_ts;
     txtime_ts.tv_sec = nextslotTime.getSecs();
     txtime_ts.tv_nsec = nextslotTime.getUsecs() * 1000;
-    int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &txtime_ts, NULL);
-    if (rc) {
-	fprintf(stderr, "txstart failed clock_nanosleep()=%d\n", rc);
-    } else if (lastcounter && ((slot_counter - lastcounter) > 1)) {
+    if (lastcounter && ((slot_counter - lastcounter) > 1)) {
 #ifdef HAVE_THREAD_DEBUG
       thread_debug("Client tick slip occurred per %ld.%ld %d %d", txtime_ts.tv_sec, txtime_ts.tv_nsec / 1000, lastcounter, slot_counter);
 #endif
 	slip++;
+    }
+    int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &txtime_ts, NULL);
+    if (rc) {
+	fprintf(stderr, "txstart failed clock_nanosleep()=%d\n", rc);
     }
 #ifdef HAVE_THREAD_DEBUG
     // thread_debug("Client tick occurred per %ld.%ld", txtime_ts.tv_sec, txtime_ts.tv_nsec / 1000);
