@@ -1220,6 +1220,8 @@ void Settings_GenerateClientSettings( struct thread_Settings *server,
 	struct thread_Settings *fullduplex = NULL;
 	if (extendflags & WRITEACK)
 	    setWriteAck(server);
+	if (extendflags & TCP_ISOCH)
+	    setIsochronous(server);
 	if (((extendflags & BIDIR) == BIDIR) ||	 \
 	    ((extendflags & REVERSE) == REVERSE)) {
 	    if ((extendflags & BIDIR) == BIDIR) {
@@ -1385,6 +1387,11 @@ int Settings_GenerateClientHdr( struct thread_Settings *client, client_hdr *hdr 
 	    hdr->udp.version_u = htonl(IPERF_VERSION_MAJORHEX);
 	    hdr->udp.version_l = htonl(IPERF_VERSION_MINORHEX);
 	}
+    } else {
+      if (isIsochronous(client)) {
+	flags |= HEADER_EXTEND;
+        extendflags |= TCP_ISOCH;
+      }
     }
     /*
      * Done with base flags (to be passed to the remote server)

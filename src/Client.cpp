@@ -531,6 +531,11 @@ void Client::RunTCP( void ) {
     int burst_remaining = 0;
     int burst_id = 1;
 
+    // RJM, consider moving this into the constructor
+    if (isIsochronous(mSettings)) {
+	framecounter = new Isochronous::FrameCounter(mSettings->mFPS);
+    }
+
     while (InProgress()) {
         if (isModeAmount(mSettings)) {
 	    reportstruct->packetLen = ((mSettings->mAmount < (unsigned) mSettings->mBufLen) ? mSettings->mAmount : mSettings->mBufLen);
@@ -546,6 +551,10 @@ void Client::RunTCP( void ) {
 		now.setnow();
 		reportstruct->packetTime.tv_sec = now.getSecs();
 		reportstruct->packetTime.tv_usec = now.getUsecs();
+		if (framecounter) {
+		    burst_size = (int) (lognormal(mSettings->mMean,mSettings->mVariance)) / (mSettings->mFPS * 8);
+		    burst_id =  framecounter->wait_tick();
+		}
 	        WriteTcpTxHdr(reportstruct, burst_size, burst_id++);
 		burst_remaining = burst_size;
 		// perform write
