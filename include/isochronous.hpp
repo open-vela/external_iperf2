@@ -72,6 +72,7 @@ namespace Isochronous {
     private :
 	double frequency;
 	Timestamp startTime;
+	Timestamp nextslotTime;
 	unsigned int period;  // units microseconds
 	unsigned int lastcounter;
 	unsigned int slot_counter;
