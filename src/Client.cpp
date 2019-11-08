@@ -149,16 +149,20 @@ Client::Client( thread_Settings *inSettings ) {
     if (isConnectOnly(mSettings) || (isReverse(mSettings) && !isBidir(mSettings))) {
 	if (!mSettings->reporthdr) {
 	    InitConnectionReport(mSettings);
-	    mSettings->reporthdr->report.connection.connecttime = ct;
-	    myJob = mSettings->reporthdr;
-	    // Post the settings report, the connection report will be posted later
-	    if (isReport(mSettings)) {
-	        struct ReportHeader *tmp = ReportSettings(mSettings);
-		UpdateConnectionReport(mSettings, tmp);
-		// Post a settings report now
-		PostReport(tmp);
+	    if (mSettings->reporthdr) {
+	        mSettings->reporthdr->report.connection.connecttime = ct;
 	    }
 	}
+	// Post the settings report, the connection report will be posted later
+	if (isReport(mSettings)) {
+	    struct ReportHeader *tmp = ReportSettings(mSettings);
+	    UpdateConnectionReport(mSettings, tmp);
+	    // Post a settings report now
+	    PostReport(tmp);
+	}
+	if (mSettings->reporthdr && isConnectionReport(mSettings))
+	    // post the connection report
+	    PostReport(mSettings->reporthdr);
     } else {
 	InitReport(mSettings);
 	// Squirrel this away so the destructor can free the memory
