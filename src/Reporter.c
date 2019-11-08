@@ -476,7 +476,9 @@ void InitDataReport(struct thread_Settings *mSettings) {
 	    }
 	}
 #ifdef HAVE_THREAD_DEBUG
-	thread_debug("Init data report %p size %ld using packetring %p", (void *)reporthdr, sizeof(struct ReportHeader), (void *)(reporthdr->packetring));
+	thread_debug("Init data report %p size %ld using packetring=%p cond=%p", \
+		     (void *)reporthdr, sizeof(struct ReportHeader),
+		     (void *)(reporthdr->packetring), (void *)(reporthdr->packetring->awake_producer));
 #endif
 	data->lastError = INITIAL_PACKETID;
 	data->lastDatagrams = INITIAL_PACKETID;
@@ -994,16 +996,20 @@ void reporter_spawn( struct thread_Settings *thread ) {
 #endif
 		if ((tmp->report.type & TRANSFER_REPORT) == 0) {
 #ifdef HAVE_THREAD_DEBUG
-		    thread_debug("Free %p in rs", (void *) tmp);
+		    thread_debug("Free %p in rs flags=%X", (void *) tmp, tmp->report.type);
 #endif
 		    free(tmp);
 		} else {
 #ifdef HAVE_THREAD_DEBUG
-		  thread_debug("Signal producer to free report %p and cond %p in rpr", (void *) tmp, (void *) tmp->packetring->awake_producer);
+		  thread_debug("Signal producer to free report %p and cond %p in rpr flags=%X", \
+			       (void *) tmp, (void *) &(tmp->packetring->awake_producer), tmp->report.type);
 #endif
 		  // Signal the producer (traffic thread) that the consumer (reporter thread)
-		  // it is done with this report
-		  Condition_Signal(tmp->packetring->awake_producer);
+		  // it is done with this report.  Note that ReportRoot is a proxy
+		  // for a compound report, only signal when final processing is done
+		  if ((tmp->report.type & (TRANSFER_REPORT | CONNECTION_REPORT)) == TRANSFER_REPORT) {
+		      Condition_Signal(tmp->packetring->awake_producer);
+		  }
 		}
                 Condition_Unlock ( ReportCond );
                 if (ReportRoot) {
@@ -1113,17 +1119,19 @@ int reporter_process_report ( struct ReportHeader *reporthdr ) {
 	    // destructor
 	    if ((tmp->report.type & TRANSFER_REPORT) == 0) {
 #ifdef HAVE_THREAD_DEBUG
-		thread_debug("Free %p in rpr", (void *) tmp);
+	      thread_debug("Free %p in rpr flags=%x", (void *) tmp, tmp->report.type);
 #endif
 		free(tmp);
 	    } else {
 #ifdef HAVE_THREAD_DEBUG
-		thread_debug("Signal producer to free report %p in rpr", (void *) tmp);
+	        thread_debug("Signal producer to free report %p in rpr flags=%X", (void *) tmp, tmp->report.type);
 #endif
 		// Signal the producer (traffic thread) that the consumer (reporter thread)
 		// it is done with this report
-		struct Condition tmpcond = *(tmp->packetring->awake_producer);
-		Condition_Signal(&tmpcond);
+		if ((tmp->report.type & (TRANSFER_REPORT | CONNECTION_REPORT)) == TRANSFER_REPORT) {
+		    struct Condition tmpcond = *(tmp->packetring->awake_producer);
+		    Condition_Signal(&tmpcond);
+		}
 	    }
         }
     }

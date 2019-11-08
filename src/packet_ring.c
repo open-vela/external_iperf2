@@ -53,9 +53,6 @@ struct PacketRing * init_packetring (int count, struct Condition *awake_consumer
     struct PacketRing *pr = NULL;
     if ((pr = (struct PacketRing *) calloc(1, sizeof(struct PacketRing)))) {
 	pr->data = (struct ReportStruct *) calloc(count, sizeof(struct ReportStruct));
-#ifdef HAVE_THREAD_DEBUG
-	thread_debug("Init %d element packet ring %p", count, (void *)pr);
-#endif
     }
     if (!pr || !pr->data) {
 	fprintf(stderr, "ERROR: no memory for packet ring\n");
@@ -68,6 +65,10 @@ struct PacketRing * init_packetring (int count, struct Condition *awake_consumer
     pr->awake_producer = awake_producer;
     pr->consumerdone = 0;
     pr->awaitcounter = 0;
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Init %d element packet ring=%p producer=%p consumer=%p", count, \
+		 (void *)pr, (void *) pr->awake_producer, (void *) pr->awake_consumer);
+#endif
     return (pr);
 }
 
@@ -157,7 +158,8 @@ inline struct ReportStruct *dequeue_ackring(struct PacketRing *pr) {
 
 void free_packetring(struct PacketRing *pr) {
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Free packet ring %p", (void *)pr);
+    thread_debug("Free packet ring=%p producer=%p (consumer=%p)", \
+		 (void *)pr, (void *) pr->awake_producer, (void *) pr->awake_consumer);
 #endif
     if (pr->awaitcounter > 1000) fprintf(stderr, "WARN: Reporter thread may be too slow, await counter=%d, " \
 					 "consider increasing NUM_REPORT_STRUCTS\n", pr->awaitcounter);
