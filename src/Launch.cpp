@@ -161,12 +161,12 @@ void client_spawn( thread_Settings *thread ) {
     if (!isReverse(thread) && !isServerReverse(thread) && !isWriteAck(thread)) {
 	// Perform any intial startup delays between the connect() and the data xfer phase
 	// this will also initiliaze the report header timestamps needed by the reporter thread
-	theClient->StartSynch();
-	theClient->InitiateServer();
-	theClient->Run();
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug("Client spawn thread normal (sock=%d)", thread->mSock);
 #endif
+	theClient->StartSynch();
+	theClient->InitiateServer();
+	theClient->Run();
     } else if (isServerReverse(thread)) {
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug("Client spawn thread server-reverse (sock=%d)", thread->mSock);

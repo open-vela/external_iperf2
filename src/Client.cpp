@@ -203,8 +203,9 @@ Client::Client( thread_Settings *inSettings ) {
  * ------------------------------------------------------------------- */
 Client::~Client() {
 #if HAVE_THREAD_DEBUG
-    thread_debug("Client destructor sock=%d server-reverse=%s bidir=%s", \
-		 mySocket, (isServerReverse(mSettings) ? "true" : "false"), (isBidir(mSettings) ? "true" : "false"));
+    thread_debug("Client destructor sock=%d report=%p server-reverse=%s bidir=%s", \
+		 mySocket, (void *) mSettings->reporthdr, \
+		 (isServerReverse(mSettings) ? "true" : "false"), (isBidir(mSettings) ? "true" : "false"));
 #endif
     if (!isBidir(mSettings) || (myJob && !myJob->bidirreport)) {
         int rc = close( mySocket );
