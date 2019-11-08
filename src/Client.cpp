@@ -349,7 +349,7 @@ void Client::SetReportStartTime (void) {
   // Now the reports are allocated and somewhat initialized,
   // set the report start times and next report times
   //
-  if (TimeZero(reporthdr->report.startTime)) {
+  if (reporthdr && TimeZero(reporthdr->report.startTime)) {
     // Note: multireport times can be used here because the barrier
     // is the only writer per that mutex
     if (reporthdr->multireport && !TimeZero(reporthdr->multireport->report.startTime)) {
