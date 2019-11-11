@@ -139,7 +139,7 @@ set the interpacket gap to \fIn\fR (units of milliseconds) for packets within an
 send isochronous traffic with frequency frames per second and load defined by mean and standard deviation using a log normal distribution, defaults to 60:20m,0.  (Note: Here the suffixes indicate bytes/sec or bits/sec per use of uppercase or lowercase, respectively)
 .TP
 .BR "    --no-connect-sync "
-Traffic threads (per -P greater than 1) by default will synchronize after their TCP connects and prior to each sending traffic.  This option disables that sychronization such that each traffic thread will start immediately after completing a successful connect.
+Parallel traffic threads (per -P greater than 1) by default will synchronize after their TCP connects and prior to each sending traffic.  This option disables that sychronization such that each traffic thread will start immediately after completing a successful connect.
 .TP
 .BR "    --no-udp-fin "
 Don't perform the UDP final server to client exchange which means there won't be a final server report displayed on the client. All packets per the test will be from the client to the server and no packets should be sent in the other direction (This option is set on the client and passed to the server requiring ver 2.0.14 or better)
