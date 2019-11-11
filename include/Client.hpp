@@ -88,6 +88,7 @@ public:
     void InitiateServer(void);
     void StartSynch(void);
     void SetReportStartTime(void);
+    bool isConnected(void);
 
 private:
     void WritePacketID( intmax_t );
@@ -97,6 +98,7 @@ private:
     void FinalUDPHandshake(void);
     void write_UDP_FIN(void);
     bool InProgress(void);
+    bool connected;
     inline void WriteSync(void);
     inline void WriteSyncDone(void);
     ReportStruct *reportstruct;
