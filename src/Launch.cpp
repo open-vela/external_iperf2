@@ -157,6 +157,10 @@ void client_spawn( thread_Settings *thread ) {
     // Note: socket connect() happens here in the constructor
     // that should be fixed as a clean up
     theClient = new Client( thread );
+    if (!theClient->isConnected()) {
+	DELETE_PTR( theClient );
+	return;
+    }
     // Code for the normal case
     if (!isReverse(thread) && !isServerReverse(thread) && !isWriteAck(thread)) {
 	// Perform any intial startup delays between the connect() and the data xfer phase
@@ -165,15 +169,17 @@ void client_spawn( thread_Settings *thread ) {
 	thread_debug("Client spawn thread normal (sock=%d)", thread->mSock);
 #endif
 	theClient->StartSynch();
-	theClient->InitiateServer();
-	theClient->Run();
+	if (theClient->isConnected()) {
+	    theClient->InitiateServer();
+	    theClient->Run();
+	}
     } else if (isServerReverse(thread)) {
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug("Client spawn thread server-reverse (sock=%d)", thread->mSock);
 #endif
-        // This is the case of the listener launching a client, no test exchange nor connect
+	// This is the case of the listener launching a client, no test exchange nor connect
 	theClient->SetReportStartTime();
-        theClient->Run();
+	theClient->Run();
     } else if (isReverse(thread) || isWriteAck(thread)) {
 	// This is a client side initiated reverse test,
 	// Could be bidir or reverse only
@@ -193,10 +199,10 @@ void client_spawn( thread_Settings *thread ) {
 	if (isModeTime(reverse_client)) {
 	    reverse_client->mAmount += (SLOPSECS * 100);  // add 2 sec for slop on reverse, units are 10 ms
 	    if (isTxHoldback(thread)) {
-	      reverse_client->mAmount += (thread->txholdback_timer.tv_sec * 100);
-	      reverse_client->mAmount += (thread->txholdback_timer.tv_usec / 1000000 * 100);
+		reverse_client->mAmount += (thread->txholdback_timer.tv_sec * 100);
+		reverse_client->mAmount += (thread->txholdback_timer.tv_usec / 1000000 * 100);
 	    }
-        }
+	}
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug("Client spawn thread reverse (sock=%d)", thread->mSock);
 #endif
@@ -205,9 +211,9 @@ void client_spawn( thread_Settings *thread ) {
 	// RJM ADD a thread event here so reverse_client is in a known ready state prior to test exchange
 	// Now exchange client's test information with remote server
 	setReverse(reverse_client);
-        thread_start(reverse_client);
+	thread_start(reverse_client);
 	// Now handle bidir vs reverse-only for client side invocation
-        if (!isBidir(thread) && !isWriteAck(thread)) {
+	if (!isBidir(thread) && !isWriteAck(thread)) {
 	    // Reverse only, client thread waits on reverse_server and never runs any traffic
 	    if (!thread_equalid(reverse_client->mTID, thread_zeroid())) {
 #ifdef HAVE_THREAD_DEBUG

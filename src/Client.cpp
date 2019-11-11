@@ -88,6 +88,7 @@ Client::Client( thread_Settings *inSettings ) {
     myJob = NULL;
     mySocket = isServerReverse(inSettings) ? inSettings->mSock : INVALID_SOCKET;
     double ct = -1.0;
+    connected = isServerReverse(mSettings);
 
     if (isCompat(inSettings) && isPeerVerDetect(inSettings)) {
 	fprintf(stderr, "%s", warn_compat_and_peer_exchange);
@@ -144,58 +145,56 @@ Client::Client( thread_Settings *inSettings ) {
       ct = Connect( );
     }
 
-    //  Tests that don't pass packet stats to the reporter thread
-    //  are Connect only or Reverse only
-    if (isConnectOnly(mSettings) || (isReverse(mSettings) && !isBidir(mSettings))) {
-	if (!mSettings->reporthdr) {
-	    InitConnectionReport(mSettings);
-	    if (mSettings->reporthdr) {
-	        mSettings->reporthdr->report.connection.connecttime = ct;
+    if (isConnected()) {
+	//  Tests that don't pass packet stats to the reporter thread
+	//  are Connect only or Reverse only
+	if (isConnectOnly(mSettings) || (isReverse(mSettings) && !isBidir(mSettings))) {
+	    if (!mSettings->reporthdr) {
+		InitConnectionReport(mSettings);
+		if (mSettings->reporthdr) {
+		    mSettings->reporthdr->report.connection.connecttime = ct;
+		}
 	    }
+	    // Post the settings report, the connection report will be posted later
+	    if (isReport(mSettings)) {
+		struct ReportHeader *tmp = ReportSettings(mSettings);
+		UpdateConnectionReport(mSettings, tmp);
+		// Post a settings report now
+		PostReport(tmp);
+	    }
+	    if (mSettings->reporthdr && isConnectionReport(mSettings))
+		// post the connection report
+		PostReport(mSettings->reporthdr);
+	} else {
+	    InitReport(mSettings);
+	    // Squirrel this away so the destructor can free the memory
+	    // even when mSettings has already destroyed
+	    myJob = mSettings->reporthdr;
+	    // Initialize things for the packet ring and the connec time
+	    if (mSettings->reporthdr) {
+		mSettings->reporthdr->report.connection.connecttime = ct;
+		reportstruct = &mSettings->reporthdr->packetring->metapacket;
+		reportstruct->packetID = (isPeerVerDetect(mSettings)) ? 1 : INITIAL_PACKETID;
+		reportstruct->errwrite=WriteNoErr;
+		reportstruct->emptyreport=0;
+		reportstruct->socket = mSettings->mSock;
+		reportstruct->packetLen = 0;
+	    }
+	    if (mSettings->reporthdr) {
+		mSettings->reporthdr->report.connection.connecttime = ct;
+	    }
+	    // Post a settings report
+	    if (isReport(mSettings)) {
+		struct ReportHeader *tmp = ReportSettings(mSettings);
+		UpdateConnectionReport(mSettings, tmp);
+		PostReport(tmp);
+	    }
+	    // Finally, post this thread's "job report" which the reporter thread
+	    // will continuously process as long as there are packets flowing
+	    if (myJob && isDataReport(mSettings))
+		PostReport(myJob);
 	}
-	// Post the settings report, the connection report will be posted later
-	if (isReport(mSettings)) {
-	    struct ReportHeader *tmp = ReportSettings(mSettings);
-	    UpdateConnectionReport(mSettings, tmp);
-	    // Post a settings report now
-	    PostReport(tmp);
-	}
-	if (mSettings->reporthdr && isConnectionReport(mSettings))
-	    // post the connection report
-	    PostReport(mSettings->reporthdr);
-    } else {
-	InitReport(mSettings);
-	// Squirrel this away so the destructor can free the memory
-	// even when mSettings has already destroyed
-	myJob = mSettings->reporthdr;
-	// Initialize things for the packet ring and the connec time
-	if (mSettings->reporthdr) {
-	    mSettings->reporthdr->report.connection.connecttime = ct;
-	    reportstruct = &mSettings->reporthdr->packetring->metapacket;
-	    reportstruct->packetID = (isPeerVerDetect(mSettings)) ? 1 : INITIAL_PACKETID;
-	    reportstruct->errwrite=WriteNoErr;
-	    reportstruct->emptyreport=0;
-	    reportstruct->socket = mSettings->mSock;
-	    reportstruct->packetLen = 0;
-	}
-	if (mSettings->reporthdr) {
-	    mSettings->reporthdr->report.connection.connecttime = ct;
-	}
-	// Post a settings report
-	if (isReport(mSettings)) {
-	    struct ReportHeader *tmp = ReportSettings(mSettings);
-	    UpdateConnectionReport(mSettings, tmp);
-	    PostReport(tmp);
-	}
-	if (myJob && isDataReport(mSettings))
-	    PostReport(myJob);
     }
-
-    // Finally, post this thread's "job report" which the reporter thread
-    // will continuously process as long as there are packets flowing
-    // if (myJob)
-    //    myJob->report.type |= TRANSFER_REPORT_READY;
-
 } // end Client
 
 /* -------------------------------------------------------------------
@@ -288,16 +287,27 @@ double Client::Connect() {
 	rc = connect( mSettings->mSock, (sockaddr*) &mSettings->peer,
 		      SockAddr_get_sizeof_sockaddr( &mSettings->peer ));
     }
-    FAIL_errno( rc == SOCKET_ERROR, "connect", mSettings );
-
-    getsockname( mSettings->mSock, (sockaddr*) &mSettings->local,
-                 &mSettings->size_local );
-    getpeername( mSettings->mSock, (sockaddr*) &mSettings->peer,
-                 &mSettings->size_peer );
-    SockAddr_Ifrname(mSettings);
+    WARN_errno( rc == SOCKET_ERROR, "connect");
+    if (rc != SOCKET_ERROR) {
+	getsockname( mSettings->mSock, (sockaddr*) &mSettings->local,
+		     &mSettings->size_local );
+	getpeername( mSettings->mSock, (sockaddr*) &mSettings->peer,
+		     &mSettings->size_peer );
+	SockAddr_Ifrname(mSettings);
+	connected = true;
+    } else {
+	connecttime = -1;
+    }
     return connecttime;
 
 } // end Connect
+
+bool Client::isConnected(void) {
+#ifdef HAVE_THREAD_DEBUG
+	    thread_debug("Client is connected %d", connected);
+#endif
+    return connected;
+}
 
 // There are multiple startup synchronizations, this code
 // handles them all. The caller decides to apply them
@@ -1082,7 +1092,7 @@ bool Client::InProgress (void) {
  */
 void Client::FinishTrafficActions(void) {
     // Shutdown the TCP socket's writes as the event for the server to end its traffic loop
-    if (!isUDP(mSettings) && (mySocket != INVALID_SOCKET)) {
+    if (!isUDP(mSettings) && (mySocket != INVALID_SOCKET) && isConnected()) {
         int rc = shutdown(mySocket, SHUT_WR);
 #ifdef HAVE_THREAD_DEBUG
         thread_debug("Shutdown client's writes on tcp socket %d", mySocket);
