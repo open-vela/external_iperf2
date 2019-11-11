@@ -160,7 +160,8 @@ void client_spawn( thread_Settings *thread ) {
     if (!theClient->isConnected()) {
         // the barrier needs to be called even
         // for threads that fail connect
-        BarrierClient(thread->multihdr, 0);
+      if (!isNoConnectSync(thread))
+	    BarrierClient(thread->multihdr, 0);
 	DELETE_PTR( theClient );
 	return;
     }
@@ -171,7 +172,8 @@ void client_spawn( thread_Settings *thread ) {
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug("Client spawn thread normal (sock=%d)", thread->mSock);
 #endif
-	theClient->StartSynch();
+        if (!isNoConnectSync(thread))
+	    theClient->StartSynch();
 	if (theClient->isConnected()) {
 	    theClient->InitiateServer();
 	    theClient->Run();
