@@ -158,6 +158,9 @@ void client_spawn( thread_Settings *thread ) {
     // that should be fixed as a clean up
     theClient = new Client( thread );
     if (!theClient->isConnected()) {
+        // the barrier needs to be called even
+        // for threads that fail connect
+        BarrierClient(thread->multihdr, 0);
 	DELETE_PTR( theClient );
 	return;
     }
