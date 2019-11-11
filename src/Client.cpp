@@ -304,7 +304,7 @@ double Client::Connect() {
 
 bool Client::isConnected(void) {
 #ifdef HAVE_THREAD_DEBUG
-	    thread_debug("Client is connected %d", connected);
+  // thread_debug("Client is connected %d", connected);
 #endif
     return connected;
 }
@@ -599,7 +599,12 @@ void Client::RunTCP( void ) {
 	} else {
 	    totLen += len + n;
 	    reportstruct->errwrite=WriteNoErr;
-	    WARN(len != reportstruct->packetLen, "write size mismatch");
+#ifdef HAVE_THREAD_DEBUG
+	    {
+	      if (len != reportstruct->packetLen)
+		thread_debug("write size mismatch req=%ld, actual=%d", reportstruct->packetLen, len);
+	    }
+#endif
 	}
 	if (isTripTime(mSettings) || isWriteAck(mSettings) || isIsochronous(mSettings))
 	    burst_remaining -= len;
