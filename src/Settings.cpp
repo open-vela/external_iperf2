@@ -79,6 +79,7 @@ static int l2checks = 0;
 static int incrdstip = 0;
 static int txstarttime = 0;
 static int writesync = 0;
+static int noconnectsync = 0;
 static int txholdback = 0;
 static int fqrate = 0;
 static int triptime = 0;
@@ -164,6 +165,7 @@ const struct option long_options[] =
 {"write-ack", optional_argument, &writeack, 1},
 {"no-udp-fin", no_argument, &noudpfin, 1},
 {"connect-only", optional_argument, &connectonly, 1},
+{"no-connect-sync", no_argument, &noconnectsync, 1},
 {"bidir", no_argument, &bidirtest, 1},
 {"ipg", required_argument, &burstipg, 1},
 {"isochronous", optional_argument, &isochronous, 1},
@@ -786,6 +788,14 @@ void Settings_Interpret( char option, const char *optarg, struct thread_Settings
 		setWriteSync(mExtSettings);
 #else
 	        fprintf(stderr, "WARNING: --write-sync requires thread support and not supported\n");
+#endif
+	    }
+	    if (noconnectsync) {
+#ifdef HAVE_THREAD
+		noconnectsync = 0;
+		setNoConnectSync(mExtSettings);
+#else
+	        fprintf(stderr, "WARNING: --no-connect-sync requires thread support and not supported\n");
 #endif
 	    }
 	    if (txholdback) {

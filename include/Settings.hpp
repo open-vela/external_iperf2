@@ -301,6 +301,7 @@ struct thread_Settings {
 #define FLAG_WRITEACK       0x00100000
 #define FLAG_WRITESYNC      0x00200000
 #define FLAG_NOUDPFIN       0x00400000
+#define FLAG_NOCONNECTSYNC  0x00800000
 
 #define isBuflenSet(settings)      ((settings->flags & FLAG_BUFLENSET) != 0)
 #define isCompat(settings)         ((settings->flags & FLAG_COMPAT) != 0)
@@ -351,7 +352,8 @@ struct thread_Settings {
 #define isConnectOnly(settings)    ((settings->flags_extend & FLAG_CONNECTONLY) != 0)
 #define isWriteAck(settings)       ((settings->flags_extend & FLAG_WRITEACK) != 0)
 #define isWriteSync(settings)      ((settings->flags_extend & FLAG_WRITESYNC) != 0)
-#define isNoUDPfin(settings)         ((settings->flags_extend & FLAG_NOUDPFIN) != 0)
+#define isNoUDPfin(settings)       ((settings->flags_extend & FLAG_NOUDPFIN) != 0)
+#define isNoConnectSync(settings)  ((settings->flags_extend & FLAG_NOCONNECTSYNC) != 0)
 
 #define setBuflenSet(settings)     settings->flags |= FLAG_BUFLENSET
 #define setCompat(settings)        settings->flags |= FLAG_COMPAT
@@ -400,6 +402,7 @@ struct thread_Settings {
 #define setWriteAck(settings)      settings->flags_extend |= FLAG_WRITEACK
 #define setWriteSync(settings)     settings->flags_extend |= FLAG_WRITESYNC
 #define setNoUDPfin(settings)      settings->flags_extend |= FLAG_NOUDPFIN
+#define setNoConnectSync(settings) settings->flags_extend |= FLAG_NOCONNECTSYNC
 
 #define unsetBuflenSet(settings)   settings->flags &= ~FLAG_BUFLENSET
 #define unsetCompat(settings)      settings->flags &= ~FLAG_COMPAT
@@ -445,9 +448,10 @@ struct thread_Settings {
 #define unsetTripTime(settings)     settings->flags_extend &= ~FLAG_TRIPTIME
 #define unsetModeInfinite(settings) settings->flags_extend &= ~FLAG_MODEINFINITE
 #define unsetConnectOnly(settings)  settings->flags_extend &= ~FLAG_CONNECTONLY
-#define unsetWriteAck(settings)    settings->flags_extend &= ~FLAG_WRITEACK
+#define unsetWriteAck(settings)     settings->flags_extend &= ~FLAG_WRITEACK
 #define unsetWriteSync(settings)    settings->flags_extend &= ~FLAG_WRITESYNC
 #define unsetNoUDPfin(settings)     settings->flags_extend &= ~FLAG_NOUDPFIN
+#define unsetNoConnectSync(settings) settings->flags_extend &= ~FLAG_NOCONNECTSYNC
 
 
 // set to defaults
