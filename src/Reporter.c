@@ -643,7 +643,18 @@ void PostReport (struct ReportHeader *reporthdr) {
 	/*
 	 * Update the ReportRoot to include this report.
 	 */
+#ifdef HAVE_THREAD_DEBUG
+      {
+	int timeout;
+	Condition_TimedLock( ReportCond, 2, timeout );
+	if (timeout) {
+	  thread_debug("Lock failed in PostReport()");
+	  exit(-1);
+	}
+      }
+#else
 	Condition_Lock( ReportCond );
+#endif
 	reporthdr->next = ReportRoot;
 	ReportRoot = reporthdr;
 	Condition_Signal( &ReportCond );
@@ -954,7 +965,18 @@ void reporter_spawn( struct thread_Settings *thread ) {
     do {
         // ReportRoot is a linked list configured as
         // as a circular buffer, i.e. tail points to head
-        Condition_Lock ( ReportCond );
+#ifdef HAVE_THREAD_DEBUG
+      {
+	int timeout;
+	Condition_TimedLock( ReportCond, 2, timeout );
+	if (timeout) {
+	  thread_debug("Lock failed in reporter_spawn()");
+	  exit(-1);
+	}
+      }
+#else
+      Condition_Lock ( ReportCond );
+#endif
         if ( ReportRoot == NULL ) {
 	    //  Use a timed wait because the traffic threads
 	    //  that signal this condition may have already
@@ -978,7 +1000,18 @@ void reporter_spawn( struct thread_Settings *thread ) {
                 // This section allows for more reports to be added while
                 // the reporter is processing reports without needing to
                 // stop the reporter or immediately notify it
+#ifdef HAVE_THREAD_DEBUG
+	      {
+		int timeout;
+		Condition_TimedLock( ReportCond, 2, timeout );
+		if (timeout) {
+		  thread_debug("Lock failed in reporter_spawn()) at again tag");
+		  exit(-1);
+		}
+	      }
+#else
                 Condition_Lock ( ReportCond );
+#endif
                 if ( tmp == ReportRoot ) {
                     // no new reports
                     ReportRoot = tmp->next;
@@ -1028,7 +1061,14 @@ void reporter_spawn( struct thread_Settings *thread ) {
          *    either traffic threads are still running or a Listener thread
          *    is running. If equal to 1 then only the reporter thread is alive
          */
+#ifdef HAVE_THREAD_DEBUG
+	if (sInterupted)
+	  reporter_dump_job_queue();
+#endif
     } while ((thread_numuserthreads() > 1) || ReportRoot);
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Reporter thread finished");
+#endif
 }
 
 /*
@@ -1242,6 +1282,27 @@ int reporter_process_report ( struct ReportHeader *reporthdr ) {
     // version of the reporter
     return need_free;
 }
+
+#ifdef HAVE_THREAD_DEBUG
+void reporter_dump_job_queue(void) {
+  int wait, rc;
+  wait = 3;
+  thread_debug("reporter thread job queue request lock (with %ld second wait)", wait);
+  Condition_TimedLock(ReportCond, wait, rc);
+  if (rc != 0) {
+    thread_debug("reporter thread job queue request lock timed out");
+  } else {
+    thread_debug("reporter thread job queue lock");
+    struct ReportHeader **itr = &ReportRoot;
+    while (*itr) {
+      thread_debug("Job in queue %p",(void *) *itr);
+      *itr = (*itr)->next;
+    }
+    Condition_Unlock(ReportCond);
+    thread_debug("reporter thread job queue unlock");
+  }
+}
+#endif
 
 /*
  * Updates connection stats
