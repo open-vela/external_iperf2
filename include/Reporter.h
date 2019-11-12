@@ -345,6 +345,7 @@ void ReportServerUDP(struct thread_Settings *agent, struct server_hdr *server);
 struct ReportHeader *ReportSettings(struct thread_Settings *agent);
 void ReportConnections(struct thread_Settings *agent );
 void reporter_peerversion (struct thread_Settings *inSettings, int upper, int lower);
+void reporter_dump_job_queue(void);
 
 extern struct ReporterMutex reporter_state;
 extern void UpdateMultiHdrRefCounter(struct MultiHeader *reporthdr, int val, int sockfd);
