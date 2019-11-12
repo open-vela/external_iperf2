@@ -131,9 +131,15 @@ struct Condition {
 #if   defined( HAVE_POSIX_THREAD )
     #define Condition_TimedWait( Cond, inSeconds ) do {                         \
         struct timespec absTimeout;                                             \
-        absTimeout.tv_sec  = time( NULL ) + inSeconds;                          \
+        absTimeout.tv_sec  = inSeconds;  					\
         absTimeout.tv_nsec = 0;                                                 \
-       pthread_cond_timedwait( &(Cond)->mCondition, &(Cond)->mMutex, &absTimeout ); \
+        pthread_cond_timedwait( &(Cond)->mCondition, &(Cond)->mMutex, &absTimeout ); \
+    } while ( 0 )
+    #define Condition_TimedLock( Cond, inSeconds, timeout ) do {		\
+        struct timespec absTimeout;                                             \
+        absTimeout.tv_sec  = inSeconds;					        \
+        absTimeout.tv_nsec = 0;                                                 \
+        timeout = pthread_mutex_timedlock(&Cond.mMutex, &absTimeout);	        \
     } while ( 0 )
 #elif defined( HAVE_WIN32_THREAD )
     // atomically release mutex and wait on condition,

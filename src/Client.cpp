@@ -316,7 +316,7 @@ void Client::StartSynch (void) {
 #ifdef HAVE_THREAD_DEBUG
   thread_debug("Client start sync enterred");
 #endif
-  int barrier_needed = 1;
+  int barrier_needed = !isNoConnectSync(mSettings);
   // Perform delays, usually between connect() and data xfer though before connect
   // if this is a connect only test
 #if defined(HAVE_CLOCK_NANOSLEEP)

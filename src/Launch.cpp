@@ -172,8 +172,7 @@ void client_spawn( thread_Settings *thread ) {
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug("Client spawn thread normal (sock=%d)", thread->mSock);
 #endif
-        if (!isNoConnectSync(thread))
-	    theClient->StartSynch();
+	theClient->StartSynch();
 	if (theClient->isConnected()) {
 	    theClient->InitiateServer();
 	    theClient->Run();
