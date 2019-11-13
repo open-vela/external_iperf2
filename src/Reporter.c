@@ -989,7 +989,7 @@ static void reporter_jobq_remove (struct ReportHeader *this_report, struct Repor
     // either directly or by signaling the traffic thread to do so
     if ((this_report->report.type & TRANSFER_REPORT) == 0) {
 #ifdef HAVE_THREAD_DEBUG
-	thread_debug("Free report %p", (void *) this_report);
+        thread_debug("Free report %p (flags = %X)", (void *) this_report, this_report->report.type);
 #endif
 	free(this_report);
     } else if ((this_report->report.type & (TRANSFER_REPORT | CONNECTION_REPORT)) == TRANSFER_REPORT) {
@@ -1069,7 +1069,6 @@ void reporter_spawn( struct thread_Settings *thread ) {
         struct ReportHeader **current = &ReportRoot;
 	lastReportRoot = (*current);
         Condition_Unlock ( ReportCond );
-	printf("report root = %p\n", (void *) (*current));
         struct ReportHeader *prev = *current;
 	while (*current) {
 	    // Report process report returns true
@@ -1170,9 +1169,9 @@ int reporter_process_report ( struct ReportHeader *reporthdr ) {
     int need_free = 1;
 
     // report.type is a bit field, process all the set bits once, note
-    // the special case for a Transfer interval report
-    while (reporthdr->report.type &&  \
-	   (((reporthdr->report.type & TRANSFER_REPORT) == TRANSFER_REPORT) && !need_free)) {
+    // the special case for a Transfer interval and Connection report
+    // which are "compound reports"
+    if (reporthdr->report.type) {
       // This code works but is a mess - fix this and use a proper dispatcher
       // for updating reports and for outputing them
       if ( (reporthdr->report.type & SETTINGS_REPORT) != 0 ) {
@@ -1245,7 +1244,7 @@ int reporter_process_report ( struct ReportHeader *reporthdr ) {
 	      if (reporthdr->bidirreport)
 		reporthdr->bidirreport->report.packetTime = packet->packetTime;
 	    }
-	    // Transfer reports stay around until the final report
+	    // Transfer reports per interval reporting stay around until the final report
 	    need_free = 0;
 	  } else {
 	    // A last packet event was detected
@@ -1275,11 +1274,11 @@ int reporter_process_report ( struct ReportHeader *reporthdr ) {
       }
     }
     // need_free is a poor implementation.  It's done this way
-    // because of recursion in the original design.  It also signals two things,
-    // one is remove from the reporter's job queue and the second
-    // is to free the report's memory which was dynamically allocated
-    // by another thread.  This is a good thing to fix with a c++
-    // version of the reporter
+    // because of recursion in the original design.  It also signals a few things,
+    // one is remove from the reporter's job queue, two s is to free the report's
+    // memory which may have been dynamically allocated
+    // by another thread and three is to flag a final report to the print routine.
+    // This is a good thing to fix with a c++ version of the reporter
     return need_free;
 }
 
