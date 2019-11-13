@@ -6,11 +6,11 @@
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software (Iperf) and associated
  * documentation files (the "Software"), to deal in the Software
- * without restriction, including without limitation the
- * rights to use, copy, modify, merge, publish, distribute,
- * sublicense, and/or sell copies of the Software, and to permit
- * persons to whom the Software is furnished to do
- * so, subject to the following conditions:
+ * without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
  *
  *
  * Redistributions of source code must retain the above
@@ -636,7 +636,7 @@ void UpdateConnectionReport(struct thread_Settings *mSettings, struct ReportHead
 
 void PostReport (struct ReportHeader *reporthdr) {
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug( "Post report %p (0x%X)", reporthdr, reporthdr->report.type);
+    thread_debug( "Jobq report %p (0x%X) post", reporthdr, reporthdr->report.type);
 #endif
     if (reporthdr) {
 #ifdef HAVE_THREAD
@@ -944,11 +944,35 @@ static inline void apply_consumption_detector(void) {
     }
 }
 
-static inline int reporter_update_jobq(struct ReportHeader *this_report) {
-    int compound_report = 0;
-    // This section allows for more reports to be added while
-    // the reporter is processing reports without needing to
-    // stop the reporter or immediately notify it
+#ifdef HAVE_THREAD_DEBUG
+static void reporter_jobq_dump(void) {
+  int wait, rc;
+  wait = 3;
+  thread_debug("reporter thread job queue request lock (with %ld second wait)", wait);
+  Condition_TimedLock(ReportCond, wait, rc);
+  if (rc != 0) {
+    thread_debug("reporter thread job queue request lock timed out");
+  } else {
+    thread_debug("reporter thread job queue lock");
+    struct ReportHeader **itr = &ReportRoot;
+    while (*itr) {
+      thread_debug("Job in queue %p",(void *) *itr);
+      *itr = (*itr)->next;
+    }
+    Condition_Unlock(ReportCond);
+    thread_debug("reporter thread job queue unlock");
+  }
+}
+#endif
+
+static void reporter_jobq_remove (struct ReportHeader *this_report, struct ReportHeader *prev) {
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Jobq report %p remove (prev=%p, next=%p)", \
+		 (void *) this_report, (void *) prev, (void *) this_report->next);
+#endif
+    // remove current from the jobq
+    prev->next = this_report->next;
+
 #ifdef HAVE_THREAD_DEBUG
     {
 	int timeout;
@@ -962,28 +986,23 @@ static inline int reporter_update_jobq(struct ReportHeader *this_report) {
     Condition_Lock ( ReportCond );
 #endif
     // If the report doesn't stay in the jobq, release it's memory
-    // either directly or pay signaling the traffic thread to do so
+    // either directly or by signaling the traffic thread to do so
     if ((this_report->report.type & TRANSFER_REPORT) == 0) {
 #ifdef HAVE_THREAD_DEBUG
-	thread_debug("Free %p in rs flags=%X", (void *) this_report, this_report->report.type);
+	thread_debug("Free report %p", (void *) this_report);
 #endif
 	free(this_report);
-    } else {
+    } else if ((this_report->report.type & (TRANSFER_REPORT | CONNECTION_REPORT)) == TRANSFER_REPORT) {
 #ifdef HAVE_THREAD_DEBUG
-	thread_debug("Signal producer to free report %p and cond %p in rpr flags=%X", \
-		     (void *) this_report, (void *) &(this_report->packetring->awake_producer), \
-		     this_report->report.type);
+	thread_debug("Signal producer to free report %p and cond %p", \
+		     (void *) this_report, (void *) &(this_report->packetring->awake_producer));
 #endif
 	// Signal the producer (traffic thread) that the consumer (reporter thread)
 	// it is done with this report.
-	if ((this_report->report.type & (TRANSFER_REPORT | CONNECTION_REPORT)) == TRANSFER_REPORT) {
-	    Condition_Signal(this_report->packetring->awake_producer);
-	} else {
-	    compound_report = 1;
-	}
+
+	 Condition_Signal(this_report->packetring->awake_producer);
     }
     Condition_Unlock ( ReportCond );
-    return compound_report;
 }
 
 /*
@@ -1021,28 +1040,37 @@ void reporter_spawn( struct thread_Settings *thread ) {
 #else
         Condition_Lock ( ReportCond );
 #endif
-        if ( ReportRoot == NULL ) {
-	    //  Use a timed wait because the traffic threads
-	    //  that signal this condition may have already
-	    //  completed
+	// check the jobq for not empty
+        if ( ReportRoot != NULL ) {
+	    // Fist, check to see if the jobq needs to be updated,
+	    // this is done via a prepend of the linked list
+	    // by the pending reports which is another linked
+	    // list
+	    if (lastReportRoot && (ReportRoot != lastReportRoot)) {
+	        // new reports can be added to the jopq now
+	        struct ReportHeader *itr = ReportRoot;
+		while ( itr->next != lastReportRoot ) {
+		   itr = itr->next;
+		}
+		itr->next = lastReportRoot;
+	    }
+	} else {
+	    // Nothing to do, wait for a traffic thread
+	    // to signal this thread. Note: use a timed wait
+	    // because the traffic threads that signal this
+	    // condition may have terminated
 	    Condition_TimedWait ( &ReportCond, 1);
 	    // The reporter is starting from an empty state
 	    // so set the load detect to trigger an initial delay
 	    reset_consumption_detector();
-        } else if (lastReportRoot && (ReportRoot != lastReportRoot)) {
-	    // new reports can be added to the jopq now
-	    struct ReportHeader *itr = ReportRoot;
-	    while ( itr->next != lastReportRoot ) {
-		itr = itr->next;
-	    }
-	    itr->next = lastReportRoot;
 	}
 
+	// time to process the jobq
         struct ReportHeader **current = &ReportRoot;
-	lastReportRoot = current;
+	lastReportRoot = (*current);
         Condition_Unlock ( ReportCond );
-	// process the current list or reports, aka the jobq
-	    printf("report root = %p\n", (void *) *current);
+	printf("report root = %p\n", (void *) (*current));
+        struct ReportHeader *prev = *current;
 	while (*current) {
 	    // Report process report returns true
 	    // if the reporter's jobq needs
@@ -1052,22 +1080,13 @@ void reporter_spawn( struct thread_Settings *thread ) {
 	    // The update_jobq returns true if this
 	    // report needs to be processed again, i.e.
 	    // this report is a compound report
-	    struct ReportHdr *prev = current;
+
             if (reporter_process_report(*current)) {
-		while(reporter_update_jobq(*current)) {
-#ifdef HAVE_THREAD_DEBUG
-		    thread_debug("Compound report %p being processed again", (void *) ReportRoot);
-#endif
-		}
-#ifdef HAVE_THREAD_DEBUG
-		thread_debug("Reporter remove %p from job queue", (void *) current);
-#endif
-		// remove current from the jobq
-		prev->next = current->next;
+	        reporter_jobq_remove(*current, prev);
 	    }
-	    printf("next = %p\n", (void *) (*current)->next);
+	    prev = *current;
 	    *current = (*current)->next;
-	    printf("current = %p\n", (void *) *current);
+	    printf("current = %p prev = %p\n", (void *) *current, (void *) prev);
         }
 	/*
          * Keep the reporter thread alive under the following conditions
@@ -1079,7 +1098,7 @@ void reporter_spawn( struct thread_Settings *thread ) {
          */
 #ifdef HAVE_THREAD_DEBUG
 	if (sInterupted)
-	    reporter_dump_job_queue();
+	    reporter_jobq_dump();
 #endif
     } while ((thread_numuserthreads() > 1) || ReportRoot);
 #ifdef HAVE_THREAD_DEBUG
@@ -1148,24 +1167,26 @@ static int condprint_interval_reports (struct ReportHeader *reporthdr, struct Re
  * Process reports starting with "reporthdr"
  */
 int reporter_process_report ( struct ReportHeader *reporthdr ) {
-    int need_free = 0;
+    int need_free = 1;
 
-    // This code works but is a mess - fix this and use a proper dispatcher
-    // for updating reports and for outputing them
-    if ( (reporthdr->report.type & SETTINGS_REPORT) != 0 ) {
+    // report.type is a bit field, process all the set bits once, note
+    // the special case for a Transfer interval report
+    while (reporthdr->report.type &&  \
+	   (((reporthdr->report.type & TRANSFER_REPORT) == TRANSFER_REPORT) && !need_free)) {
+      // This code works but is a mess - fix this and use a proper dispatcher
+      // for updating reports and for outputing them
+      if ( (reporthdr->report.type & SETTINGS_REPORT) != 0 ) {
         reporthdr->report.type &= ~SETTINGS_REPORT;
-	need_free = 1;
-        return reporter_print( &reporthdr->report, SETTINGS_REPORT, 1 );
-    } else if ( (reporthdr->report.type & CONNECTION_REPORT) != 0 ) {
+        reporter_print( &reporthdr->report, SETTINGS_REPORT, need_free );
+      } else if ( (reporthdr->report.type & CONNECTION_REPORT) != 0 ) {
         reporthdr->report.type &= ~CONNECTION_REPORT;
 	need_free = (reporthdr->report.type == 0 ? 1 : 0);
         reporter_print( &reporthdr->report, CONNECTION_REPORT, need_free);
-    } else if ( (reporthdr->report.type & SERVER_RELAY_REPORT) != 0 ) {
+      } else if ( (reporthdr->report.type & SERVER_RELAY_REPORT) != 0 ) {
         reporthdr->report.type &= ~SERVER_RELAY_REPORT;
-	need_free = 1;
-        return reporter_print( &reporthdr->report, SERVER_RELAY_REPORT, 1 );
-    }
-    if ((reporthdr->report.type & TRANSFER_REPORT) != 0) {
+        reporter_print( &reporthdr->report, SERVER_RELAY_REPORT, need_free);
+      }
+      if ((reporthdr->report.type & TRANSFER_REPORT) != 0) {
         // The consumption detector applies delay to the reporter
         // thread when its consumption rate is too low.   This allows
         // the traffic threads to send aggregates vs thrash
@@ -1182,104 +1203,85 @@ int reporter_process_report ( struct ReportHeader *reporthdr ) {
 	struct ReportStruct *packet = NULL;
 	int timeslot_event = 0;
         while (!timeslot_event && (packet = dequeue_packetring(reporthdr->packetring))) {
-	    // Check for a very first reported packet that needs to be summed
-	    // This has to be done in the reporter thread as these
-	    // reports are shared by multiple traffic threads
-	    // Note: the first reported packet may not have the earliest
-	    // timestamp but it should be good enough
-	    if (reporthdr->multireport && TimeZero(reporthdr->multireport->report.startTime)) {
-		reporthdr->multireport->report.startTime = reporthdr->report.startTime;
-		reporthdr->multireport->report.nextTime = reporthdr->report.nextTime;
-		reporthdr->multireport->report.packetTime = packet->packetTime;
+	  // Check for a very first reported packet that needs to be summed
+	  // This has to be done in the reporter thread as these
+	  // reports are shared by multiple traffic threads
+	  // Note: the first reported packet may not have the earliest
+	  // timestamp but it should be good enough
+	  if (reporthdr->multireport && TimeZero(reporthdr->multireport->report.startTime)) {
+	    reporthdr->multireport->report.startTime = reporthdr->report.startTime;
+	    reporthdr->multireport->report.nextTime = reporthdr->report.nextTime;
+	    reporthdr->multireport->report.packetTime = packet->packetTime;
+	  }
+	  if (reporthdr->bidirreport && TimeZero(reporthdr->bidirreport->report.startTime)) {
+	    reporthdr->bidirreport->report.startTime = reporthdr->report.startTime;
+	    reporthdr->bidirreport->report.nextTime = reporthdr->report.nextTime;
+	    reporthdr->bidirreport->report.packetTime = packet->packetTime;
+	  }
+	  // Increment the total packet count processed by this thread
+	  // this will be used to make decisions on if the reporter
+	  // thread should add some delay to eliminate cpu thread
+	  // thrashing,
+	  consumption_detector.accounted_packets--;
+	  // Check against a final packet event on this packet ring
+	  if (!(packet->packetID < 0)) {
+	    // Check to output any interval reports, do this prior
+	    // to packet handling to preserve interval accounting
+	    if (!TimeZero(reporthdr->report.intervalTime)) {
+	      timeslot_event = condprint_interval_reports(reporthdr, packet);
 	    }
-	    if (reporthdr->bidirreport && TimeZero(reporthdr->bidirreport->report.startTime)) {
-		reporthdr->bidirreport->report.startTime = reporthdr->report.startTime;
-		reporthdr->bidirreport->report.nextTime = reporthdr->report.nextTime;
+	    // update fields common to TCP and UDP, client and server which is bytes and packet time
+	    reporthdr->report.TotalLen += packet->packetLen;
+	    reporthdr->report.packetTime = packet->packetTime;
+	    // Do the packet accounting per the handler type
+	    if (reporthdr->packet_handler) {
+	      (*reporthdr->packet_handler)(reporthdr, packet);
+	      // Sum reports update the report header's last
+	      // packet time after the handler. This means
+	      // the report header's packet time will be
+	      // the previous time before the interval
+	      if (reporthdr->multireport)
+		reporthdr->multireport->report.packetTime = packet->packetTime;
+	      if (reporthdr->bidirreport)
 		reporthdr->bidirreport->report.packetTime = packet->packetTime;
 	    }
-	    // Increment the total packet count processed by this thread
-	    // this will be used to make decisions on if the reporter
-	    // thread should add some delay to eliminate cpu thread
-	    // thrashing,
-	    consumption_detector.accounted_packets--;
-	    // Check against a final packet event on this packet ring
-	    if (!(packet->packetID < 0)) {
-		// Check to output any interval reports, do this prior
-		// to packet handling to preserve interval accounting
-		if (!TimeZero(reporthdr->report.intervalTime)) {
-		    timeslot_event = condprint_interval_reports(reporthdr, packet);
-		}
-		// update fields common to TCP and UDP, client and server which is bytes and packet time
-		reporthdr->report.TotalLen += packet->packetLen;
-		reporthdr->report.packetTime = packet->packetTime;
-		// Do the packet accounting per the handler type
-		if (reporthdr->packet_handler) {
-		    (*reporthdr->packet_handler)(reporthdr, packet);
-		    // Sum reports update the report header's last
-		    // packet time after the handler. This means
-		    // the report header's packet time will be
-		    // the previous time before the interval
-		    if (reporthdr->multireport)
-			reporthdr->multireport->report.packetTime = packet->packetTime;
-		    if (reporthdr->bidirreport)
-			reporthdr->bidirreport->report.packetTime = packet->packetTime;
-		}
-	    } else {
-		// A last packet event was detected
-		// printf("last packet event detected\n"); fflush(stdout);
-		need_free = 1;
-		reporthdr->reporter_thread_suspends = consumption_detector.reporter_thread_suspends;
-		// output final reports
-		reporthdr->report.TotalLen += packet->packetLen;
-		reporthdr->report.packetTime=packet->packetTime;
-		struct ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
-		struct ReporterData *bidirstats = (reporthdr->bidirreport ? &reporthdr->bidirreport->report : NULL);
-		(*reporthdr->output_handler)(&reporthdr->report, sumstats, bidirstats, 1);
-		// Thread is done with the packet ring, signal back to the traffic thread
-		// which will proceed from the EndReport wait, this must be the last thing done
-		reporthdr->packetring->consumerdone = 1;
-		// This is a final report so set the sum report header's packet time
-		// Note, the thread with the max value will set this
-		// Also note, the final sum report output occurs as part of freeing the
-		// sum or bidir report per the last reference and not here
-		if (reporthdr->multireport && \
-		    (TimeDifference(reporthdr->multireport->report.packetTime, packet->packetTime) > 0))
-		    reporthdr->multireport->report.packetTime = packet->packetTime;
-		if (reporthdr->bidirreport && \
-		    (TimeDifference(reporthdr->bidirreport->report.packetTime, packet->packetTime) > 0))
-		    reporthdr->bidirreport->report.packetTime = packet->packetTime;
-	    }
+	    // Transfer reports stay around until the final report
+	    need_free = 0;
+	  } else {
+	    // A last packet event was detected
+	    // printf("last packet event detected\n"); fflush(stdout);
+	    reporthdr->reporter_thread_suspends = consumption_detector.reporter_thread_suspends;
+	    // output final reports
+	    reporthdr->report.TotalLen += packet->packetLen;
+	    reporthdr->report.packetTime=packet->packetTime;
+	    struct ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
+	    struct ReporterData *bidirstats = (reporthdr->bidirreport ? &reporthdr->bidirreport->report : NULL);
+	    (*reporthdr->output_handler)(&reporthdr->report, sumstats, bidirstats, 1);
+	    // Thread is done with the packet ring, signal back to the traffic thread
+	    // which will proceed from the EndReport wait, this must be the last thing done
+	    reporthdr->packetring->consumerdone = 1;
+	    // This is a final report so set the sum report header's packet time
+	    // Note, the thread with the max value will set this
+	    // Also note, the final sum report output occurs as part of freeing the
+	    // sum or bidir report per the last reference and not here
+	    if (reporthdr->multireport && \
+		(TimeDifference(reporthdr->multireport->report.packetTime, packet->packetTime) > 0))
+	      reporthdr->multireport->report.packetTime = packet->packetTime;
+	    if (reporthdr->bidirreport && \
+		(TimeDifference(reporthdr->bidirreport->report.packetTime, packet->packetTime) > 0))
+	      reporthdr->bidirreport->report.packetTime = packet->packetTime;
+	  }
 	}
+      }
     }
     // need_free is a poor implementation.  It's done this way
-    // because of the recursion.  It also signals two things,
+    // because of recursion in the original design.  It also signals two things,
     // one is remove from the reporter's job queue and the second
     // is to free the report's memory which was dynamically allocated
     // by another thread.  This is a good thing to fix with a c++
     // version of the reporter
     return need_free;
 }
-
-#ifdef HAVE_THREAD_DEBUG
-void reporter_dump_job_queue(void) {
-  int wait, rc;
-  wait = 3;
-  thread_debug("reporter thread job queue request lock (with %ld second wait)", wait);
-  Condition_TimedLock(ReportCond, wait, rc);
-  if (rc != 0) {
-    thread_debug("reporter thread job queue request lock timed out");
-  } else {
-    thread_debug("reporter thread job queue lock");
-    struct ReportHeader **itr = &ReportRoot;
-    while (*itr) {
-      thread_debug("Job in queue %p",(void *) *itr);
-      *itr = (*itr)->next;
-    }
-    Condition_Unlock(ReportCond);
-    thread_debug("reporter thread job queue unlock");
-  }
-}
-#endif
 
 /*
  * Updates connection stats
