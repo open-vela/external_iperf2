@@ -943,10 +943,62 @@ static inline void apply_consumption_detector(void) {
 	reset_consumption_detector();
     }
 }
+
+static inline void reporter_remove_report(struct ReportHeader *tmp) {
+  // This section allows for more reports to be added while
+  // the reporter is processing reports without needing to
+  // stop the reporter or immediately notify it
+#ifdef HAVE_THREAD_DEBUG
+  {
+    int timeout;
+    Condition_TimedLock( ReportCond, 2, timeout );
+    if (timeout) {
+      thread_debug("Lock failed in reporter_spawn()) at again tag");
+      exit(-1);
+    }
+  }
+#else
+  Condition_Lock ( ReportCond );
+#endif
+  if ( tmp == ReportRoot ) {
+    // no new reports
+    ReportRoot = tmp->next;
+  } else {
+    // new reports added
+    struct ReportHeader *itr = ReportRoot;
+    while ( itr->next != tmp ) {
+      itr = itr->next;
+    }
+    itr->next = tmp->next;
+  }
+  // See notes if reporter_process_report
+#ifdef HAVE_THREAD_DEBUG
+  thread_debug("Remove %p from reporter job queue in rs", (void *) tmp);
+#endif
+  if ((tmp->report.type & TRANSFER_REPORT) == 0) {
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Free %p in rs flags=%X", (void *) tmp, tmp->report.type);
+#endif
+    free(tmp);
+  } else {
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Signal producer to free report %p and cond %p in rpr flags=%X", \
+		 (void *) tmp, (void *) &(tmp->packetring->awake_producer), tmp->report.type);
+#endif
+    // Signal the producer (traffic thread) that the consumer (reporter thread)
+    // it is done with this report.  Note that ReportRoot is a proxy
+    // for a compound report, only signal when final processing is done
+    if ((tmp->report.type & (TRANSFER_REPORT | CONNECTION_REPORT)) == TRANSFER_REPORT) {
+      Condition_Signal(tmp->packetring->awake_producer);
+    }
+  }
+  Condition_Unlock ( ReportCond );
+}
+
 /*
- * This function is called only when the reporter thread
  * This function is the loop that the reporter thread processes
  */
+
 void reporter_spawn( struct thread_Settings *thread ) {
 #ifdef HAVE_THREAD_DEBUG
     thread_debug( "Reporter thread started");
@@ -966,16 +1018,16 @@ void reporter_spawn( struct thread_Settings *thread ) {
         // ReportRoot is a linked list configured as
         // as a circular buffer, i.e. tail points to head
 #ifdef HAVE_THREAD_DEBUG
-      {
-	int timeout;
-	Condition_TimedLock( ReportCond, 2, timeout );
-	if (timeout) {
-	  thread_debug("Lock failed in reporter_spawn()");
-	  exit(-1);
+        {
+	  int timeout;
+	  Condition_TimedLock( ReportCond, 2, timeout );
+	  if (timeout) {
+	    thread_debug("Lock failed in reporter_spawn()");
+	    exit(-1);
+	  }
 	}
-      }
 #else
-      Condition_Lock ( ReportCond );
+        Condition_Lock ( ReportCond );
 #endif
         if ( ReportRoot == NULL ) {
 	    //  Use a timed wait because the traffic threads
@@ -986,65 +1038,17 @@ void reporter_spawn( struct thread_Settings *thread ) {
 	    // so set the load detect to trigger an initial delay
 	    reset_consumption_detector();
         }
+        struct ReportHeader **current = &ReportRoot;
         Condition_Unlock ( ReportCond );
-
-      again:
-        if ( ReportRoot != NULL ) {
-            struct ReportHeader *tmp = ReportRoot;
+	while (*current) {
 	    // Report process report returns true
 	    // if the report header is done and needs
 	    // to be freed.  The common case will return false
 	    // where the next report in the circular buffer
 	    // will be processed
-            if ( reporter_process_report ( tmp ) ) {
-                // This section allows for more reports to be added while
-                // the reporter is processing reports without needing to
-                // stop the reporter or immediately notify it
-#ifdef HAVE_THREAD_DEBUG
-	      {
-		int timeout;
-		Condition_TimedLock( ReportCond, 2, timeout );
-		if (timeout) {
-		  thread_debug("Lock failed in reporter_spawn()) at again tag");
-		  exit(-1);
-		}
-	      }
-#else
-                Condition_Lock ( ReportCond );
-#endif
-                if ( tmp == ReportRoot ) {
-                    // no new reports
-                    ReportRoot = tmp->next;
-                } else {
-                    // new reports added
-                    struct ReportHeader *itr = ReportRoot;
-                    while ( itr->next != tmp ) {
-                        itr = itr->next;
-                    }
-                    itr->next = tmp->next;
-                }
-		// See notes if reporter_process_report
-#ifdef HAVE_THREAD_DEBUG
-		thread_debug("Remove %p from reporter job queue in rs", (void *) tmp);
-#endif
-		if ((tmp->report.type & TRANSFER_REPORT) == 0) {
-#ifdef HAVE_THREAD_DEBUG
-		    thread_debug("Free %p in rs flags=%X", (void *) tmp, tmp->report.type);
-#endif
-		    free(tmp);
-		} else {
-#ifdef HAVE_THREAD_DEBUG
-		  thread_debug("Signal producer to free report %p and cond %p in rpr flags=%X", \
-			       (void *) tmp, (void *) &(tmp->packetring->awake_producer), tmp->report.type);
-#endif
-		  // Signal the producer (traffic thread) that the consumer (reporter thread)
-		  // it is done with this report.  Note that ReportRoot is a proxy
-		  // for a compound report, only signal when final processing is done
-		  if ((tmp->report.type & (TRANSFER_REPORT | CONNECTION_REPORT)) == TRANSFER_REPORT) {
-		      Condition_Signal(tmp->packetring->awake_producer);
-		  }
-		}
-                Condition_Unlock ( ReportCond );
+	again :
+            if (reporter_process_report(*current)) {
+	        reporter_remove_report(*current);
                 if (ReportRoot) {
 #ifdef HAVE_THREAD_DEBUG
 		    thread_debug("Compound report %p being processed again", (void *) ReportRoot);
@@ -1052,6 +1056,7 @@ void reporter_spawn( struct thread_Settings *thread ) {
                     goto again;
 		}
             }
+	    *current = (*current)->next;
         }
 	/*
          * Keep the reporter thread alive under the following conditions
@@ -1134,51 +1139,11 @@ static int condprint_interval_reports (struct ReportHeader *reporthdr, struct Re
 int reporter_process_report ( struct ReportHeader *reporthdr ) {
     int need_free = 0;
 
-    if ( reporthdr->next != NULL ) {
-        if (reporter_process_report(reporthdr->next)) {
-            // Remove the report from the reporter job
-	    // list.  Note: This structure is poorly
-	    // implemented.  There are two types of jobs,
-	    // persistent ones such as transfer reports
-	    // and one shot ones such as connection and
-	    // settings reports. Clean all of this up
-	    // with a c++ based reporter implementation
-	    // and live with it for now
-            struct ReportHeader *tmp = reporthdr->next;
-            reporthdr->next = reporthdr->next->next;
-#ifdef HAVE_THREAD_DEBUG
-	    thread_debug( "Remove %p from reporter job queue in rpr", (void *) tmp);
-#endif
-	    // Free reports that are one-shot. Note that
-	    // Transfer Reports get freed by its calling thread,
-	    // e.g. client or server. This is because those threads
-	    // may need final reporter stats and freeing it in the
-	    // reporter thread context makes for a race and locking
-	    // to prevent it.  Better is to let the thread that
-	    // allocated also free it which can be done in the thread's
-	    // destructor
-	    if ((tmp->report.type & TRANSFER_REPORT) == 0) {
-#ifdef HAVE_THREAD_DEBUG
-	      thread_debug("Free %p in rpr flags=%x", (void *) tmp, tmp->report.type);
-#endif
-		free(tmp);
-	    } else {
-#ifdef HAVE_THREAD_DEBUG
-	        thread_debug("Signal producer to free report %p in rpr flags=%X", (void *) tmp, tmp->report.type);
-#endif
-		// Signal the producer (traffic thread) that the consumer (reporter thread)
-		// it is done with this report
-		if ((tmp->report.type & (TRANSFER_REPORT | CONNECTION_REPORT)) == TRANSFER_REPORT) {
-		    struct Condition tmpcond = *(tmp->packetring->awake_producer);
-		    Condition_Signal(&tmpcond);
-		}
-	    }
-        }
-    }
     // This code works but is a mess - fix this and use a proper dispatcher
     // for updating reports and for outputing them
     if ( (reporthdr->report.type & SETTINGS_REPORT) != 0 ) {
         reporthdr->report.type &= ~SETTINGS_REPORT;
+	need_free = 1;
         return reporter_print( &reporthdr->report, SETTINGS_REPORT, 1 );
     } else if ( (reporthdr->report.type & CONNECTION_REPORT) != 0 ) {
         reporthdr->report.type &= ~CONNECTION_REPORT;
@@ -1186,6 +1151,7 @@ int reporter_process_report ( struct ReportHeader *reporthdr ) {
         reporter_print( &reporthdr->report, CONNECTION_REPORT, need_free);
     } else if ( (reporthdr->report.type & SERVER_RELAY_REPORT) != 0 ) {
         reporthdr->report.type &= ~SERVER_RELAY_REPORT;
+	need_free = 1;
         return reporter_print( &reporthdr->report, SERVER_RELAY_REPORT, 1 );
     }
     if ((reporthdr->report.type & TRANSFER_REPORT) != 0) {
