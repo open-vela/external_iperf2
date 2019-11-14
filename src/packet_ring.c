@@ -92,8 +92,10 @@ inline void enqueue_packetring(struct PacketRing *pr, struct ReportStruct *metap
 	    }
 	}
 #endif
-	Condition_TimedWait(pr->awake_producer, 1);
-	Condition_Unlock((*(pr->awake_producer)));
+	int timeout;
+	Condition_TimedWait(pr->awake_producer, 1, timeout);
+	if (!timeout)
+	    Condition_Unlock((*(pr->awake_producer)));
     }
     int writeindex;
     if ((pr->producer + 1) == pr->maxcount)
@@ -141,19 +143,21 @@ inline void enqueue_ackring(struct PacketRing *pr, struct ReportStruct *metapack
 }
 
 inline struct ReportStruct *dequeue_ackring(struct PacketRing *pr) {
-  struct ReportStruct *packet = NULL;
+    struct ReportStruct *packet = NULL;
 
-  Condition_Lock((*(pr->awake_consumer)));
-  while ((packet = dequeue_packetring(pr)) == NULL) {
-      Condition_TimedWait(pr->awake_consumer, 1);
-  }
-  Condition_Unlock((*(pr->awake_consumer)));
-  if (packet) {
-    // Signal the producer thread for low latency
-    // indication of space available
-    Condition_Signal(pr->awake_producer);
-  }
-  return packet;
+    Condition_Lock((*(pr->awake_consumer)));
+    int timeout;
+    while ((packet = dequeue_packetring(pr)) == NULL) {
+	Condition_TimedWait(pr->awake_consumer, 1, timeout);
+    }
+    if (!timeout)
+	Condition_Unlock((*(pr->awake_consumer)));
+    if (packet) {
+	// Signal the producer thread for low latency
+	// indication of space available
+	Condition_Signal(pr->awake_producer);
+    }
+    return packet;
 }
 
 void free_packetring(struct PacketRing *pr) {
