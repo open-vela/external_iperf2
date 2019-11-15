@@ -143,7 +143,8 @@ inline void enqueue_ackring(struct PacketRing *pr, struct ReportStruct *metapack
 }
 
 inline struct ReportStruct *dequeue_ackring(struct PacketRing *pr) {
-  struct ReportStruct *packet = NULL;
+    struct ReportStruct *packet = NULL;
+
 
   Condition_Lock((*(pr->awake_consumer)));
   int timeout = 0;
