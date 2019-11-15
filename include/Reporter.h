@@ -76,6 +76,7 @@ extern "C" {
 #endif
 
 extern struct Condition ReportCond;
+extern struct Condition ReportsPending;
 
 /*
  *
