@@ -1055,6 +1055,39 @@ static inline struct ReportHeader *reporter_jobq_popall (void) {
     return first;
 }
 
+static inline struct ReportHeader *reporter_jobq_popall (void) {
+// ReportRoot is a linked list configured as
+// as a circular buffer, i.e. tail points to head
+#ifdef HAVE_THREAD_DEBUG
+    {
+	int timeout;
+	Condition_TimedLock( ReportCond, 2, timeout );
+	if (timeout) {
+	    thread_debug("Lock failed in reporter_jobq_popall()");
+	    exit(-1);
+	}
+    }
+#else
+    Condition_Lock ( ReportCond );
+#endif
+    int timeout;
+    // check the jobq for something to do, else block
+    // on signal
+    while (ReportRoot == NULL) {
+	// Nothing to do, wait for a traffic thread
+	// to signal this thread. Note: use a timed wait
+	// because the traffic threads that signal this
+	// condition may have terminated
+	Condition_TimedWait(&ReportCond, 1, timeout);
+	// The reporter is starting from an empty state
+	// so set the load detect to trigger an initial delay
+	reset_consumption_detector();
+    }
+    struct ReportHeader *first = ReportRoot;
+    Condition_Unlock ( ReportCond );
+    return first;
+}
+
 /*
  * This function is the loop that the reporter thread processes
  */
