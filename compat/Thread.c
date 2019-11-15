@@ -245,7 +245,7 @@ void thread_start( struct thread_Settings* thread ) {
 void thread_stop( struct thread_Settings* thread ) {
 #ifdef HAVE_THREAD
   #ifdef HAVE_THREAD_DEBUG
-  thread_debug("Thread stop invoked %p", (void *)thread);
+  thread_debug("Thread stop invoked %p (%d/%d)", (void *)thread, thread_sNum, thread_trfc_sNum);
   #endif
     // Make sure we have been started
     if ( ! thread_equalid( thread->mTID, thread_zeroid() ) ) {
@@ -359,7 +359,7 @@ thread_run_wrapper( void* paramPtr ) {
     // decrement thread count and send condition signal
     Condition_Lock( thread_sNum_cond );
     thread_sNum--;
-    if ((thread->mThreadMode == kMode_Server) || (thread->mThreadMode == kMode_Server)) {
+    if ((thread->mThreadMode == kMode_Client) || (thread->mThreadMode == kMode_Server)) {
        thread_trfc_sNum--;
     }
     Condition_Signal( &thread_sNum_cond );
