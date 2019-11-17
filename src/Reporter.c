@@ -977,27 +977,10 @@ static void reporter_jobq_dump(void) {
 }
 #endif
 
-// https://blog.kloetzl.info/beautiful-code/
-// Linked list removal/processing is derived from:
-//
-// remove_list_entry(entry) {
-//   indirect = &head;
-//   while ((*indirect) != entry) {
-//	indirect = &(*indirect)->next;
-//   }
-//   *indirect = entry->next
-// }
-static void reporter_jobq_remove_entry (struct ReportHeader *entry) {
+static void reporter_jobq_free_entry (struct ReportHeader *entry) {
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Jobq report %p remove (next=%p)", (void *) entry, (void *) entry->next);
 #endif
-    // First, remove the entry
-    Condition_Lock(ReportCond);
-    struct ReportHeader **indirect = &ReportRoot;
-    while ((*indirect) != entry)
-        indirect = &(*indirect)->next; // advance the search pointer
-    *indirect = entry->next; // remove the report
-    Condition_Unlock(ReportCond);
 
     // Next, free it's memory either directly or indirectly
     // by signaling the traffic thread to do so
@@ -1046,7 +1029,7 @@ void reporter_spawn( struct thread_Settings *thread ) {
      */
     while (thread_numtrafficthreads() || ReportRoot) {
 #ifdef HAVE_THREAD_DEBUG
-      // thread_debug("Pending traffic threads = %d", thread_numtrafficthreads());;
+	// thread_debug("Pending traffic threads = %d", thread_numtrafficthreads());;
 #endif
 
         Condition_Lock(ReportCond);
@@ -1067,22 +1050,42 @@ void reporter_spawn( struct thread_Settings *thread ) {
 #endif
 	    ReportPendingHead = NULL;
 	    ReportPendingTail = NULL;
-       }
-       Condition_Unlock(ReportsPending);
-       // Process the current jobq
-       struct ReportHeader *work_item = ReportRoot;
-       Condition_Unlock(ReportCond);
-       // Report process report returns true
-       // when a report needs to be removed
-       // from the jobq
-       while (work_item) {
+	}
+	Condition_Unlock(ReportsPending);
+	// Process the current jobq
+	struct ReportHeader **work_item = &ReportRoot;
+	Condition_Unlock(ReportCond);
+
+	// Report process report returns true
+	// when a report needs to be removed
+	// from the jobq
+	//
+	// https://blog.kloetzl.info/beautiful-code/
+	// Linked list removal/processing is derived from:
+        //
+        // remove_list_entry(entry) {
+        //   indirect = &head;
+        //   while ((*indirect) != entry) {
+        //	indirect = &(*indirect)->next;
+        //   }
+        //   *indirect = entry->next
+        // }
+	while (*work_item) {
 #ifdef HAVE_THREAD_DEBUG
-	 // thread_debug( "Jobq *NEXT* %p", work_item);
+	    // thread_debug( "Jobq *NEXT* %p", (void *) *work_item);
 #endif
-	   if (reporter_process_report(work_item))
-	       reporter_jobq_remove_entry(work_item);
-	   work_item = work_item->next;
-       }
+	    if (reporter_process_report(*work_item)) {
+		struct ReportHeader *tmp = *work_item;
+		*work_item = (*work_item)->next;
+		reporter_jobq_free_entry(tmp);
+#ifdef HAVE_THREAD_DEBUG
+		thread_debug( "Jobq *FREE* %p (%p)", (void *) tmp, (void *) *work_item);
+#endif
+		if (!(*work_item))
+		    break;
+	    }
+	    work_item = &(*work_item)->next;
+	}
     }
 #ifdef HAVE_THREAD_DEBUG
     if (sInterupted)
@@ -1151,7 +1154,7 @@ static int condprint_interval_reports (struct ReportHeader *reporthdr, struct Re
 /*
  * Process reports starting with "reporthdr"
  */
-int reporter_process_report ( struct ReportHeader *reporthdr ) {
+int reporter_process_report (struct ReportHeader *reporthdr) {
     int need_free = 1;
 
     // report.type is a bit field which indicates the reports requested,
@@ -1172,6 +1175,7 @@ int reporter_process_report ( struct ReportHeader *reporthdr ) {
 	    reporter_print( &reporthdr->report, SERVER_RELAY_REPORT, need_free);
 	}
 	if ((reporthdr->report.type & TRANSFER_REPORT) != 0) {
+	    need_free = 0;
 	    // The consumption detector applies delay to the reporter
 	    // thread when its consumption rate is too low.   This allows
 	    // the traffic threads to send aggregates vs thrash
@@ -1231,8 +1235,9 @@ int reporter_process_report ( struct ReportHeader *reporthdr ) {
 			    reporthdr->bidirreport->report.packetTime = packet->packetTime;
 		    }
 		    // Transfer reports per interval reporting stay around until the final report
-		    need_free = 0;
+
 		} else {
+		    need_free = 1;
 		    // A last packet event was detected
 		    // printf("last packet event detected\n"); fflush(stdout);
 		    reporthdr->reporter_thread_suspends = consumption_detector.reporter_thread_suspends;
@@ -1259,6 +1264,11 @@ int reporter_process_report ( struct ReportHeader *reporthdr ) {
 	    }
 	}
     }
+
+#ifdef HAVE_THREAD_DEBUG
+    // thread_debug("Processed report %p (flags=%x) free=%d", (void *)reporthdr, reporthdr->report.type, need_free);
+#endif
+
     // need_free is a poor implementation.  It's done this way
     // because of recursion in the original design.  It also signals a few things,
     // one is remove from the reporter's job queue, two s is to free the report's
