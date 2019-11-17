@@ -96,7 +96,6 @@ extern "C" {
     // when a packet ring is full.  Shouldn't really
     // be needed but is "belts and suspeners"
     struct Condition ReportCond;
-    struct Condition ReportsPending;
     // Initialize reporter thread mutex
     ReporterMutex reporter_state;
 }
@@ -145,7 +144,6 @@ int main( int argc, char **argv ) {
 
     // Initialize global mutexes and conditions
     Condition_Initialize ( &ReportCond );
-    Condition_Initialize ( &ReportsPending );
     Mutex_Initialize( &groupCond );
     Mutex_Initialize( &clients_mutex );
     // Initialize reporter thread mutex
@@ -264,7 +262,6 @@ int main( int argc, char **argv ) {
     // done actions
     // Destroy global mutexes and conditions
     Condition_Destroy ( &ReportCond );
-    Condition_Destroy ( &ReportsPending );
     Mutex_Destroy( &groupCond );
     Mutex_Destroy( &clients_mutex );
     Condition_Destroy(&reporter_state.await_reporter);
