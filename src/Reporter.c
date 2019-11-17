@@ -648,14 +648,14 @@ void PostReport (struct ReportHeader *reporthdr) {
 #ifdef HAVE_THREAD_DEBUG
       {
 	int timeout;
-	Condition_TimedLock( ReportsPending, 2, timeout );
+	Condition_TimedLock(ReportCond, 2, timeout);
 	if (timeout) {
 	  thread_debug("Lock failed in PostReport()");
 	  exit(-1);
 	}
       }
 #else
-	Condition_Lock(ReportsPending);
+	Condition_Lock(ReportCond);
 #endif
 	reporthdr->next = NULL;
 	if (!ReportPendingHead) {
@@ -665,7 +665,7 @@ void PostReport (struct ReportHeader *reporthdr) {
 	  ReportPendingTail->next = reporthdr;
 	  ReportPendingTail = reporthdr;
 	}
-	Condition_Unlock(ReportsPending);
+	Condition_Unlock(ReportCond);
 	// wake up the reporter thread
 	Condition_Signal(&ReportCond);
 #else
@@ -978,10 +978,6 @@ static void reporter_jobq_dump(void) {
 #endif
 
 static void reporter_jobq_free_entry (struct ReportHeader *entry) {
-#ifdef HAVE_THREAD_DEBUG
-    thread_debug("Jobq report %p remove (next=%p)", (void *) entry, (void *) entry->next);
-#endif
-
     // Next, free it's memory either directly or indirectly
     // by signaling the traffic thread to do so
     if ((entry->report.type & TRANSFER_REPORT) == 0) {
@@ -1000,7 +996,38 @@ static void reporter_jobq_free_entry (struct ReportHeader *entry) {
     }
 }
 
-
+/* Concatenate pending reports and return the head */
+static inline struct ReportHeader *reporter_jobq_get(void) {
+    Condition_Lock(ReportCond);
+    // check the jobq for empty
+    if (ReportRoot == NULL) {
+	// The reporter is starting from an empty state
+	// so set the load detect to trigger an initial delay
+	reset_consumption_detector();
+    }
+    // update the jobq per pending reports
+    if (ReportPendingHead) {
+	ReportPendingTail->next = ReportRoot;
+	ReportRoot = ReportPendingHead;
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug( "Jobq *ROOT* %p (last=%p)", \
+		      (void *) ReportRoot, (void * ) ReportPendingTail->next);
+#endif
+	ReportPendingHead = NULL;
+	ReportPendingTail = NULL;
+    }
+    // set the start of the first job in the jobq
+    int timeout = 0;
+    if (!ReportRoot) {
+	Condition_TimedWait(&ReportCond, 1, timeout);
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug( "Jobq *WAIT* done %p ", (void *) ReportPendingHead);
+#endif
+    }
+    if (!timeout)
+	Condition_Unlock(ReportCond);
+    return ReportRoot;
+}
 /*
  * This function is the loop that the reporter thread processes
  */
@@ -1027,64 +1054,46 @@ void reporter_spawn( struct thread_Settings *thread ) {
      *    either traffic threads are still running or a Listener thread
      *    is running. If equal to 1 then only the reporter thread is alive
      */
-    while (thread_numtrafficthreads() || ReportRoot) {
-#ifdef HAVE_THREAD_DEBUG
-	// thread_debug("Pending traffic threads = %d", thread_numtrafficthreads());;
-#endif
 
-        Condition_Lock(ReportCond);
-	// check the jobq for empty
-        if (ReportRoot == NULL) {
-	    // The reporter is starting from an empty state
-	    // so set the load detect to trigger an initial delay
-	    reset_consumption_detector();
-	}
-	// update the jobq per pending reports
-	Condition_Lock(ReportsPending);
-	if (ReportPendingHead) {
-	    ReportPendingTail->next = ReportRoot;
-	    ReportRoot = ReportPendingHead;
+    while ((reporter_jobq_get()) || thread_numtrafficthreads()) {
 #ifdef HAVE_THREAD_DEBUG
-	    thread_debug( "Jobq *ROOT* %p (last=%p)", \
-			  (void *) ReportRoot, (void * ) ReportPendingTail->next);
+	// thread_debug( "Jobq *HEAD* %p (%d)", (void *) ReportRoot, thread_numtrafficthreads());
 #endif
-	    ReportPendingHead = NULL;
-	    ReportPendingTail = NULL;
-	}
-	Condition_Unlock(ReportsPending);
-	// Process the current jobq
-	struct ReportHeader **work_item = &ReportRoot;
-	Condition_Unlock(ReportCond);
-
-	// Report process report returns true
-	// when a report needs to be removed
-	// from the jobq
-	//
-	// https://blog.kloetzl.info/beautiful-code/
-	// Linked list removal/processing is derived from:
-        //
-        // remove_list_entry(entry) {
-        //   indirect = &head;
-        //   while ((*indirect) != entry) {
-        //	indirect = &(*indirect)->next;
-        //   }
-        //   *indirect = entry->next
-        // }
-	while (*work_item) {
+	if (ReportRoot) {
+	    // https://blog.kloetzl.info/beautiful-code/
+	    // Linked list removal/processing is derived from:
+	    //
+	    // remove_list_entry(entry) {
+	    //     indirect = &head;
+	    //     while ((*indirect) != entry) {
+	    //	       indirect = &(*indirect)->next;
+	    //     }
+	    //     *indirect = entry->next
+	    // }
+	    struct ReportHeader **work_item = &ReportRoot;
+	    while (*work_item) {
 #ifdef HAVE_THREAD_DEBUG
-	    // thread_debug( "Jobq *NEXT* %p", (void *) *work_item);
+		// thread_debug( "Jobq *NEXT* %p", (void *) *work_item);
 #endif
-	    if (reporter_process_report(*work_item)) {
-		struct ReportHeader *tmp = *work_item;
-		*work_item = (*work_item)->next;
-		reporter_jobq_free_entry(tmp);
+		// Report process report returns true
+		// when a report needs to be removed
+		// from the jobq
+		if (reporter_process_report(*work_item)) {
+		    struct ReportHeader *tmp = *work_item;
+		    *work_item = (*work_item)->next;
 #ifdef HAVE_THREAD_DEBUG
-		thread_debug( "Jobq *FREE* %p (%p)", (void *) tmp, (void *) *work_item);
+		    thread_debug( "Jobq *FREE* %p (%X) (%p)", (void *) tmp, tmp->report.type,(void *) *work_item);
 #endif
-		if (!(*work_item))
-		    break;
+		    reporter_jobq_free_entry(tmp);
+		    if (!(*work_item))
+			break;
+		}
+#ifdef HAVE_THREAD_DEBUG
+//	        thread_debug( "Jobq *REMOVE* (%p)=%p (%p)=%p", (void *) work_item, (void *) (*work_item), \
+//			      (void *) &(*work_item)->next, (void *) *(&(*work_item)->next));
+#endif
+		work_item = &(*work_item)->next;
 	    }
-	    work_item = &(*work_item)->next;
 	}
     }
 #ifdef HAVE_THREAD_DEBUG
