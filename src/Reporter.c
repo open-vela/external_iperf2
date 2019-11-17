@@ -1089,8 +1089,7 @@ void reporter_spawn( struct thread_Settings *thread ) {
 			break;
 		}
 #ifdef HAVE_THREAD_DEBUG
-//	        thread_debug( "Jobq *REMOVE* (%p)=%p (%p)=%p", (void *) work_item, (void *) (*work_item), \
-			      (void *) &(*work_item)->next, (void *) *(&(*work_item)->next));
+//	        thread_debug( "Jobq *REMOVE* (%p)=%p (%p)=%p", (void *) work_item, (void *) (*work_item), (void *) &(*work_item)->next, (void *) *(&(*work_item)->next));
 #endif
 		work_item = &(*work_item)->next;
 	    }
