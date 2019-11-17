@@ -1055,7 +1055,7 @@ void reporter_spawn( struct thread_Settings *thread ) {
      *    is running. If equal to 1 then only the reporter thread is alive
      */
 
-    while ((reporter_jobq_get()) || thread_numtrafficthreads()) {
+    while ((reporter_jobq_get()) || (thread_numuserthreads() > 1)) {
 #ifdef HAVE_THREAD_DEBUG
 	// thread_debug( "Jobq *HEAD* %p (%d)", (void *) ReportRoot, thread_numtrafficthreads());
 #endif
@@ -1090,7 +1090,7 @@ void reporter_spawn( struct thread_Settings *thread ) {
 		}
 #ifdef HAVE_THREAD_DEBUG
 //	        thread_debug( "Jobq *REMOVE* (%p)=%p (%p)=%p", (void *) work_item, (void *) (*work_item), \
-//			      (void *) &(*work_item)->next, (void *) *(&(*work_item)->next));
+			      (void *) &(*work_item)->next, (void *) *(&(*work_item)->next));
 #endif
 		work_item = &(*work_item)->next;
 	    }
