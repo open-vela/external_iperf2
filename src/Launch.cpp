@@ -160,7 +160,7 @@ void client_spawn( thread_Settings *thread ) {
     if (!theClient->isConnected()) {
         // the barrier needs to be called even
         // for threads that fail connect
-	if (!isNoConnectSync(thread))
+	if (thread->multihdr && !isNoConnectSync(thread))
 	    BarrierClient(thread->multihdr, 0);
 	DELETE_PTR(theClient);
 	return;
