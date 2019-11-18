@@ -645,18 +645,7 @@ void PostReport (struct ReportHeader *reporthdr) {
 	/*
 	 * Update the ReportRoot to include this report.
 	 */
-#ifdef HAVE_THREAD_DEBUG
-      {
-	int timeout;
-	Condition_TimedLock(ReportCond, 2, timeout);
-	if (timeout) {
-	  thread_debug("Lock failed in PostReport()");
-	  exit(-1);
-	}
-      }
-#else
 	Condition_Lock(ReportCond);
-#endif
 	reporthdr->next = NULL;
 	if (!ReportPendingHead) {
 	  ReportPendingHead = reporthdr;
@@ -733,14 +722,11 @@ void EndReport( struct ReportHeader *agent ) {
         thread_debug( "Traffic thread awaiting reporter to be done with %p and cond %p", (void *)agent, (void *) agent->packetring->awake_producer);
 #endif
         Condition_Lock((*(agent->packetring->awake_producer)));
-	int timeout = 0;
 	while (!agent->packetring->consumerdone) {
-	    timeout = 0;
-	    Condition_TimedWait(agent->packetring->awake_producer, 1, timeout);
+	    Condition_TimedWait(agent->packetring->awake_producer, 1);
 	    // printf("Consumer done may be stuck\n");
 	}
-	if (!timeout)
-	    Condition_Unlock((*(agent->packetring->awake_producer)));
+	Condition_Unlock((*(agent->packetring->awake_producer)));
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug( "Traffic thread thinks reporter is done with %p", (void *)agent);
 #endif
@@ -958,22 +944,17 @@ static inline void apply_consumption_detector(void) {
 
 #ifdef HAVE_THREAD_DEBUG
 static void reporter_jobq_dump(void) {
-  int wait, rc;
+  int wait;
   wait = 3;
   thread_debug("reporter thread job queue request lock (with %ld second wait)", wait);
-  Condition_TimedLock(ReportCond, wait, rc);
-  if (rc != 0) {
-    thread_debug("reporter thread job queue request lock timed out");
-  } else {
-    thread_debug("reporter thread job queue lock");
-    struct ReportHeader *itr = ReportRoot;
-    while (itr) {
-      thread_debug("Job in queue %p",(void *) itr);
-      itr = itr->next;
-    }
-    Condition_Unlock(ReportCond);
-    thread_debug("reporter thread job queue unlock");
+  Condition_TimedLock(ReportCond, wait);
+  struct ReportHeader *itr = ReportRoot;
+  while (itr) {
+    thread_debug("Job in queue %p",(void *) itr);
+    itr = itr->next;
   }
+  Condition_Unlock(ReportCond);
+  thread_debug("reporter thread job queue unlock");
 }
 #endif
 
@@ -1017,15 +998,13 @@ static inline struct ReportHeader *reporter_jobq_set_root(void) {
 	ReportPendingTail = NULL;
     }
     // set the start of the first job in the jobq
-    int timeout = 0;
     if (!ReportRoot) {
-	Condition_TimedWait(&ReportCond, 1, timeout);
+	Condition_TimedWait(&ReportCond, 1);
 #ifdef HAVE_THREAD_DEBUG
-	thread_debug( "Jobq *WAIT* done %p ", (void *) ReportPendingHead);
+	thread_debug( "Jobq *WAIT* exit  %p ", (void *) ReportPendingHead);
 #endif
     }
-    if (!timeout)
-	Condition_Unlock(ReportCond);
+    Condition_Unlock(ReportCond);
     return ReportRoot;
 }
 /*
