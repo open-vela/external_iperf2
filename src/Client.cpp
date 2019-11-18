@@ -134,15 +134,13 @@ Client::Client( thread_Settings *inSettings ) {
     // ServerReverse traffic threads don't need a new connect()
     // as they use the session created by the client's connect()
     if (!isServerReverse(mSettings)) {
-      // let the reporter thread go first in the case of -P greater than 1
-      if (mSettings->multihdr) {
+	// let the reporter thread go first in the case of -P greater than 1
         Condition_Lock(reporter_state.await_reporter);
 	while (!reporter_state.reporter_running) {
-	  Condition_Wait(&reporter_state.await_reporter);
+	    Condition_Wait(&reporter_state.await_reporter);
 	}
         Condition_Unlock(reporter_state.await_reporter);
-      }
-      ct = Connect( );
+	ct = Connect( );
     }
 
     if (isConnected()) {
@@ -165,6 +163,7 @@ Client::Client( thread_Settings *inSettings ) {
 	    if (mSettings->reporthdr && isConnectionReport(mSettings))
 		// post the connection report
 		PostReport(mSettings->reporthdr);
+	    // printf("posted reports\n");
 	} else {
 	    InitReport(mSettings);
 	    // Squirrel this away so the destructor can free the memory

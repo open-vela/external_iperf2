@@ -997,7 +997,7 @@ static void reporter_jobq_free_entry (struct ReportHeader *entry) {
 }
 
 /* Concatenate pending reports and return the head */
-static inline struct ReportHeader *reporter_jobq_get(void) {
+static inline struct ReportHeader *reporter_jobq_set_root(void) {
     Condition_Lock(ReportCond);
     // check the jobq for empty
     if (ReportRoot == NULL) {
@@ -1054,8 +1054,7 @@ void reporter_spawn( struct thread_Settings *thread ) {
      *    either traffic threads are still running or a Listener thread
      *    is running. If equal to 1 then only the reporter thread is alive
      */
-
-    while ((reporter_jobq_get()) || (thread_numuserthreads() > 1)) {
+    while ((reporter_jobq_set_root()) || (thread_numuserthreads() > 1)) {
 #ifdef HAVE_THREAD_DEBUG
 	// thread_debug( "Jobq *HEAD* %p (%d)", (void *) ReportRoot, thread_numtrafficthreads());
 #endif
@@ -1100,6 +1099,7 @@ void reporter_spawn( struct thread_Settings *thread ) {
         reporter_jobq_dump();
     thread_debug("Reporter thread finished");
 #endif
+    printf("reporter exit\n");
 }
 
 /*
@@ -1164,14 +1164,13 @@ static int condprint_interval_reports (struct ReportHeader *reporthdr, struct Re
  */
 int reporter_process_report (struct ReportHeader *reporthdr) {
     int need_free = 1;
-
     // report.type is a bit field which indicates the reports requested,
     // note the special case for a Transfer interval and Connection report
     // which are "compound reports"
     if (reporthdr->report.type) {
 	// This code works but is a mess - fix this and use a proper dispatcher
 	// for updating reports and for outputing them
-	if ( (reporthdr->report.type & SETTINGS_REPORT) != 0 ) {
+	if ((reporthdr->report.type & SETTINGS_REPORT) != 0 ) {
 	    reporthdr->report.type &= ~SETTINGS_REPORT;
 	    reporter_print( &reporthdr->report, SETTINGS_REPORT, need_free );
 	} else if ( (reporthdr->report.type & CONNECTION_REPORT) != 0 ) {
