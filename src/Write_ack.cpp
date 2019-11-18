@@ -83,16 +83,14 @@ void WriteAck::Close(PacketRing *pr) {
 #endif
   enqueue_ackring(pr, &pr->metapacket);
   Condition_Lock((*(pr->awake_producer)));
-  int timeout;
   while (!pr->consumerdone) {
 #ifdef HAVE_THREAD_DEBUG
     thread_debug( "Server await write ack thread done per cond %p/%d", \
 		  (void *) pr->awake_producer, pr->consumerdone);
 #endif
-    Condition_TimedWait(pr->awake_producer, 1, timeout);
+    Condition_TimedWait(pr->awake_producer, 1);
   }
-  if (!timeout)
-    Condition_Unlock((*(pr->awake_producer)));
+  Condition_Unlock((*(pr->awake_producer)));
 #ifdef HAVE_THREAD_DEBUG
   thread_debug( "Server thread thinks write ack thread is done with %p", (void *) pr);
 #endif
