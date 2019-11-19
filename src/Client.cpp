@@ -137,7 +137,7 @@ Client::Client( thread_Settings *inSettings ) {
 	// let the reporter thread go first in the case of -P greater than 1
         Condition_Lock(reporter_state.await_reporter);
 	while (!reporter_state.reporter_running) {
-	    Condition_Wait(&reporter_state.await_reporter);
+	    Condition_TimedWait(&reporter_state.await_reporter, 1);
 	}
         Condition_Unlock(reporter_state.await_reporter);
 	ct = Connect( );
