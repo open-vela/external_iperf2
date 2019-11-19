@@ -1013,17 +1013,6 @@ void reporter_spawn( struct thread_Settings *thread ) {
 #ifdef HAVE_THREAD_DEBUG
     thread_debug( "Reporter thread started");
 #endif
-    //
-    // Signal to other (client) threads that the
-    // reporter is now running.  This is needed because
-    // the client's traffic thread has a connect() within
-    // it's constructor and that connect gets reported via
-    // via this thread so let this thread go first
-    Condition_Lock(reporter_state.await);
-    reporter_state.ready = 1;
-    Condition_Unlock(reporter_state.await);
-    Condition_Broadcast(&reporter_state.await);
-
     /*
      * reporter main loop needs to wait on all threads being started
      */
@@ -1035,6 +1024,17 @@ void reporter_spawn( struct thread_Settings *thread ) {
 #ifdef HAVE_THREAD_DEBUG
     thread_debug( "Reporter await done");
 #endif
+
+    //
+    // Signal to other (client) threads that the
+    // reporter is now running.  This is needed because
+    // the client's traffic thread has a connect() within
+    // it's constructor and that connect gets reported via
+    // via this thread so let this thread go first
+    Condition_Lock(reporter_state.await);
+    reporter_state.ready = 1;
+    Condition_Unlock(reporter_state.await);
+    Condition_Broadcast(&reporter_state.await);
 
     /*
      * Keep the reporter thread alive under the following conditions
