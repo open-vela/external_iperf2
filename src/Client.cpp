@@ -135,11 +135,11 @@ Client::Client( thread_Settings *inSettings ) {
     // as they use the session created by the client's connect()
     if (!isServerReverse(mSettings)) {
 	// let the reporter thread go first in the case of -P greater than 1
-        Condition_Lock(reporter_state.await_reporter);
-	while (!reporter_state.reporter_running) {
-	    Condition_TimedWait(&reporter_state.await_reporter, 1);
+        Condition_Lock(reporter_state.await);
+	while (!reporter_state.ready) {
+	    Condition_TimedWait(&reporter_state.await, 1);
 	}
-        Condition_Unlock(reporter_state.await_reporter);
+        Condition_Unlock(reporter_state.await);
 	ct = Connect( );
     }
 

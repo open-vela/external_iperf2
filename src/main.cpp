@@ -97,7 +97,7 @@ extern "C" {
     // be needed but is "belts and suspeners"
     struct Condition ReportCond;
     // Initialize reporter thread mutex
-    ReporterMutex reporter_state;
+    AwaitMutex reporter_state;
     AwaitMutex threads_start;
 }
 
@@ -148,10 +148,10 @@ int main( int argc, char **argv ) {
     Mutex_Initialize( &groupCond );
     Mutex_Initialize( &clients_mutex );
     // Initialize reporter thread mutex
-    reporter_state.reporter_running = 0;
-    threads_start.__done = 0;
-    Condition_Initialize(&reporter_state.await_reporter);
-    Condition_Initialize(&threads_start.__await);
+    reporter_state.ready = 0;
+    threads_start.ready = 0;
+    Condition_Initialize(&reporter_state.await);
+    Condition_Initialize(&threads_start.await);
 
     // Initialize the thread subsystem
     thread_init( );
@@ -253,8 +253,8 @@ int main( int argc, char **argv ) {
 
 	// Start all the threads that are ready to go
 	thread_start(into);
-	threads_start.__done = 1;
-        Condition_Signal(&threads_start.__await);
+	threads_start.ready = 1;
+        Condition_Signal(&threads_start.await);
     }
 #else
     // No need to make a reporter thread because we don't have threads
@@ -269,7 +269,8 @@ int main( int argc, char **argv ) {
     Condition_Destroy ( &ReportCond );
     Mutex_Destroy( &groupCond );
     Mutex_Destroy( &clients_mutex );
-    Condition_Destroy(&reporter_state.await_reporter);
+    Condition_Destroy(&reporter_state.await);
+    Condition_Destroy(&threads_start.await);
 
     // all done!
     return 0;

@@ -293,14 +293,9 @@ struct ReporterData {
     unsigned int FQPacingRate;
 };
 
-struct ReporterMutex {
-    struct Condition await_reporter;
-    int reporter_running;
-};
-
 struct AwaitMutex {
-    struct Condition __await;
-    int __done;
+    struct Condition await;
+    int ready;
 };
 
 struct MultiHeader {
@@ -353,7 +348,7 @@ void ReportConnections(struct thread_Settings *agent );
 void reporter_peerversion (struct thread_Settings *inSettings, int upper, int lower);
 void reporter_dump_job_queue(void);
 
-extern struct ReporterMutex reporter_state;
+extern struct AwaitMutex reporter_state;
 extern struct AwaitMutex threads_start;
 extern void UpdateMultiHdrRefCounter(struct MultiHeader *reporthdr, int val, int sockfd);
 

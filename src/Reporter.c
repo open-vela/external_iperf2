@@ -1019,19 +1019,19 @@ void reporter_spawn( struct thread_Settings *thread ) {
     // the client's traffic thread has a connect() within
     // it's constructor and that connect gets reported via
     // via this thread so let this thread go first
-    Condition_Lock(reporter_state.await_reporter);
-    reporter_state.reporter_running = 1;
-    Condition_Unlock(reporter_state.await_reporter);
-    Condition_Broadcast(&reporter_state.await_reporter);
+    Condition_Lock(reporter_state.await);
+    reporter_state.ready = 1;
+    Condition_Unlock(reporter_state.await);
+    Condition_Broadcast(&reporter_state.await);
 
     /*
      * reporter main loop needs to wait on all threads being started
      */
-    Condition_Lock(threads_start.__await);
-    while (!threads_start.__done) {
-	Condition_TimedWait(&threads_start.__await, 1);
+    Condition_Lock(threads_start.await);
+    while (!threads_start.ready) {
+	Condition_TimedWait(&threads_start.await, 1);
     }
-    Condition_Unlock(threads_start.__await);
+    Condition_Unlock(threads_start.await);
 #ifdef HAVE_THREAD_DEBUG
     thread_debug( "Reporter await done");
 #endif
