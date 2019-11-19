@@ -298,6 +298,11 @@ struct ReporterMutex {
     int reporter_running;
 };
 
+struct AwaitMutex {
+    struct Condition __await;
+    int __done;
+};
+
 struct MultiHeader {
     int groupID;
     int threads;
@@ -349,6 +354,7 @@ void reporter_peerversion (struct thread_Settings *inSettings, int upper, int lo
 void reporter_dump_job_queue(void);
 
 extern struct ReporterMutex reporter_state;
+extern struct AwaitMutex threads_start;
 extern void UpdateMultiHdrRefCounter(struct MultiHeader *reporthdr, int val, int sockfd);
 
 extern report_connection connection_reports[];

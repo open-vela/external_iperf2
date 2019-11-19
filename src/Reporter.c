@@ -985,6 +985,12 @@ static inline struct ReportHeader *reporter_jobq_set_root(void) {
 	// The reporter is starting from an empty state
 	// so set the load detect to trigger an initial delay
 	reset_consumption_detector();
+	if (!ReportPendingHead) {
+	    Condition_TimedWait(&ReportCond, 1);
+#ifdef HAVE_THREAD_DEBUG
+	    thread_debug( "Jobq *WAIT* exit  %p ", (void *) ReportPendingHead);
+#endif
+	}
     }
     // update the jobq per pending reports
     if (ReportPendingHead) {
@@ -996,13 +1002,6 @@ static inline struct ReportHeader *reporter_jobq_set_root(void) {
 #endif
 	ReportPendingHead = NULL;
 	ReportPendingTail = NULL;
-    }
-    // set the start of the first job in the jobq
-    if (!ReportRoot) {
-	Condition_TimedWait(&ReportCond, 1);
-#ifdef HAVE_THREAD_DEBUG
-	thread_debug( "Jobq *WAIT* exit  %p ", (void *) ReportPendingHead);
-#endif
     }
     Condition_Unlock(ReportCond);
     return ReportRoot;
@@ -1026,6 +1025,18 @@ void reporter_spawn( struct thread_Settings *thread ) {
     Condition_Broadcast(&reporter_state.await_reporter);
 
     /*
+     * reporter main loop needs to wait on all threads being started
+     */
+    Condition_Lock(threads_start.__await);
+    while (!threads_start.__done) {
+	Condition_TimedWait(&threads_start.__await, 1);
+    }
+    Condition_Unlock(threads_start.__await);
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug( "Reporter await done");
+#endif
+
+    /*
      * Keep the reporter thread alive under the following conditions
      *
      * o) There are more reports to ouput, ReportRoot has a report
@@ -1033,7 +1044,7 @@ void reporter_spawn( struct thread_Settings *thread ) {
      *    either traffic threads are still running or a Listener thread
      *    is running. If equal to 1 then only the reporter thread is alive
      */
-    while ((reporter_jobq_set_root()) || (thread_numuserthreads() > 1)) {
+    while ((reporter_jobq_set_root() != NULL) || (thread_numuserthreads() > 1)){
 #ifdef HAVE_THREAD_DEBUG
 	// thread_debug( "Jobq *HEAD* %p (%d)", (void *) ReportRoot, thread_numtrafficthreads());
 #endif
@@ -1078,7 +1089,6 @@ void reporter_spawn( struct thread_Settings *thread ) {
         reporter_jobq_dump();
     thread_debug("Reporter thread finished");
 #endif
-    printf("reporter exit\n");
 }
 
 /*
