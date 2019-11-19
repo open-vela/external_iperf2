@@ -98,6 +98,7 @@ extern "C" {
     struct Condition ReportCond;
     // Initialize reporter thread mutex
     ReporterMutex reporter_state;
+    AwaitMutex threads_start;
 }
 
 // global variables only accessed within this file
@@ -148,7 +149,9 @@ int main( int argc, char **argv ) {
     Mutex_Initialize( &clients_mutex );
     // Initialize reporter thread mutex
     reporter_state.reporter_running = 0;
+    threads_start.__done = 0;
     Condition_Initialize(&reporter_state.await_reporter);
+    Condition_Initialize(&threads_start.__await);
 
     // Initialize the thread subsystem
     thread_init( );
@@ -216,7 +219,7 @@ int main( int argc, char **argv ) {
 	    }
 	}
 	if ( isDaemon( ext_gSettings ) ) {
-	    CmdInstallService(argc, argv);
+	    CmdInstallService(argc, argv);T
 	} else if (isRemoveService(ext_gSettings)) {
 	    return 0;
 	}
@@ -249,7 +252,9 @@ int main( int argc, char **argv ) {
 	into->runNow = ext_gSettings;
 
 	// Start all the threads that are ready to go
-	thread_start( into );
+	thread_start(into);
+	threads_start.__done = 1;
+        Condition_Signal(&threads_start.__await);
     }
 #else
     // No need to make a reporter thread because we don't have threads
@@ -387,7 +392,7 @@ VOID ServiceStart (DWORD dwArgc, LPTSTR *lpszArgv) {
 #else
         into = ext_gSettings;
 #endif
-        thread_start( into );
+        thread_start_all(into);
     }
 
     // report the status to the service control manager.
