@@ -274,7 +274,6 @@ void client_init( thread_Settings *clients ) {
         itr->runNow = next;
         itr = next;
     }
-#endif
     // For each of the needed threads create a copy of the
     // provided settings, unsetting the report flag and add
     // to the list of threads to start
@@ -286,8 +285,7 @@ void client_init( thread_Settings *clients ) {
         itr->runNow = next;
         itr = next;
     }
-
-#ifndef HAVE_THREAD
+#else
     if ( next != NULL ) {
         // We don't have threads and we need to start a listener so
         // have it ran after the client is finished

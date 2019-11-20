@@ -107,6 +107,7 @@ void thread_init( );
 void thread_destroy( );
 
 // start or stop a thread executing
+void thread_start_all( struct thread_Settings* thread );
 void thread_start( struct thread_Settings* thread );
 void thread_stop( struct thread_Settings* thread );
 

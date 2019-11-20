@@ -167,15 +167,18 @@ void thread_destroy( ) {
  * Start the specified object's thread execution. Increments thread
  * count, spawns new thread, and stores thread ID.
  * ------------------------------------------------------------------- */
-void thread_start( struct thread_Settings* thread ) {
+void thread_start_all(struct thread_Settings* thread) {
+    struct thread_Settings **ithread = &thread;
+    while(*ithread) {
+	thread_start(*ithread);
+	ithread = &(*ithread)->runNow;
+    }
+}
 
+void thread_start( struct thread_Settings* thread ) {
     // Make sure this object has not been started already
     if ( thread_equalid( thread->mTID, thread_zeroid() ) ) {
 
-        // Check if we need to start another thread before this one
-        if ( thread->runNow != NULL ) {
-            thread_start( thread->runNow );
-        }
 
         // increment thread count
         Condition_Lock( thread_sNum_cond );
