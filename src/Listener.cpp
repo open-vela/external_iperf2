@@ -363,10 +363,10 @@ sInterupted == SIGALRM
 #endif
 		{
 		    if (mSettings->mSock > 0)
-			thread_start( server );
+			thread_start(server);
 		    // Start the BiDir client if exists
 		    if (tempSettings && isBidir(tempSettings)) {
-		      thread_start(tempSettings);
+			thread_start(tempSettings);
 		    }
 		}
 

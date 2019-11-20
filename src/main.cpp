@@ -252,7 +252,7 @@ int main( int argc, char **argv ) {
 	into->runNow = ext_gSettings;
 
 	// Start all the threads that are ready to go
-	thread_start(into);
+	thread_start_all(into);
 	threads_start.ready = 1;
         Condition_Signal(&threads_start.await);
     }
