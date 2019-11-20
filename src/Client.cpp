@@ -221,6 +221,8 @@ Client::~Client() {
 	    UpdateMultiHdrRefCounter(myJob->multireport, -1, 0);
 	}
 	FreeReport(myJob);
+    } else if (mSettings->multihdr && !isServerReverse(mSettings)) {
+        UpdateMultiHdrRefCounter(mSettings->multihdr, -1, 0);
     }
     DELETE_ARRAY(mBuf);
 } // end ~Client
