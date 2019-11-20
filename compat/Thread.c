@@ -168,10 +168,10 @@ void thread_destroy( ) {
  * count, spawns new thread, and stores thread ID.
  * ------------------------------------------------------------------- */
 void thread_start_all(struct thread_Settings* thread) {
-    struct thread_Settings **ithread = &thread;
-    while(*ithread) {
-	thread_start(*ithread);
-	ithread = &(*ithread)->runNow;
+    struct thread_Settings *ithread = thread;
+    while(ithread) {
+	thread_start(ithread);
+	ithread = ithread->runNow;
     }
 }
 
