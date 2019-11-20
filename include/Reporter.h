@@ -321,6 +321,7 @@ struct MultiHeader {
     struct ReporterData report;
     struct MeanMinMaxStats connect_times;
     void (*output_sum_handler) (struct ReporterData *stats, int final);
+    void (*output_connect_handler) (struct MultiHeader *multihdr);
 };
 
 struct ReportHeader {
