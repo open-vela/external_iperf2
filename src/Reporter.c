@@ -380,8 +380,10 @@ void UpdateMultiHdrRefCounter(struct MultiHeader *multihdr, int val, int sockfd)
 	need_free = 1;
     }
     Mutex_Unlock(&multihdr->refcountlock);
-    if (need_free)
+    if (need_free) {
+	Mutex_Destroy(&multihdr->refcountlock);
 	free(multihdr);
+    }
 }
 
 void FreeReport(struct ReportHeader *reporthdr) {
