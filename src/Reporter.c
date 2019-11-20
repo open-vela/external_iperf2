@@ -381,6 +381,7 @@ void UpdateMultiHdrRefCounter(struct MultiHeader *multihdr, int val, int sockfd)
     }
     Mutex_Unlock(&multihdr->refcountlock);
     if (need_free) {
+	Condition_Destroy(&multihdr->multibarrier_cond);
 	Mutex_Destroy(&multihdr->refcountlock);
 	free(multihdr);
     }
