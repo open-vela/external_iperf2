@@ -339,37 +339,45 @@ void InitReport(struct thread_Settings *mSettings) {
 }
 
 void UpdateMultiHdrRefCounter(struct MultiHeader *multihdr, int val, int sockfd) {
-    if (!multihdr)
-	return;
-    // decrease the reference counter for mutliheaders
-    // and check to free the multiheader
-    Mutex_Lock(&multihdr->refcountlock);
+  if (!multihdr)
+    return;
+  int need_free = 0;
+  // decrease the reference counter for mutliheaders
+  // and check to free the multiheader
+  Mutex_Lock(&multihdr->refcountlock);
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Sum multiheader %p ref=%d->%d", (void *)multihdr, \
-		 multihdr->refcount, (multihdr->refcount + val));
+  thread_debug("Sum multiheader %p ref=%d->%d", (void *)multihdr, \
+	       multihdr->refcount, (multihdr->refcount + val));
 #endif
-    if ((multihdr->refcount == 0) && (val > 0)) {
-	multihdr->sockfd = sockfd;
+  if ((multihdr->refcount == 0) && (val > 0)) {
+    multihdr->sockfd = sockfd;
+  }
+  multihdr->refcount += val;
+  if (multihdr->refcount > multihdr->maxrefcount)
+    multihdr->maxrefcount = multihdr->refcount;
+  if ((multihdr->maxrefcount > 1) && (multihdr->refcount == 0) && (val < 0)) {
+    // Output a final report before freeing it
+    if (*multihdr->output_sum_handler)
+      (*multihdr->output_sum_handler)(&multihdr->report, 1);
+    if (multihdr->connect_times.cnt > 2)
+      fprintf(stdout, "connect times mean/min/max=%f/%f/%f", \
+	      (multihdr->connect_times.sum / multihdr->connect_times.cnt), \
+	      multihdr->connect_times.min, multihdr->connect_times.max);
+    if (sockfd && (multihdr->sockfd == sockfd)) {
+#ifdef HAVE_THREAD_DEBUG
+      thread_debug("Close socket %d per last reference", sockfd);
+#endif
+      int rc = close(multihdr->sockfd);
+      WARN_errno( rc == SOCKET_ERROR, "client bidir close" );
     }
-    multihdr->refcount += val;
-    if (multihdr->refcount > multihdr->maxrefcount)
-      multihdr->maxrefcount = multihdr->refcount;
-    if ((multihdr->maxrefcount > 1) && (multihdr->refcount == 0) && (val < 0)) {
-	    // Output a final report before freeing it
-	    (*multihdr->output_sum_handler)(&multihdr->report, 1);
-	    if (sockfd && (multihdr->sockfd == sockfd)) {
 #ifdef HAVE_THREAD_DEBUG
-		thread_debug("Close socket %d per last reference", sockfd);
+    thread_debug("Free sum multiheader %p per last reference", (void *)multihdr);
 #endif
-		int rc = close(multihdr->sockfd);
-		WARN_errno( rc == SOCKET_ERROR, "client bidir close" );
-	    }
-#ifdef HAVE_THREAD_DEBUG
-	    thread_debug("Free sum multiheader %p per last reference", (void *)multihdr);
-#endif
-	    free(multihdr);
-    }
-    Mutex_Unlock(&multihdr->refcountlock);
+    need_free = 1;
+  }
+  Mutex_Unlock(&multihdr->refcountlock);
+  if (need_free)
+    free(multihdr);
 }
 
 void FreeReport(struct ReportHeader *reporthdr) {
@@ -617,6 +625,9 @@ void InitConnectionReport (struct thread_Settings *mSettings) {
     data->connection.WriteAckLen = (mSettings->mWriteAckLen > 0) ? mSettings->mWriteAckLen : mSettings->mBufLen;
     if (mSettings->mSock > 0)
       UpdateConnectionReport(mSettings, reporthdr);
+    if (reporthdr->multireport) {
+      UpdateMultiHdrRefCounter(reporthdr->multireport, 1, 0);
+    }
 }
 
 // Read the actual socket window size data
@@ -1148,6 +1159,22 @@ static int condprint_interval_reports (struct ReportHeader *reporthdr, struct Re
     return timeslot_event;
 }
 
+static void reporter_compute_connect_times (struct MultiHeader *hdr, double connect_time) {
+    // Compute end/end delay stats
+    hdr->connect_times.sum += connect_time;
+    hdr->connect_times.cnt++;
+    // mean min max tests
+    if (connect_time < hdr->connect_times.min)
+      hdr->connect_times.min = connect_time;
+    if (connect_time > hdr->connect_times.max)
+      hdr->connect_times.max = connect_time;
+    // For variance, working units is microseconds
+    // variance interval
+    // stats->transit.vdTransit = usec_transit - stats->transit.meanTransit;
+    // stats->transit.meanTransit = stats->transit.meanTransit + (stats->transit.vdTransit / stats->transit.cntTransit);
+    // stats->transit.m2Transit = stats->transit.m2Transit + (stats->transit.vdTransit * (usec_transit - stats->transit.meanTransit));
+}
+
 /*
  * Process reports starting with "reporthdr"
  */
@@ -1165,6 +1192,9 @@ int reporter_process_report (struct ReportHeader *reporthdr) {
 	} else if ( (reporthdr->report.type & CONNECTION_REPORT) != 0 ) {
 	    reporthdr->report.type &= ~CONNECTION_REPORT;
 	    need_free = (reporthdr->report.type == 0 ? 1 : 0);
+	    if (reporthdr->multireport) {
+	        reporter_compute_connect_times(reporthdr->multireport, reporthdr->report.connection.connecttime);
+	    }
 	    reporter_print( &reporthdr->report, CONNECTION_REPORT, need_free);
 	} else if ( (reporthdr->report.type & SERVER_RELAY_REPORT) != 0 ) {
 	    reporthdr->report.type &= ~SERVER_RELAY_REPORT;
