@@ -177,6 +177,8 @@ struct MultiHeader* InitSumReport(struct thread_Settings *agent, int inID) {
 	multihdr->refcount = 0;
 	Mutex_Initialize(&multihdr->refcountlock);
 	multihdr->threads = 0;
+	multihdr->connect_times.min = FLT_MAX;
+	multihdr->connect_times.max = FLT_MIN;
 	if (isMultipleReport(agent)) {
 	    struct ReporterData *data = &multihdr->report;
 	    data->type = TRANSFER_REPORT;
@@ -339,45 +341,47 @@ void InitReport(struct thread_Settings *mSettings) {
 }
 
 void UpdateMultiHdrRefCounter(struct MultiHeader *multihdr, int val, int sockfd) {
-  if (!multihdr)
-    return;
-  int need_free = 0;
-  // decrease the reference counter for mutliheaders
-  // and check to free the multiheader
-  Mutex_Lock(&multihdr->refcountlock);
+    if (!multihdr)
+	return;
+    int need_free = 0;
+    // decrease the reference counter for mutliheaders
+    // and check to free the multiheader
+    Mutex_Lock(&multihdr->refcountlock);
 #ifdef HAVE_THREAD_DEBUG
-  thread_debug("Sum multiheader %p ref=%d->%d", (void *)multihdr, \
-	       multihdr->refcount, (multihdr->refcount + val));
+    thread_debug("Sum multiheader %p ref=%d->%d", (void *)multihdr, \
+		 multihdr->refcount, (multihdr->refcount + val));
 #endif
-  if ((multihdr->refcount == 0) && (val > 0)) {
-    multihdr->sockfd = sockfd;
-  }
-  multihdr->refcount += val;
-  if (multihdr->refcount > multihdr->maxrefcount)
-    multihdr->maxrefcount = multihdr->refcount;
-  if ((multihdr->maxrefcount > 1) && (multihdr->refcount == 0) && (val < 0)) {
-    // Output a final report before freeing it
-    if (*multihdr->output_sum_handler)
-      (*multihdr->output_sum_handler)(&multihdr->report, 1);
-    if (multihdr->connect_times.cnt > 2)
-      fprintf(stdout, "connect times mean/min/max=%f/%f/%f", \
-	      (multihdr->connect_times.sum / multihdr->connect_times.cnt), \
-	      multihdr->connect_times.min, multihdr->connect_times.max);
-    if (sockfd && (multihdr->sockfd == sockfd)) {
-#ifdef HAVE_THREAD_DEBUG
-      thread_debug("Close socket %d per last reference", sockfd);
-#endif
-      int rc = close(multihdr->sockfd);
-      WARN_errno( rc == SOCKET_ERROR, "client bidir close" );
+    if ((multihdr->refcount == 0) && (val > 0)) {
+	multihdr->sockfd = sockfd;
     }
+    multihdr->refcount += val;
+    if (multihdr->refcount > multihdr->maxrefcount)
+	multihdr->maxrefcount = multihdr->refcount;
+    if ((multihdr->maxrefcount > 1) && (multihdr->refcount == 0) && (val < 0)) {
+	// Output a final report before freeing it
+	if (*multihdr->output_sum_handler)
+	    (*multihdr->output_sum_handler)(&multihdr->report, 1);
+	if (multihdr->connect_times.cnt > 1) {
+	    fprintf(stdout, "[ CT] final connect times (mean/min/max cnt) = %0.2f/%0.2f/%0.2f (ms) %d\n", \
+		    (multihdr->connect_times.sum / multihdr->connect_times.cnt), \
+		    multihdr->connect_times.min, multihdr->connect_times.max, multihdr->connect_times.cnt);
+	    fflush(stdout);
+	}
+	if (sockfd && (multihdr->sockfd == sockfd)) {
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Free sum multiheader %p per last reference", (void *)multihdr);
+	    thread_debug("Close socket %d per last reference", sockfd);
 #endif
-    need_free = 1;
-  }
-  Mutex_Unlock(&multihdr->refcountlock);
-  if (need_free)
-    free(multihdr);
+	    int rc = close(multihdr->sockfd);
+	    WARN_errno( rc == SOCKET_ERROR, "client bidir close" );
+	}
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug("Free sum multiheader %p per last reference", (void *)multihdr);
+#endif
+	need_free = 1;
+    }
+    Mutex_Unlock(&multihdr->refcountlock);
+    if (need_free)
+	free(multihdr);
 }
 
 void FreeReport(struct ReportHeader *reporthdr) {
@@ -624,9 +628,9 @@ void InitConnectionReport (struct thread_Settings *mSettings) {
     data->connection.mFormat = mSettings->mFormat;
     data->connection.WriteAckLen = (mSettings->mWriteAckLen > 0) ? mSettings->mWriteAckLen : mSettings->mBufLen;
     if (mSettings->mSock > 0)
-      UpdateConnectionReport(mSettings, reporthdr);
-    if (reporthdr->multireport) {
-      UpdateMultiHdrRefCounter(reporthdr->multireport, 1, 0);
+	UpdateConnectionReport(mSettings, reporthdr);
+    if (isConnectOnly(mSettings) && mSettings->multihdr) {
+	UpdateMultiHdrRefCounter(mSettings->multihdr, 1, 0);
     }
 }
 
