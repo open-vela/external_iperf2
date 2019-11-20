@@ -429,7 +429,8 @@ void InitDataReport(struct thread_Settings *mSettings) {
 	data = &reporthdr->report;
 	data->mThreadMode = mSettings->mThreadMode;
 	reporthdr->packet_handler = NULL;
-	reporthdr->multireport->output_connect_handler = NULL;
+	if (reporthdr->multireport)
+	    reporthdr->multireport->output_connect_handler = NULL;
 	if (!isConnectOnly(mSettings)) {
 	    // Create a new packet ring which is used to communicate
 	    // packet stats from the traffic thread to the reporter
