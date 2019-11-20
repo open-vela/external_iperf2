@@ -232,7 +232,7 @@ void client_spawn( thread_Settings *thread ) {
 		}
 	    }
 	} else {
-	    // bidir case or Write akc case, start the client traffic
+	    // bidir case or Write ack case, start the client traffic
 	    theClient->Run();
 	}
     }

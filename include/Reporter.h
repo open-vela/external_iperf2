@@ -101,6 +101,17 @@ struct TransitStats {
     double totvdTransit;
 };
 
+struct MeanMinMaxStats {
+    double max;
+    double min;
+    double sum;
+    double last;
+    double mean;
+    double m2;
+    double vd;
+    int cnt;
+};
+
 #define TCPREADBINCOUNT 8
 struct ReadStats {
     int cntRead;
@@ -308,6 +319,7 @@ struct MultiHeader {
     int maxrefcount;
     int sockfd;
     struct ReporterData report;
+    struct MeanMinMaxStats connect_times;
     void (*output_sum_handler) (struct ReporterData *stats, int final);
 };
 
