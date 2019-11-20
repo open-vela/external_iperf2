@@ -154,6 +154,7 @@ static void output_transfer_sum_report_client_udp(struct ReporterData *stats, in
 static void output_transfer_sum_report_server_udp(struct ReporterData *stats, int final);
 static void output_transfer_bidir_report_tcp(struct ReporterData *stats, int final);
 static void output_transfer_bidir_report_udp(struct ReporterData *stats, int final);
+static void output_connect_final_report_tcp(struct MultiHeader *multihdr);
 
 static void reset_transfer_stats(struct ReporterData *stats);
 static inline void reset_transfer_stats_client_tcp(struct ReporterData *stats);
@@ -208,6 +209,7 @@ struct MultiHeader* InitSumReport(struct thread_Settings *agent, int inID) {
 	    }
 	    if ( isEnhanced( agent ) ) {
 		data->info.mEnhanced = 1;
+		multihdr->output_connect_handler = output_connect_final_report_tcp;
 	    } else {
 		data->info.mEnhanced = 0;
 	    }
@@ -361,12 +363,9 @@ void UpdateMultiHdrRefCounter(struct MultiHeader *multihdr, int val, int sockfd)
 	// Output a final report before freeing it
 	if (*multihdr->output_sum_handler)
 	    (*multihdr->output_sum_handler)(&multihdr->report, 1);
-	if (multihdr->connect_times.cnt > 1) {
-	    fprintf(stdout, "[ CT] final connect times (mean/min/max cnt) = %0.2f/%0.2f/%0.2f (ms) %d\n", \
-		    (multihdr->connect_times.sum / multihdr->connect_times.cnt), \
-		    multihdr->connect_times.min, multihdr->connect_times.max, multihdr->connect_times.cnt);
-	    fflush(stdout);
-	}
+	if (*multihdr->output_connect_handler)
+	    (*multihdr->output_connect_handler)(multihdr);
+
 	if (sockfd && (multihdr->sockfd == sockfd)) {
 #ifdef HAVE_THREAD_DEBUG
 	    thread_debug("Close socket %d per last reference", sockfd);
@@ -430,6 +429,7 @@ void InitDataReport(struct thread_Settings *mSettings) {
 	data = &reporthdr->report;
 	data->mThreadMode = mSettings->mThreadMode;
 	reporthdr->packet_handler = NULL;
+	reporthdr->multireport->output_connect_handler = NULL;
 	if (!isConnectOnly(mSettings)) {
 	    // Create a new packet ring which is used to communicate
 	    // packet stats from the traffic thread to the reporter
@@ -439,6 +439,7 @@ void InitDataReport(struct thread_Settings *mSettings) {
 	    // 1) packet_handler: does packet accounting per the test and protocol
 	    // 2) output_handler: performs output, e.g. interval reports, per the test and protocol
 	    // 3) output_sum_handler: performs summing output when multiple traffic threads
+
 	    switch (data->mThreadMode) {
 	    case kMode_Server :
 		if (isUDP(mSettings)) {
@@ -467,8 +468,11 @@ void InitDataReport(struct thread_Settings *mSettings) {
 		      reporthdr->bidirreport->output_sum_handler = output_transfer_bidir_report_udp;
 		} else {
 		    reporthdr->output_handler = output_transfer_report_client_tcp;
-		    if (reporthdr->multireport)
+		    if (reporthdr->multireport) {
 		        reporthdr->multireport->output_sum_handler = output_transfer_sum_report_client_tcp;
+			if (isEnhanced(mSettings))
+			    reporthdr->multireport->output_connect_handler = output_connect_final_report_tcp;
+		    }
 		    if (reporthdr->bidirreport)
 		        reporthdr->bidirreport->output_sum_handler = output_transfer_bidir_report_tcp;
 		}
@@ -492,6 +496,7 @@ void InitDataReport(struct thread_Settings *mSettings) {
 	        UpdateMultiHdrRefCounter(mSettings->multihdr, 1, 0);
 	    }
 	}
+
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug("Init data report %p size %ld using packetring=%p cond=%p", \
 		     (void *)reporthdr, sizeof(struct ReportHeader),
@@ -1831,6 +1836,15 @@ static void output_transfer_sum_report_server_udp(struct ReporterData *stats, in
 	reset_transfer_stats_server_udp(stats);
     }
 }
+static void output_connect_final_report_tcp (struct MultiHeader *multihdr) {
+    if (multihdr->connect_times.cnt > 1) {
+        fprintf(stdout, "[ CT] final connect times (mean/min/max cnt) = %0.2f/%0.2f/%0.2f (ms) %d\n", \
+	        (multihdr->connect_times.sum / multihdr->connect_times.cnt), \
+		multihdr->connect_times.min, multihdr->connect_times.max, multihdr->connect_times.cnt);
+	fflush(stdout);
+    }
+}
+
 static void output_transfer_sum_report_client_udp(struct ReporterData *stats, int final) {
     set_endtime(stats,final);
     if (final) {
