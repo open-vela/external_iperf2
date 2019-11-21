@@ -1173,7 +1173,8 @@ static int condprint_interval_reports (struct ReportHeader *reporthdr, struct Re
 }
 
 static void reporter_compute_connect_times (struct MultiHeader *hdr, double connect_time) {
-    // Compute end/end delay stats
+  // Compute end/end delay stats
+  if (connect_time > 0.0) {
     hdr->connect_times.sum += connect_time;
     hdr->connect_times.cnt++;
     // mean min max tests
@@ -1181,11 +1182,14 @@ static void reporter_compute_connect_times (struct MultiHeader *hdr, double conn
       hdr->connect_times.min = connect_time;
     if (connect_time > hdr->connect_times.max)
       hdr->connect_times.max = connect_time;
-    // For variance, working units is microseconds
-    // variance interval
-    // stats->transit.vdTransit = usec_transit - stats->transit.meanTransit;
-    // stats->transit.meanTransit = stats->transit.meanTransit + (stats->transit.vdTransit / stats->transit.cntTransit);
-    // stats->transit.m2Transit = stats->transit.m2Transit + (stats->transit.vdTransit * (usec_transit - stats->transit.meanTransit));
+  } else {
+    hdr->connect_times.err++;
+  }
+  // For variance, working units is microseconds
+  // variance interval
+  // stats->transit.vdTransit = usec_transit - stats->transit.meanTransit;
+  // stats->transit.meanTransit = stats->transit.meanTransit + (stats->transit.vdTransit / stats->transit.cntTransit);
+  // stats->transit.m2Transit = stats->transit.m2Transit + (stats->transit.vdTransit * (usec_transit - stats->transit.meanTransit));
 }
 
 /*
@@ -1839,9 +1843,10 @@ static void output_transfer_sum_report_server_udp(struct ReporterData *stats, in
 }
 static void output_connect_final_report_tcp (struct MultiHeader *multihdr) {
     if (multihdr->connect_times.cnt > 1) {
-        fprintf(stdout, "[ CT] final connect times (mean/min/max cnt) = %0.2f/%0.2f/%0.2f (ms) %d\n", \
+        fprintf(stdout, "[ CT] final connect times (mean/min/max) = %0.2f/%0.2f/%0.2f ms (tot/err) = %d/%d\n", \
 	        (multihdr->connect_times.sum / multihdr->connect_times.cnt), \
-		multihdr->connect_times.min, multihdr->connect_times.max, multihdr->connect_times.cnt);
+		multihdr->connect_times.min, multihdr->connect_times.max, (multihdr->connect_times.cnt + multihdr->connect_times.err), \
+		multihdr->connect_times.err);
 	fflush(stdout);
     }
 }

@@ -110,6 +110,7 @@ struct MeanMinMaxStats {
     double m2;
     double vd;
     int cnt;
+    int err;
 };
 
 #define TCPREADBINCOUNT 8
