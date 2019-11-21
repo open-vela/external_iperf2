@@ -630,6 +630,7 @@ void Client::RunTCP( void ) {
 		if (framecounter) {
 		    burst_size = (int) (lognormal(mSettings->mMean,mSettings->mVariance)) / (mSettings->mFPS * 8);
 		    burst_id =  framecounter->wait_tick();
+		    // printf("burstsize=%d\n",burst_size);
 		}
 		// RJM fix below, consider using the timer value vs re-reading the clock
 		now.setnow();
@@ -643,10 +644,12 @@ void Client::RunTCP( void ) {
 		burst_remaining -= n;
 		reportstruct->packetLen -= n;
 		// thread_debug("***write burst header %d id=%d", burst_size, (burst_id - 1));
-	    } else if (reportstruct->packetLen > burst_remaining) {
+	    }
+	    if (reportstruct->packetLen > burst_remaining) {
 		reportstruct->packetLen = burst_remaining;
 	    }
 	}
+	// printf("pl=%ld\n",reportstruct->packetLen);
 	// perform write
 	WARN(reportstruct->packetLen <= 0, "invalid write req size");
 	int len = write(mSettings->mSock, mBuf, reportstruct->packetLen);
