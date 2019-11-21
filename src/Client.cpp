@@ -193,6 +193,10 @@ Client::Client( thread_Settings *inSettings ) {
 	    if (myJob && isDataReport(mSettings))
 		PostReport(myJob);
 	}
+    } else if (isReport(mSettings)) {
+        struct ReportHeader *tmp = ReportSettings(mSettings);
+	// Post a settings report on a failed connect
+	PostReport(tmp);
     }
 } // end Client
 
@@ -205,7 +209,7 @@ Client::~Client() {
 		 mySocket, (void *) mSettings->reporthdr, \
 		 (isServerReverse(mSettings) ? "true" : "false"), (isBidir(mSettings) ? "true" : "false"));
 #endif
-    if (!isBidir(mSettings) || (myJob && !myJob->bidirreport)) {
+    if ((!isBidir(mSettings) || (myJob && !myJob->bidirreport)) && (mySocket != INVALID_SOCKET)) {
         int rc = close( mySocket );
 	WARN_errno( rc == SOCKET_ERROR, "client close" );
 	mySocket = INVALID_SOCKET;
@@ -298,6 +302,11 @@ double Client::Connect() {
 	connected = true;
     } else {
 	connecttime = -1;
+	if (mySocket != INVALID_SOCKET) {
+	    int rc = close(mySocket);
+	    WARN_errno( rc == SOCKET_ERROR, "client connect close" );
+	    mySocket = INVALID_SOCKET;
+	}
     }
     return connecttime;
 
@@ -385,6 +394,61 @@ void Client::SetReportStartTime (void) {
     if (!TimeZero(reporthdr->report.intervalTime)) {
       reporthdr->report.nextTime = reporthdr->report.startTime;
       TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
+    }
+  }
+}
+
+void Client::ConnectPeriodic (void) {
+  Timestamp now;
+  Timestamp end;
+  unsigned int amount_usec = 1000000;
+  if (isModeTime(mSettings)) {
+    amount_usec = (mSettings->mAmount * 10000);
+  }
+  end.add(amount_usec); // add in micro seconds
+  Timestamp next = now;
+  setNoConnectSync(mSettings);
+  while (!sInterupted && (isModeTime(mSettings) && now.before(end) && next.before(end))) {
+    while (!now.before(next)) {
+      next.add(mSettings->mInterval);
+    }
+    if (next.before(end)) {
+      timespec tmp;
+      tmp.tv_sec = next.getSecs();
+      tmp.tv_nsec = next.getUsecs() * 1000;
+      int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &tmp, NULL);
+      if (rc) {
+	fprintf(stderr, "ConnectPeriodic() failed clock_nanosleep()=%d\n", rc);
+      }
+      if (isConnected() && (mySocket != INVALID_SOCKET)) {
+	int rc = close(mySocket);
+	WARN_errno( rc == SOCKET_ERROR, "client close" );
+	mySocket = INVALID_SOCKET;
+	unsetReport(mSettings);
+      } else {
+	setReport(mSettings);
+      }
+      if (!isConnected() && isReport(mSettings)) {
+	struct ReportHeader *tmp = ReportSettings(mSettings);
+	// Post a settings report now
+	PostReport(tmp);
+      }
+      mSettings->reporthdr = NULL;
+      double ct = Connect();
+      if (ct > 0.0) {
+	InitConnectionReport(mSettings);
+	UpdateMultiHdrRefCounter(mSettings->multihdr, -1, 0);
+	if (mSettings->reporthdr) {
+	  mSettings->reporthdr->report.connection.connecttime = ct;
+	  PostReport(mSettings->reporthdr);
+	}
+      }
+      now.setnow();
+      //  timespec tmp;
+      // tmp.tv_sec = mSettings->txholdback_timer.tv_sec;
+      // tmp.tv_nsec = mSettings->txholdback_timer.tv_usec * 1000;
+      // See if this a delay between connect and data
+      // int rc = clock_nanosleep(CLOCK_MONOTONIC, 0, &tmp, NULL);
     }
   }
 }

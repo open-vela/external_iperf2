@@ -88,6 +88,7 @@ public:
     void InitiateServer(void);
     void StartSynch(void);
     void SetReportStartTime(void);
+    void ConnectPeriodic(void);
     bool isConnected(void);
 
 private:
