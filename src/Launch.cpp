@@ -158,7 +158,9 @@ void client_spawn( thread_Settings *thread ) {
     // that should be fixed as a clean up
     theClient = new Client( thread );
     if (isConnectOnly(thread)) {
+	UpdateMultiHdrRefCounter(thread->multihdr, 1, 0);
 	theClient->ConnectPeriodic();
+	UpdateMultiHdrRefCounter(thread->multihdr, -1, 0);
     } else if (!theClient->isConnected()) {
         // the barrier needs to be called even
         // for threads that fail connect

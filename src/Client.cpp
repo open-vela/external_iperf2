@@ -426,7 +426,7 @@ void Client::ConnectPeriodic (void) {
 	mySocket = INVALID_SOCKET;
 	unsetReport(mSettings);
       } else {
-	setReport(mSettings);
+	unsetReport(mSettings);
       }
       if (!isConnected() && isReport(mSettings)) {
 	struct ReportHeader *tmp = ReportSettings(mSettings);
@@ -435,13 +435,11 @@ void Client::ConnectPeriodic (void) {
       }
       mSettings->reporthdr = NULL;
       double ct = Connect();
-      if (ct > 0.0) {
-	InitConnectionReport(mSettings);
-	UpdateMultiHdrRefCounter(mSettings->multihdr, -1, 0);
-	if (mSettings->reporthdr) {
+      InitConnectionReport(mSettings);
+      UpdateMultiHdrRefCounter(mSettings->multihdr, -1, 0);
+      if (mSettings->reporthdr) {
 	  mSettings->reporthdr->report.connection.connecttime = ct;
 	  PostReport(mSettings->reporthdr);
-	}
       }
       now.setnow();
       //  timespec tmp;
