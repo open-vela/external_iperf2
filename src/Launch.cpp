@@ -157,16 +157,17 @@ void client_spawn( thread_Settings *thread ) {
     // Note: socket connect() happens here in the constructor
     // that should be fixed as a clean up
     theClient = new Client( thread );
-    if (!theClient->isConnected()) {
+    if (isConnectOnly(thread)) {
+	theClient->ConnectPeriodic();
+    } else if (!theClient->isConnected()) {
         // the barrier needs to be called even
         // for threads that fail connect
 	if (thread->multihdr && !isNoConnectSync(thread))
 	    BarrierClient(thread->multihdr, 0);
 	DELETE_PTR(theClient);
 	return;
-    }
-    // Code for the normal case
-    if (!isReverse(thread) && !isServerReverse(thread) && !isWriteAck(thread)) {
+    } else if (!isReverse(thread) && !isServerReverse(thread) && !isWriteAck(thread)) {
+	// Code for the normal case
 	// Perform any intial startup delays between the connect() and the data xfer phase
 	// this will also initiliaze the report header timestamps needed by the reporter thread
 #ifdef HAVE_THREAD_DEBUG
@@ -255,7 +256,7 @@ void client_init( thread_Settings *clients ) {
     setReport(clients);
     // See if we need to start a listener as well
     Settings_GenerateListenerSettings( clients, &next );
-    if (clients->mThreads > 1) {
+    if ((clients->mThreads > 1) || isConnectOnly(clients)) {
       // Create a multiple report header to handle reporting the
       // sum of multiple client threads
       Mutex_Lock( &groupCond );
