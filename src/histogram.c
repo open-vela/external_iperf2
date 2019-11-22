@@ -125,14 +125,18 @@ int histogram_insert(struct histogram *h, float value, struct timeval *ts) {
     // calculate the bin, convert the value units from seconds to units of interest
     bin = (int) (h->units  * (value - h->offset) / h->binwidth);
     h->populationcnt++;
-    if (ts && (bin > h->maxbin)) {
+    if (ts && (value > h->maxval)) {
         h->maxbin = bin;
+        h->maxval = value;
         h->maxts.tv_sec = ts->tv_sec;
         h->maxts.tv_usec = ts->tv_usec;
-	if (bin > h->fmaxbin) {
+	// printf("imax=%ld.%ld %f\n",h->maxts.tv_sec, h->maxts.tv_usec, value);
+	if (value > h->fmaxval) {
 	  h->fmaxbin = bin;
+          h->fmaxval = value;
 	  h->fmaxts.tv_sec = ts->tv_sec;
 	  h->fmaxts.tv_usec = ts->tv_usec;
+	  // printf("fmax=%ld.%ld %f\n",h->fmaxts.tv_sec, h->fmaxts.tv_usec, value);
 	}
     }
     if (bin < 0) {
@@ -234,13 +238,13 @@ void histogram_print(struct histogram *h, double start, double end, int final) {
     else
       fprintf(stdout, "%s (%.2f/%.2f/99.7%%=%d/%d/%d,Outliers=%d,obl/obu=%d/%d)", \
 	      h->outbuf, h->ci_lower, h->ci_upper, lowerci, upperci, upper3stdev, outliercnt, oob_l, oob_u);
-    if (h->maxts.tv_sec && h->maxbin) {
-      if (!final) {
-	fprintf(stdout, " (%d/%ld.%ld)\n", (h->maxbin + 1), h->maxts.tv_sec, h->maxts.tv_usec);
-	h->maxbin = -1;
-      } else {
-	fprintf(stdout, " (%d/%ld.%ld)\n", (h->fmaxbin + 1), h->fmaxts.tv_sec, h->fmaxts.tv_usec);
-      }
-    } else
+    if (!final && (h->maxval > 0)) {
+      fprintf(stdout, " (%0.3f ms/%ld.%ld)\n", (h->maxval * 1e3), h->maxts.tv_sec, h->maxts.tv_usec);
+      h->maxbin = -1;
+      h->maxval = 0;
+    } else if (final && (h->fmaxval > 0)) {
+      fprintf(stdout, " (%0.3f ms/%ld.%ld)\n", (h->fmaxval * 1e3), h->fmaxts.tv_sec, h->fmaxts.tv_usec);
+    } else {
       fprintf(stdout, "\n");
+    }
 }
