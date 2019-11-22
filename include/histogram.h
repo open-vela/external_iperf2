@@ -56,6 +56,8 @@ struct histogram {
     unsigned int populationcnt;
     int maxbin;
     int fmaxbin;
+    double maxval;
+    double fmaxval;
     struct timeval maxts;
     struct timeval fmaxts;
     float offset;
