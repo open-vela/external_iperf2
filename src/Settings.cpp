@@ -767,19 +767,31 @@ void Settings_Interpret( char option, const char *optarg, struct thread_Settings
 		int match = 0;
 		txstarttime = 0;
 		setTxStartTime(mExtSettings);
+		setEnhanced(mExtSettings);
 		match = sscanf(optarg,"%ld.%6ld", &seconds, &usecs);
+		mExtSettings->txstart_epoch.tv_usec = 0;
+		Timestamp now;
 		switch (match) {
 		case 2:
 		    mExtSettings->txstart_epoch.tv_usec = usecs;
-		    mExtSettings->txstart_epoch.tv_sec = seconds;
-		    break;
 		case 1:
-		  mExtSettings->txstart_epoch.tv_sec = seconds;
-		  mExtSettings->txstart_epoch.tv_usec = 0;
-		  break;
+		    mExtSettings->txstart_epoch.tv_sec = seconds;
+		    if ((now.getSecs() - seconds) > 0) {
+			fprintf(stderr, "WARNING: start time of before now ignored\n");
+			unsetTxStartTime(mExtSettings);
+		    } else if (seconds - (now.getSecs()) > (6 * 3600)) {
+			int hours = (seconds - now.getSecs()) / 3600;
+			fprintf(stdout, "WARNING: start time %d hour(s) from now, continue (Y/N)? ", hours);
+			char ans;
+			scanf("%c", &ans);
+			if (!(ans == 'y' || ans == 'Y')) {
+			    exit(1);
+			}
+		    }
+		    break;
 		default:
-		  unsetTxStartTime(mExtSettings);
-		  fprintf(stderr, "WARNING: invalid --txstart-time format\n");
+		    unsetTxStartTime(mExtSettings);
+		    fprintf(stderr, "WARNING: invalid --txstart-time format\n");
 		}
 	    }
 	    if (writesync) {
