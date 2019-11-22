@@ -595,14 +595,25 @@ void *reporter_reportpeer(struct ConnectionInfo *stats, int ID) {
 #endif
 	         extbuf);
 	if (stats->epochStartTime.tv_sec) {
+	    struct tm ts;
+	    char start_timebuf[80];
 #ifdef HAVE_CLOCK_GETTIME
-	  struct timespec t1;
-	  clock_gettime(CLOCK_REALTIME, &t1);
-	  printf(client_report_epoch_start_current, ID,stats->epochStartTime.tv_sec, stats->epochStartTime.tv_usec, t1.tv_sec, t1.tv_nsec / 1000);
+	    // Format time, "ddd yyyy-mm-dd hh:mm:ss zzz"
+	    ts = *localtime(&stats->epochStartTime.tv_sec);
+	    strftime(start_timebuf, sizeof(start_timebuf), "%Y-%m-%d %H:%M:%S", &ts);
+	    struct timespec t1;
+	    clock_gettime(CLOCK_REALTIME, &t1);
+	    ts = *localtime(&t1.tv_sec);
+	    char now_timebuf[80];
+	    strftime(now_timebuf, sizeof(now_timebuf), "%Y-%m-%d %H:%M:%S (%Z)", &ts);
+	    printf(client_report_epoch_start_current, ID, start_timebuf, stats->epochStartTime.tv_sec, stats->epochStartTime.tv_usec, now_timebuf);
 #else
-	  printf(client_report_epoch_start, ID,stats->epochStartTime.tv_sec, stats->epochStartTime.tv_usec);
+	    // Format time, "ddd yyyy-mm-dd hh:mm:ss zzz"
+	    ts = *localtime(&stats->epochStartTime.tv_sec);
+	    strftime(start_timebuf, sizeof(start_timebuf), "%Y-%m-%d %H:%M:%S (%Z)", &ts);
+	    printf(client_report_epoch_start, ID, start_timebuf, stats->epochStartTime.tv_sec, stats->epochStartTime.tv_usec);
 #endif
-	  fflush(stdout);
+	    fflush(stdout);
 	}
     }
     return NULL;

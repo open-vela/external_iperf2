@@ -257,10 +257,10 @@ const char report_sum_bw_jitter_loss_format[] =
  * Enhanced reports (per -e)
  * ------------------------------------------------------------------- */
 const char client_report_epoch_start[] =
-"[%3d] Client thread's traffic will start at %ld.%ld (epoch/unix format)\n";
+"[%3d] Client traffic to start at %s (%ld.%ld in epoch/unix format)\n";
 
 const char client_report_epoch_start_current[] =
-"[%3d] Client thread's traffic will start at %ld.%ld current time is %ld.%ld (epoch/unix format)\n";
+"[%3d] Client traffic to start at %s (%ld.%ld) current time %s\n";
 
 const char client_write_size[] =
 "Write buffer size";
