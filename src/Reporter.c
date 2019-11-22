@@ -1843,11 +1843,12 @@ static void output_transfer_sum_report_server_udp(struct ReporterData *stats, in
 }
 static void output_connect_final_report_tcp (struct MultiHeader *multihdr) {
     if (multihdr->connect_times.cnt > 1) {
-        fprintf(stdout, "[ CT] final connect times (mean/min/max) = %0.2f/%0.2f/%0.2f ms (tot/err) = %d/%d\n", \
+        fprintf(stdout, "[ CT] final connect times (min/avg/max) = %0.3f/%0.3f/%0.3f ms (tot/err) = %d/%d\n", \
+		multihdr->connect_times.min,  \
 	        (multihdr->connect_times.sum / multihdr->connect_times.cnt), \
-		multihdr->connect_times.min, multihdr->connect_times.max, (multihdr->connect_times.cnt + multihdr->connect_times.err), \
+		multihdr->connect_times.max, \
+		(multihdr->connect_times.cnt + multihdr->connect_times.err), \
 		multihdr->connect_times.err);
-	fflush(stdout);
     }
 }
 
