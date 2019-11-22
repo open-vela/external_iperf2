@@ -243,6 +243,7 @@ struct ConnectionInfo {
     int flags_extend;
     char mFormat;
     unsigned int WriteAckLen;
+    enum ThreadMode mThreadMode;         // -s or -c
 };
 
 struct ReporterData {
