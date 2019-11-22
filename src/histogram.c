@@ -92,6 +92,12 @@ struct histogram *histogram_init(unsigned int bincount, unsigned int binwidth, f
     this->ci_lower = ci_lower;
     this->ci_upper = ci_upper;
     this->prev = NULL;
+    this->maxbin = -1;
+    this->fmaxbin = -1;
+    this->maxts.tv_sec = 0;
+    this->maxts.tv_usec = 0;
+    this->fmaxts.tv_sec = 0;
+    this->fmaxts.tv_usec = 0;
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("histo create %p", (void *) this);
 #endif
@@ -114,11 +120,21 @@ void histogram_delete(struct histogram *h) {
 }
 
 // value is units seconds
-int histogram_insert(struct histogram *h, float value) {
+int histogram_insert(struct histogram *h, float value, struct timeval *ts) {
     int bin;
     // calculate the bin, convert the value units from seconds to units of interest
     bin = (int) (h->units  * (value - h->offset) / h->binwidth);
     h->populationcnt++;
+    if (ts && (bin > h->maxbin)) {
+        h->maxbin = bin;
+        h->maxts.tv_sec = ts->tv_sec;
+        h->maxts.tv_usec = ts->tv_usec;
+	if (bin > h->fmaxbin) {
+	  h->fmaxbin = bin;
+	  h->fmaxts.tv_sec = ts->tv_sec;
+	  h->fmaxts.tv_usec = ts->tv_usec;
+	}
+    }
     if (bin < 0) {
 	h->cntloweroutofbounds++;
 	return(-1);
@@ -137,6 +153,9 @@ void histogram_clear(struct histogram *h) {
     h->populationcnt = 0;
     h->cntloweroutofbounds=0;
     h->cntupperoutofbounds=0;
+    h->maxbin = 0;
+    h->maxts.tv_sec = 0;
+    h->maxts.tv_usec = 0;
     if (h->prev)
 	histogram_clear(h->prev);
     h->prev = NULL;
@@ -210,9 +229,18 @@ void histogram_print(struct histogram *h, double start, double end, int final) {
     if (!upper3stdev)
        upper3stdev=h->bincount;
     if (h->ci_upper > 99.7)
-      fprintf(stdout, "%s (%.2f/99.7/%.2f/%%=%d/%d/%d,Outliers=%d,obl/obu=%d/%d)\n", \
+      fprintf(stdout, "%s (%.2f/99.7/%.2f/%%=%d/%d/%d,Outliers=%d,obl/obu=%d/%d)", \
 	      h->outbuf, h->ci_lower, h->ci_upper, lowerci, upper3stdev, upperci, outliercnt, oob_l, oob_u);
     else
-      fprintf(stdout, "%s (%.2f/%.2f/99.7%%=%d/%d/%d,Outliers=%d,obl/obu=%d/%d)\n", \
+      fprintf(stdout, "%s (%.2f/%.2f/99.7%%=%d/%d/%d,Outliers=%d,obl/obu=%d/%d)", \
 	      h->outbuf, h->ci_lower, h->ci_upper, lowerci, upperci, upper3stdev, outliercnt, oob_l, oob_u);
+    if (h->maxts.tv_sec && h->maxbin) {
+      if (!final) {
+	fprintf(stdout, " (%d/%ld.%ld)\n", (h->maxbin + 1), h->maxts.tv_sec, h->maxts.tv_usec);
+	h->maxbin = -1;
+      } else {
+	fprintf(stdout, " (%d/%ld.%ld)\n", (h->fmaxbin + 1), h->fmaxts.tv_sec, h->fmaxts.tv_usec);
+      }
+    } else
+      fprintf(stdout, "\n");
 }
