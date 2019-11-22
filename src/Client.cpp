@@ -324,47 +324,49 @@ bool Client::isConnected(void) {
 // either before connect() or after connect() and before writes()
 void Client::StartSynch (void) {
 #ifdef HAVE_THREAD_DEBUG
-  thread_debug("Client start sync enterred");
+    thread_debug("Client start sync enterred");
 #endif
-  int barrier_needed = !isNoConnectSync(mSettings);
-  // Perform delays, usually between connect() and data xfer though before connect
-  // if this is a connect only test
+    int barrier_needed = !isNoConnectSync(mSettings);
+    // Perform delays, usually between connect() and data xfer though before connect
+    // if this is a connect only test
 #if defined(HAVE_CLOCK_NANOSLEEP)
-  // check for an epoch based start time
-  if (isTxStartTime(mSettings)) {
-      if (isIsochronous(mSettings)) {
-	Timestamp tmp;
-	tmp.set(mSettings->txstart_epoch.tv_sec, mSettings->txstart_epoch.tv_usec);
-	framecounter = new Isochronous::FrameCounter(mSettings->mFPS, tmp);
-      } else {
+    // check for an epoch based start time
+    if (isTxStartTime(mSettings)) {
+	if (isIsochronous(mSettings)) {
+	    Timestamp tmp;
+	    tmp.set(mSettings->txstart_epoch.tv_sec, mSettings->txstart_epoch.tv_usec);
+	    framecounter = new Isochronous::FrameCounter(mSettings->mFPS, tmp);
+	} else {
+	    timespec tmp;
+	    tmp.tv_sec = mSettings->txstart_epoch.tv_sec;
+	    tmp.tv_nsec = mSettings->txstart_epoch.tv_usec * 1000;
+	    int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &tmp, NULL);
+	    if (rc) {
+		fprintf(stderr, "txstart failed clock_nanosleep()=%d\n", rc);
+		fflush(stderr);
+	    } else {
+		barrier_needed = 0;
+	    }
+	}
+    } else if (isTxHoldback(mSettings) && !isConnectOnly(mSettings)) {
 	timespec tmp;
-	tmp.tv_sec = mSettings->txstart_epoch.tv_sec;
-	tmp.tv_nsec = mSettings->txstart_epoch.tv_usec * 1000;
-	int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &tmp, NULL);
+	tmp.tv_sec = mSettings->txholdback_timer.tv_sec;
+	tmp.tv_nsec = mSettings->txholdback_timer.tv_usec * 1000;
+	// See if this a delay between connect and data
+	int rc = clock_nanosleep(CLOCK_MONOTONIC, 0, &tmp, NULL);
 	if (rc) {
-	  fprintf(stderr, "txstart failed clock_nanosleep()=%d\n", rc);
+	    fprintf(stderr, "txholdback failed clock_nanosleep()=%d\n", rc);
 	} else
-	  barrier_needed = 0;
-      }
-  } else if (isTxHoldback(mSettings) && !isConnectOnly(mSettings)) {
-    timespec tmp;
-    tmp.tv_sec = mSettings->txholdback_timer.tv_sec;
-    tmp.tv_nsec = mSettings->txholdback_timer.tv_usec * 1000;
-    // See if this a delay between connect and data
-    int rc = clock_nanosleep(CLOCK_MONOTONIC, 0, &tmp, NULL);
-    if (rc) {
-      fprintf(stderr, "txholdback failed clock_nanosleep()=%d\n", rc);
-    } else
-      barrier_needed = 0;
-  }
+	    barrier_needed = 0;
+    }
 #endif
-  if (!isServerReverse(mSettings) && mSettings->multihdr && \
-      barrier_needed) {
-      BarrierClient(mSettings->multihdr, 1);
-  }
-  SetReportStartTime();
+    if (!isServerReverse(mSettings) && mSettings->multihdr && \
+	barrier_needed) {
+	BarrierClient(mSettings->multihdr, 1);
+    }
+    SetReportStartTime();
 #ifdef HAVE_THREAD_DEBUG
-  thread_debug("Client start sync exited");
+    thread_debug("Client start sync exited");
 #endif
 }
 
