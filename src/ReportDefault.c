@@ -538,9 +538,13 @@ void *reporter_reportpeer(struct ConnectionInfo *stats, int ID) {
 	  }
 	}
 	if (isTripTime(stats)) {
-	    snprintf(b, PEERBUFSIZE-strlen(b), " (trip-times) (%ld.%ld)", \
-		   stats->epochStartTime.tv_sec, stats->epochStartTime.tv_usec);
+	    snprintf(b, PEERBUFSIZE-strlen(b), " (trip-times)");
 	    b += strlen(b);
+	    if (stats->mThreadMode == kMode_Server) {
+		snprintf(b, PEERBUFSIZE-strlen(b), " (%ld.%ld)", \
+			 stats->epochStartTime.tv_sec, stats->epochStartTime.tv_usec);
+		b += strlen(b);
+	    }
 	}
 	if (stats->l2mode) {
 	    snprintf(b, PEERBUFSIZE-strlen(b), " (%s=0x%X)", "l2mode", stats->l2mode);
