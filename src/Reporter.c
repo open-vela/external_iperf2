@@ -1505,42 +1505,41 @@ inline void reporter_handle_packet_server_udp(struct ReportHeader *reporthdr, st
 	stats->transit.vdTransit = 0;
 	stats->transit.meanTransit = 0;
 	stats->transit.m2Transit = 0;
-	return;
-    }
-
-    // Do L2 accounting first (if needed)
-    if (packet->l2errors && (data->cntDatagrams > L2DROPFILTERCOUNTER)) {
+    } else if (!packet->emptyreport) {
+      // Do L2 accounting first (if needed)
+      if (packet->l2errors && (data->cntDatagrams > L2DROPFILTERCOUNTER)) {
 	stats->l2counts.cnt++;
 	stats->l2counts.tot_cnt++;
 	if (packet->l2errors & L2UNKNOWN) {
-	    stats->l2counts.unknown++;
-	    stats->l2counts.tot_unknown++;
+	  stats->l2counts.unknown++;
+	  stats->l2counts.tot_unknown++;
 	}
 	if (packet->l2errors & L2LENERR) {
-	    stats->l2counts.lengtherr++;
-	    stats->l2counts.tot_lengtherr++;
+	  stats->l2counts.lengtherr++;
+	  stats->l2counts.tot_lengtherr++;
 	}
 	if (packet->l2errors & L2CSUMERR) {
-	    stats->l2counts.udpcsumerr++;
-	    stats->l2counts.tot_udpcsumerr++;
+	  stats->l2counts.udpcsumerr++;
+	  stats->l2counts.tot_udpcsumerr++;
 	}
-    }
-    // packet loss occured if the datagram numbers aren't sequential
-    if ( packet->packetID != data->PacketID + 1 ) {
+      }
+      // packet loss occured if the datagram numbers aren't sequential
+      if ( packet->packetID != data->PacketID + 1 ) {
 	if (packet->packetID < data->PacketID + 1 ) {
-	    data->cntOutofOrder++;
+	  data->cntOutofOrder++;
 	} else {
-	    data->cntError += packet->packetID - data->PacketID - 1;
+	  data->cntError += packet->packetID - data->PacketID - 1;
 	}
-    }
-    // never decrease datagramID (e.g. if we get an out-of-order packet)
-    if ( packet->packetID > data->PacketID ) {
+      }
+      // never decrease datagramID (e.g. if we get an out-of-order packet)
+      if ( packet->packetID > data->PacketID ) {
 	data->PacketID = packet->packetID;
+      }
+      // These are valid packets that need standard iperf accounting
+      reporter_handle_packet_pps(data, stats);
+      reporter_handle_packet_oneway_transit(data, stats, packet);
+      reporter_handle_packet_isochronous(data, stats, packet);
     }
-    // These are valid packets that need standard iperf accounting
-    reporter_handle_packet_pps(data, stats);
-    reporter_handle_packet_oneway_transit(data, stats, packet);
-    reporter_handle_packet_isochronous(data, stats, packet);
 }
 
 void reporter_handle_packet_client(struct ReportHeader *reporthdr, struct ReportStruct *packet) {
