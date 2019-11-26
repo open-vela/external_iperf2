@@ -681,7 +681,7 @@ void Client::RunTCP( void ) {
 	reportstruct->packetTime.tv_sec = now.getSecs();
 	reportstruct->packetTime.tv_usec = now.getUsecs();
 	if ((mSettings->mInterval > 0) || isEnhanced(mSettings)) {
-            ReportPacket( mSettings->reporthdr, reportstruct );
+            ReportPacket(mSettings->reporthdr, reportstruct);
         }
 
         if (isModeAmount(mSettings)) {
