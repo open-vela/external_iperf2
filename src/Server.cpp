@@ -632,11 +632,14 @@ void Server::RunUDP( void ) {
 	// bandwidth accounting, basically it's indicating
 	// that the reportstruct itself couldn't be
 	// completely filled out.
-	reportstruct->emptyreport=0;
+	reportstruct->emptyreport=1;
+	reportstruct->packetLen=0;
 	// read the next packet with timestamp
 	// will also set empty report or not
 	rxlen=ReadWithRxTimestamp(&readerr);
 	if (!readerr && (rxlen > 0)) {
+	    reportstruct->emptyreport = 0;
+	    reportstruct->packetLen = rxlen;
 	    if (isL2LengthCheck(mSettings)) {
 		reportstruct->l2len = rxlen;
 		// L2 processing will set the reportstruct packet length with the length found in the udp header
@@ -644,9 +647,6 @@ void Server::RunUDP( void ) {
 		// will do the compare and account and print l2 errors
 		reportstruct->l2errors = 0x0;
 		L2_processing();
-	    } else {
-		// Normal UDP rx, set the length to the socket received length
-		reportstruct->packetLen = rxlen;
 	    }
 	    if (!(reportstruct->l2errors & L2UNKNOWN)) {
 		// ReadPacketID returns true if this is the last UDP packet sent by the client
