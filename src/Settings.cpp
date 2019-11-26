@@ -974,10 +974,9 @@ void Settings_ModalOptions( struct thread_Settings *mExtSettings ) {
 	mExtSettings->mUDPRate = kDefault_UDPRate;
     }
 
-    if (isUDP(mExtSettings) || (mExtSettings->mThreadMode != kMode_Client))  {
+    if (mExtSettings->mThreadMode != kMode_Client)  {
         if (isTripTime(mExtSettings)) {
-            unsetTripTime(mExtSettings);
-            fprintf(stderr, "WARNING: option of --trip-time requires tcp (not udp) and is only supported on the client and not on the server\n");
+            fprintf(stderr, "WARNING: setting of option --trip-times is recommended on the client and not on the server\n");
 	}
         if (isConnectOnly(mExtSettings)) {
             unsetConnectOnly(mExtSettings);
