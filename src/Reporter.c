@@ -1506,6 +1506,7 @@ inline void reporter_handle_packet_server_udp(struct ReportHeader *reporthdr, st
 	stats->transit.meanTransit = 0;
 	stats->transit.m2Transit = 0;
     } else if (!packet->emptyreport) {
+      // These are valid packets that need standard iperf accounting
       // Do L2 accounting first (if needed)
       if (packet->l2errors && (data->cntDatagrams > L2DROPFILTERCOUNTER)) {
 	stats->l2counts.cnt++;
@@ -1535,7 +1536,6 @@ inline void reporter_handle_packet_server_udp(struct ReportHeader *reporthdr, st
       if ( packet->packetID > data->PacketID ) {
 	data->PacketID = packet->packetID;
       }
-      // These are valid packets that need standard iperf accounting
       reporter_handle_packet_pps(data, stats);
       reporter_handle_packet_oneway_transit(data, stats, packet);
       reporter_handle_packet_isochronous(data, stats, packet);
@@ -1548,19 +1548,18 @@ void reporter_handle_packet_client(struct ReportHeader *reporthdr, struct Report
 
     data->packetTime = packet->packetTime;
     stats->socket = packet->socket;
-    if (packet->errwrite) {
-	if (packet->errwrite != WriteErrNoAccount) {
-	    stats->sock_callstats.write.WriteErr++;
-	    stats->sock_callstats.write.totWriteErr++;
-	}
-    } else {
+    if (packet->errwrite && (packet->errwrite != WriteErrNoAccount)) {
+	stats->sock_callstats.write.WriteErr++;
+	stats->sock_callstats.write.totWriteErr++;
+    }
+    if (!packet->emptyreport) {
+	// These are valid packets that need standard iperf accounting
 	stats->sock_callstats.write.WriteCnt++;
 	stats->sock_callstats.write.totWriteCnt++;
-    }
-    // These are valid packets that need standard iperf accounting
-    if (!packet->emptyreport && isUDP(data)) {
-	reporter_handle_packet_pps(data, stats);
-	reporter_handle_packet_isochronous(data, stats, packet);
+	if (isUDP(data)) {
+	  reporter_handle_packet_pps(data, stats);
+	  reporter_handle_packet_isochronous(data, stats, packet);
+	}
     }
 }
 
@@ -1682,7 +1681,6 @@ static inline void reset_transfer_stats(struct ReporterData *stats) {
 	if ((stats->info.mTCP == (char)kMode_Client) || (stats->info.mUDP == (char)kMode_Client)) {
 	    stats->info.sock_callstats.write.WriteCnt = 0;
 	    stats->info.sock_callstats.write.WriteErr = 0;
-	    stats->info.sock_callstats.write.WriteErr = 0;
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 	    stats->info.sock_callstats.write.TCPretry = 0;
 	    stats->info.sock_callstats.write.up_to_date = 0;
@@ -1725,7 +1723,11 @@ static inline void reset_transfer_stats_client_tcp(struct ReporterData *stats) {
 #endif
 }
 static inline void reset_transfer_stats_client_udp(struct ReporterData *stats) {
-    stats->info.startTime = stats->info.endTime;
+    if (stats->info.cntError < 0) {
+	stats->info.cntError = 0;
+    }
+    stats->lastError = stats->cntError;
+    stats->lastDatagrams = stats->PacketID;
     stats->lastTotal = stats->TotalLen;
     stats->info.sock_callstats.write.WriteCnt = 0;
     stats->info.sock_callstats.write.WriteErr = 0;
@@ -1734,6 +1736,7 @@ static inline void reset_transfer_stats_client_udp(struct ReporterData *stats) {
     stats->info.isochstats.slipcnt = 0;
     stats->info.IPGcnt = 0;
     stats->info.IPGsum = 0;
+    stats->info.startTime = stats->info.endTime;    
 }
 static inline void reset_transfer_stats_server_tcp(struct ReporterData *stats) {
     int ix;
@@ -1905,7 +1908,6 @@ static void output_transfer_report_client_udp(struct ReporterData *stats, struct
 	stats->info.endTime = TimeDifference(stats->packetTime, stats->startTime);
 	reporter_print(stats, TRANSFER_REPORT, 1);
     } else {
-	stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
 	stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
 	stats->info.endTime = TimeDifference(stats->nextTime, stats->startTime);
 	reporter_print(stats, TRANSFER_REPORT, 0);
