@@ -1388,7 +1388,7 @@ int Settings_GenerateClientHdr( struct thread_Settings *client, client_hdr *hdr 
 	 */
 	hdr->udp.tlvoffset = htons((sizeof(client_hdr_udp_tests) + sizeof(client_hdr_v1) + sizeof(UDP_datagram)));
 
-	if (isL2LengthCheck(client) || isIsochronous(client) || isNoUDPfin(client)) {
+	if (isL2LengthCheck(client) || isIsochronous(client) || isNoUDPfin(client) || isTripTime(client)) {
 	    flags |= HEADER_UDPTESTS;
 	    uint16_t testflags = 0;
 
@@ -1403,6 +1403,9 @@ int Settings_GenerateClientHdr( struct thread_Settings *client, client_hdr *hdr 
 	    }
 	    if (isNoUDPfin(client)) {
 		testflags |= HEADER_NOUDPFIN;
+	    }
+	    if (isTripTime(client)) {
+		testflags |= HEADER_PKTTRIPTIME;
 	    }
 	    // Write flags to header so the listener can determine the tests requested
 	    hdr->udp.testflags = htons(testflags);
