@@ -1210,6 +1210,9 @@ int Listener::ReadClientHeader(client_hdr *hdr ) {
 	    if ((testflags & HEADER_NOUDPFIN) != 0) {
 		setNoUDPfin(server);
 	    }
+	    if ((testflags & HEADER_PKTTRIPTIME) != 0) {
+		setTripTime(server);
+	    }
 	    reporter_peerversion(server, ntohl(hdr->udp.version_u), ntohl(hdr->udp.version_l));
 	}
     } else {

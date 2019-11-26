@@ -314,16 +314,28 @@ void Server::InitTrafficLoop (void) {
         // even when mSettings has already destroyed
         myJob = mSettings->reporthdr;
 	//
-	// Set the report start times and next report times
+	// Set the report start times and next report times, options
+	// are now, the accept time or the first write time
 	//
+	now.setnow();
+	myJob->report.startTime.tv_sec = now.getSecs();
+	myJob->report.startTime.tv_usec = now.getUsecs();
 	if (!isReverse(mSettings)) {
-	  // Servers that aren't full duplex use the accept timestamp for start
-	  myJob->report.startTime.tv_sec = mSettings->accept_time.tv_sec;
-	  myJob->report.startTime.tv_usec = mSettings->accept_time.tv_usec;
-	} else {
-	  now.setnow();
-	  myJob->report.startTime.tv_sec = now.getSecs();
-	  myJob->report.startTime.tv_usec = now.getUsecs();
+	  if (isUDP(mSettings) && isTripTime(mSettings)) {
+	    // Trip times use the first packet's sent time
+	    // RJM add some defense to the below
+	    int n;
+	    if ((n = recvn(mSettings->mSock, mBuf, sizeof (struct UDP_datagram), MSG_PEEK)) \
+		== sizeof(struct UDP_datagram)) {
+	      struct UDP_datagram* mBuf_UDP  = (struct UDP_datagram *) mBuf;
+	      myJob->report.startTime.tv_sec = ntohl(mBuf_UDP->tv_sec);
+	      myJob->report.startTime.tv_usec = ntohl(mBuf_UDP->tv_usec);
+	    }
+	  } else {
+	      // Servers that aren't full duplex use the accept timestamp for start
+	      myJob->report.startTime.tv_sec = mSettings->accept_time.tv_sec;
+	      myJob->report.startTime.tv_usec = mSettings->accept_time.tv_usec;
+	  }
 	}
 	myJob->report.nextTime = myJob->report.startTime;
 	TimeAdd(myJob->report.nextTime, myJob->report.intervalTime);
@@ -458,7 +470,6 @@ bool Server::ReadPacketID (void) {
     // read the sent timestamp from the rx packet
     reportstruct->sentTime.tv_sec = ntohl( mBuf_UDP->tv_sec  );
     reportstruct->sentTime.tv_usec = ntohl( mBuf_UDP->tv_usec );
-
     return terminate;
 }
 
