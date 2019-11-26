@@ -158,9 +158,12 @@ void client_spawn( thread_Settings *thread ) {
     // that should be fixed as a clean up
     theClient = new Client( thread );
     if (isConnectOnly(thread)) {
+      // add one to the multihdr reference to keep
+      // it around during connect_periodic.
+      // these reference will be decremented
+      // after the Client's destructor
 	UpdateMultiHdrRefCounter(thread->multihdr, 1, 0);
 	theClient->ConnectPeriodic();
-	UpdateMultiHdrRefCounter(thread->multihdr, -1, 0);
     } else if (!theClient->isConnected()) {
         // the barrier needs to be called even
         // for threads that fail connect
@@ -241,6 +244,14 @@ void client_spawn( thread_Settings *thread ) {
     }
     // Call the client's destructor which will close the socket
     DELETE_PTR( theClient );
+    if (isConnectOnly(thread)) {
+        // the client destructor may have posted to the reporter
+        // a thread_rest should yied to it such that
+        // the final min/mean/max message follows the
+        // last connect message
+        thread_rest();
+	UpdateMultiHdrRefCounter(thread->multihdr, -1, 0);
+    }
 }
 
 /*

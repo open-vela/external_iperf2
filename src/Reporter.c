@@ -180,6 +180,9 @@ struct MultiHeader* InitSumReport(struct thread_Settings *agent, int inID) {
 	multihdr->threads = 0;
 	multihdr->connect_times.min = FLT_MAX;
 	multihdr->connect_times.max = FLT_MIN;
+	multihdr->connect_times.vd = 0;
+	multihdr->connect_times.m2 = 0;
+	multihdr->connect_times.mean = 0;
 	if (isMultipleReport(agent)) {
 	    struct ReporterData *data = &multihdr->report;
 	    data->type = TRANSFER_REPORT;
@@ -1183,7 +1186,15 @@ static void reporter_compute_connect_times (struct MultiHeader *hdr, double conn
   // Compute end/end delay stats
   if (connect_time > 0.0) {
     hdr->connect_times.sum += connect_time;
-    hdr->connect_times.cnt++;
+    if ((hdr->connect_times.cnt++) == 1) {
+      hdr->connect_times.vd = connect_time;
+      hdr->connect_times.mean = connect_time;
+      hdr->connect_times.m2 = connect_time * connect_time;
+    } else {
+      hdr->connect_times.vd = connect_time - hdr->connect_times.mean;
+      hdr->connect_times.mean = hdr->connect_times.mean + (hdr->connect_times.vd / hdr->connect_times.cnt);
+      hdr->connect_times.m2 = hdr->connect_times.m2 + (hdr->connect_times.vd * (connect_time - hdr->connect_times.mean));
+    }
     // mean min max tests
     if (connect_time < hdr->connect_times.min)
       hdr->connect_times.min = connect_time;
@@ -1192,11 +1203,6 @@ static void reporter_compute_connect_times (struct MultiHeader *hdr, double conn
   } else {
     hdr->connect_times.err++;
   }
-  // For variance, working units is microseconds
-  // variance interval
-  // stats->transit.vdTransit = usec_transit - stats->transit.meanTransit;
-  // stats->transit.meanTransit = stats->transit.meanTransit + (stats->transit.vdTransit / stats->transit.cntTransit);
-  // stats->transit.m2Transit = stats->transit.m2Transit + (stats->transit.vdTransit * (usec_transit - stats->transit.meanTransit));
 }
 
 /*
@@ -1850,10 +1856,11 @@ static void output_transfer_sum_report_server_udp(struct ReporterData *stats, in
 }
 static void output_connect_final_report_tcp (struct MultiHeader *multihdr) {
     if (multihdr->connect_times.cnt > 1) {
-        fprintf(stdout, "[ CT] final connect times (min/avg/max) = %0.3f/%0.3f/%0.3f ms (tot/err) = %d/%d\n", \
+        double variance = (multihdr->connect_times.cnt < 2) ? 0 : sqrt(multihdr->connect_times.m2 / (multihdr->connect_times.cnt - 1));
+        fprintf(stdout, "[ CT] final connect times (min/avg/max/stdev) = %0.3f/%0.3f/%0.3f/%0.3f ms (tot/err) = %d/%d\n", \
 		multihdr->connect_times.min,  \
 	        (multihdr->connect_times.sum / multihdr->connect_times.cnt), \
-		multihdr->connect_times.max, \
+		multihdr->connect_times.max, variance,  \
 		(multihdr->connect_times.cnt + multihdr->connect_times.err), \
 		multihdr->connect_times.err);
     }
