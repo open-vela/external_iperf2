@@ -69,6 +69,7 @@ extern "C" {
 #define HEADER_L2ETHPIPV6   0x00000002
 #define HEADER_L2LENCHECK   0x00000004
 #define HEADER_NOUDPFIN     0x00000008
+#define HEADER_PKTTRIPTIME  0x00000010
 
 #define RUN_NOW         0x00000001
 // newer flags available per HEADER_EXTEND
