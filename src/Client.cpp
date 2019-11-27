@@ -1034,16 +1034,16 @@ void Client::RunUDPIsochronous (void) {
 	        currLen = write(mSettings->mSock, mBuf, (bytecnt < mSettings->mBufLen) ? bytecnt : mSettings->mBufLen);
 	    }
 
-	    if ( currLen < 0 ) {
+	    if (currLen < 0) {
 	        reportstruct->packetID--;
 		reportstruct->emptyreport = 1;
+		currLen = 0;
 		if (FATALUDPWRITERR(errno)) {
 	            reportstruct->errwrite = WriteErrFatal;
 	            WARN_errno( 1, "write" );
 		    fatalwrite_err = 1;
 	        } else {
 		    reportstruct->errwrite = WriteErrAccount;
-		    currLen = 0;
 		}
 	    } else {
 		bytecnt -= currLen;
