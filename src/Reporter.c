@@ -1736,7 +1736,7 @@ static inline void reset_transfer_stats_client_udp(struct ReporterData *stats) {
     stats->info.isochstats.slipcnt = 0;
     stats->info.IPGcnt = 0;
     stats->info.IPGsum = 0;
-    stats->info.startTime = stats->info.endTime;    
+    stats->info.startTime = stats->info.endTime;
 }
 static inline void reset_transfer_stats_server_tcp(struct ReporterData *stats) {
     int ix;
@@ -1909,7 +1909,6 @@ static void output_transfer_report_client_udp(struct ReporterData *stats, struct
 	reporter_print(stats, TRANSFER_REPORT, 1);
     } else {
 	stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
-	stats->info.endTime = TimeDifference(stats->nextTime, stats->startTime);
 	reporter_print(stats, TRANSFER_REPORT, 0);
 	reset_transfer_stats_client_udp(stats);
     }
