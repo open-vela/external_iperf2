@@ -90,6 +90,7 @@ static int burstipg = 0;
 static int burstipg_set = 0;
 static int isochronous = 0;
 static int noudpfin = 0;
+static int numreportstructs = 0;
 
 extern Mutex groupCond;
 
@@ -169,6 +170,7 @@ const struct option long_options[] =
 {"bidir", no_argument, &bidirtest, 1},
 {"ipg", required_argument, &burstipg, 1},
 {"isochronous", optional_argument, &isochronous, 1},
+{"NUM_REPORT_STRUCTS", required_argument, &numreportstructs, 1},
 #ifdef WIN32
 {"reverse", no_argument, &reversetest, 1},
 #endif
@@ -906,6 +908,10 @@ void Settings_Interpret( char option, const char *optarg, struct thread_Settings
 		if (*end != '\0') {
 		    fprintf (stderr, "Invalid value of '%s' for --ipg\n", optarg);
 		}
+	    }
+	    if (numreportstructs) {
+		numreportstructs = 0;
+		mExtSettings->numreportstructs = atoi( optarg );
 	    }
 	    break;
         default: // ignore unknown
