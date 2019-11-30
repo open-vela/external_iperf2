@@ -72,28 +72,27 @@ void Iperf_pushback ( Iperf_ListEntry *add, Iperf_ListEntry **root ) {
 /*
  * Delete Entry del from the List
  */
-void Iperf_delete ( iperf_sockaddr *del, Iperf_ListEntry **root ) {
-    Mutex_Lock( &clients_mutex );
-    Iperf_ListEntry *temp = Iperf_present( del, *root );
-    if ( temp != NULL ) {
-        if ( temp == *root ) {
-            *root = (*root)->next;
-        } else {
-            Iperf_ListEntry *itr = *root;
-            while ( itr->next != NULL ) {
-                if ( itr->next == temp ) {
-                    itr->next = itr->next->next;
-                    break;
-                }
-                itr = itr->next;
-            }
-        }
-	if (temp->holder) {
-	    UpdateMultiHdrRefCounter(temp->holder, -1, 0);
-	}
-        delete temp;
+void Iperf_delete (iperf_sockaddr *del, Iperf_ListEntry **root) {
+    // remove_list_entry(entry) {
+    //     indirect = &head;
+    //     while ((*indirect) != entry) {
+    //	       indirect = &(*indirect)->next;
+    //     }
+    //     *indirect = entry->next
+    Mutex_Lock(&clients_mutex);
+    Iperf_ListEntry **tmp = root;
+    while (!(SockAddr_are_Equal((sockaddr*)&(*tmp)->data, (sockaddr*) del))) {
+	tmp = &(*tmp)->next;
     }
-    Mutex_Unlock( &clients_mutex );
+    if (*tmp) {
+	Iperf_ListEntry *remove = (*tmp);
+	if (remove->holder) {
+	    UpdateMultiHdrRefCounter(remove->holder, -1, 0);
+	}
+	*tmp = remove->next;
+        delete remove;
+    }
+    Mutex_Unlock(&clients_mutex);
 }
 
 /*
