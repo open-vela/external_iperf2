@@ -438,7 +438,11 @@ void InitDataReport(struct thread_Settings *mSettings) {
 	    // Create a new packet ring which is used to communicate
 	    // packet stats from the traffic thread to the reporter
 	    // thread.  The reporter thread does all packet accounting
-	    reporthdr->packetring = init_packetring(NUM_REPORT_STRUCTS, &ReportCond, &mSettings->awake_me);
+	    reporthdr->packetring = init_packetring((mSettings->numreportstructs ? mSettings->numreportstructs : NUM_REPORT_STRUCTS), \
+						    &ReportCond, &mSettings->awake_me);
+	    if (mSettings->numreportstructs)
+	        fprintf (stdout, "[%3d] NUM_REPORT_STRUCTS override from %d to %d\n", mSettings->mSock, NUM_REPORT_STRUCTS, mSettings->numreportstructs);
+
 	    // Set up the function vectors, there are three
 	    // 1) packet_handler: does packet accounting per the test and protocol
 	    // 2) output_handler: performs output, e.g. interval reports, per the test and protocol

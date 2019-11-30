@@ -234,6 +234,7 @@ struct thread_Settings {
     struct timeval accept_time;
     struct Condition awake_me;
     struct PacketRing *ackring;
+    int numreportstructs;
 };
 
 /*
