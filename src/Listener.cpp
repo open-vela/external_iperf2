@@ -849,7 +849,7 @@ void Listener::McastSetTTL( int val ) {
  * until a new connection arrives or until the -t value occurs
  * ------------------------------------------------------------------- */
 
-void Listener::Accept( thread_Settings *server ) {
+void Listener::Accept(thread_Settings *server) {
 
     server->size_peer = sizeof(iperf_sockaddr);
     // Handles interupted accepts. Returns the newly connected socket.
@@ -884,9 +884,8 @@ void Listener::Accept( thread_Settings *server ) {
 	}
 	if ( isUDP( server ) ) {
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Listener thread listening for UDP (sock=%d)", ListenSocket);
+	    thread_debug("Listener thread listening for UDP (sock=%d)", ListenSocket);
 #endif
-
 	    int rc;
 	    /* ------------------------------------------------------------------------
 	     * Do the equivalent of an accept() call for UDP sockets. This waits
@@ -897,7 +896,7 @@ void Listener::Accept( thread_Settings *server ) {
 	    // The INVALID socket is used to keep the while loop going
 	    server->mSock = INVALID_SOCKET;
 	    rc = recvfrom( ListenSocket, mBuf, mSettings->mBufLen, 0,
-			       (struct sockaddr*) &server->peer, &server->size_peer );
+			   (struct sockaddr*) &server->peer, &server->size_peer );
 	    FAIL_errno( rc == SOCKET_ERROR, "recvfrom", mSettings );
 	    if (sInterupted != 0) {
 		server->mSock = INVALID_SOCKET;
@@ -928,7 +927,7 @@ void Listener::Accept( thread_Settings *server ) {
 	    }
 	} else {
 #ifdef HAVE_THREAD_DEBUG
-	  thread_debug("Listener thread accepting for TCP (sock=%d)", ListenSocket);
+	    thread_debug("Listener thread accepting for TCP (sock=%d)", ListenSocket);
 #endif
 	    // accept a TCP  connection
 	    server->mSock = accept( ListenSocket,  (sockaddr*) &server->peer, &server->size_peer );

@@ -185,6 +185,8 @@ void byte_snprintf( char* outString, int inLen, double inNum, char inFormat );
 #define TimeDifference( left, right ) (left.tv_sec  - right.tv_sec) +   \
         (left.tv_usec - right.tv_usec) / ((double) rMillion)
 
+#define TimeDouble(timeval) (timeval.tv_sec + timeval.tv_usec / ((double) rMillion))
+
 #define TimeAdd( left, right )  do {                                    \
                                     left.tv_usec += right.tv_usec;      \
                                     if ( left.tv_usec > rMillion ) {    \
