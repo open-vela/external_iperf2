@@ -45,7 +45,7 @@ perform layer 2 length checks on received UDP packets (requires systems that sup
 print TCP maximum segment size (MTU - TCP/IP header)
 .TP
 .BR "    --NUM_REPORT_STRUCTS " \fI<count>\fR
-Override the default shared memory size between the traffic thread(s) and reporter thread in order to mitigate mutex lock contentions.  The default value of 5000 and should be sufficient for 1Gb/s networks. Increase this upon seeing the WARNing message of reporter thread too slow. If the WARNing message isn't seen, then increasing this won't have any significant effect (other than to use some additional memory.)
+Override the default shared memory size between the traffic thread(s) and reporter thread in order to mitigate mutex lock contentions.  The default value of 5000 should be sufficient for 1Gb/s networks. Increase this upon seeing the WARNing message of reporter thread too slow. If the WARNing message isn't seen, then increasing this won't have any significant effect (other than to use some additional memory.)
 .TP
 .BR -o ", " --output " \fIfilename\fR"
 output the report or error message to this specified file
