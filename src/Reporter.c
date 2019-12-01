@@ -1147,7 +1147,7 @@ void process_report ( struct ReportHeader *report ) {
 }
 
 static int condprint_interval_reports (struct ReportHeader *reporthdr, struct ReportStruct *packet) {
-    int timeslot_event = 0;
+    int advance_jobq = 0;
     // Print a report if packet time exceeds the next report interval time,
     // Also signal to the caller to move to the next report (or packet ring)
     // if there was output. This will allow for more precise interval sum accounting.
@@ -1161,11 +1161,11 @@ static int condprint_interval_reports (struct ReportHeader *reporthdr, struct Re
 	(*reporthdr->output_handler)(&reporthdr->report, sumstats, bidirstats, 0);
 	TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
 	if (reporthdr->multireport) {
-	    timeslot_event = 1;
+	    advance_jobq = 1;
 	    reporthdr->multireport->threads++;
 	}
 	if (reporthdr->bidirreport) {
-	    timeslot_event = 1;
+	    advance_jobq = 1;
 	    reporthdr->bidirreport->threads++;
 	}
     }
@@ -1183,7 +1183,7 @@ static int condprint_interval_reports (struct ReportHeader *reporthdr, struct Re
 	(*reporthdr->multireport->output_sum_handler)(&reporthdr->multireport->report, 0);
 	TimeAdd(reporthdr->multireport->report.nextTime, reporthdr->report.intervalTime);
     }
-    return timeslot_event;
+    return advance_jobq;
 }
 
 static void reporter_compute_connect_times (struct MultiHeader *hdr, double connect_time) {
@@ -1250,8 +1250,8 @@ int reporter_process_report (struct ReportHeader *reporthdr) {
 	    apply_consumption_detector();
 	    // If there are more packets to process then handle them
 	    struct ReportStruct *packet = NULL;
-	    int timeslot_event = 0;
-	    while (!timeslot_event) {
+	    int advance_jobq = 0;
+	    while (!advance_jobq) {
 		if ((packet = dequeue_packetring(reporthdr->packetring))) {
 		    // Check for a very first reported packet that needs to be summed
 		    // This has to be done in the reporter thread as these
@@ -1278,7 +1278,7 @@ int reporter_process_report (struct ReportHeader *reporthdr) {
 			// Check to output any interval reports, do this prior
 			// to packet handling to preserve interval accounting
 			if (!TimeZero(reporthdr->report.intervalTime)) {
-			    timeslot_event = condprint_interval_reports(reporthdr, packet);
+			    advance_jobq = condprint_interval_reports(reporthdr, packet);
 			}
 			// update fields common to TCP and UDP, client and server which is bytes and packet time
 			reporthdr->report.TotalLen += packet->packetLen;
@@ -1298,6 +1298,7 @@ int reporter_process_report (struct ReportHeader *reporthdr) {
 			// Transfer reports per interval reporting stay around until the final report
 		    } else {
 			need_free = 1;
+			advance_jobq = 1;
 			// A last packet event was detected
 			// printf("last packet event detected\n"); fflush(stdout);
 			reporthdr->reporter_thread_suspends = consumption_detector.reporter_thread_suspends;
@@ -1337,7 +1338,7 @@ int reporter_process_report (struct ReportHeader *reporthdr) {
 		    nullpacket.packetID = reporthdr->report.lastDatagrams;
 		    reporthdr->report.packetTime = nullpacket.packetTime;
 		    condprint_interval_reports(reporthdr, &nullpacket);
-		    timeslot_event = 1;
+		    advance_jobq = 1;
 		}
 	    }
 	}
