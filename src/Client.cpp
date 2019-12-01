@@ -1156,7 +1156,6 @@ bool Client::InProgress (void) {
 	(isModeTime(mSettings) &&  mEndTime.before(reportstruct->packetTime))  ||
 	(isModeAmount(mSettings) && (mSettings->mAmount <= 0)))
 	return false;
-
     return true;
 }
 
