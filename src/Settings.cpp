@@ -911,7 +911,7 @@ void Settings_Interpret( char option, const char *optarg, struct thread_Settings
 	    }
 	    if (numreportstructs) {
 		numreportstructs = 0;
-		mExtSettings->numreportstructs = atoi( optarg );
+		mExtSettings->numreportstructs = byte_atoi( optarg );
 	    }
 	    break;
         default: // ignore unknown
