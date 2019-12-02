@@ -520,6 +520,9 @@ void InitDataReport(struct thread_Settings *mSettings) {
 	    struct timeval *interval = &data->intervalTime;
 	    interval->tv_sec = (long) mSettings->mInterval;
 	    interval->tv_usec = (long) ((mSettings->mInterval - interval->tv_sec) * rMillion);
+	    reporthdr->output_interval_report_handler = condprint_interval_reports;
+	} else {
+	    reporthdr->output_interval_report_handler = NULL;
 	}
 	data->mHost = mSettings->mHost;
 	data->mLocalhost = mSettings->mLocalhost;
@@ -1277,8 +1280,8 @@ int reporter_process_report (struct ReportHeader *reporthdr) {
 		    if (!(packet->packetID < 0)) {
 			// Check to output any interval reports, do this prior
 			// to packet handling to preserve interval accounting
-			if (!TimeZero(reporthdr->report.intervalTime)) {
-			    advance_jobq = condprint_interval_reports(reporthdr, packet);
+			if (reporthdr->output_interval_report_handler) {
+			    advance_jobq = (*reporthdr->output_interval_report_handler)(reporthdr, packet);
 			}
 			// update fields common to TCP and UDP, client and server which is bytes and packet time
 			reporthdr->report.TotalLen += packet->packetLen;
@@ -1322,23 +1325,25 @@ int reporter_process_report (struct ReportHeader *reporthdr) {
 			    (TimeDifference(reporthdr->bidirreport->report.packetTime, packet->packetTime) > 0))
 			    reporthdr->bidirreport->report.packetTime = packet->packetTime;
 		    }
-		} else if (!TimeZero(reporthdr->report.intervalTime)) {
-		    // Interval reports need packet events
-		    // so generate them
-		    struct ReportStruct nullpacket;
-#ifdef HAVE_CLOCK_GETTIME
-		    struct timespec t1;
-		    clock_gettime(CLOCK_REALTIME, &t1);
-		    nullpacket.packetTime.tv_sec  = t1.tv_sec;
-		    nullpacket.packetTime.tv_usec = t1.tv_nsec / 1000;
-#else
-		    gettimeofday(&nullpacket.packetTime, NULL);
-#endif
-		    nullpacket.packetLen = 0;
-		    nullpacket.packetID = reporthdr->report.lastDatagrams;
-		    reporthdr->report.packetTime = nullpacket.packetTime;
-		    condprint_interval_reports(reporthdr, &nullpacket);
+		} else {
 		    advance_jobq = 1;
+		    if (reporthdr->output_interval_report_handler) {
+		      // Interval reports need packet events
+		      // so generate them
+		      struct ReportStruct nullpacket;
+#ifdef HAVE_CLOCK_GETTIME
+		      struct timespec t1;
+		      clock_gettime(CLOCK_REALTIME, &t1);
+		      nullpacket.packetTime.tv_sec  = t1.tv_sec;
+		      nullpacket.packetTime.tv_usec = t1.tv_nsec / 1000;
+#else
+		      gettimeofday(&nullpacket.packetTime, NULL);
+#endif
+		      nullpacket.packetLen = 0;
+		      nullpacket.packetID = reporthdr->report.lastDatagrams;
+		      reporthdr->report.packetTime = nullpacket.packetTime;
+		      advance_jobq = (*reporthdr->output_interval_report_handler)(reporthdr, &nullpacket);
+		    }
 		}
 	    }
 	}
