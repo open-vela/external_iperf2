@@ -392,7 +392,7 @@ void UpdateMultiHdrRefCounter(struct MultiHeader *multihdr, int val, int sockfd)
 void FreeReport(struct ReportHeader *reporthdr) {
     if (reporthdr) {
 	if (reporthdr->packetring && (reporthdr->reporter_thread_suspends < 3)) {
-	    fprintf(stdout, "WARN: this test was likley CPU bound (or may not be detecting the underlying network devices)\n");
+	  fprintf(stdout, "WARN: this test was likley CPU bound (%d) (or may not be detecting the underlying network devices)\n", reporthdr->reporter_thread_suspends);
 	}
 	if (reporthdr->packetring) {
 	    free_packetring(reporthdr->packetring);
@@ -1327,6 +1327,7 @@ int reporter_process_report (struct ReportHeader *reporthdr) {
 		    }
 		} else {
 		    advance_jobq = 1;
+		    apply_consumption_detector();
 		    if (reporthdr->output_interval_report_handler) {
 		      // Interval reports need packet events
 		      // so generate them
