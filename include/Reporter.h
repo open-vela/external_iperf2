@@ -333,6 +333,7 @@ struct ReportHeader {
     void (*output_handler) (struct ReporterData *stats, struct ReporterData *sumstats, struct ReporterData *bidirstats, int final);
     void (*output_sum_handler) (struct ReporterData *stats, int final);
     void (*output_bidir_handler) (struct ReporterData *stats, int final);
+    int (*output_interval_report_handler) (struct ReportHeader *reporthdr, struct ReportStruct *packet);
     struct MultiHeader *multireport;
     struct MultiHeader *bidirreport;
     struct ReportHeader *next;
