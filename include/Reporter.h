@@ -63,7 +63,7 @@ struct thread_Settings;
 struct server_hdr;
 #include "Settings.hpp"
 
-#define NUM_REPORT_STRUCTS 5000
+#define NUM_REPORT_STRUCTS 10000
 
 // If the minimum latency exceeds the boundaries below
 // assume the clocks are not synched and suppress the
