@@ -62,29 +62,6 @@
 #include "PerfSocket.hpp"
 #include "Write_ack.hpp"
 
-#if HAVE_SCHED_SETSCHEDULER
-#include <sched.h>
-#endif
-#ifdef HAVE_MLOCKALL
-#include <sys/mman.h>
-#endif
-static void set_scheduler(thread_Settings *thread) {
-#if HAVE_SCHED_SETSCHEDULER
-    if ( isRealtime( thread ) ) {
-	struct sched_param sp;
-	sp.sched_priority = sched_get_priority_max(SCHED_RR);
-	// SCHED_OTHER, SCHED_FIFO, SCHED_RR
-	if (sched_setscheduler(0, SCHED_RR, &sp) < 0)  {
-	    perror("Client set scheduler");
-#ifdef HAVE_MLOCKALL
-	} else if (mlockall(MCL_CURRENT | MCL_FUTURE) != 0) {
-	    // lock the threads memory
-	    perror ("mlockall");
-#endif // MLOCK
-	}
-    }
-#endif // SCHED
-}
 
 /*
  * listener_spawn is responsible for creating a Listener class
@@ -115,7 +92,7 @@ void server_spawn(thread_Settings *thread) {
 		 (void *) thread, (void *)thread->multihdr, thread->mSock);
 #endif
     // set traffic thread to realtime if needed
-    set_scheduler(thread);
+    thread_setscheduler(thread);
 
     // Start up the server
     theServer = new Server( thread );
@@ -148,7 +125,7 @@ void client_spawn( thread_Settings *thread ) {
     thread_Settings *reverse_client = NULL;
 
     // set traffic thread to realtime if needed
-    set_scheduler(thread);
+    thread_setscheduler(thread);
 
     if (isBidir(thread) && !thread->bidirhdr)
         thread->bidirhdr = InitBiDirReport(thread, 0);
@@ -317,7 +294,7 @@ void writeack_server_spawn(thread_Settings *thread) {
     thread_debug("Write ack server spawn settings=%p sock=%d", (void *) thread, thread->mSock);
 #endif
     // set traffic thread to realtime if needed
-    set_scheduler(thread);
+    thread_setscheduler(thread);
 
     // Start up the server
     theServerAck = new WriteAck(thread);
@@ -336,7 +313,7 @@ void writeack_client_spawn(thread_Settings *thread) {
     thread_debug("Write ack client spawn settings=%p sock=%d", (void *) thread, thread->mSock);
 #endif
     // set traffic thread to realtime if needed
-    set_scheduler(thread);
+    thread_setscheduler(thread);
     // the client side server doesn't do write acks
     unsetWriteAck(thread);
     // Start up the server
