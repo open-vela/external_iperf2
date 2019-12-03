@@ -498,6 +498,33 @@ int thread_numtrafficthreads( void ) {
     return thread_trfc_sNum;
 }
 
+/* -------------------------------------------------------------------
+ * Support for realtime scheduling of threads
+ * ------------------------------------------------------------------- */
+#if HAVE_SCHED_SETSCHEDULER
+#include <sched.h>
+#endif
+#ifdef HAVE_MLOCKALL
+#include <sys/mman.h>
+#endif
+void thread_setscheduler(struct thread_Settings *thread) {
+#if HAVE_SCHED_SETSCHEDULER
+    if ( isRealtime( thread ) ) {
+	struct sched_param sp;
+	sp.sched_priority = sched_get_priority_max(SCHED_RR);
+	// SCHED_OTHER, SCHED_FIFO, SCHED_RR
+	if (sched_setscheduler(0, SCHED_RR, &sp) < 0)  {
+	    perror("Client set scheduler");
+#ifdef HAVE_MLOCKALL
+	} else if (mlockall(MCL_CURRENT | MCL_FUTURE) != 0) {
+	    // lock the threads memory
+	    perror ("mlockall");
+#endif // MLOCK
+	}
+    }
+#endif // SCHED
+}
+
 /*
  * -------------------------------------------------------------------
  * Allow another thread to execute. If no other threads are runable this
