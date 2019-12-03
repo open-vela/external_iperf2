@@ -1077,6 +1077,8 @@ void reporter_spawn( struct thread_Settings *thread ) {
     Condition_Unlock(reporter_state.await);
     Condition_Broadcast(&reporter_state.await);
 
+    // set reporter thread to realtime if requested
+    thread_setscheduler(thread);
     /*
      * Keep the reporter thread alive under the following conditions
      *

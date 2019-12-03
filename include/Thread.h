@@ -146,6 +146,10 @@ DWORD WINAPI thread_run_wrapper( void* paramPtr );
 void*thread_run_wrapper( void* paramPtr );
 #endif
 
+#if HAVE_SCHED_SETSCHEDULER
+void thread_setscheduler(struct thread_Settings *thread);
+#endif
+
 void thread_rest ( void );
 
 // defined in launch.cpp
