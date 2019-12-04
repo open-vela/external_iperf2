@@ -1443,6 +1443,8 @@ int Settings_GenerateClientHdr( struct thread_Settings *client, client_hdr *hdr 
     if (flags & HEADER_EXTEND) {
 	if (isBWSet(client)) {
 	    hdr->extend.mRate = htonl(client->mUDPRate);
+	} else {
+	    hdr->extend.mRate = 0;
 	}
 	if (client->mUDPRateUnits == kRate_PPS) {
 	    extendflags |= UNITS_PPS;
