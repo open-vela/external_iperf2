@@ -1221,7 +1221,11 @@ void Settings_GenerateListenerSettings( struct thread_Settings *client, struct t
             (*listener)->mLocalhost = new char[strlen( client->mLocalhost ) + 1];
             strcpy( (*listener)->mLocalhost, client->mLocalhost );
         }
-	(*listener)->mBufLen   = kDefault_UDPBufLen;
+	if (isUDP((*listener))) {
+	    (*listener)->mBufLen = kDefault_UDPBufLen;
+	} else {
+	    (*listener)->mBufLen = kDefault_TCPBufLen;
+	}
 	setReport((*listener));
     } else {
         *listener = NULL;
@@ -1240,7 +1244,7 @@ void Settings_GenerateClientSettings( struct thread_Settings *server,
                                       client_hdr *hdr ) {
     int extendflags = 0;
     if (!server || !hdr)
-      return;
+	return;
     int flags = ntohl(hdr->base.flags);
     if ((flags & HEADER_EXTEND) != 0 ) {
 	extendflags = ntohl(hdr->extend.flags);
@@ -1254,36 +1258,36 @@ void Settings_GenerateClientSettings( struct thread_Settings *server,
 	    if ((extendflags & BIDIR) == BIDIR) {
 	        Settings_Copy(server, &fullduplex);
 		if (fullduplex) {
-		   *client = fullduplex;
-		   setBidir(fullduplex);
+		    *client = fullduplex;
+		    setBidir(fullduplex);
 		}
 	    } else if ((extendflags & REVERSE) == REVERSE) {
 	        *client = NULL;
 	        fullduplex = server;
 	    }
 	    if (fullduplex) {
-	      setServerReverse(fullduplex);
-	      unsetReport(fullduplex);
-	      fullduplex->mAmount = ntohl(hdr->base.mAmount);
-	      if ((fullduplex->mAmount & 0x80000000) > 0) {
-		setModeTime(fullduplex);
+		setServerReverse(fullduplex);
+		unsetReport(fullduplex);
+		fullduplex->mAmount = ntohl(hdr->base.mAmount);
+		if ((fullduplex->mAmount & 0x80000000) > 0) {
+		    setModeTime(fullduplex);
 #ifndef WIN32
-		fullduplex->mAmount |= 0xFFFFFFFF00000000LL;
+		    fullduplex->mAmount |= 0xFFFFFFFF00000000LL;
 #else
-		fullduplex->mAmount |= 0xFFFFFFFF00000000;
+		    fullduplex->mAmount |= 0xFFFFFFFF00000000;
 #endif
-		fullduplex->mAmount = -fullduplex->mAmount;
-	      } else {
-		unsetModeTime(fullduplex);
-	      }
-	      if (!isBWSet(fullduplex)) {
-		fullduplex->mUDPRate = ntohl(hdr->extend.mRate);
-		if ((extendflags & UNITS_PPS) == UNITS_PPS) {
-		  fullduplex->mUDPRateUnits = kRate_PPS;
+		    fullduplex->mAmount = -fullduplex->mAmount;
 		} else {
-		  fullduplex->mUDPRateUnits = kRate_BW;
+		    unsetModeTime(fullduplex);
 		}
-	      }
+		if (!isBWSet(fullduplex)) {
+		    fullduplex->mUDPRate = ntohl(hdr->extend.mRate);
+		    if ((extendflags & UNITS_PPS) == UNITS_PPS) {
+			fullduplex->mUDPRateUnits = kRate_PPS;
+		    } else {
+			fullduplex->mUDPRateUnits = kRate_BW;
+		    }
+		}
 	    }
 	}
     } else if ( (flags & HEADER_VERSION1) != 0 ) {
@@ -1316,7 +1320,7 @@ void Settings_GenerateClientSettings( struct thread_Settings *server,
 				  kTest_TradeOff : kTest_DualTest);
         (*client)->mThreadMode = kMode_Client;
 	if ((flags & HEADER_EXTEND) != 0 ) {
-	    if ( !isBWSet(server) ) {
+	    if (!isBWSet(server)) {
 		(*client)->mUDPRate = ntohl(hdr->extend.mRate);
 		if ((extendflags & UNITS_PPS) == UNITS_PPS) {
 		    (*client)->mUDPRateUnits = kRate_PPS;
