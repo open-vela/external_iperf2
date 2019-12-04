@@ -73,8 +73,6 @@ void Iperf_pushback ( Iperf_ListEntry *add, Iperf_ListEntry **root ) {
  * Delete Entry del from the List
  */
 void Iperf_delete (iperf_sockaddr *del, Iperf_ListEntry **root) {
-    if (!(*root))
-        return;
     // remove_list_entry(entry) {
     //     indirect = &head;
     //     while ((*indirect) != entry) {
@@ -83,7 +81,7 @@ void Iperf_delete (iperf_sockaddr *del, Iperf_ListEntry **root) {
     //     *indirect = entry->next
     Mutex_Lock(&clients_mutex);
     Iperf_ListEntry **tmp = root;
-    while (!(SockAddr_are_Equal((sockaddr*)&(*tmp)->data, (sockaddr*) del))) {
+    while ((*tmp) && !(SockAddr_are_Equal((sockaddr*)&(*tmp)->data, (sockaddr*) del))) {
 	tmp = &(*tmp)->next;
     }
     if (*tmp) {
