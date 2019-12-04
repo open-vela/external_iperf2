@@ -73,6 +73,8 @@ void Iperf_pushback ( Iperf_ListEntry *add, Iperf_ListEntry **root ) {
  * Delete Entry del from the List
  */
 void Iperf_delete (iperf_sockaddr *del, Iperf_ListEntry **root) {
+    if (!(*root))
+        return;
     // remove_list_entry(entry) {
     //     indirect = &head;
     //     while ((*indirect) != entry) {
