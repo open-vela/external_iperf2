@@ -395,7 +395,7 @@ void FreeReport(struct ReportHeader *reporthdr) {
 	  fprintf(stdout, "WARN: this test was likley CPU bound (%d) (or may not be detecting the underlying network devices)\n", reporthdr->reporter_thread_suspends);
 	}
 	if (reporthdr->packetring) {
-	    free_packetring(reporthdr->packetring);
+	    packetring_free(reporthdr->packetring);
 	}
 	if (reporthdr->report.info.latency_histogram) {
 	    histogram_delete(reporthdr->report.info.latency_histogram);
@@ -438,7 +438,7 @@ void InitDataReport(struct thread_Settings *mSettings) {
 	    // Create a new packet ring which is used to communicate
 	    // packet stats from the traffic thread to the reporter
 	    // thread.  The reporter thread does all packet accounting
-	    reporthdr->packetring = init_packetring((mSettings->numreportstructs ? mSettings->numreportstructs : NUM_REPORT_STRUCTS), \
+	    reporthdr->packetring = packetring_init((mSettings->numreportstructs ? mSettings->numreportstructs : NUM_REPORT_STRUCTS), \
 						    &ReportCond, &mSettings->awake_me);
 	    if (mSettings->numreportstructs)
 	        fprintf (stdout, "[%3d] NUM_REPORT_STRUCTS override from %d to %d\n", mSettings->mSock, NUM_REPORT_STRUCTS, mSettings->numreportstructs);
@@ -718,10 +718,10 @@ void ReportPacket( struct ReportHeader* agent, struct ReportStruct *packet ) {
     if ( agent != NULL ) {
 #ifdef HAVE_THREAD_DEBUG
 	if (packet->packetID < 0) {
-	  thread_debug("Reporting last packet for %p  qdepth=%d", (void *) agent, getcount_packetring(agent->packetring));
+	  thread_debug("Reporting last packet for %p  qdepth=%d", (void *) agent, packetring_getcount(agent->packetring));
 	}
 #endif
-        enqueue_packetring(agent->packetring, packet);
+        packetring_enqueue(agent->packetring, packet);
 #ifndef HAVE_THREAD
         /*
          * Process the report in this thread
@@ -1192,26 +1192,26 @@ static int condprint_interval_reports (struct ReportHeader *reporthdr, struct Re
 }
 
 static void reporter_compute_connect_times (struct MultiHeader *hdr, double connect_time) {
-  // Compute end/end delay stats
-  if (connect_time > 0.0) {
-    hdr->connect_times.sum += connect_time;
-    if ((hdr->connect_times.cnt++) == 1) {
-      hdr->connect_times.vd = connect_time;
-      hdr->connect_times.mean = connect_time;
-      hdr->connect_times.m2 = connect_time * connect_time;
+    // Compute end/end delay stats
+    if (connect_time > 0.0) {
+	hdr->connect_times.sum += connect_time;
+	if ((hdr->connect_times.cnt++) == 1) {
+	    hdr->connect_times.vd = connect_time;
+	    hdr->connect_times.mean = connect_time;
+	    hdr->connect_times.m2 = connect_time * connect_time;
+	} else {
+	    hdr->connect_times.vd = connect_time - hdr->connect_times.mean;
+	    hdr->connect_times.mean = hdr->connect_times.mean + (hdr->connect_times.vd / hdr->connect_times.cnt);
+	    hdr->connect_times.m2 = hdr->connect_times.m2 + (hdr->connect_times.vd * (connect_time - hdr->connect_times.mean));
+	}
+	// mean min max tests
+	if (connect_time < hdr->connect_times.min)
+	    hdr->connect_times.min = connect_time;
+	if (connect_time > hdr->connect_times.max)
+	    hdr->connect_times.max = connect_time;
     } else {
-      hdr->connect_times.vd = connect_time - hdr->connect_times.mean;
-      hdr->connect_times.mean = hdr->connect_times.mean + (hdr->connect_times.vd / hdr->connect_times.cnt);
-      hdr->connect_times.m2 = hdr->connect_times.m2 + (hdr->connect_times.vd * (connect_time - hdr->connect_times.mean));
+	hdr->connect_times.err++;
     }
-    // mean min max tests
-    if (connect_time < hdr->connect_times.min)
-      hdr->connect_times.min = connect_time;
-    if (connect_time > hdr->connect_times.max)
-      hdr->connect_times.max = connect_time;
-  } else {
-    hdr->connect_times.err++;
-  }
 }
 
 /*
@@ -1256,7 +1256,7 @@ int reporter_process_report (struct ReportHeader *reporthdr) {
 	    // If there are more packets to process then handle them
 	    struct ReportStruct *packet = NULL;
 	    int advance_jobq = 0;
-	    while (!advance_jobq && (packet = dequeue_packetring(reporthdr->packetring))) {
+	    while (!advance_jobq && (packet = packetring_dequeue(reporthdr->packetring))) {
 		// Check for a very first reported packet that needs to be summed
 		// This has to be done in the reporter thread as these
 		// reports are shared by multiple traffic threads
@@ -1514,39 +1514,39 @@ inline void reporter_handle_packet_server_udp(struct ReportHeader *reporthdr, st
 	stats->transit.meanTransit = 0;
 	stats->transit.m2Transit = 0;
     } else if (!packet->emptyreport) {
-      // These are valid packets that need standard iperf accounting
-      // Do L2 accounting first (if needed)
-      if (packet->l2errors && (data->cntDatagrams > L2DROPFILTERCOUNTER)) {
-	stats->l2counts.cnt++;
-	stats->l2counts.tot_cnt++;
-	if (packet->l2errors & L2UNKNOWN) {
-	  stats->l2counts.unknown++;
-	  stats->l2counts.tot_unknown++;
+	// These are valid packets that need standard iperf accounting
+	// Do L2 accounting first (if needed)
+	if (packet->l2errors && (data->cntDatagrams > L2DROPFILTERCOUNTER)) {
+	    stats->l2counts.cnt++;
+	    stats->l2counts.tot_cnt++;
+	    if (packet->l2errors & L2UNKNOWN) {
+		stats->l2counts.unknown++;
+		stats->l2counts.tot_unknown++;
+	    }
+	    if (packet->l2errors & L2LENERR) {
+		stats->l2counts.lengtherr++;
+		stats->l2counts.tot_lengtherr++;
+	    }
+	    if (packet->l2errors & L2CSUMERR) {
+		stats->l2counts.udpcsumerr++;
+		stats->l2counts.tot_udpcsumerr++;
+	    }
 	}
-	if (packet->l2errors & L2LENERR) {
-	  stats->l2counts.lengtherr++;
-	  stats->l2counts.tot_lengtherr++;
+	// packet loss occured if the datagram numbers aren't sequential
+	if ( packet->packetID != data->PacketID + 1 ) {
+	    if (packet->packetID < data->PacketID + 1 ) {
+		data->cntOutofOrder++;
+	    } else {
+		data->cntError += packet->packetID - data->PacketID - 1;
+	    }
 	}
-	if (packet->l2errors & L2CSUMERR) {
-	  stats->l2counts.udpcsumerr++;
-	  stats->l2counts.tot_udpcsumerr++;
+	// never decrease datagramID (e.g. if we get an out-of-order packet)
+	if ( packet->packetID > data->PacketID ) {
+	    data->PacketID = packet->packetID;
 	}
-      }
-      // packet loss occured if the datagram numbers aren't sequential
-      if ( packet->packetID != data->PacketID + 1 ) {
-	if (packet->packetID < data->PacketID + 1 ) {
-	  data->cntOutofOrder++;
-	} else {
-	  data->cntError += packet->packetID - data->PacketID - 1;
-	}
-      }
-      // never decrease datagramID (e.g. if we get an out-of-order packet)
-      if ( packet->packetID > data->PacketID ) {
-	data->PacketID = packet->packetID;
-      }
-      reporter_handle_packet_pps(data, stats);
-      reporter_handle_packet_oneway_transit(data, stats, packet);
-      reporter_handle_packet_isochronous(data, stats, packet);
+	reporter_handle_packet_pps(data, stats);
+	reporter_handle_packet_oneway_transit(data, stats, packet);
+	reporter_handle_packet_isochronous(data, stats, packet);
     }
 }
 

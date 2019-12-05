@@ -97,15 +97,15 @@ struct PacketRing {
   struct ReportStruct *data;
 };
 
-extern struct PacketRing * init_packetring (int count, struct Condition *awake_consumer, struct Condition *awake_producer);
-extern void enqueue_packetring(struct PacketRing *pr, struct ReportStruct *metapacket);
-extern struct ReportStruct *dequeue_packetring(struct PacketRing * pr);
+extern struct PacketRing * packetring_init(int count, struct Condition *awake_consumer, struct Condition *awake_producer);
+extern void packetring_enqueue(struct PacketRing *pr, struct ReportStruct *metapacket);
+extern struct ReportStruct *packetring_dequeue(struct PacketRing * pr);
 extern void enqueue_ackring(struct PacketRing *pr, struct ReportStruct *metapacket);
 extern struct ReportStruct *dequeue_ackring(struct PacketRing * pr);
-extern void free_packetring(struct PacketRing *pr);
+extern void packetring_free(struct PacketRing *pr);
 extern void free_ackring(struct PacketRing *pr);
 #ifdef HAVE_THREAD_DEBUG
-extern int getcount_packetring(struct PacketRing *pr);
+extern int packetring_getcount(struct PacketRing *pr);
 #endif
 
 #ifdef __cplusplus
