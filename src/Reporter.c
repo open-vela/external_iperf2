@@ -1162,7 +1162,6 @@ static int condprint_interval_reports (struct ReportHeader *reporthdr, struct Re
         // output_missed_reports(&reporthdr->report, packet);
 	struct ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
 	struct ReporterData *bidirstats = (reporthdr->bidirreport ? &reporthdr->bidirreport->report : NULL);
-	WARN(!*reporthdr->output_handler, "Transfer output handler is not set:");
 	(*reporthdr->output_handler)(&reporthdr->report, sumstats, bidirstats, 0);
 	TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
 	if (reporthdr->multireport) {
