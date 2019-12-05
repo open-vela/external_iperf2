@@ -49,7 +49,7 @@
 #include "Condition.h"
 #include "Thread.h"
 
-struct PacketRing * init_packetring (int count, struct Condition *awake_consumer, struct Condition *awake_producer) {
+struct PacketRing * packetring_init (int count, struct Condition *awake_consumer, struct Condition *awake_producer) {
     struct PacketRing *pr = NULL;
     if ((pr = (struct PacketRing *) calloc(1, sizeof(struct PacketRing)))) {
 	pr->data = (struct ReportStruct *) calloc(count, sizeof(struct ReportStruct));
@@ -73,7 +73,7 @@ struct PacketRing * init_packetring (int count, struct Condition *awake_consumer
 }
 
 
-inline void enqueue_packetring(struct PacketRing *pr, struct ReportStruct *metapacket) {
+inline void packetring_enqueue (struct PacketRing *pr, struct ReportStruct *metapacket) {
     while (((pr->producer == pr->maxcount) && (pr->consumer == 0)) || \
 	   ((pr->producer + 1) == pr->consumer)) {
 	// Signal the consumer thread to process a full queue
@@ -106,7 +106,7 @@ inline void enqueue_packetring(struct PacketRing *pr, struct ReportStruct *metap
     pr->producer = writeindex;
 }
 
-inline struct ReportStruct *dequeue_packetring(struct PacketRing *pr) {
+inline struct ReportStruct *packetring_dequeue (struct PacketRing *pr) {
     struct ReportStruct *packet = NULL;
     if (pr->producer == pr->consumer)
 	return NULL;
@@ -130,8 +130,8 @@ inline struct ReportStruct *dequeue_packetring(struct PacketRing *pr) {
     return packet;
 }
 
-inline void enqueue_ackring(struct PacketRing *pr, struct ReportStruct *metapacket) {
-    enqueue_packetring(pr, metapacket);
+inline void enqueue_ackring (struct PacketRing *pr, struct ReportStruct *metapacket) {
+    packetring_enqueue(pr, metapacket);
     // Keep the latency low by signaling the consumer thread
     // per each enqueue
 #ifdef HAVE_THREAD_DEBUG
@@ -140,10 +140,10 @@ inline void enqueue_ackring(struct PacketRing *pr, struct ReportStruct *metapack
     Condition_Signal(pr->awake_consumer);
 }
 
-inline struct ReportStruct *dequeue_ackring(struct PacketRing *pr) {
+inline struct ReportStruct *dequeue_ackring (struct PacketRing *pr) {
   struct ReportStruct *packet = NULL;
   Condition_Lock((*(pr->awake_consumer)));
-  while ((packet = dequeue_packetring(pr)) == NULL) {
+  while ((packet = packetring_dequeue(pr)) == NULL) {
       Condition_TimedWait(pr->awake_consumer, 1);
   }
   Condition_Unlock((*(pr->awake_consumer)));
@@ -155,7 +155,7 @@ inline struct ReportStruct *dequeue_ackring(struct PacketRing *pr) {
   return packet;
 }
 
-void free_packetring(struct PacketRing *pr) {
+void packetring_free (struct PacketRing *pr) {
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Free packet ring=%p producer=%p (consumer=%p)", \
 		 (void *)pr, (void *) pr->awake_producer, (void *) pr->awake_consumer);
@@ -167,7 +167,7 @@ void free_packetring(struct PacketRing *pr) {
 }
 
 void free_ackring(struct PacketRing *pr) {
-    free_packetring(pr);
+    packetring_free(pr);
     Condition_Destroy(pr->awake_consumer);
 }
 
@@ -177,7 +177,7 @@ void free_ackring(struct PacketRing *pr) {
  * is no guarantee the return value is accurate
  */
 #ifdef HAVE_THREAD_DEBUG
-inline int getcount_packetring(struct PacketRing *pr) {
+inline int packetring_getcount (struct PacketRing *pr) {
     int depth = 0;
     if (pr->producer != pr->consumer) {
         depth = (pr->producer > pr->consumer) ? \

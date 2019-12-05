@@ -256,7 +256,7 @@ sInterupted == SIGALRM
 		if (isWriteAck(server)) {
 		    thread_Settings *writeackthread;
 		    Settings_Copy(server, &writeackthread);
-		    server->ackring = init_packetring(ACKRING_DEFAULTSIZE, &server->awake_me, &writeackthread->awake_me);
+		    server->ackring = packetring_init(ACKRING_DEFAULTSIZE, &server->awake_me, &writeackthread->awake_me);
 		    writeackthread->ackring = server->ackring;
 		    writeackthread->mThreadMode = kMode_WriteAckServer;
 #if HAVE_THREAD_DEBUG
