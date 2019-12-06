@@ -219,7 +219,7 @@ int main( int argc, char **argv ) {
 	    }
 	}
 	if ( isDaemon( ext_gSettings ) ) {
-	    CmdInstallService(argc, argv);T
+	    CmdInstallService(argc, argv);
 	} else if (isRemoveService(ext_gSettings)) {
 	    return 0;
 	}
