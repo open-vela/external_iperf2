@@ -552,7 +552,7 @@ void Settings_Interpret( char option, const char *optarg, struct thread_Settings
             // time mode (instead of amount mode), units is 10 ms
             setModeTime( mExtSettings );
             setServerModeTime( mExtSettings );
-	    if (atoi(optarg) > 0)
+	    if (atof(optarg) > 0.0)
                 mExtSettings->mAmount = (int) (atof( optarg ) * 100.0);
 	    else
 	        infinitetime = 1;
