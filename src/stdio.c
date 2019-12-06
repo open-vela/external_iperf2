@@ -179,6 +179,8 @@ double bitorbyte_atof( const char *inString ) {
     case 'g':  theNum *= kgiga_to_Unit;  break;
     case 'm':  theNum *= kmega_to_Unit;  break;
     case 'k':  theNum *= kkilo_to_Unit;  break;
+    case 'p':
+    case 'P':  theNum *= -1; break;
     default: break;
     }
     return theNum;
