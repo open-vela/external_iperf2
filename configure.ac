@@ -14,7 +14,7 @@ AM_MAINTAINER_MODE([disable])
 
 m4_include([m4/ax_create_stdint_h.m4])
 m4_include([m4/dast.m4])
-m4_include([m4/acx_pthread.m4])
+m4_include([m4/ax_pthread.m4])
 
 AC_ARG_ENABLE(ipv6, AC_HELP_STRING([--disable-ipv6],
 	    [disable ipv6 support (default is autodetect)]),
@@ -91,8 +91,8 @@ AC_CHECK_LIB([rt], [clock_gettime])
 dnl check for -lpthread
 
 if test "$enable_threads" != no; then
-  ACX_PTHREAD()
-    if test "$acx_pthread_ok" = yes; then
+  AX_PTHREAD()
+    if test "$ax_pthread_ok" = yes; then
       AC_DEFINE([HAVE_POSIX_THREAD], 1,)
       AC_DEFINE([_REENTRANT], 1,)
     fi
@@ -104,7 +104,7 @@ AC_SEARCH_LIBS([socket], [socket], [],
   [AC_CHECK_HEADER([winsock2.h],[
 
   AC_DEFINE([HAVE_WINSOCK2_H], 1, [Define if winsock2.h exists.])
-  if test "$acx_pthread_ok" != yes; then
+  if test "$ax_pthread_ok" != yes; then
   AC_DEFINE([HAVE_WIN32_THREAD], 1, [Define if using WIN32 threads])
   fi
   LIBS="-lws2_32 $LIBS"],
