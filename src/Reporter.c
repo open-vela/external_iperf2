@@ -1165,7 +1165,7 @@ static int reporter_condprint_time_interval_report (struct ReportHeader *reporth
     if (TimeDifference(reporthdr->report.nextTime, packet->packetTime) < 0) {
         // In the (hopefully unlikely event) the reporter fell behind
         // ouput the missed reports to catch up
-        // output_missed_reports(&reporthdr->report, packet);
+        reporter_output_missed_reports(&reporthdr->report, packet);
 	struct ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
 	struct ReporterData *bidirstats = (reporthdr->bidirreport ? &reporthdr->bidirreport->report : NULL);
 	(*reporthdr->output_handler)(&reporthdr->report, sumstats, bidirstats, 0);
