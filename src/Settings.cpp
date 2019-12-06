@@ -1070,8 +1070,11 @@ void Settings_ModalOptions( struct thread_Settings *mExtSettings ) {
 		mExtSettings->mFPS = atof(results);
 		if ((results = strtok(NULL, ",")) != NULL) {
 		    mExtSettings->mMean = bitorbyte_atof(results);
+		    if (mExtSettings->mMean < 0) {
+		        mExtSettings->mMean *= -8 * mExtSettings->mBufLen;
+		    }
 		    if ((results = strtok(NULL, ",")) != NULL) {
-			mExtSettings->mVariance = bitorbyte_atof(results);
+		        mExtSettings->mVariance = bitorbyte_atof(results);
 		    }
 		} else {
 		    mExtSettings->mMean = 20000000.0;
