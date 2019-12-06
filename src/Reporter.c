@@ -141,7 +141,7 @@ static void reporter_handle_packet_server_tcp(struct ReportHeader *report, struc
 static void reporter_handle_packet_client(struct ReportHeader *report, struct ReportStruct *packet);
 
 // Reporter ouput
-static int condprint_interval_reports (struct ReportHeader *reporthdr, struct ReportStruct *packet);
+static int reporter_condprint_time_interval_report(struct ReportHeader *reporthdr, struct ReportStruct *packet);
 static void output_missed_reports(struct ReporterData *stats, struct ReportStruct *packet);
 static void output_missed_multireports(struct ReporterData *stats, struct ReportStruct *packet);
 static void output_transfer_report_client_tcp(struct ReporterData *stats, struct ReporterData *sumstats, struct ReporterData *bidirstats, int final);
@@ -520,7 +520,7 @@ void InitDataReport(struct thread_Settings *mSettings) {
 	    struct timeval *interval = &data->intervalTime;
 	    interval->tv_sec = (long) mSettings->mInterval;
 	    interval->tv_usec = (long) ((mSettings->mInterval - interval->tv_sec) * rMillion);
-	    reporthdr->output_interval_report_handler = condprint_interval_reports;
+	    reporthdr->output_interval_report_handler = reporter_condprint_time_interval_report;
 	} else {
 	    reporthdr->output_interval_report_handler = NULL;
 	}
@@ -1151,7 +1151,7 @@ void process_report ( struct ReportHeader *report ) {
     }
 }
 
-static int condprint_interval_reports (struct ReportHeader *reporthdr, struct ReportStruct *packet) {
+static int reporter_condprint_time_interval_report (struct ReportHeader *reporthdr, struct ReportStruct *packet) {
     int advance_jobq = 0;
     // Print a report if packet time exceeds the next report interval time,
     // Also signal to the caller to move to the next report (or packet ring)
