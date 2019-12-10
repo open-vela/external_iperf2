@@ -140,6 +140,8 @@ static void reporter_output_transfer_report_null(struct ReporterData *stats, str
 static void reporter_handle_packet_server_udp(struct ReportHeader *report, struct ReportStruct *packet);
 static void reporter_handle_packet_server_tcp(struct ReportHeader *report, struct ReportStruct *packet);
 static void reporter_handle_packet_client(struct ReportHeader *report, struct ReportStruct *packet);
+static void reporter_handle_packet_pps(struct ReporterData *data, struct TransferInfo *stats, struct ReportStruct *packet);
+
 
 // Reporter's conditional print, right now only time based sampling, possibly add packet based
 static int reporter_condprint_time_interval_report(struct ReportHeader *reporthdr, struct ReportStruct *packet);
@@ -1163,13 +1165,25 @@ static int reporter_condprint_time_interval_report (struct ReportHeader *reporth
     // Also signal to the caller to move to the next report (or packet ring)
     // if there was output. This will allow for more precise interval sum accounting.
     if (TimeDifference(reporthdr->report.nextTime, packet->packetTime) < 0) {
+#ifdef DEBUG_PPS
+       static int onetime = 1;
+      // printf("*** packetID TRIGGER = %ld pt=%ld.%ld empty=%d nt=%ld.%ld\n",packet->packetID, packet->packetTime.tv_sec, packet->packetTime.tv_usec, packet->emptyreport, reporthdr->report.nextTime.tv_sec, reporthdr->report.nextTime.tv_usec);
+#endif
         // In the (hopefully unlikely event) the reporter fell behind
         // ouput the missed reports to catch up
-        reporter_output_missed_reports(&reporthdr->report, packet);
 	struct ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
 	struct ReporterData *bidirstats = (reporthdr->bidirreport ? &reporthdr->bidirreport->report : NULL);
+#ifdef DEBUG_PPS
+	if (onetime && packet->emptyreport) {
+	    reporter_handle_packet_pps(&reporthdr->report, &reporthdr->report.info, packet);
+	}
+	onetime = 0;
+#endif
 	(*reporthdr->output_handler)(&reporthdr->report, sumstats, bidirstats, 0);
 	TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
+	if (reporthdr->output_interval_report_handler) {
+	  reporter_output_missed_reports(&reporthdr->report, packet);
+	}
 	if (reporthdr->multireport) {
 	    advance_jobq = 1;
 	    reporthdr->multireport->threads++;
@@ -1352,11 +1366,14 @@ int reporter_process_report (struct ReportHeader *reporthdr) {
  */
 #define L2DROPFILTERCOUNTER 100
 
-static inline void reporter_handle_packet_pps(struct ReporterData *data, struct TransferInfo *stats) {
+static inline void reporter_handle_packet_pps(struct ReporterData *data, struct TransferInfo *stats, struct ReportStruct *packet) {
     data->cntDatagrams++;
-    stats->IPGsum += TimeDifference(data->packetTime, data->IPGstart);
+    stats->IPGsum += TimeDifference(packet->packetTime, data->IPGstart);
     stats->IPGcnt++;
     stats->IPGcnttot++;
+#ifdef DEBUG_PPS
+    //    printf("*** IPGsum = %f cnt=%ld ipg=%ld.%ld pt=%ld.%ld id=%ld\n", stats->IPGsum, stats->IPGcnt, data->IPGstart.tv_sec, data->IPGstart.tv_usec, packet->packetTime.tv_sec, packet->packetTime.tv_usec, packet->packetID);
+#endif
     data->IPGstart = data->packetTime;
 }
 
@@ -1549,7 +1566,7 @@ inline void reporter_handle_packet_server_udp(struct ReportHeader *reporthdr, st
 	if ( packet->packetID > data->PacketID ) {
 	    data->PacketID = packet->packetID;
 	}
-	reporter_handle_packet_pps(data, stats);
+	reporter_handle_packet_pps(data, stats, packet);
 	reporter_handle_packet_oneway_transit(data, stats, packet);
 	reporter_handle_packet_isochronous(data, stats, packet);
     }
@@ -1561,16 +1578,16 @@ void reporter_handle_packet_client(struct ReportHeader *reporthdr, struct Report
 
     data->packetTime = packet->packetTime;
     stats->socket = packet->socket;
-    if (packet->errwrite && (packet->errwrite != WriteErrNoAccount)) {
-	stats->sock_callstats.write.WriteErr++;
-	stats->sock_callstats.write.totWriteErr++;
-    }
     if (!packet->emptyreport) {
+        if (packet->errwrite && (packet->errwrite != WriteErrNoAccount)) {
+	    stats->sock_callstats.write.WriteErr++;
+	    stats->sock_callstats.write.totWriteErr++;
+	}
 	// These are valid packets that need standard iperf accounting
 	stats->sock_callstats.write.WriteCnt++;
 	stats->sock_callstats.write.totWriteCnt++;
 	if (isUDP(data)) {
-	  reporter_handle_packet_pps(data, stats);
+	  reporter_handle_packet_pps(data, stats, packet);
 	  reporter_handle_packet_isochronous(data, stats, packet);
 	}
     }
@@ -1625,26 +1642,22 @@ static void gettcpistats (struct ReporterData *stats, struct ReporterData *sumst
 
 // If reports were missed, catch up now
 static inline void reporter_output_missed_reports(struct ReporterData *stats, struct ReportStruct *packet) {
-    while ((stats->intervalTime.tv_sec != 0 || \
-	    stats->intervalTime.tv_usec != 0) && \
-	   TimeDifference(stats->nextTime, stats->packetTime ) < 0 ) {
-	stats->info.startTime = stats->info.endTime;
-	stats->info.endTime = TimeDifference( stats->nextTime, stats->startTime );
-	TimeAdd(stats->nextTime, stats->intervalTime);
-	if (TimeDifference(stats->nextTime, stats->packetTime) < 0) {
-	    struct ReporterData emptystats;
-	    memset(&emptystats, 0, sizeof(struct ReporterData));
-	    emptystats.info.startTime = stats->info.startTime;
-	    emptystats.info.endTime = stats->info.endTime;
-	    emptystats.info.mFormat = stats->info.mFormat;
-	    emptystats.info.mTCP = stats->info.mTCP;
-	    emptystats.info.mUDP = stats->info.mUDP;
-	    emptystats.info.mIsochronous = stats->info.mIsochronous;
-	    emptystats.info.mEnhanced = stats->info.mEnhanced;
-	    emptystats.info.transferID = stats->info.transferID;
-	    emptystats.info.groupID = stats->info.groupID;
-	    reporter_print( &emptystats, TRANSFER_REPORT, 0);
-	}
+  while (TimeDifference(stats->nextTime, packet->packetTime) < 0) {
+      stats->info.endTime = TimeDifference( stats->nextTime, stats->startTime );
+      TimeAdd(stats->nextTime, stats->intervalTime);
+      struct ReporterData emptystats;
+      memset(&emptystats, 0, sizeof(struct ReporterData));
+      emptystats.info.startTime = stats->info.startTime;
+      emptystats.info.endTime = stats->info.endTime;
+      emptystats.info.mFormat = stats->info.mFormat;
+      emptystats.info.mTCP = stats->info.mTCP;
+      emptystats.info.mUDP = stats->info.mUDP;
+      emptystats.info.mIsochronous = stats->info.mIsochronous;
+      emptystats.info.mEnhanced = stats->info.mEnhanced;
+      emptystats.info.transferID = stats->info.transferID;
+      emptystats.info.groupID = stats->info.groupID;
+      reporter_print( &emptystats, TRANSFER_REPORT, 0);
+      stats->info.startTime = stats->info.endTime;
     }
 }
 // If reports were missed, catch up now
