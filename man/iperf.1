@@ -139,7 +139,7 @@ increment the destination ip address when using the parallel (-P) option
 set the interpacket gap to \fIn\fR (units of milliseconds) for packets within an isochronous frame (burst), requires --isochronous
 .TP
 .BR "    --isochronous[=" \fIfps\fR:\fImean\fR,\fIstdev\fR "]"
-send isochronous traffic with frequency frames per second and load defined by mean and standard deviation using a log normal distribution, defaults to 60:20m,0.  (Note: Here the suffixes indicate bytes/sec or bits/sec per use of uppercase or lowercase, respectively)
+send isochronous traffic with frequency frames per second and load defined by mean and standard deviation using a log normal distribution, defaults to 60:20m,0.  (Note: Here the suffixes indicate bytes/sec or bits/sec per use of uppercase or lowercase, respectively.  Also the p suffix is supported to set set the burst size in packets, e.g. isochronous=2:25p will send two 25 packet bursts evevery second, or one 25 packet burst every 0.5 seconds.)
 .TP
 .BR "    --no-connect-sync "
 By default, parallel traffic threads (per -P greater than 1) will synchronize after their TCP connects and prior to each sending traffic, i.e. all the threads first complete (or error) the TCP 3WHS before any traffic thread will start sending.  This option disables that sychronization such that each traffic thread will start sending immediately after completing its successful connect.
