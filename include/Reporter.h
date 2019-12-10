@@ -297,6 +297,7 @@ struct ReporterData {
     struct ConnectionInfo connection;
     struct timeval startTime;
     struct timeval packetTime;
+    struct timeval prevpacketTime;
     struct timeval nextTime;
     struct timeval intervalTime;
     struct timeval IPGstart;

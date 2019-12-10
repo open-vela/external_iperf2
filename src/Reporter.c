@@ -145,6 +145,8 @@ static void reporter_handle_packet_pps(struct ReporterData *data, struct Transfe
 
 // Reporter's conditional print, right now only time based sampling, possibly add packet based
 static int reporter_condprint_time_interval_report(struct ReportHeader *reporthdr, struct ReportStruct *packet);
+static int reporter_condprint_packet_interval_report(struct ReportHeader *reporthdr, struct ReportStruct *packet);
+static int reporter_condprint_frame_interval_report(struct ReportHeader *reporthdr, struct ReportStruct *packet);
 
 // Reporter's interval ouput specialize routines
 static void reporter_output_missed_reports(struct ReporterData *stats, struct ReportStruct *packet);
@@ -529,6 +531,10 @@ void InitDataReport(struct thread_Settings *mSettings) {
 	    interval->tv_sec = (long) mSettings->mInterval;
 	    interval->tv_usec = (long) ((mSettings->mInterval - interval->tv_sec) * rMillion);
 	    reporthdr->output_interval_report_handler = reporter_condprint_time_interval_report;
+	} else if (mSettings->mIntervalPackets) {
+	    reporthdr->output_interval_report_handler = reporter_condprint_packet_interval_report;
+	} else if (mSettings->mIntervalFrames) {
+	    reporthdr->output_interval_report_handler = reporter_condprint_frame_interval_report;
 	} else {
 	    reporthdr->output_interval_report_handler = NULL;
 	}
@@ -1210,6 +1216,47 @@ static int reporter_condprint_time_interval_report (struct ReportHeader *reporth
     return advance_jobq;
 }
 
+static int reporter_condprint_packet_interval_report (struct ReportHeader *reporthdr, struct ReportStruct *packet) {
+    int advance_jobq = 0;
+    printf("packet reporting not done\n");
+    // Print a report if packet time exceeds the next report interval time,
+    // Also signal to the caller to move to the next report (or packet ring)
+    // if there was output. This will allow for more precise interval sum accounting.
+    if ((packet->packetID - reporthdr->report.lastDatagrams) >= 500) {
+	struct ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
+	struct ReporterData *bidirstats = (reporthdr->bidirreport ? &reporthdr->bidirreport->report : NULL);
+	(*reporthdr->output_handler)(&reporthdr->report, sumstats, bidirstats, 0);
+	TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
+	if (reporthdr->multireport) {
+	    advance_jobq = 1;
+	    reporthdr->multireport->threads++;
+	}
+	if (reporthdr->bidirreport) {
+	    advance_jobq = 1;
+	    reporthdr->bidirreport->threads++;
+	}
+    }
+    if (reporthdr->bidirreport && (reporthdr->bidirreport->refcount > 1) && \
+	(reporthdr->bidirreport->threads == reporthdr->bidirreport->refcount)) {
+	reporthdr->bidirreport->threads = 0;
+	// output_missed_multireports(&reporthdr->multireport->report, packet);
+	(*reporthdr->bidirreport->output_sum_handler)(&reporthdr->bidirreport->report, 0);
+	TimeAdd(reporthdr->bidirreport->report.nextTime, reporthdr->report.intervalTime);
+    }
+    if (reporthdr->multireport && (reporthdr->multireport->refcount > (reporthdr->bidirreport ? 2 : 1)) && \
+	(reporthdr->multireport->threads == reporthdr->multireport->refcount))  {
+	reporthdr->multireport->threads = 0;
+	// output_missed_multireports(&reporthdr->multireport->report, packet);
+	(*reporthdr->multireport->output_sum_handler)(&reporthdr->multireport->report, 0);
+	TimeAdd(reporthdr->multireport->report.nextTime, reporthdr->report.intervalTime);
+    }
+    return advance_jobq;
+}
+
+static int reporter_condprint_frame_interval_report (struct ReportHeader *reporthdr, struct ReportStruct *packet) {
+    int advance_jobq = 0;
+    printf("frame reporting not done\n");
+}
 static void reporter_compute_connect_times (struct MultiHeader *hdr, double connect_time) {
     // Compute end/end delay stats
     if (connect_time > 0.0) {
@@ -1301,6 +1348,9 @@ int reporter_process_report (struct ReportHeader *reporthdr) {
 		    // Check to output any interval reports, do this prior
 		    // to packet handling to preserve interval accounting
 		    if (reporthdr->output_interval_report_handler) {
+		        if (!packet->emptyreport)
+			    // Stash this last timestamp away for calculations that need it, e.g. packet interval reporting
+			    reporthdr->report.prevpacketTime = reporthdr->report.IPGstart;
 			advance_jobq = (*reporthdr->output_interval_report_handler)(reporthdr, packet);
 		    }
 		    // update fields common to TCP and UDP, client and server which is bytes and packet time
@@ -1665,16 +1715,26 @@ static inline void reporter_output_missed_multireports(struct ReporterData *stat
     reporter_output_missed_reports(stats, packet);
 }
 
-static inline void set_endtime(struct ReporterData *stats, int final) {
+static inline void set_endtime(struct ReporterData *stats, int which) {
   // There is a corner case when the first packet is also the last where the start time (which comes
   // from app level syscall) is greater than the packetTime (which come for kernel level SO_TIMESTAMP)
   // For this case set the start and end time to both zero.
   if (TimeDifference(stats->packetTime, stats->startTime) < 0) {
     stats->info.endTime = 0;
-  } else if (!final) {
-    stats->info.endTime = TimeDifference(stats->nextTime, stats->startTime);
   } else {
-    stats->info.endTime = TimeDifference(stats->packetTime, stats->startTime);
+    switch(which) {
+    case 0 :
+      stats->info.endTime = TimeDifference(stats->nextTime, stats->startTime);
+      break;
+    case 1 :
+      stats->info.endTime = TimeDifference(stats->packetTime, stats->startTime);
+      break;
+    case 2 :
+      stats->info.endTime = TimeDifference(stats->prevpacketTime, stats->startTime);
+      break;
+    default:
+      stats->info.endTime = TimeDifference(stats->nextTime, stats->startTime);
+    }
   }
 }
 
@@ -1807,7 +1867,7 @@ static inline void reporter_reset_transfer_stats_server_udp(struct ReporterData 
 
 // These are the output handlers that get the reports ready and then prints them
 static void reporter_output_transfer_report_server_udp(struct ReporterData *stats, struct ReporterData *sumstats, struct ReporterData *bidirstats, int final) {
-    set_endtime(stats, final);
+    set_endtime(stats, 2);
     if (sumstats) {
 	sumstats->cntOutofOrder += stats->cntOutofOrder - stats->lastOutofOrder;
 	// assume most of the  time out-of-order packets are not

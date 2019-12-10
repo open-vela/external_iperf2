@@ -481,20 +481,44 @@ void Settings_Interpret( char option, const char *optarg, struct thread_Settings
             break;
 
         case 'i': // specify interval between periodic bw reports
-	    char *end;
-	    mExtSettings->mInterval = strtof( optarg, &end );
-	    if (*end != '\0') {
-		fprintf (stderr, "Invalid value of '%s' for -i interval\n", optarg);
-	    } else {
-	        if ( mExtSettings->mInterval < SMALLEST_INTERVAL ) {
+	    {
+	      char *tmp= new char [strlen(optarg) + 1];
+	      strcpy(tmp, optarg);
+	      // scan for packet or frames as units
+	      if ((((results = strtok(tmp, "p")) != NULL) && strcmp(results,optarg)) \
+		  || (((results = strtok(tmp, "P")) != NULL)  && strcmp(results,optarg))) {
+		mExtSettings->mIntervalPackets = byte_atoi(results);
+		mExtSettings->mInterval = 0.0;
+		mExtSettings->mIntervalFrames = 0;
+	      } else if ((((results = strtok(tmp, "f")) != NULL) && strcmp(results,optarg)) \
+			 || (((results = strtok(tmp, "F")) != NULL)  && strcmp(results,optarg))) {
+		mExtSettings->mIntervalFrames = byte_atoi(results);
+		mExtSettings->mInterval = 0.0;
+		mExtSettings->mIntervalPackets = 0;
+		mExtSettings->mUDPRateUnits = kRate_BW;
+		mExtSettings->mUDPRate = byte_atoi(optarg);
+		if (((results = strtok(tmp, ",")) != NULL) && strcmp(results,optarg)) {
+		  setVaryLoad(mExtSettings);
+		  mExtSettings->mVariance = byte_atoi(optarg);
+		}
+	      } else {
+		char *end;
+		mExtSettings->mInterval = strtof( optarg, &end );
+		if (*end != '\0') {
+		  fprintf (stderr, "Invalid value of '%s' for -i interval\n", optarg);
+		} else {
+		  if ( mExtSettings->mInterval < SMALLEST_INTERVAL ) {
 		    mExtSettings->mInterval = SMALLEST_INTERVAL;
 #ifndef HAVE_FASTSAMPLING
 		    fprintf (stderr, report_interval_small, mExtSettings->mInterval);
 #endif
-	        }
-		if ( mExtSettings->mInterval < 0.5 ) {
+		  }
+		  if ( mExtSettings->mInterval < 0.5 ) {
 		    setEnhanced( mExtSettings );
+		  }
 		}
+	      }
+	      delete [] tmp;
 	    }
             break;
 

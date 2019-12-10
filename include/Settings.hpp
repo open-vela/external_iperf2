@@ -194,6 +194,8 @@ struct thread_Settings {
     uintmax_t mAmount;             // -n or -t
     // doubles
     double mInterval;               // -i
+    int mIntervalFrames;
+    int mIntervalPackets;
     // shorts
     unsigned short mListenPort;     // -L
     unsigned short mPort;           // -p
