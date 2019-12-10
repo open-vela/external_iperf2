@@ -402,7 +402,7 @@ void UpdateMultiHdrRefCounter(struct MultiHeader *multihdr, int val, int sockfd)
 void FreeReport(struct ReportHeader *reporthdr) {
     if (reporthdr) {
 	if (reporthdr->packetring && !TimeZero(reporthdr->report.intervalTime) && (reporthdr->reporter_thread_suspends < 3)) {
-	  fprintf(stdout, "WARN: this test was likley CPU bound (%d) (or may not be detecting the underlying network devices)\n", reporthdr->reporter_thread_suspends);
+	    fprintf(stdout, "WARN: this test was likley CPU bound (%d) (or may not be detecting the underlying network devices)\n", reporthdr->reporter_thread_suspends);
 	}
 	if (reporthdr->packetring) {
 	    packetring_free(reporthdr->packetring);
@@ -1167,28 +1167,21 @@ void process_report ( struct ReportHeader *report ) {
 
 static int reporter_condprint_time_interval_report (struct ReportHeader *reporthdr, struct ReportStruct *packet) {
     int advance_jobq = 0;
+    struct ReporterData *stats = &reporthdr->report;
+    if (isUDP(stats))
+        reporter_handle_packet_pps(&reporthdr->report, &reporthdr->report.info, packet);
+
     // Print a report if packet time exceeds the next report interval time,
     // Also signal to the caller to move to the next report (or packet ring)
     // if there was output. This will allow for more precise interval sum accounting.
     if (TimeDifference(reporthdr->report.nextTime, packet->packetTime) < 0) {
 #ifdef DEBUG_PPS
-       static int onetime = 1;
        printf("*** packetID TRIGGER = %ld pt=%ld.%ld empty=%d nt=%ld.%ld\n",packet->packetID, packet->packetTime.tv_sec, packet->packetTime.tv_usec, packet->emptyreport, reporthdr->report.nextTime.tv_sec, reporthdr->report.nextTime.tv_usec);
 #endif
         // In the (hopefully unlikely event) the reporter fell behind
         // ouput the missed reports to catch up
 	struct ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
 	struct ReporterData *bidirstats = (reporthdr->bidirreport ? &reporthdr->bidirreport->report : NULL);
-
-	  struct ReporterData *data = &reporthdr->report;
-	  if (isUDP(data)) 
-	    reporter_handle_packet_pps(&reporthdr->report, &reporthdr->report.info, packet);
-
-#ifdef DEBUG_PPS
-	if (onetime && packet->emptyreport) {
-	}
-	onetime = 0;
-#endif
 	(*reporthdr->output_handler)(&reporthdr->report, sumstats, bidirstats, 0);
 	TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
 	if (reporthdr->output_interval_report_handler) {
@@ -1421,21 +1414,15 @@ int reporter_process_report (struct ReportHeader *reporthdr) {
 #define L2DROPFILTERCOUNTER 100
 
 static inline void reporter_handle_packet_pps(struct ReporterData *data, struct TransferInfo *stats, struct ReportStruct *packet) {
-    static double lastempty = 0.0;
     if (!packet->emptyreport) {
         data->cntDatagrams++;
         stats->IPGcnt++;
         stats->IPGcnttot++;
-	data->IPGstart = data->packetTime;
-	stats->IPGsum += TimeDifference(packet->packetTime, data->IPGstart);
-	lastempty = TimeDouble(packet->packetTime);
-    } else {
-      stats->IPGsum += TimeDouble(packet->packetTime) - lastempty;
-      lastempty = TimeDouble(packet->packetTime);
     }
-    printf("*** IPGsum = %f cnt=%ld ipg=%ld.%ld pt=%ld.%ld id=%ld empty=%d\n", stats->IPGsum, stats->IPGcnt, data->IPGstart.tv_sec, data->IPGstart.tv_usec, packet->packetTime.tv_sec, packet->packetTime.tv_usec, packet->packetID, packet->emptyreport);    
+    stats->IPGsum += TimeDifference(packet->packetTime, data->IPGstart);
+    data->IPGstart = packet->packetTime;
 #ifdef DEBUG_PPS
-    //    printf("*** IPGsum = %f cnt=%ld ipg=%ld.%ld pt=%ld.%ld id=%ld\n", stats->IPGsum, stats->IPGcnt, data->IPGstart.tv_sec, data->IPGstart.tv_usec, packet->packetTime.tv_sec, packet->packetTime.tv_usec, packet->packetID);
+    printf("*** IPGsum = %f cnt=%ld ipg=%ld.%ld pt=%ld.%ld id=%ld empty=%d\n", stats->IPGsum, stats->IPGcnt, data->IPGstart.tv_sec, data->IPGstart.tv_usec, packet->packetTime.tv_sec, packet->packetTime.tv_usec, packet->packetID, packet->emptyreport);
 #endif
 }
 
@@ -1628,7 +1615,7 @@ inline void reporter_handle_packet_server_udp(struct ReportHeader *reporthdr, st
 	if ( packet->packetID > data->PacketID ) {
 	    data->PacketID = packet->packetID;
 	}
-	reporter_handle_packet_pps(data, stats, packet);
+	//	reporter_handle_packet_pps(data, stats, packet);
 	reporter_handle_packet_oneway_transit(data, stats, packet);
 	reporter_handle_packet_isochronous(data, stats, packet);
     }
@@ -1832,8 +1819,10 @@ static inline void reporter_reset_transfer_stats_client_udp(struct ReporterData 
     stats->info.isochstats.framecnt = 0;
     stats->info.isochstats.framelostcnt = 0;
     stats->info.isochstats.slipcnt = 0;
-    // stats->info.IPGcnt = 0;
-    // stats->info.IPGsum = 0;
+    if (stats->info.TotalLen) {
+        stats->info.IPGcnt = 0;
+        stats->info.IPGsum = 0;
+    }
     stats->info.startTime = stats->info.endTime;
 }
 static inline void reporter_reset_transfer_stats_server_tcp(struct ReporterData *stats) {
@@ -1869,8 +1858,10 @@ static inline void reporter_reset_transfer_stats_server_udp(struct ReporterData 
     stats->info.isochstats.framecnt = 0;
     stats->info.isochstats.framelostcnt = 0;
     stats->info.isochstats.slipcnt = 0;
-    stats->info.IPGcnt = 0;
-    stats->info.IPGsum = 0;
+    if (stats->info.TotalLen) {
+        stats->info.IPGcnt = 0;
+	stats->info.IPGsum = 0;
+    }
     stats->info.l2counts.cnt = 0;
     stats->info.l2counts.unknown = 0;
     stats->info.l2counts.udpcsumerr = 0;
@@ -2004,6 +1995,8 @@ static void reporter_output_transfer_report_client_udp(struct ReporterData *stat
 	stats->info.TotalLen = stats->TotalLen;
 	stats->info.startTime = 0.0;
 	stats->info.endTime = TimeDifference(stats->packetTime, stats->startTime);
+	stats->info.IPGcnt = stats->info.IPGcnttot;
+	stats->info.IPGsum = stats->info.endTime;
 	reporter_print(stats, TRANSFER_REPORT, 1);
     } else {
 	stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
