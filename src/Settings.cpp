@@ -1436,6 +1436,14 @@ int Settings_GenerateClientHdr( struct thread_Settings *client, client_hdr *hdr 
 	    if (isIsochronous(client)) {
 		hdr->udp.tlvoffset = htons((sizeof(UDP_isoch_payload) + sizeof(client_hdr_udp_tests) + sizeof(client_hdr_v1) + sizeof(UDP_datagram)));
 		testflags |= HEADER_UDP_ISOCH;
+		hdr->udp.isoch_ext.FPSl = htonl(client->mFPS);
+		hdr->udp.isoch_ext.FPSu = htonl(((long)(client->mFPS) - (long)client->mFPS * rMillion));
+		hdr->udp.isoch_ext.Meanl = htonl(client->mMean);
+		hdr->udp.isoch_ext.Meanu = htonl(((long)(client->mMean) - (long)client->mMean * rMillion));
+		hdr->udp.isoch_ext.Variancel = htonl(client->mVariance);
+		hdr->udp.isoch_ext.Varianceu = htonl(((long)(client->mVariance) - (long)client->mVariance * rMillion));
+		hdr->udp.isoch_ext.BurstIPGl = htonl(client->mBurstIPG);
+		hdr->udp.isoch_ext.BurstIPGu = htonl(((long)(client->mBurstIPG) - (long)client->mBurstIPG * rMillion));
 	    }
 	    if (isNoUDPfin(client)) {
 		testflags |= HEADER_NOUDPFIN;
@@ -1447,9 +1455,9 @@ int Settings_GenerateClientHdr( struct thread_Settings *client, client_hdr *hdr 
 	    hdr->udp.testflags = htons(testflags);
 	    hdr->udp.version_u = htonl(IPERF_VERSION_MAJORHEX);
 	    hdr->udp.version_l = htonl(IPERF_VERSION_MINORHEX);
+	    hdr->udp.mTOS = htonl(client->mTOS);
 	}
-    } else {
-      if (isIsochronous(client)) {
+    } else if (isIsochronous(client)) {
 	flags |= HEADER_EXTEND;
         extendflags |= TCP_ISOCH;
       }
