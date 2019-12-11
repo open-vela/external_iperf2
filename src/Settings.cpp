@@ -1441,14 +1441,16 @@ int Settings_GenerateClientHdr( struct thread_Settings *client, client_hdr *hdr 
 	    if (isIsochronous(client)) {
 		hdr->udp.tlvoffset = htons((sizeof(UDP_isoch_payload) + sizeof(client_hdr_udp_tests) + sizeof(client_hdr_v1) + sizeof(UDP_datagram)));
 		testflags |= HEADER_UDP_ISOCH;
-		hdr->udp.isoch_ext.FPSl = htonl(client->mFPS);
-		hdr->udp.isoch_ext.FPSu = htonl(((long)(client->mFPS) - (long)client->mFPS * rMillion));
-		hdr->udp.isoch_ext.Meanl = htonl(client->mMean);
-		hdr->udp.isoch_ext.Meanu = htonl(((long)(client->mMean) - (long)client->mMean * rMillion));
-		hdr->udp.isoch_ext.Variancel = htonl(client->mVariance);
-		hdr->udp.isoch_ext.Varianceu = htonl(((long)(client->mVariance) - (long)client->mVariance * rMillion));
-		hdr->udp.isoch_ext.BurstIPGl = htonl(client->mBurstIPG);
-		hdr->udp.isoch_ext.BurstIPGu = htonl(((long)(client->mBurstIPG) - (long)client->mBurstIPG * rMillion));
+		if (isBidir(client)) {
+		  hdr->udp.isoch_ext.FPSl = htonl(client->mFPS);
+		  hdr->udp.isoch_ext.FPSu = htonl(((long)(client->mFPS) - (long)client->mFPS * rMillion));
+		  hdr->udp.isoch_ext.Meanl = htonl(client->mMean);
+		  hdr->udp.isoch_ext.Meanu = htonl(((long)(client->mMean) - (long)client->mMean * rMillion));
+		  hdr->udp.isoch_ext.Variancel = htonl(client->mVariance);
+		  hdr->udp.isoch_ext.Varianceu = htonl(((long)(client->mVariance) - (long)client->mVariance * rMillion));
+		  hdr->udp.isoch_ext.BurstIPGl = htonl(client->mBurstIPG);
+		  hdr->udp.isoch_ext.BurstIPGu = htonl(((long)(client->mBurstIPG) - (long)client->mBurstIPG * rMillion));
+		}
 	    }
 	    if (isNoUDPfin(client)) {
 		testflags |= HEADER_NOUDPFIN;
@@ -1463,8 +1465,18 @@ int Settings_GenerateClientHdr( struct thread_Settings *client, client_hdr *hdr 
 	    hdr->udp.mTOS = htonl(client->mTOS);
 	}
     } else if (isIsochronous(client)) {
-	flags |= HEADER_EXTEND;
-        extendflags |= TCP_ISOCH;
+      flags |= HEADER_EXTEND;
+      extendflags |= TCP_ISOCH;
+      if (isBidir(client)) {
+	hdr->extend.isoch_ext.FPSl = htonl(client->mFPS);
+	hdr->extend.isoch_ext.FPSu = htonl(((long)(client->mFPS) - (long)client->mFPS * rMillion));
+	hdr->extend.isoch_ext.Meanl = htonl(client->mMean);
+	hdr->extend.isoch_ext.Meanu = htonl(((long)(client->mMean) - (long)client->mMean * rMillion));
+	hdr->extend.isoch_ext.Variancel = htonl(client->mVariance);
+	hdr->extend.isoch_ext.Varianceu = htonl(((long)(client->mVariance) - (long)client->mVariance * rMillion));
+	hdr->extend.isoch_ext.BurstIPGl = htonl(client->mBurstIPG);
+	hdr->extend.isoch_ext.BurstIPGu = htonl(((long)(client->mBurstIPG) - (long)client->mBurstIPG * rMillion));
+      }
     }
     /*
      * Done with base flags (to be passed to the remote server)
