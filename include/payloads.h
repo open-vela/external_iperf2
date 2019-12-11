@@ -157,6 +157,17 @@ struct client_hdr_v1 {
     int32_t mAmount;
 };
 
+struct client_hdrext_isoch {
+    int32_t FPSl;
+    int32_t FPSu;
+    int32_t Meanl;
+    int32_t Meanu;
+    int32_t Variancel;
+    int32_t Varianceu;
+    int32_t BurstIPGl;
+    int32_t BurstIPGu;
+};
+
 // This is used for tests that require
 // the initial handshake
 struct client_hdrext {
@@ -168,6 +179,8 @@ struct client_hdrext {
     int32_t mRate;
     int32_t mUDPRateUnits;
     int32_t mRealtime;
+    int32_t mTOS;
+    struct client_hdrext_isoch isoch_ext;
 };
 
 /*
@@ -321,6 +334,8 @@ struct client_hdr_udp_tests {
     int16_t tlvoffset;
     uint32_t version_u;
     uint32_t version_l;
+    int32_t mTOS;
+    struct client_hdrext_isoch isoch_ext;
 };
 
 

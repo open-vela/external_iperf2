@@ -1251,8 +1251,8 @@ static int reporter_condprint_packet_interval_report (struct ReportHeader *repor
 }
 
 static int reporter_condprint_frame_interval_report (struct ReportHeader *reporthdr, struct ReportStruct *packet) {
-    int advance_jobq = 0;
     printf("frame reporting not done\n");
+    return -1;
 }
 static void reporter_compute_connect_times (struct MultiHeader *hdr, double connect_time) {
     // Compute end/end delay stats
