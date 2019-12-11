@@ -1315,6 +1315,11 @@ void Settings_GenerateClientSettings( struct thread_Settings *server,
 			fullduplex->mUDPRateUnits = kRate_BW;
 		    }
 		}
+		if (isIsochronous(fullduplex)) {
+		    // fullduplex->mFPS = ntohl(client->mFPS);
+		    // fullduplex->mFPS += ntohl(client->mFPS) / (double)rMillion;
+		    printf("*** full duplex isoch\n");
+		}
 	    }
 	}
     } else if ( (flags & HEADER_VERSION1) != 0 ) {
@@ -1460,7 +1465,6 @@ int Settings_GenerateClientHdr( struct thread_Settings *client, client_hdr *hdr 
     } else if (isIsochronous(client)) {
 	flags |= HEADER_EXTEND;
         extendflags |= TCP_ISOCH;
-      }
     }
     /*
      * Done with base flags (to be passed to the remote server)
