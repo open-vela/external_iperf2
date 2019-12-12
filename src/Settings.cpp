@@ -366,6 +366,7 @@ void Settings_Destroy( struct thread_Settings *mSettings) {
     DELETE_ARRAY( mSettings->mOutputFileName );
     DELETE_ARRAY( mSettings->mRxHistogramStr );
     DELETE_ARRAY( mSettings->mSSMMulticastStr);
+    DELETE_ARRAY( mSettings->mCongestion);
     FREE_ARRAY( mSettings->mIfrname);
     FREE_ARRAY( mSettings->mIfrnametx);
     DELETE_ARRAY( mSettings->mIsochronousStr );
