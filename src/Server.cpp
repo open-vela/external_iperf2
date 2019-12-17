@@ -228,9 +228,9 @@ void Server::RunTCP( void ) {
 	    totLen += currLen;
 	    if (isBWSet(mSettings))
 		tokens -= currLen;
-	    if (0.0 != mSettings->mInterval) {
+	    if (mSettings->mIntervalMode == kInterval_Time) {
 	      reportstruct->packetLen = currLen;
-	      ReportPacket( mSettings->reporthdr, reportstruct );
+	      ReportPacket(mSettings->reporthdr, reportstruct);
 	    }
 
 	    // Check for reverse and amount where
@@ -250,7 +250,7 @@ void Server::RunTCP( void ) {
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
 
-    if(0.0 == mSettings->mInterval) {
+    if(mSettings->mIntervalMode == kInterval_Time) {
 	reportstruct->packetLen = totLen;
 	ReportPacket( mSettings->reporthdr, reportstruct );
     }
@@ -361,8 +361,8 @@ void Server::InitTrafficLoop (void) {
     // minterval double, units seconds
     // mAmount integer, units 10 milliseconds
     // divide by two so timeout is 1/2 the interval
-    if (mSettings->mInterval) {
-	sorcvtimer = (int) (mSettings->mInterval * 1e6) / 2;
+    if (mSettings->mInterval && (mSettings->mIntervalMode == kInterval_Time)) {
+      sorcvtimer = (mSettings->mInterval / 2);
     } else if (isServerModeTime(mSettings)) {
 	sorcvtimer = (mSettings->mAmount * 1000) / 2;
     }

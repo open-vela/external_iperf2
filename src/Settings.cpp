@@ -268,6 +268,7 @@ void Settings_Initialize( struct thread_Settings *main ) {
     // mMode    = kTest_Normal;          // -r,  mMode == kTest_TradeOff
     main->mThreadMode   = kMode_Unknown; // -s,  or -c, none
     main->mAmount       = 1000;          // -t,  10 seconds
+    main->mIntervalMode = kInterval_None;// -i   none, time, packets, or bursts
     // mUDPRate > 0 means UDP            // -u,  N/A, see kDefault_UDPRate
     // skip version                      // -v,
     //main->mTCPWin       = 0;           // -w,  ie. don't set window
@@ -488,35 +489,34 @@ void Settings_Interpret( char option, const char *optarg, struct thread_Settings
 	      // scan for packet or frames as units
 	      if ((((results = strtok(tmp, "p")) != NULL) && strcmp(results,optarg)) \
 		  || (((results = strtok(tmp, "P")) != NULL)  && strcmp(results,optarg))) {
-		mExtSettings->mIntervalPackets = byte_atoi(results);
-		mExtSettings->mInterval = 0.0;
-		mExtSettings->mIntervalFrames = 0;
+		mExtSettings->mInterval = bitorbyte_atoi(results);
+		mExtSettings->mIntervalMode = kInterval_Packets;
 	      } else if ((((results = strtok(tmp, "f")) != NULL) && strcmp(results,optarg)) \
 			 || (((results = strtok(tmp, "F")) != NULL)  && strcmp(results,optarg))) {
-		mExtSettings->mIntervalFrames = byte_atoi(results);
-		mExtSettings->mInterval = 0.0;
-		mExtSettings->mIntervalPackets = 0;
-		mExtSettings->mUDPRateUnits = kRate_BW;
-		mExtSettings->mUDPRate = byte_atoi(optarg);
-		if (((results = strtok(tmp, ",")) != NULL) && strcmp(results,optarg)) {
-		  setVaryLoad(mExtSettings);
-		  mExtSettings->mVariance = byte_atoi(optarg);
-		}
+		mExtSettings->mInterval = bitorbyte_atoi(results);
+		mExtSettings->mIntervalMode = kInterval_Frames;
 	      } else {
 		char *end;
-		mExtSettings->mInterval = strtof( optarg, &end );
+		double itime = strtof(optarg, &end);
 		if (*end != '\0') {
 		  fprintf (stderr, "Invalid value of '%s' for -i interval\n", optarg);
-		} else {
-		  if ( mExtSettings->mInterval < SMALLEST_INTERVAL ) {
-		    mExtSettings->mInterval = SMALLEST_INTERVAL;
+		  exit(1);
+		}
+		if (itime > (UINT_MAX / 1e6)) {
+		  fprintf (stderr, "Too large value of '%s' for -i interval, max is %f\n", optarg, (UINT_MAX / 1e6));
+		  exit(1);
+		}
+		mExtSettings->mInterval = (unsigned int) (itime * 1e6);
+		if (!mExtSettings->mInterval) {
+		  fprintf (stderr, "Interval per -i cannot be zero\n");
+		  exit(1);
+		}
+		mExtSettings->mIntervalMode = kInterval_Time;
+		if ( mExtSettings->mInterval < SMALLEST_INTERVAL ) {
+		  mExtSettings->mInterval = SMALLEST_INTERVAL;
 #ifndef HAVE_FASTSAMPLING
-		    fprintf (stderr, report_interval_small, mExtSettings->mInterval);
+		  fprintf (stderr, report_interval_small, mExtSettings->mInterval);
 #endif
-		  }
-		  if ( mExtSettings->mInterval < 0.5 ) {
-		    setEnhanced( mExtSettings );
-		  }
 		}
 	      }
 	      delete [] tmp;
@@ -1269,7 +1269,7 @@ void Settings_GenerateListenerSettings( struct thread_Settings *client, struct t
  */
 void Settings_GenerateClientSettings( struct thread_Settings *server,
                                       struct thread_Settings **client,
-                                      client_hdr *hdr ) {
+                                      struct client_hdr *hdr ) {
     int extendflags = 0;
     if (!server || !hdr)
 	return;
@@ -1316,10 +1316,11 @@ void Settings_GenerateClientSettings( struct thread_Settings *server,
 			fullduplex->mUDPRateUnits = kRate_BW;
 		    }
 		}
-		if (isIsochronous(fullduplex)) {
-		    // fullduplex->mFPS = ntohl(client->mFPS);
-		    // fullduplex->mFPS += ntohl(client->mFPS) / (double)rMillion;
-		    printf("*** full duplex isoch\n");
+		if (isIsochronous(server)) {
+		    setIsochronous(fullduplex);
+		    fullduplex->mFPS = ntohl(hdr->udp.isoch_ext.FPSl);
+		    fullduplex->mFPS += ntohl(hdr->udp.isoch_ext.FPSu) / (double)rMillion;
+		    printf("*** full duplex isoch fps=%f\n", fullduplex->mFPS);
 		}
 	    }
 	}
@@ -1442,7 +1443,7 @@ int Settings_GenerateClientHdr( struct thread_Settings *client, client_hdr *hdr 
 	    if (isIsochronous(client)) {
 		hdr->udp.tlvoffset = htons((sizeof(UDP_isoch_payload) + sizeof(client_hdr_udp_tests) + sizeof(client_hdr_v1) + sizeof(UDP_datagram)));
 		testflags |= HEADER_UDP_ISOCH;
-		if (isBidir(client)) {
+		if (isBidir(client) || isReverse(client)) {
 		  hdr->udp.isoch_ext.FPSl = htonl(client->mFPS);
 		  hdr->udp.isoch_ext.FPSu = htonl(((long)(client->mFPS) - (long)client->mFPS * rMillion));
 		  hdr->udp.isoch_ext.Meanl = htonl(client->mMean);
