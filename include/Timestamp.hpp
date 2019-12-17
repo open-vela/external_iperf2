@@ -240,8 +240,7 @@ public:
         mTime.tv_usec += usec;
 	mTime.tv_sec += mTime.tv_usec / kMillion;
 	mTime.tv_usec = mTime.tv_usec % kMillion;
-        assert( mTime.tv_usec >= 0  &&
-                mTime.tv_usec <  kMillion );
+	// assert((mTime.tv_usec >= 0) && (mTime.tv_usec < kMillion));
     }
 
     /* -------------------------------------------------------------------

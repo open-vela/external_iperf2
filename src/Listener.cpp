@@ -73,7 +73,6 @@
 
 #define HEADERS()
 
-#include <limits.h>
 #include "headers.h"
 #include "Listener.hpp"
 #include "SocketAddr.h"
@@ -1223,8 +1222,8 @@ int Listener::ReadClientHeader(client_hdr *hdr ) {
 	// minterval double, units seconds
 	// mAmount integer, units 10 milliseconds
 	// divide by two so timeout is 1/2 the interval
-	if (mSettings->mInterval) {
-	    sorcvtimer = (int) (mSettings->mInterval * 1e6) / 2;
+	if (mSettings->mInterval && (mSettings->mIntervalMode == kInterval_Time)) {
+	    sorcvtimer = (mSettings->mInterval / 2);
 	} else if (isModeTime(mSettings)) {
 	    sorcvtimer = (mSettings->mAmount * 1000) / 2;
 	}
