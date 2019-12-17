@@ -179,7 +179,7 @@ static void gettcpistats(struct ReporterData *stats, struct ReporterData *sumsta
 
 struct MultiHeader* InitSumReport(struct thread_Settings *agent, int inID) {
     struct MultiHeader *multihdr = (struct MultiHeader *) calloc(1, sizeof(struct MultiHeader));
-    if ( multihdr != NULL ) {
+    if (multihdr != NULL) {
 #ifdef HAVE_THREAD_DEBUG
         thread_debug("Init multiheader sum report %p id=%d", (void *)multihdr, inID);
 #endif
@@ -199,13 +199,14 @@ struct MultiHeader* InitSumReport(struct thread_Settings *agent, int inID) {
 	    // Only initialize the interval time here
 	    // The startTime and nextTime for summing reports will be set by
 	    // the reporter thread in realtime
-	    if (agent->mInterval != 0.0) {
-		struct timeval *interval = &data->intervalTime;
-		interval->tv_sec = (long) agent->mInterval;
-		interval->tv_usec = (long) ((agent->mInterval - interval->tv_sec)
-					    * rMillion);
+	    if ((agent->mInterval) && (agent->mIntervalMode == kInterval_Time)) {
+	      struct timeval *interval = &data->intervalTime;
+	      interval->tv_sec = (long) (agent->mInterval / rMillion);
+	      interval->tv_usec = (long) (agent->mInterval % rMillion);
+	    } else {
+	      setNoMultReport(agent);
+	      fprintf(stderr, "Sum report suppressed on this thread\n");
 	    }
-
 	    data->mHost = agent->mHost;
 	    data->mLocalhost = agent->mLocalhost;
 	    data->mBufLen = agent->mBufLen;
@@ -251,11 +252,13 @@ struct MultiHeader* InitBiDirReport(struct thread_Settings *agent, int inID) {
 	if (isMultipleReport(agent)) {
 	    struct ReporterData *data = &multihdr->report;
 	    data->type = TRANSFER_REPORT;
-	    if (agent->mInterval != 0.0) {
-		struct timeval *interval = &data->intervalTime;
-		interval->tv_sec = (long) agent->mInterval;
-		interval->tv_usec = (long) ((agent->mInterval - interval->tv_sec)
-					    * rMillion);
+	    if ((agent->mInterval) && (agent->mIntervalMode == kInterval_Time)) {
+	      struct timeval *interval = &data->intervalTime;
+	      interval->tv_sec = (long) (agent->mInterval / rMillion);
+	      interval->tv_usec = (long) (agent->mInterval % rMillion);
+	    } else {
+	      setNoMultReport(agent);
+	      fprintf(stderr, "BiDir report suppressed on this thread\n");
 	    }
 	    data->mHost = agent->mHost;
 	    data->mLocalhost = agent->mLocalhost;
@@ -526,17 +529,25 @@ void InitDataReport(struct thread_Settings *mSettings) {
 	data->info.transferID = mSettings->mSock;
 	data->info.groupID = (mSettings->multihdr != NULL ? mSettings->multihdr->groupID : -1);
 	data->type = TRANSFER_REPORT;
-	if ( mSettings->mInterval != 0.0 ) {
+
+	switch (mSettings->mIntervalMode) {
+	case kInterval_Time :
+	  {
 	    struct timeval *interval = &data->intervalTime;
-	    interval->tv_sec = (long) mSettings->mInterval;
-	    interval->tv_usec = (long) ((mSettings->mInterval - interval->tv_sec) * rMillion);
+	    interval->tv_sec = (long) (mSettings->mInterval / rMillion);
+	    interval->tv_usec = (long) (mSettings->mInterval % rMillion);
 	    reporthdr->output_interval_report_handler = reporter_condprint_time_interval_report;
-	} else if (mSettings->mIntervalPackets) {
-	    reporthdr->output_interval_report_handler = reporter_condprint_packet_interval_report;
-	} else if (mSettings->mIntervalFrames) {
-	    reporthdr->output_interval_report_handler = reporter_condprint_frame_interval_report;
-	} else {
-	    reporthdr->output_interval_report_handler = NULL;
+	  }
+	  break;
+	case kInterval_Packets :
+	  reporthdr->output_interval_report_handler = reporter_condprint_packet_interval_report;
+	  break;
+	case kInterval_Frames :
+	  reporthdr->output_interval_report_handler = reporter_condprint_frame_interval_report;
+	  break;
+	default :
+	  reporthdr->output_interval_report_handler = NULL;
+	  break;
 	}
 	data->mHost = mSettings->mHost;
 	data->mLocalhost = mSettings->mLocalhost;

@@ -75,7 +75,7 @@ void reporter_printstats(struct TransferInfo *stats) {
 
     byte_snprintf( buffer, sizeof(buffer)/2, (double) stats->TotalLen,
                    toupper( (int)stats->mFormat));
-    if (!stats->TotalLen || (stats->endTime < SMALLEST_INTERVAL)) {
+    if (!stats->TotalLen || (stats->endTime < SMALLEST_INTERVAL_SEC)) {
         bytesxfered = 0;
     } else {
         bytesxfered = (double) stats->TotalLen;

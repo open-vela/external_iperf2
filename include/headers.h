@@ -86,6 +86,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <limits.h>
 
 // AF_PACKET HEADERS
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)

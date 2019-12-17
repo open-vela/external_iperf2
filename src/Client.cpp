@@ -462,10 +462,10 @@ void Client::InitTrafficLoop (void) {
     //  default socket timeouts are preferred.
     int sosndtimer = 0;
     // sosndtimer units microseconds
-    if (mSettings->mInterval) {
-	sosndtimer = (int) (mSettings->mInterval * 1000000) / 2;
+    if ((mSettings->mIntervalMode == kInterval_Time) && mSettings->mInterval) {
+      sosndtimer = mSettings->mInterval / 2;
     } else if (isModeTime(mSettings)) {
-	sosndtimer = (mSettings->mAmount * 10000) / 2;
+      sosndtimer = (mSettings->mAmount * 10000) / 2;
     }
     SetSocketOptionsSendTimeout(mSettings, sosndtimer);
     // set the lower bounds delay based of the socket timeout timer
@@ -680,10 +680,9 @@ void Client::RunTCP( void ) {
 	now.setnow();
 	reportstruct->packetTime.tv_sec = now.getSecs();
 	reportstruct->packetTime.tv_usec = now.getUsecs();
-	if ((mSettings->mInterval > 0) || isEnhanced(mSettings)) {
+	if ((mSettings->mIntervalMode == kInterval_Time) || isEnhanced(mSettings)) {
             ReportPacket(mSettings->reporthdr, reportstruct);
         }
-
         if (isModeAmount(mSettings)) {
             /* mAmount may be unsigned, so don't let it underflow! */
 	    if( mSettings->mAmount >= (unsigned long) (reportstruct->packetLen) ) {
@@ -779,7 +778,7 @@ void Client::RunRateLimitedTCP ( void ) {
 	    reportstruct->packetTime.tv_sec = time2.getSecs();
 	    reportstruct->packetTime.tv_usec = time2.getUsecs();
 
-	    if (isEnhanced(mSettings) || (mSettings->mInterval > 0)) {
+	    if (isEnhanced(mSettings) || (mSettings->mIntervalMode == kInterval_Time)) {
 		ReportPacket( mSettings->reporthdr, reportstruct );
 	    }
 
@@ -1190,7 +1189,7 @@ void Client::FinishTrafficActions(void) {
      *  then report the entire transfer as one big packet
      *
      */
-    if(!isUDP(mSettings) && !isEnhanced(mSettings) && (0.0 == mSettings->mInterval)) {
+    if(!isUDP(mSettings) && !isEnhanced(mSettings) && (mSettings->mIntervalMode != kInterval_Time)) {
 	reportstruct->packetLen = totLen;
 	ReportPacket( mSettings->reporthdr, reportstruct );
     }
@@ -1331,25 +1330,14 @@ void Client::HdrXchange(int flags) {
 	} else {
 	    int n;
 	    client_hdr_ack ack;
-	    int sotimer = 0;
-	    // sotimer units microseconds convert
-	    if (mSettings->mInterval) {
-		sotimer = (int) ((mSettings->mInterval * 1e6) / 4);
-	    } else if (isModeTime(mSettings)) {
-		sotimer = (int) ((mSettings->mAmount * 1000) / 4);
-	    }
-	    if (sotimer > HDRXACKMAX) {
-		sotimer = HDRXACKMAX;
-	    } else if (sotimer < HDRXACKMIN) {
-		sotimer = HDRXACKMIN;
-	    }
+	    int sotimer = 2; // 2 seconds
 #ifdef WIN32
             // Windows SO_RCVTIMEO uses ms
-	    DWORD timeout = (double) sotimer / 1e3;
+	    DWORD timeout = (double) sotimer * 1e3;
 #else
 	    struct timeval timeout;
-	    timeout.tv_sec = sotimer / 1000000;
-	    timeout.tv_usec = sotimer % 1000000;
+	    timeout.tv_sec = sotimer;
+	    timeout.tv_usec = 0;
 #endif
 	    if (setsockopt( mSettings->mSock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0 ) {
 		WARN_errno( mSettings->mSock == SO_RCVTIMEO, "socket" );

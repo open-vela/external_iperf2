@@ -71,12 +71,15 @@
 extern "C" {
 #endif
 
-/* Smallest report interval supported. Units is seconds */
+/* Smallest report interval supported. Units is microseconds */
 #ifndef HAVE_FASTSAMPLING
-#define SMALLEST_INTERVAL 0.005
+#define SMALLEST_INTERVAL 5000 // 5ms
+#define SMALLEST_INTERVAL_SEC 0.005 // 5ms
 #else
-#define SMALLEST_INTERVAL 0.0001
+#define SMALLEST_INTERVAL 100 // 100 usec
+#define SMALLEST_INTERVAL_SEC 0.0001 // 5ms
 #endif
+
 #define SLOPSECS 2
 
 // server/client mode
@@ -105,6 +108,14 @@ enum TestMode {
     kTest_DualTest,
     kTest_TradeOff,
     kTest_Unknown
+};
+
+// interval reporting mode
+enum IntervalMode {
+    kInterval_None = 0,
+    kInterval_Time,
+    kInterval_Frames,
+    kInterval_Packets
 };
 
 // rate request units
@@ -190,12 +201,10 @@ struct thread_Settings {
     enum TestMode mMode;                 // -r or -d
     // Hopefully int64_t's
     intmax_t mUDPRate;            // -b or -u
-    enum RateUnits mUDPRateUnits;        // -b is either bw or pps
+    int mUDPRateUnits;            // -b is either bw or pps
     uintmax_t mAmount;             // -n or -t
-    // doubles
-    double mInterval;               // -i
-    int mIntervalFrames;
-    int mIntervalPackets;
+    unsigned int mInterval;               // -i integer time units is usec
+    enum IntervalMode mIntervalMode;
     // shorts
     unsigned short mListenPort;     // -L
     unsigned short mPort;           // -p
