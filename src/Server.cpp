@@ -107,8 +107,11 @@ Server::~Server() {
     thread_debug("Server destructor sock=%d bidir=%s", mySocket, (isBidir(mSettings) ? "true" : "false"));
 #endif
   if (isBidir(mSettings) && mSettings->bidirhdr) {
-     // for bidir update will close the socket if needed
+      // for bidir update will close the socket if needed
       UpdateMultiHdrRefCounter(mSettings->bidirhdr, -1, mySocket);
+      if (mSettings->multihdr) {
+	  UpdateMultiHdrRefCounter(mSettings->multihdr, -1, mySocket);
+      }
   } else if ((mySocket != INVALID_SOCKET) && !isReverse(mSettings) \
       && !isBidir(mSettings) && (myJob && !myJob->bidirreport)) {
 #if HAVE_THREAD_DEBUG
