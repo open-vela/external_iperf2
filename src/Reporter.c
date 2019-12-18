@@ -376,6 +376,9 @@ void UpdateMultiHdrRefCounter(struct MultiHeader *multihdr, int val, int sockfd)
     if (multihdr->refcount > multihdr->maxrefcount)
 	multihdr->maxrefcount = multihdr->refcount;
     if ((multihdr->maxrefcount > 1) && (multihdr->refcount == 0) && (val < 0)) {
+
+	// RJM fix this - needs to be a post to the reporter thread, can't be
+	// done in a traffic thread
 	// Output a final report before freeing it
 	if (*multihdr->output_sum_handler) {
 	    reporter_set_timestamps_time(&multihdr->report, 1);
