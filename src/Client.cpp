@@ -217,17 +217,6 @@ Client::~Client() {
     if (isServerReverse(mSettings))
 	Iperf_delete( &(mSettings->peer), &clients );
 
-    if (myJob) {
-	if (myJob->bidirreport) {
-	    UpdateMultiHdrRefCounter(myJob->bidirreport, -1, mySocket);
-	}
-	if (myJob->multireport && !isServerReverse(mSettings)) {
-	    UpdateMultiHdrRefCounter(myJob->multireport, -1, 0);
-	}
-	FreeReport(myJob);
-    } else if (mSettings->multihdr && !isServerReverse(mSettings)) {
-        UpdateMultiHdrRefCounter(mSettings->multihdr, -1, 0);
-    }
     DELETE_ARRAY(mBuf);
 } // end ~Client
 
