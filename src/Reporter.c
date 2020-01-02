@@ -358,53 +358,38 @@ void InitReport(struct thread_Settings *mSettings) {
     }
 }
 
-void UpdateMultiHdrRefCounter(struct MultiHeader *multihdr, int val, int sockfd) {
-    if (!multihdr)
-	return;
+int UpdateMultiHdrRefCounter(struct MultiHeader *multihdr, int val, int sockfd) {
     int need_free = 0;
-    // decrease the reference counter for mutliheaders
-    // and check to free the multiheader
-    Mutex_Lock(&multihdr->refcountlock);
+    if (multihdr) {
+	// decrease the reference counter for mutliheaders
+	// and check to free the multiheader
+	Mutex_Lock(&multihdr->refcountlock);
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Sum multiheader %p ref=%d->%d", (void *)multihdr, \
-		 multihdr->refcount, (multihdr->refcount + val));
+	thread_debug("Sum multiheader %p ref=%d->%d", (void *)multihdr, \
+		     multihdr->refcount, (multihdr->refcount + val));
 #endif
-    if ((multihdr->refcount == 0) && (val > 0)) {
-	multihdr->sockfd = sockfd;
-    }
-    multihdr->refcount += val;
-    if (multihdr->refcount > multihdr->maxrefcount)
-	multihdr->maxrefcount = multihdr->refcount;
-    if ((multihdr->maxrefcount > 1) && (multihdr->refcount == 0) && (val < 0)) {
-
-	// RJM fix this - needs to be a post to the reporter thread, can't be
-	// done in a traffic thread
-	// Output a final report before freeing it
-	if (*multihdr->output_sum_handler) {
-	    reporter_set_timestamps_time(&multihdr->report, 1);
-	    (*multihdr->output_sum_handler)(&multihdr->report, 1);
+	if ((multihdr->refcount == 0) && (val > 0)) {
+	    multihdr->sockfd = sockfd;
 	}
-	if (*multihdr->output_connect_handler)
-	    (*multihdr->output_connect_handler)(multihdr);
-
-	if (sockfd && (multihdr->sockfd == sockfd)) {
+	multihdr->refcount += val;
+	if (multihdr->refcount > multihdr->maxrefcount)
+	    multihdr->maxrefcount = multihdr->refcount;
+	if ((multihdr->maxrefcount > 1) && (multihdr->refcount == 0) && (val < 0)) {
+	    if (sockfd && (multihdr->sockfd == sockfd)) {
 #ifdef HAVE_THREAD_DEBUG
-	    thread_debug("Close socket %d per last reference", sockfd);
+		thread_debug("Close socket %d per last reference", sockfd);
 #endif
-	    int rc = close(multihdr->sockfd);
-	    WARN_errno( rc == SOCKET_ERROR, "client bidir close" );
+		int rc = close(multihdr->sockfd);
+		WARN_errno( rc == SOCKET_ERROR, "client bidir close" );
+	    }
+#ifdef HAVE_THREAD_DEBUG
+	    thread_debug("Free sum multiheader %p per last reference", (void *)multihdr);
+#endif
+	    need_free = 1;
 	}
-#ifdef HAVE_THREAD_DEBUG
-	thread_debug("Free sum multiheader %p per last reference", (void *)multihdr);
-#endif
-	need_free = 1;
+	Mutex_Unlock(&multihdr->refcountlock);
     }
-    Mutex_Unlock(&multihdr->refcountlock);
-    if (need_free) {
-	Condition_Destroy(&multihdr->multibarrier_cond);
-	Mutex_Destroy(&multihdr->refcountlock);
-	free(multihdr);
-    }
+    return need_free;
 }
 
 void FreeReport(struct ReportHeader *reporthdr) {
@@ -427,6 +412,14 @@ void FreeReport(struct ReportHeader *reporthdr) {
 		     (void *)reporthdr->report.info.latency_histogram, (void *) reporthdr->report.info.framelatency_histogram);
 #endif
 	free(reporthdr);
+    }
+}
+
+void FreeMultiReport(struct MultiHeader *multihdr) {
+    if (multihdr) {
+	Condition_Destroy(&multihdr->multibarrier_cond);
+	Mutex_Destroy(&multihdr->refcountlock);
+	free(multihdr);
     }
 }
 
@@ -763,10 +756,10 @@ void ReportPacket( struct ReportHeader* agent, struct ReportStruct *packet ) {
 
 /*
  * CloseReport is called by a transfer agent to finalize
- * the report and signal transfer is over.
+ * the report and signal transfer is over. Context is traffic thread
  */
 void CloseReport(struct ReportHeader *agent, struct ReportStruct *finalpacket) {
-    if ( agent != NULL) {
+    if (agent != NULL) {
 	struct ReportStruct packet;
         /*
          * Using PacketID of -1 ends reporting
@@ -785,10 +778,10 @@ void CloseReport(struct ReportHeader *agent, struct ReportStruct *finalpacket) {
 /*
  * EndReport signifies the agent no longer is interested
  * in the report. Calls to GetReport will no longer be
- * filled
+ * filled.  Context is traffic thread
  */
-void EndReport( struct ReportHeader *agent ) {
-    if ( agent != NULL ) {
+void EndReport(struct ReportHeader *agent) {
+    if (agent) {
 #ifdef HAVE_THREAD_DEBUG
         thread_debug( "Traffic thread awaiting reporter to be done with %p and cond %p", (void *)agent, (void *) agent->packetring->awake_producer);
 #endif
@@ -1395,7 +1388,7 @@ int reporter_process_report (struct ReportHeader *reporthdr) {
 		    struct ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
 		    struct ReporterData *bidirstats = (reporthdr->bidirreport ? &reporthdr->bidirreport->report : NULL);
 		    reporter_set_timestamps_time(&reporthdr->report, 1);
-		    (*reporthdr->output_handler)(&reporthdr->report, sumstats, bidirstats, 1);
+		    (*reporthdr->output_handler)(&reporthdr->report, NULL, NULL, 1);
 		    // Thread is done with the packet ring, signal back to the traffic thread
 		    // which will proceed from the EndReport wait, this must be the last thing done
 		    reporthdr->packetring->consumerdone = 1;
@@ -1403,13 +1396,31 @@ int reporter_process_report (struct ReportHeader *reporthdr) {
 		    // Note, the thread with the max value will set this
 		    // Also note, the final sum report output occurs as part of freeing the
 		    // sum or bidir report per the last reference and not here
-		    if (reporthdr->multireport && \
-			(TimeDifference(reporthdr->multireport->report.packetTime, packet->packetTime) > 0)) {
-			reporthdr->multireport->report.packetTime = packet->packetTime;
+		    if (reporthdr->bidirreport) {
+			if (TimeDifference(reporthdr->bidirreport->report.packetTime, packet->packetTime) > 0) {
+			    reporthdr->bidirreport->report.packetTime = packet->packetTime;
+			}
+			if (UpdateMultiHdrRefCounter(reporthdr->bidirreport, -1, reporthdr->bidirreport->sockfd)) {
+			    if (reporthdr->bidirreport->output_sum_handler) {
+				reporter_set_timestamps_time(&reporthdr->bidirreport->report, 1);
+				//	(*reporthdr->bidirreport->output_sum_handler)(&reporthdr->bidirreport->report, 1);
+			    }
+			    FreeMultiReport(reporthdr->bidirreport);
+			}
 		    }
-		    if (reporthdr->bidirreport && \
-			(TimeDifference(reporthdr->bidirreport->report.packetTime, packet->packetTime) > 0)) {
-			reporthdr->bidirreport->report.packetTime = packet->packetTime;
+		    if (reporthdr->multireport) {
+			if (TimeDifference(reporthdr->multireport->report.packetTime, packet->packetTime) > 0) {
+			    reporthdr->multireport->report.packetTime = packet->packetTime;
+			}
+			if (UpdateMultiHdrRefCounter(reporthdr->multireport, -1, reporthdr->multireport->sockfd)) {
+			    if (reporthdr->multireport->output_sum_handler) {
+				reporter_set_timestamps_time(&reporthdr->multireport->report, 1);
+				(*reporthdr->multireport->output_sum_handler)(&reporthdr->multireport->report, 1);
+			    }
+			    if (reporthdr->multireport->output_connect_handler)
+				(*reporthdr->multireport->output_connect_handler)(reporthdr->multireport);
+			    FreeMultiReport(reporthdr->multireport);
+			}
 		    }
 		}
 	    }

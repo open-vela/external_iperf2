@@ -106,18 +106,12 @@ Server::~Server() {
 #if HAVE_THREAD_DEBUG
     thread_debug("Server destructor sock=%d bidir=%s", mySocket, (isBidir(mSettings) ? "true" : "false"));
 #endif
-  if (isBidir(mSettings) && mSettings->bidirhdr) {
-      // for bidir update will close the socket if needed
-      UpdateMultiHdrRefCounter(mSettings->bidirhdr, -1, mySocket);
-      if (mSettings->multihdr) {
-	  UpdateMultiHdrRefCounter(mSettings->multihdr, -1, mySocket);
-      }
-  } else if ((mySocket != INVALID_SOCKET) && !isReverse(mSettings) \
+    if ((mySocket != INVALID_SOCKET) && !isReverse(mSettings)		\
       && !isBidir(mSettings) && (myJob && !myJob->bidirreport)) {
 #if HAVE_THREAD_DEBUG
       thread_debug("Socket close sock=%d (server destructor)", mySocket);
 #endif
-      int rc = close( mySocket );
+      int rc = close(mySocket);
       WARN_errno( rc == SOCKET_ERROR, "server close" );
       mySocket = INVALID_SOCKET;
   }
@@ -129,7 +123,7 @@ Server::~Server() {
     myDropSocket = INVALID_SOCKET;
   }
 #endif
-  DELETE_ARRAY( mBuf );
+  DELETE_ARRAY(mBuf);
   FreeReport(myJob);
 }
 
@@ -660,11 +654,9 @@ void Server::RunUDP( void ) {
 		}
 	    }
 	}
-
 	ReportPacket(mSettings->reporthdr, reportstruct);
-
     }
-    CloseReport( mSettings->reporthdr, reportstruct );
+    CloseReport(mSettings->reporthdr, reportstruct);
     // send a acknowledgement back except when:
     // 1) we're NOT receiving multicast
     // 2) the user requested no final exchange

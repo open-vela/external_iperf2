@@ -367,7 +367,7 @@ void reporter_dump_job_queue(void);
 
 extern struct AwaitMutex reporter_state;
 extern struct AwaitMutex threads_start;
-extern void UpdateMultiHdrRefCounter(struct MultiHeader *reporthdr, int val, int sockfd);
+extern int UpdateMultiHdrRefCounter(struct MultiHeader *reporthdr, int val, int sockfd);
 
 extern report_connection connection_reports[];
 extern report_settings settings_reports[];
