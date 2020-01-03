@@ -249,9 +249,9 @@ void Server::RunTCP( void ) {
 
     if(mSettings->mIntervalMode == kInterval_Time) {
 	reportstruct->packetLen = totLen;
-	ReportPacket( mSettings->reporthdr, reportstruct );
+	ReportPacket(mSettings->reporthdr, reportstruct);
     }
-    CloseReport( mSettings->reporthdr, reportstruct );
+    CloseReport(mSettings->reporthdr, reportstruct);
     EndReport( mSettings->reporthdr );
     if (isWriteAck(mSettings)) {
         WriteAck::Close(mSettings->ackring);
