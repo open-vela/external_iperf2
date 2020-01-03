@@ -164,6 +164,12 @@ enum WriteErrType {
     WriteErrNoAccount,
 };
 
+enum TimestampType {
+    INTERVAL  = 0,
+    FINALPARTIAL,
+    TOTAL,
+};
+
 struct L2Stats {
     intmax_t cnt;
     intmax_t unknown;

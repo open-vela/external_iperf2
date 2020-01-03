@@ -86,9 +86,6 @@ void Iperf_delete (iperf_sockaddr *del, Iperf_ListEntry **root) {
     }
     if (*tmp) {
 	Iperf_ListEntry *remove = (*tmp);
-	if (remove->holder) {
-	    UpdateMultiHdrRefCounter(remove->holder, -1, 0);
-	}
 	*tmp = remove->next;
         delete remove;
     }
