@@ -1707,8 +1707,8 @@ static void gettcpistats (struct ReporterData *stats, struct ReporterData *sumst
 	stats->info.sock_callstats.write.meanrtt = (stats->info.sock_callstats.write.meanrtt * ((double) (cnt - 1) / (double) cnt)) + ((double) (tcp_internal.tcpi_rtt) / (double) cnt);
 	stats->info.sock_callstats.write.rtt = tcp_internal.tcpi_rtt;
 	if (sumstats) {
-	  sumstats->info.sock_callstats.write.TCPretry += retry;
-	  sumstats->info.sock_callstats.write.totTCPretry += retry;
+	    sumstats->info.sock_callstats.write.TCPretry += retry;
+	    sumstats->info.sock_callstats.write.totTCPretry += retry;
 	}
     }
     if (final) {
@@ -1751,23 +1751,23 @@ static inline void reporter_set_timestamps_time(struct ReporterData *stats, enum
 	stats->info.endTime = 0;
 	stats->info.startTime = 0;
     } else {
-      switch (tstype) {
-      case INTERVAL:
-	stats->info.startTime = stats->info.endTime;
-	stats->info.endTime = TimeDifference(stats->nextTime, stats->startTime);
-	TimeAdd(stats->nextTime, stats->intervalTime);
-	break;
-      case TOTAL:
-	stats->info.startTime = 0;
-	stats->info.endTime = TimeDifference(stats->packetTime, stats->startTime);
-	break;
-      case FINALPARTIAL:
-	stats->info.startTime = stats->info.endTime;
-	stats->info.endTime = TimeDifference(stats->packetTime, stats->startTime);
-	break;
-      default:
-	break;
-      }
+	switch (tstype) {
+	case INTERVAL:
+	    stats->info.startTime = stats->info.endTime;
+	    stats->info.endTime = TimeDifference(stats->nextTime, stats->startTime);
+	    TimeAdd(stats->nextTime, stats->intervalTime);
+	    break;
+	case TOTAL:
+	    stats->info.startTime = 0;
+	    stats->info.endTime = TimeDifference(stats->packetTime, stats->startTime);
+	    break;
+	case FINALPARTIAL:
+	    stats->info.startTime = stats->info.endTime;
+	    stats->info.endTime = TimeDifference(stats->packetTime, stats->startTime);
+	    break;
+	default:
+	    break;
+	}
     }
 }
 
@@ -2093,16 +2093,12 @@ static void reporter_output_transfer_report_client_tcp(struct ReporterData *stat
 	stats->info.sock_callstats.write.TCPretry = stats->info.sock_callstats.write.totTCPretry;
 	stats->info.TotalLen = stats->TotalLen;
 	stats->info.startTime = 0.0;
-	if (!bidirstats)
+	if (!bidirstats || stats->info.mEnhanced)
 	    reporter_print(stats, TRANSFER_REPORT, 1);
-	else if (stats->info.mEnhanced)
-	  reporter_print(stats, TRANSFER_REPORT, 1);
     } else {
 	stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
-	if (!bidirstats)
+	if (!bidirstats || stats->info.mEnhanced)
 	    reporter_print(stats, TRANSFER_REPORT, 0);
-	else if (stats->info.mEnhanced)
-	  reporter_print(stats, TRANSFER_REPORT, 0);
 	reporter_reset_transfer_stats_client_tcp(stats);
     }
 }
