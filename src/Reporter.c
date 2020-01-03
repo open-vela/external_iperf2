@@ -2091,7 +2091,7 @@ static void reporter_output_transfer_report_client_tcp(struct ReporterData *stat
 	stats->info.sock_callstats.write.WriteCnt = stats->info.sock_callstats.write.totWriteCnt;
 	stats->info.sock_callstats.write.TCPretry = stats->info.sock_callstats.write.totTCPretry;
 	stats->info.TotalLen = stats->TotalLen;
-	stats->info.startTime = 0.0;
+	reporter_set_timestamps_time(stats, TOTAL);
 	if (!bidirstats || stats->info.mEnhanced)
 	    reporter_print(stats, TRANSFER_REPORT, 1);
     } else {
@@ -2174,7 +2174,7 @@ static void reporter_output_transfer_sum_report_client_tcp(struct ReporterData *
 	stats->info.sock_callstats.write.WriteCnt = stats->info.sock_callstats.write.totWriteCnt;
 	stats->info.sock_callstats.write.TCPretry = stats->info.sock_callstats.write.totTCPretry;
 	stats->info.TotalLen = stats->TotalLen;
-	stats->info.startTime = 0.0;
+        reporter_set_timestamps_time(stats, TOTAL);
 	reporter_print( stats, MULTIPLE_REPORT, 1 );
     } else {
 	stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
