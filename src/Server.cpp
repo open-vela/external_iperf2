@@ -215,8 +215,8 @@ void Server::RunTCP( void ) {
 		currLen = 0;
 	    }
 	    if (alignbytes) {
-	      currLen += alignbytes;
-	      alignbytes = 0;
+		currLen += alignbytes;
+		alignbytes = 0;
 	    }
 	    currLen += n;
 	    now.setnow();
@@ -225,10 +225,9 @@ void Server::RunTCP( void ) {
 	    totLen += currLen;
 	    if (isBWSet(mSettings))
 		tokens -= currLen;
-	    if (mSettings->mIntervalMode == kInterval_Time) {
-	      reportstruct->packetLen = currLen;
-	      ReportPacket(mSettings->reporthdr, reportstruct);
-	    }
+
+	    reportstruct->packetLen = currLen;
+	    ReportPacket(mSettings->reporthdr, reportstruct);
 
 	    // Check for reverse and amount where
 	    // the server stops after receiving
@@ -241,16 +240,12 @@ void Server::RunTCP( void ) {
 	    delay_loop(4);
 	}
     }
- end:
+  end:
     // stop timing
     now.setnow();
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
-
-    if(mSettings->mIntervalMode == kInterval_Time) {
-	reportstruct->packetLen = totLen;
-	ReportPacket(mSettings->reporthdr, reportstruct);
-    }
+    reportstruct->packetLen = 0;
     CloseReport(mSettings->reporthdr, reportstruct);
     EndReport( mSettings->reporthdr );
     if (isWriteAck(mSettings)) {

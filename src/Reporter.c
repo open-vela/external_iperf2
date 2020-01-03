@@ -772,7 +772,7 @@ void CloseReport(struct ReportHeader *agent, struct ReportStruct *finalpacket) {
          * event
          */
         packet.packetID = -1;
-        packet.packetLen = 0;
+        packet.packetLen = finalpacket->packetLen;
 	packet.packetTime = finalpacket->packetTime;
         ReportPacket(agent, &packet);
     }
@@ -1353,6 +1353,9 @@ int reporter_process_report (struct ReportHeader *reporthdr) {
 		// thread should add some delay to eliminate cpu thread
 		// thrashing,
 		consumption_detector.accounted_packets--;
+		// update fields common to TCP and UDP, client and server which is bytes and packet time
+		reporthdr->report.TotalLen += packet->packetLen;
+		reporthdr->report.packetTime = packet->packetTime;
 		// Check against a final packet event on this packet ring
 		if (!(packet->packetID < 0)) {
 		    // Check to output any interval reports, do this prior
@@ -1363,9 +1366,6 @@ int reporter_process_report (struct ReportHeader *reporthdr) {
 			    reporthdr->report.prevpacketTime = reporthdr->report.IPGstart;
 			advance_jobq = (*reporthdr->output_interval_report_handler)(reporthdr, packet);
 		    }
-		    // update fields common to TCP and UDP, client and server which is bytes and packet time
-		    reporthdr->report.TotalLen += packet->packetLen;
-		    reporthdr->report.packetTime = packet->packetTime;
 		    // Do the packet accounting per the handler type
 		    if (reporthdr->packet_handler) {
 			(*reporthdr->packet_handler)(reporthdr, packet);
@@ -1385,41 +1385,41 @@ int reporter_process_report (struct ReportHeader *reporthdr) {
 		    // A last packet event was detected
 		    // printf("last packet event detected\n"); fflush(stdout);
 		    reporthdr->reporter_thread_suspends = consumption_detector.reporter_thread_suspends;
-		    // output final reports
-		    reporthdr->report.TotalLen += packet->packetLen;
-		    reporthdr->report.packetTime=packet->packetTime;
-		    struct ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
-		    struct ReporterData *bidirstats = (reporthdr->bidirreport ? &reporthdr->bidirreport->report : NULL);
-		    (*reporthdr->output_handler)(&reporthdr->report, NULL, NULL, 1);
-		    // Thread is done with the packet ring, signal back to the traffic thread
-		    // which will proceed from the EndReport wait, this must be the last thing done
-		    reporthdr->packetring->consumerdone = 1;
-		    // This is a final report so set the sum report header's packet time
-		    // Note, the thread with the max value will set this
-		    // Also note, the final sum report output occurs as part of freeing the
-		    // sum or bidir report per the last reference and not here
-		    if (reporthdr->bidirreport) {
-			if (TimeDifference(reporthdr->bidirreport->report.packetTime, packet->packetTime) > 0) {
-			    reporthdr->bidirreport->report.packetTime = packet->packetTime;
-			}
-			if (UpdateMultiHdrRefCounter(reporthdr->bidirreport, -1, reporthdr->bidirreport->sockfd)) {
-			    if (reporthdr->bidirreport->output_sum_handler) {
-				//	(*reporthdr->bidirreport->output_sum_handler)(&reporthdr->bidirreport->report, 1);
+		    if (reporthdr->packet_handler) {
+			(*reporthdr->packet_handler)(reporthdr, packet);
+			struct ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
+			struct ReporterData *bidirstats = (reporthdr->bidirreport ? &reporthdr->bidirreport->report : NULL);
+			(*reporthdr->output_handler)(&reporthdr->report, sumstats, bidirstats, 1);
+			// Thread is done with the packet ring, signal back to the traffic thread
+			// which will proceed from the EndReport wait, this must be the last thing done
+			reporthdr->packetring->consumerdone = 1;
+			// This is a final report so set the sum report header's packet time
+			// Note, the thread with the max value will set this
+			// Also note, the final sum report output occurs as part of freeing the
+			// sum or bidir report per the last reference and not here
+			if (reporthdr->bidirreport) {
+			    if (TimeDifference(reporthdr->bidirreport->report.packetTime, packet->packetTime) > 0) {
+				reporthdr->bidirreport->report.packetTime = packet->packetTime;
 			    }
-			    FreeMultiReport(reporthdr->bidirreport);
-			}
-		    }
-		    if (reporthdr->multireport) {
-			if (TimeDifference(reporthdr->multireport->report.packetTime, packet->packetTime) > 0) {
-			    reporthdr->multireport->report.packetTime = packet->packetTime;
-			}
-			if (UpdateMultiHdrRefCounter(reporthdr->multireport, -1, reporthdr->multireport->sockfd)) {
-			    if (reporthdr->multireport->output_sum_handler) {
-				(*reporthdr->multireport->output_sum_handler)(&reporthdr->multireport->report, 1);
+			    if (UpdateMultiHdrRefCounter(reporthdr->bidirreport, -1, reporthdr->bidirreport->sockfd)) {
+				if (reporthdr->bidirreport->output_sum_handler) {
+				    //	(*reporthdr->bidirreport->output_sum_handler)(&reporthdr->bidirreport->report, 1);
+				}
+				FreeMultiReport(reporthdr->bidirreport);
 			    }
-			    if (reporthdr->multireport->output_connect_handler)
-				(*reporthdr->multireport->output_connect_handler)(reporthdr->multireport);
-			    FreeMultiReport(reporthdr->multireport);
+			}
+			if (reporthdr->multireport) {
+			    if (TimeDifference(reporthdr->multireport->report.packetTime, packet->packetTime) > 0) {
+				reporthdr->multireport->report.packetTime = packet->packetTime;
+			    }
+			    if (UpdateMultiHdrRefCounter(reporthdr->multireport, -1, reporthdr->multireport->sockfd)) {
+				if (reporthdr->multireport->output_sum_handler) {
+				    (*reporthdr->multireport->output_sum_handler)(&reporthdr->multireport->report, 1);
+				}
+				if (reporthdr->multireport->output_connect_handler)
+				    (*reporthdr->multireport->output_connect_handler)(reporthdr->multireport);
+				FreeMultiReport(reporthdr->multireport);
+			    }
 			}
 		    }
 		}
@@ -2043,16 +2043,16 @@ static void reporter_output_transfer_report_server_tcp(struct ReporterData *stat
     stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
     if (!final) {
 	if (!bidirstats)
-	  reporter_print(stats, TRANSFER_REPORT, 0);
+	    reporter_print(stats, TRANSFER_REPORT, 0);
 	else if (stats->info.mEnhanced)
-	  reporter_print(stats, TRANSFER_REPORT, 0);
+	    reporter_print(stats, TRANSFER_REPORT, 0);
 	reporter_reset_transfer_stats_server_tcp(stats);
     } else {
         // print a partial interval report if enable and this a final
         if ((stats->info.TotalLen > 0) && !TimeZero(stats->intervalTime)) {
-	  reporter_set_timestamps_time(stats, FINALPARTIAL);
-	  reporter_print(stats, TRANSFER_REPORT, 0);
-	  reporter_reset_transfer_stats_server_tcp(stats);
+	    reporter_set_timestamps_time(stats, FINALPARTIAL);
+	    reporter_print(stats, TRANSFER_REPORT, 0);
+	    reporter_reset_transfer_stats_server_tcp(stats);
         }
         stats->info.TotalLen = stats->TotalLen;
 	stats->info.startTime = 0.0;
@@ -2063,10 +2063,9 @@ static void reporter_output_transfer_report_server_tcp(struct ReporterData *stat
 	stats->info.transit.sumTransit = stats->info.transit.totsumTransit;
 	stats->info.transit.cntTransit = stats->info.transit.totcntTransit;
 	reporter_set_timestamps_time(stats, TOTAL);
-	if (!bidirstats) {
-	  reporter_print(stats, TRANSFER_REPORT, 1);
-	} else if (stats->info.mEnhanced)
-	  reporter_print(stats, TRANSFER_REPORT, 1);
+	if (!bidirstats || stats->info.mEnhanced) {
+	    reporter_print(stats, TRANSFER_REPORT, 1);
+	}
     }
 }
 
