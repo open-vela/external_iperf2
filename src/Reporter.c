@@ -1048,6 +1048,7 @@ static void reporter_jobq_free_entry (struct ReportHeader *entry) {
 
 /* Concatenate pending reports and return the head */
 static inline struct ReportHeader *reporter_jobq_set_root(void) {
+    struct ReportHeader *root = NULL;
     Condition_Lock(ReportCond);
     // check the jobq for empty
     if (ReportRoot == NULL) {
@@ -1072,8 +1073,9 @@ static inline struct ReportHeader *reporter_jobq_set_root(void) {
 	ReportPendingHead = NULL;
 	ReportPendingTail = NULL;
     }
+    root = ReportRoot;
     Condition_Unlock(ReportCond);
-    return ReportRoot;
+    return root;
 }
 /*
  * This function is the loop that the reporter thread processes
