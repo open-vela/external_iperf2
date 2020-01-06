@@ -1180,7 +1180,8 @@ void Client::FinishTrafficActions(void) {
      */
     if(!isUDP(mSettings) && !isEnhanced(mSettings) && (mSettings->mIntervalMode != kInterval_Time)) {
 	reportstruct->packetLen = totLen;
-	ReportPacket( mSettings->reporthdr, reportstruct );
+	ReportPacket(mSettings->reporthdr, reportstruct);
+	reportstruct->packetLen = 0;
     }
     CloseReport( mSettings->reporthdr, reportstruct);
     EndReport( mSettings->reporthdr );
