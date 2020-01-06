@@ -127,9 +127,6 @@ void client_spawn( thread_Settings *thread ) {
     // set traffic thread to realtime if needed
     thread_setscheduler(thread);
 
-    if (isBidir(thread) && !thread->bidirhdr)
-        thread->bidirhdr = InitBiDirReport(thread, 0);
-
     // start up the client
     // Note: socket connect() happens here in the constructor
     // that should be fixed as a clean up
@@ -244,6 +241,9 @@ void client_init( thread_Settings *clients ) {
 
     itr = clients;
     setReport(clients);
+    if (isBidir(clients))
+        clients->bidirhdr = InitBiDirReport(clients, 0);
+
     // See if we need to start a listener as well
     Settings_GenerateListenerSettings( clients, &next );
     if ((clients->mThreads > 1) || isConnectOnly(clients)) {
