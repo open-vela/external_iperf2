@@ -1394,9 +1394,6 @@ int reporter_process_report (struct ReportHeader *reporthdr) {
 			struct ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
 			struct ReporterData *bidirstats = (reporthdr->bidirreport ? &reporthdr->bidirreport->report : NULL);
 			(*reporthdr->output_handler)(&reporthdr->report, sumstats, bidirstats, 1);
-			// Thread is done with the packet ring, signal back to the traffic thread
-			// which will proceed from the EndReport wait, this must be the last thing done
-			reporthdr->packetring->consumerdone = 1;
 			// This is a final report so set the sum report header's packet time
 			// Note, the thread with the max value will set this
 			// Also note, the final sum report output occurs as part of freeing the
@@ -1426,6 +1423,11 @@ int reporter_process_report (struct ReportHeader *reporthdr) {
 			    }
 			}
 		    }
+		    // Thread is done with the packet ring, signal back to the traffic thread
+		    // which will proceed from the EndReport wait, this must be the last thing done
+		    Condition_Lock((*(reporthdr->packetring->awake_producer)));
+		    reporthdr->packetring->consumerdone = 1;
+		    Condition_Unlock((*(reporthdr->packetring->awake_producer)));
 		}
 	    }
 	}
