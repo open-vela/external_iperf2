@@ -201,11 +201,11 @@ struct MultiHeader* InitSumReport(struct thread_Settings *agent, int inID) {
 	    // The startTime and nextTime for summing reports will be set by
 	    // the reporter thread in realtime
 	    if ((agent->mInterval) && (agent->mIntervalMode == kInterval_Time)) {
-	      struct timeval *interval = &data->intervalTime;
-	      interval->tv_sec = (long) (agent->mInterval / rMillion);
-	      interval->tv_usec = (long) (agent->mInterval % rMillion);
+		struct timeval *interval = &data->intervalTime;
+		interval->tv_sec = (long) (agent->mInterval / rMillion);
+		interval->tv_usec = (long) (agent->mInterval % rMillion);
 	    } else {
-	      setNoMultReport(agent);
+		setNoMultReport(agent);
 	    }
 	    data->mHost = agent->mHost;
 	    data->mLocalhost = agent->mLocalhost;
@@ -234,7 +234,7 @@ struct MultiHeader* InitSumReport(struct thread_Settings *agent, int inID) {
 	    }
 	}
     } else {
-            FAIL(1, "Out of Memory!!\n", agent);
+	FAIL(1, "Out of Memory!!\n", agent);
     }
     return multihdr;
 }
@@ -258,7 +258,9 @@ struct MultiHeader* InitBiDirReport(struct thread_Settings *agent, int inID) {
 	      interval->tv_usec = (long) (agent->mInterval % rMillion);
 	    } else {
 	      setNoMultReport(agent);
-	      fprintf(stderr, "BiDir report suppressed on this thread\n");
+#ifdef HAVE_THREAD_DEBUG
+	      thread_debug("BiDir report supressed on this thread");
+#endif
 	    }
 	    data->mHost = agent->mHost;
 	    data->mLocalhost = agent->mLocalhost;
@@ -427,7 +429,7 @@ void FreeMultiReport(struct MultiHeader *multihdr) {
 }
 
 void InitDataReport(struct thread_Settings *mSettings) {
-     /*
+    /*
      * Create in one big chunk
      */
     struct ReportHeader *reporthdr = (struct ReportHeader *) calloc(1, sizeof(struct ReportHeader));
@@ -468,9 +470,9 @@ void InitDataReport(struct thread_Settings *mSettings) {
 		    reporthdr->packet_handler = reporter_handle_packet_server_udp;
 		    reporthdr->output_handler = reporter_output_transfer_report_server_udp;
 		    if (reporthdr->multireport)
-		      reporthdr->multireport->output_sum_handler = reporter_output_transfer_sum_report_server_udp;
+			reporthdr->multireport->output_sum_handler = reporter_output_transfer_sum_report_server_udp;
 		    if (reporthdr->bidirreport)
-		      reporthdr->bidirreport->output_sum_handler = reporter_output_transfer_bidir_report_udp;
+			reporthdr->bidirreport->output_sum_handler = reporter_output_transfer_bidir_report_udp;
 		} else {
 		    reporthdr->packet_handler = reporter_handle_packet_server_tcp;
 		    reporthdr->output_handler = reporter_output_transfer_report_server_tcp;
@@ -485,9 +487,9 @@ void InitDataReport(struct thread_Settings *mSettings) {
 		if (isUDP(mSettings)) {
 		    reporthdr->output_handler = reporter_output_transfer_report_client_udp;
 		    if (reporthdr->multireport)
-		      reporthdr->multireport->output_sum_handler = reporter_output_transfer_sum_report_client_udp;
+			reporthdr->multireport->output_sum_handler = reporter_output_transfer_sum_report_client_udp;
 		    if (reporthdr->bidirreport)
-		      reporthdr->bidirreport->output_sum_handler = reporter_output_transfer_bidir_report_udp;
+			reporthdr->bidirreport->output_sum_handler = reporter_output_transfer_bidir_report_udp;
 		} else {
 		    reporthdr->output_handler = reporter_output_transfer_report_client_tcp;
 		    if (reporthdr->multireport) {
@@ -533,22 +535,22 @@ void InitDataReport(struct thread_Settings *mSettings) {
 
 	switch (mSettings->mIntervalMode) {
 	case kInterval_Time :
-	  {
+	{
 	    struct timeval *interval = &data->intervalTime;
 	    interval->tv_sec = (long) (mSettings->mInterval / rMillion);
 	    interval->tv_usec = (long) (mSettings->mInterval % rMillion);
 	    reporthdr->output_interval_report_handler = reporter_condprint_time_interval_report;
-	  }
-	  break;
+	}
+	break;
 	case kInterval_Packets :
-	  reporthdr->output_interval_report_handler = reporter_condprint_packet_interval_report;
-	  break;
+	    reporthdr->output_interval_report_handler = reporter_condprint_packet_interval_report;
+	    break;
 	case kInterval_Frames :
-	  reporthdr->output_interval_report_handler = reporter_condprint_frame_interval_report;
-	  break;
+	    reporthdr->output_interval_report_handler = reporter_condprint_frame_interval_report;
+	    break;
 	default :
-	  reporthdr->output_interval_report_handler = NULL;
-	  break;
+	    reporthdr->output_interval_report_handler = NULL;
+	    break;
 	}
 	data->mHost = mSettings->mHost;
 	data->mLocalhost = mSettings->mLocalhost;
@@ -1403,7 +1405,7 @@ int reporter_process_report (struct ReportHeader *reporthdr) {
 			    }
 			    if (UpdateMultiHdrRefCounter(reporthdr->bidirreport, -1, reporthdr->bidirreport->sockfd)) {
 				if (reporthdr->bidirreport->output_sum_handler) {
-				    //	(*reporthdr->bidirreport->output_sum_handler)(&reporthdr->bidirreport->report, 1);
+				    (*reporthdr->bidirreport->output_sum_handler)(&reporthdr->bidirreport->report, 1);
 				}
 				FreeMultiReport(reporthdr->bidirreport);
 			    }
@@ -2203,11 +2205,11 @@ static void reporter_output_transfer_sum_report_server_tcp(struct ReporterData *
 static void reporter_output_transfer_bidir_report_tcp(struct ReporterData *stats, int final) {
     if (final) {
 	stats->info.TotalLen = stats->TotalLen;
-	stats->info.startTime = 0.0;
-	reporter_print( stats, BIDIR_REPORT, 1 );
+        reporter_set_timestamps_time(stats, TOTAL);
+	reporter_print(stats, BIDIR_REPORT, 1);
     } else {
 	stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
-	reporter_print( stats, BIDIR_REPORT, 0 );
+	reporter_print(stats, BIDIR_REPORT, 0);
 	reporter_reset_transfer_stats_bidir(stats);
     }
 }
