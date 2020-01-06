@@ -288,6 +288,8 @@ void Sig_Interupt( int inSigno ) {
     // then that is the only thread that can supply the next interrupt
     if ( (inSigno == SIGINT) && thread_equalid( sThread, thread_zeroid() ) ) {
         sThread = thread_getid();
+	// extern struct ReportHeader *ReportRoot;
+	// printf("ReportRoot=%p user_threads=%d\n", (void *) ReportRoot, thread_numuserthreads());
     } else if ( thread_equalid( sThread, thread_getid() ) ) {
         sig_exit( inSigno );
     }
