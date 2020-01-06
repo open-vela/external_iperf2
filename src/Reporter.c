@@ -792,7 +792,10 @@ void EndReport(struct ReportHeader *agent) {
 #endif
         Condition_Lock((*(agent->packetring->awake_producer)));
 	while (!agent->packetring->consumerdone) {
-	    Condition_TimedWait(agent->packetring->awake_producer, 1);
+	    // This wait time is the lag between the reporter thread
+	    // and the traffic thread, a reporter thread with lots of
+	    // reports (e.g. fastsampling) can lag per the i/o
+	    Condition_TimedWait(agent->packetring->awake_producer, 2);
 	    // printf("Consumer done may be stuck\n");
 	}
 	Condition_Unlock((*(agent->packetring->awake_producer)));
@@ -1428,6 +1431,7 @@ int reporter_process_report (struct ReportHeader *reporthdr) {
 		    Condition_Lock((*(reporthdr->packetring->awake_producer)));
 		    reporthdr->packetring->consumerdone = 1;
 		    Condition_Unlock((*(reporthdr->packetring->awake_producer)));
+		    Condition_Signal(reporthdr->packetring->awake_producer);
 		}
 	    }
 	}
