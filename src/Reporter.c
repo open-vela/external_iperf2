@@ -795,7 +795,7 @@ void EndReport(struct ReportHeader *agent) {
 	    // This wait time is the lag between the reporter thread
 	    // and the traffic thread, a reporter thread with lots of
 	    // reports (e.g. fastsampling) can lag per the i/o
-	    Condition_TimedWait(agent->packetring->awake_producer, 2);
+	    Condition_TimedWait(agent->packetring->awake_producer, 1);
 	    // printf("Consumer done may be stuck\n");
 	}
 	Condition_Unlock((*(agent->packetring->awake_producer)));
@@ -1040,12 +1040,15 @@ static void reporter_jobq_free_entry (struct ReportHeader *entry) {
 	free(entry);
     } else if ((entry->report.type & (TRANSFER_REPORT | CONNECTION_REPORT)) == TRANSFER_REPORT) {
 #ifdef HAVE_THREAD_DEBUG
-	thread_debug("Signal producer to free report %p and cond %p", \
-		     (void *) entry, (void *) &(entry->packetring->awake_producer));
+        thread_debug("Signal producer to free report %p and cond %p", \
+		   (void *) entry, (void *) &(entry->packetring->awake_producer));
 #endif
-	// Signal the producer (traffic thread) that the consumer (reporter thread)
-	// it is done with this report.
-	Condition_Signal(entry->packetring->awake_producer);
+        // Thread is done with the packet ring, signal back to the traffic thread
+        // which will proceed from the EndReport wait, this must be the last thing done
+        Condition_Lock((*(entry->packetring->awake_producer)));
+        entry->packetring->consumerdone = 1;
+        Condition_Unlock((*(entry->packetring->awake_producer)));
+        Condition_Signal(entry->packetring->awake_producer);
     }
 }
 
@@ -1426,12 +1429,6 @@ int reporter_process_report (struct ReportHeader *reporthdr) {
 			    }
 			}
 		    }
-		    // Thread is done with the packet ring, signal back to the traffic thread
-		    // which will proceed from the EndReport wait, this must be the last thing done
-		    Condition_Lock((*(reporthdr->packetring->awake_producer)));
-		    reporthdr->packetring->consumerdone = 1;
-		    Condition_Unlock((*(reporthdr->packetring->awake_producer)));
-		    Condition_Signal(reporthdr->packetring->awake_producer);
 		}
 	    }
 	}
