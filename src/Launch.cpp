@@ -269,10 +269,13 @@ void client_init( thread_Settings *clients ) {
     // provided settings, unsetting the report flag and add
     // to the list of threads to start
     for (int i = 1; i < clients->mThreads; i++) {
-        Settings_Copy( clients, &next );
-	if (isIncrDstIP(clients))
-	    next->incrdstip = i;
-
+        Settings_Copy(clients, &next);
+	if (next) {
+	    if (isIncrDstIP(clients))
+		next->incrdstip = i;
+	    if (isBidir(clients))
+		next->bidirhdr = InitBiDirReport(next, 0);
+	}
         itr->runNow = next;
         itr = next;
     }
