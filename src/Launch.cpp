@@ -273,8 +273,11 @@ void client_init( thread_Settings *clients ) {
 	if (next) {
 	    if (isIncrDstIP(clients))
 		next->incrdstip = i;
-	    if (isBidir(clients))
+	    if (isBidir(clients)) {
+		// Force a new bidir report for all the clients
+		next->bidirhdr = NULL;
 		next->bidirhdr = InitBiDirReport(next, 0);
+	    }
 	}
         itr->runNow = next;
         itr = next;
