@@ -2061,15 +2061,14 @@ static void reporter_output_transfer_report_server_tcp(struct ReporterData *stat
 	    reporter_print(stats, TRANSFER_REPORT, 0);
 	    reporter_reset_transfer_stats_server_tcp(stats);
         }
+	reporter_set_timestamps_time(stats, TOTAL);
         stats->info.TotalLen = stats->TotalLen;
-	stats->info.startTime = 0.0;
         stats->info.sock_callstats.read.cntRead = stats->info.sock_callstats.read.totcntRead;
         for (ix = 0; ix < TCPREADBINCOUNT; ix++) {
 	    stats->info.sock_callstats.read.bins[ix] = stats->info.sock_callstats.read.totbins[ix];
         }
 	stats->info.transit.sumTransit = stats->info.transit.totsumTransit;
 	stats->info.transit.cntTransit = stats->info.transit.totcntTransit;
-	reporter_set_timestamps_time(stats, TOTAL);
 	if (!bidirstats || stats->info.mEnhanced) {
 	    reporter_print(stats, TRANSFER_REPORT, 1);
 	}
