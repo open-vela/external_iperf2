@@ -1193,9 +1193,6 @@ static int reporter_condprint_time_interval_report (struct ReportHeader *reporth
     struct ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
     struct ReporterData *bidirstats = (reporthdr->bidirreport ? &reporthdr->bidirreport->report : NULL);
 
-    if (isUDP(stats))
-        reporter_handle_packet_pps(&reporthdr->report, &reporthdr->report.info, packet);
-
     // Print a report if packet time exceeds the next report interval time,
     // Also signal to the caller to move to the next report (or packet ring)
     // if there was output. This will allow for more precise interval sum accounting.
@@ -1622,7 +1619,7 @@ inline void reporter_handle_packet_server_udp(struct ReportHeader *reporthdr, st
 	stats->transit.vdTransit = 0;
 	stats->transit.meanTransit = 0;
 	stats->transit.m2Transit = 0;
-    } else if (!packet->emptyreport) {
+    } else if (packet->packetID > 0) {
 	// These are valid packets that need standard iperf accounting
 	// Do L2 accounting first (if needed)
 	if (packet->l2errors && (data->cntDatagrams > L2DROPFILTERCOUNTER)) {
@@ -1653,7 +1650,7 @@ inline void reporter_handle_packet_server_udp(struct ReportHeader *reporthdr, st
 	if ( packet->packetID > data->PacketID ) {
 	    data->PacketID = packet->packetID;
 	}
-	//	reporter_handle_packet_pps(data, stats, packet);
+	reporter_handle_packet_pps(data, stats, packet);
 	reporter_handle_packet_oneway_transit(data, stats, packet);
 	reporter_handle_packet_isochronous(data, stats, packet);
     }
@@ -1927,10 +1924,13 @@ static void reporter_output_transfer_report_server_udp(struct ReporterData *stat
 	stats->info.cntError = stats->cntError - stats->lastError;
 	stats->info.cntError -= stats->info.cntOutofOrder;
 	stats->info.cntDatagrams = stats->PacketID - stats->lastDatagrams;
+	if (final)
+	    reporter_set_timestamps_time(stats, FINALPARTIAL);
 	reporter_print(stats, TRANSFER_REPORT, 0);
 	reporter_reset_transfer_stats_server_udp(stats);
     }
     if (final) {
+	reporter_set_timestamps_time(stats, TOTAL);
 	stats->info.cntOutofOrder = stats->cntOutofOrder;
 	// assume most of the  time out-of-order packets are not
 	// duplicate packets, so conditionally subtract them from the lost packets.
@@ -1940,7 +1940,6 @@ static void reporter_output_transfer_report_server_udp(struct ReporterData *stat
 	stats->info.IPGcnt = stats->info.IPGcnttot;
 	stats->info.IPGsum = TimeDifference(stats->packetTime, stats->startTime);
 	stats->info.TotalLen = stats->TotalLen;
-	stats->info.startTime = 0.0;
 	stats->info.l2counts.cnt = stats->info.l2counts.tot_cnt;
 	stats->info.l2counts.unknown = stats->info.l2counts.tot_unknown;
 	stats->info.l2counts.udpcsumerr = stats->info.l2counts.tot_udpcsumerr;
