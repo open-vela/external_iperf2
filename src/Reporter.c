@@ -1673,7 +1673,7 @@ void reporter_handle_packet_client(struct ReportHeader *reporthdr, struct Report
 	if (isUDP(data)) {
 	    if (packet->packetID > 0)
 		data->PacketID = packet->packetID;
-	  // reporter_handle_packet_pps(data, stats, packet);
+	  reporter_handle_packet_pps(data, stats, packet);
 	  reporter_handle_packet_isochronous(data, stats, packet);
 	}
     }
