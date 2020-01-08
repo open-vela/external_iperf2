@@ -1671,6 +1671,8 @@ void reporter_handle_packet_client(struct ReportHeader *reporthdr, struct Report
 	stats->sock_callstats.write.WriteCnt++;
 	stats->sock_callstats.write.totWriteCnt++;
 	if (isUDP(data)) {
+	    if (packet->packetID > 0)
+		data->PacketID = packet->packetID;
 	  // reporter_handle_packet_pps(data, stats, packet);
 	  reporter_handle_packet_isochronous(data, stats, packet);
 	}
@@ -2018,12 +2020,13 @@ static void reporter_output_transfer_report_client_udp(struct ReporterData *stat
 	bidirstats->TotalLen += stats->TotalLen - stats->lastTotal;
     }
     if (final) {
+	reporter_set_timestamps_time(stats, TOTAL);
 	stats->info.TotalLen = stats->TotalLen;
 	stats->info.sock_callstats.write.WriteErr = stats->info.sock_callstats.write.totWriteErr;
 	stats->info.sock_callstats.write.WriteCnt = stats->info.sock_callstats.write.totWriteCnt;
 	stats->info.TotalLen = stats->TotalLen;
-	stats->info.startTime = 0.0;
 	stats->info.IPGcnt = stats->info.IPGcnttot;
+	stats->info.cntDatagrams = stats->PacketID;
 	reporter_print(stats, TRANSFER_REPORT, 1);
     } else {
 	stats->info.TotalLen = stats->TotalLen - stats->lastTotal;

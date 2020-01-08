@@ -895,7 +895,7 @@ void Client::RunUDP( void ) {
 	        reportstruct->errwrite = WriteErrAccount;
 	        currLen = 0;
 	    }
-	  reportstruct->emptyreport = 1;
+	    reportstruct->emptyreport = 1;
 	}
 
 	if (isModeAmount(mSettings)) {
@@ -910,15 +910,14 @@ void Client::RunUDP( void ) {
 	// report packets
 	reportstruct->packetLen = (unsigned long) currLen;
 	ReportPacket( mSettings->reporthdr, reportstruct );
-	// Insert delay here only if the running delay is greater than 1 usec,
+	// Insert delay here only if the running delay is greater than 100 usec,
 	// otherwise don't delay and immediately continue with the next tx.
-	if ( delay >= 1000 ) {
+	if ( delay >= 100000 ) {
 	    // Convert from nanoseconds to microseconds
 	    // and invoke the microsecond delay
 	    delay_loop((unsigned long) (delay / 1000));
 	}
     }
-
     FinishTrafficActions();
 }
 
