@@ -974,12 +974,12 @@ void ReportServerUDP( struct thread_Settings *agent, struct server_hdr *server )
 #define MINPACKETDEPTH 10
 #define MINPERQUEUEDEPTH 20
 #define REPORTERDELAY_DURATION 16000 // units is microseconds
-typedef struct ConsumptionDetectorType {
+struct ConsumptionDetectorType {
     int accounted_packets;
     int accounted_packet_threads;
     int reporter_thread_suspends ;
-} ConsumptionDetectorType;
-ConsumptionDetectorType consumption_detector = \
+};
+struct ConsumptionDetectorType consumption_detector = \
   {.accounted_packets = 0, .accounted_packet_threads = 0, .reporter_thread_suspends = 0};
 
 static inline void reset_consumption_detector(void) {
