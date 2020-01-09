@@ -1360,9 +1360,6 @@ int reporter_process_report (struct ReportHeader *reporthdr) {
 		// thread should add some delay to eliminate cpu thread
 		// thrashing,
 		consumption_detector.accounted_packets--;
-		// update fields common to TCP and UDP, client and server which is bytes and packet time
-		reporthdr->report.TotalLen += packet->packetLen;
-		reporthdr->report.packetTime = packet->packetTime;
 		// Check against a final packet event on this packet ring
 		if (!(packet->packetID < 0)) {
 		    // Check to output any interval reports, do this prior
@@ -1589,6 +1586,7 @@ inline void reporter_handle_packet_server_tcp(struct ReportHeader *reporthdr, st
     struct TransferInfo *stats = &reporthdr->report.info;
     if (packet->packetLen > 0) {
 	int bin;
+	reporthdr->report.TotalLen += packet->packetLen;
 	// mean min max tests
 	stats->sock_callstats.read.cntRead++;
 	stats->sock_callstats.read.totcntRead++;
@@ -1620,6 +1618,7 @@ inline void reporter_handle_packet_server_udp(struct ReportHeader *reporthdr, st
 	stats->transit.meanTransit = 0;
 	stats->transit.m2Transit = 0;
     } else if (packet->packetID > 0) {
+	reporthdr->report.TotalLen += packet->packetLen;
 	// These are valid packets that need standard iperf accounting
 	// Do L2 accounting first (if needed)
 	if (packet->l2errors && (data->cntDatagrams > L2DROPFILTERCOUNTER)) {
@@ -1660,6 +1659,7 @@ void reporter_handle_packet_client(struct ReportHeader *reporthdr, struct Report
     struct ReporterData *data = &reporthdr->report;
     struct TransferInfo *stats = &reporthdr->report.info;
 
+    reporthdr->report.TotalLen += packet->packetLen;
     data->packetTime = packet->packetTime;
     stats->socket = packet->socket;
     if (!packet->emptyreport) {
@@ -1673,8 +1673,8 @@ void reporter_handle_packet_client(struct ReportHeader *reporthdr, struct Report
 	if (isUDP(data)) {
 	    if (packet->packetID > 0)
 		data->PacketID = packet->packetID;
-	  reporter_handle_packet_pps(data, stats, packet);
-	  reporter_handle_packet_isochronous(data, stats, packet);
+	    reporter_handle_packet_pps(data, stats, packet);
+	    reporter_handle_packet_isochronous(data, stats, packet);
 	}
     }
 }
