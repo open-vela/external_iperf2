@@ -625,6 +625,7 @@ void Client::RunTCP( void ) {
 		now.setnow();
 		reportstruct->packetTime.tv_sec = now.getSecs();
 		reportstruct->packetTime.tv_usec = now.getUsecs();
+		reportstruct->sentTime = reportstruct->packetTime;
 	        WriteTcpTxHdr(reportstruct, burst_size, burst_id++);
 		burst_remaining = burst_size;
 		// perform write
@@ -658,8 +659,8 @@ void Client::RunTCP( void ) {
 	    reportstruct->errwrite=WriteNoErr;
 #ifdef HAVE_THREAD_DEBUG
 	    {
-	      if (len != reportstruct->packetLen)
-		thread_debug("write size mismatch req=%ld, actual=%d", reportstruct->packetLen, len);
+		if (len != reportstruct->packetLen)
+		    thread_debug("write size mismatch req=%ld, actual=%d", reportstruct->packetLen, len);
 	    }
 #endif
 	}
@@ -669,6 +670,7 @@ void Client::RunTCP( void ) {
 	now.setnow();
 	reportstruct->packetTime.tv_sec = now.getSecs();
 	reportstruct->packetTime.tv_usec = now.getUsecs();
+	reportstruct->sentTime = reportstruct->packetTime;
 	if ((mSettings->mIntervalMode == kInterval_Time) || isEnhanced(mSettings)) {
             ReportPacket(mSettings->reporthdr, reportstruct);
         }
@@ -677,7 +679,7 @@ void Client::RunTCP( void ) {
 	    if( mSettings->mAmount >= (unsigned long) (reportstruct->packetLen) ) {
                 mSettings->mAmount -= (unsigned long) (reportstruct->packetLen);
             } else {
-               mSettings->mAmount = 0;
+		mSettings->mAmount = 0;
             }
         }
     }
@@ -723,21 +725,22 @@ void Client::RunRateLimitedTCP ( void ) {
 	    WriteSync();
 	    int n = 0;
 	    if (isTripTime(mSettings) || isWriteAck(mSettings)) {
-	      if (burst_remaining == 0) {
-		now.setnow();
-		reportstruct->packetTime.tv_sec = now.getSecs();
-		reportstruct->packetTime.tv_usec = now.getUsecs();
-	        WriteTcpTxHdr(reportstruct, burst_size, burst_id++);
-		burst_remaining = burst_size;
-		// perform write
-		n = writen(mSettings->mSock, mBuf, sizeof(struct TCP_burst_payload));
-		WARN(n != sizeof(struct TCP_burst_payload), "burst hdr write failed");
-		burst_remaining -= n;
-		reportstruct->packetLen -= n;
-		// thread_debug("***write burst header %d id=%d", burst_size, (burst_id - 1));
-	      } else if (reportstruct->packetLen > burst_remaining) {
-		reportstruct->packetLen = burst_remaining;
-	      }
+		if (burst_remaining == 0) {
+		    now.setnow();
+		    reportstruct->packetTime.tv_sec = now.getSecs();
+		    reportstruct->packetTime.tv_usec = now.getUsecs();
+		    reportstruct->sentTime = reportstruct->packetTime;
+		    WriteTcpTxHdr(reportstruct, burst_size, burst_id++);
+		    burst_remaining = burst_size;
+		    // perform write
+		    n = writen(mSettings->mSock, mBuf, sizeof(struct TCP_burst_payload));
+		    WARN(n != sizeof(struct TCP_burst_payload), "burst hdr write failed");
+		    burst_remaining -= n;
+		    reportstruct->packetLen -= n;
+		    // thread_debug("***write burst header %d id=%d", burst_size, (burst_id - 1));
+		} else if (reportstruct->packetLen > burst_remaining) {
+		    reportstruct->packetLen = burst_remaining;
+		}
 	    }
 
 	    int len = write( mSettings->mSock, mBuf, reportstruct->packetLen);
@@ -754,18 +757,19 @@ void Client::RunRateLimitedTCP ( void ) {
 	        }
 		len = 0;
 	    } else {
-	      // Consume tokens per the transmit
+		// Consume tokens per the transmit
 	        tokens -= (len + n);
 	        totLen += (len + n);;
 		reportstruct->errwrite=WriteNoErr;
 	    }
 	    if (isTripTime(mSettings) || isWriteAck(mSettings))
-	      burst_remaining -= len;
+		burst_remaining -= len;
 
 	    time2.setnow();
 	    reportstruct->packetLen = len + n;
 	    reportstruct->packetTime.tv_sec = time2.getSecs();
 	    reportstruct->packetTime.tv_usec = time2.getUsecs();
+	    reportstruct->sentTime = reportstruct->packetTime;
 
 	    if (isEnhanced(mSettings) || (mSettings->mIntervalMode == kInterval_Time)) {
 		ReportPacket( mSettings->reporthdr, reportstruct );
@@ -829,6 +833,7 @@ void Client::RunUDP( void ) {
 	now.setnow();
 	reportstruct->packetTime.tv_sec = now.getSecs();
 	reportstruct->packetTime.tv_usec = now.getUsecs();
+	reportstruct->sentTime = reportstruct->packetTime;
         if (isVaryLoad(mSettings) && mSettings->mUDPRateUnits == kRate_BW) {
 	    static Timestamp time3;
 	    if (now.subSec(time3) >= VARYLOAD_PERIOD) {
@@ -973,6 +978,7 @@ void Client::RunUDPIsochronous (void) {
 	    t1.setnow();
 	    reportstruct->packetTime.tv_sec = t1.getSecs();
 	    reportstruct->packetTime.tv_usec = t1.getUsecs();
+	    reportstruct->sentTime = reportstruct->packetTime;
 	    mBuf_UDP->tv_sec  = htonl(reportstruct->packetTime.tv_sec);
 	    mBuf_UDP->tv_usec = htonl(reportstruct->packetTime.tv_usec);
 	    WritePacketID(reportstruct->packetID++);
@@ -1163,6 +1169,7 @@ void Client::FinishTrafficActions(void) {
     now.setnow();
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
+    reportstruct->sentTime = reportstruct->packetTime;
     // remove the thread from the write sync barrier
     WriteSyncDone();
     /*
