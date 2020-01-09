@@ -54,11 +54,12 @@
 #ifndef REPORT_DEFAULT_H
 #define REPORT_DEFAULT_H
 
-void reporter_printstats(struct TransferInfo *stats );
-void reporter_multistats(struct TransferInfo *stats );
-void reporter_bidirstats(struct TransferInfo *stats );
-void reporter_serverstats(struct ConnectionInfo *conn, struct TransferInfo *stats );
-void reporter_reportsettings(struct ReporterData *stats );
+void reporter_printstats(struct TransferInfo *stats);
+void reporter_multistats(struct TransferInfo *stats);
+void reporter_bidirstats(struct TransferInfo *stats);
+void reporter_framestats(struct TransferInfo *stats);
+void reporter_serverstats(struct ConnectionInfo *conn, struct TransferInfo *stats);
+void reporter_reportsettings(struct ReporterData *stats);
 void *reporter_reportpeer(struct ConnectionInfo *stats, int ID);
 
 
