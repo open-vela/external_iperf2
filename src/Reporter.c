@@ -1197,6 +1197,7 @@ static int reporter_condprint_time_interval_report (struct ReportHeader *reporth
     // Also signal to the caller to move to the next report (or packet ring)
     // if there was output. This will allow for more precise interval sum accounting.
     if (TimeDifference(reporthdr->report.nextTime, packet->packetTime) < 0) {
+	stats->packetTime = packet->packetTime;
 #ifdef DEBUG_PPS
 	printf("*** packetID TRIGGER = %ld pt=%ld.%ld empty=%d nt=%ld.%ld\n",packet->packetID, packet->packetTime.tv_sec, packet->packetTime.tv_usec, packet->emptyreport, reporthdr->report.nextTime.tv_sec, reporthdr->report.nextTime.tv_usec);
 #endif
