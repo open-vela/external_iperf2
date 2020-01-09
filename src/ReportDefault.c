@@ -377,6 +377,81 @@ void reporter_bidirstats(struct TransferInfo *stats) {
     }
 }
 
+void reporter_framestats(struct TransferInfo *stats) {
+    static char header_printed = 0;
+    double bytesxfered;
+    double transit_time = 0.0;
+
+    byte_snprintf( buffer, sizeof(buffer)/2, (double) stats->TotalLen,
+                   toupper( (int)stats->mFormat));
+    if (!stats->TotalLen || (stats->endTime < SMALLEST_INTERVAL_SEC)) {
+        bytesxfered = 0;
+    } else {
+        bytesxfered = (double) stats->TotalLen;
+    }
+    byte_snprintf( &buffer[sizeof(buffer)/2], sizeof(buffer)/2,
+                   (bytesxfered / (stats->endTime - stats->startTime)),
+		   stats->mFormat);
+
+    // UDP Server Reporting
+    if( !header_printed ) {
+	printf( "%s", report_frame_jitter_loss_enhanced_header);
+	header_printed = 1;
+    }
+    if (stats->IPGcnt) {
+	transit_time = stats->endTime - stats->startTime;
+	// If the min latency is out of bounds of a realistic value
+	// assume the clocks are not synched and suppress the
+	// latency output
+	if ((stats->transit.minTransit > UNREALISTIC_LATENCYMINMAX) ||
+	    (stats->transit.minTransit < UNREALISTIC_LATENCYMINMIN)) {
+	    printf( report_frame_jitter_loss_suppress_enhanced_format, stats->transferID,
+		    stats->startTime, stats->endTime, transit_time,
+		    buffer, &buffer[sizeof(buffer)/2],
+		    stats->jitter*1000.0, stats->cntError, stats->cntDatagrams,
+		    (100.0 * stats->cntError) / stats->cntDatagrams,
+		    (stats->IPGcnt / stats->IPGsum));
+	} else {
+	    double meantransit = stats->transit.sumTransit / stats->transit.cntTransit;
+	    printf( report_frame_jitter_loss_enhanced_format, stats->transferID,
+		    stats->startTime, stats->endTime, transit_time,
+		    buffer, &buffer[sizeof(buffer)/2],
+		    stats->jitter*1e3, stats->cntError, stats->cntDatagrams,
+		    (100.0 * stats->cntError) / stats->cntDatagrams,
+		    (meantransit * 1e3),
+		    stats->transit.minTransit*1e3,
+		    stats->transit.maxTransit*1e3,
+		    (stats->transit.cntTransit < 2) ? 0 : sqrt(stats->transit.m2Transit / (stats->transit.cntTransit - 1)) / 1e3,
+		    (stats->IPGcnt / stats->IPGsum),
+		    (meantransit > 0.0) ? (round((stats->IPGcnt / stats->IPGsum) * meantransit)) : 0,
+		    ((meantransit > 0.0) ? (NETPOWERCONSTANT * ((double) bytesxfered) / (double) (stats->endTime - stats->startTime) / meantransit) : 0),
+		    stats->isochstats.framecnt, stats->isochstats.framelostcnt);
+	}
+	if (stats->latency_histogram) {
+	    histogram_print(stats->latency_histogram, stats->startTime, stats->endTime, stats->free);
+	}
+    } else {
+	printf( report_frame_jitter_loss_suppress_enhanced_format, stats->transferID,
+		stats->startTime, stats->endTime, transit_time,
+		buffer, &buffer[sizeof(buffer)/2],
+		0.0, stats->cntError,
+		stats->cntDatagrams,
+		0.0,0.0,0.0,0.0,0.0,0.0);
+    }
+    if ( stats->cntOutofOrder > 0 ) {
+	printf( report_outoforder,
+		stats->transferID, stats->startTime,
+		stats->endTime, stats->cntOutofOrder );
+    }
+    if (stats->l2counts.cnt) {
+	printf( report_l2statistics,
+		stats->transferID, stats->startTime,
+		stats->endTime, stats->l2counts.cnt, stats->l2counts.lengtherr,
+		stats->l2counts.udpcsumerr, stats->l2counts.unknown);
+    }
+}
+
+
 /*
  * Prints server transfer reports in default style
  */

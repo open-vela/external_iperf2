@@ -121,6 +121,10 @@ report_statistics bidir_reports[kReport_MAXIMUM] = {
     reporter_bidirstats,
     statistics_notimpl
 };
+report_statistics frame_reports[kReport_MAXIMUM] = {
+    reporter_framestats,
+    statistics_notimpl
+};
 
 char buffer[SNBUFFERSIZE]; // Buffer for printing
 struct ReportHeader *ReportRoot = NULL;
@@ -1272,9 +1276,34 @@ static int reporter_condprint_packet_interval_report (struct ReportHeader *repor
 }
 
 static int reporter_condprint_frame_interval_report (struct ReportHeader *reporthdr, struct ReportStruct *packet) {
-    printf("frame reporting not done\n");
-    return -1;
+    int rc = 0;
+    struct ReporterData *stats = &reporthdr->report;
+    // first packet of a burst and not a duplicate
+    if ((packet->burstsize == (packet->remaining + packet->packetLen)) && (stats->matchframeID != packet->frameID)) {
+	reporthdr->report.matchframeID=packet->frameID;
+	if (isTripTime(stats))
+	    stats->nextTime = packet->sentTime;
+	else
+	    stats->nextTime = packet->packetTime;
+    }
+    if ((packet->packetLen == packet->remaining) && (packet->frameID == stats->matchframeID)) {
+	if ((stats->info.startTime = TimeDifference(stats->nextTime, stats->startTime)) < 0)
+	    stats->info.startTime = 0.0;
+	stats->info.endTime = TimeDifference(packet->packetTime, stats->startTime);
+	stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
+	stats->info.cntOutofOrder = stats->cntOutofOrder - stats->lastOutofOrder;
+	// assume most of the  time out-of-order packets are not
+	// duplicate packets, so conditionally subtract them from the lost packets.
+	stats->info.cntError = stats->cntError - stats->lastError;
+	stats->info.cntError -= stats->info.cntOutofOrder;
+	stats->info.cntDatagrams = stats->PacketID - stats->lastDatagrams;
+	reporter_print(stats, TRANSFER_FRAMEREPORT, 0);
+	reporter_reset_transfer_stats_server_udp(stats);
+	rc = 1;
+    }
+    return rc;
 }
+
 static void reporter_compute_connect_times (struct MultiHeader *hdr, double connect_time) {
     // Compute end/end delay stats
     if (connect_time > 0.0) {
@@ -2256,6 +2285,9 @@ int reporter_print( struct ReporterData *stats, int type, int end ) {
             break;
         case BIDIR_REPORT:
             bidir_reports[stats->mode]( &stats->info );
+            break;
+        case TRANSFER_FRAMEREPORT:
+            frame_reports[stats->mode]( &stats->info );
             break;
         default:
             fprintf( stderr, "Printing type not implemented! No Output\n" );

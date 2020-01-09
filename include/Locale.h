@@ -196,6 +196,11 @@ extern const char report_bw_sum_bidir_format[];
 
 extern const char report_bw_sum_bidir_enhanced_format[];
 
+extern const char report_frame_jitter_loss_enhanced_header[];
+
+extern const char report_frame_jitter_loss_enhanced_format[];
+
+extern const char report_frame_jitter_loss_suppress_enhanced_format[];
 /* -------------------------------------------------------------------
  * Misc reports
  * ------------------------------------------------------------------- */

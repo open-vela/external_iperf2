@@ -192,6 +192,7 @@ struct L2Stats {
 #define    CONNECTION_REPORT     0x00000008
 #define    MULTIPLE_REPORT       0x00000010
 #define    BIDIR_REPORT          0x00000020
+#define    TRANSFER_FRAMEREPORT  0x00000040
 
 union SendReadStats {
     struct ReadStats read;
@@ -267,6 +268,7 @@ struct ReporterData {
     intmax_t cntDatagrams;
     intmax_t lastDatagrams;
     intmax_t PacketID;
+    intmax_t matchframeID;
     uintmax_t TotalLen;
     uintmax_t lastTotal;
 

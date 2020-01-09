@@ -491,10 +491,8 @@ void Settings_Interpret( char option, const char *optarg, struct thread_Settings
 		  || (((results = strtok(tmp, "P")) != NULL)  && strcmp(results,optarg))) {
 		mExtSettings->mInterval = bitorbyte_atoi(results);
 		mExtSettings->mIntervalMode = kInterval_Packets;
-	      } else if ((((results = strtok(tmp, "f")) != NULL) && strcmp(results,optarg)) \
-			 || (((results = strtok(tmp, "F")) != NULL)  && strcmp(results,optarg))) {
-		mExtSettings->mInterval = bitorbyte_atoi(results);
-		mExtSettings->mIntervalMode = kInterval_Frames;
+	      } else if (((results = strtok(tmp, "f")) != NULL) || ((results = strtok(tmp, "F")) != NULL)) {
+		  mExtSettings->mIntervalMode = kInterval_Frames;
 	      } else {
 		char *end;
 		double itime = strtof(optarg, &end);
