@@ -1958,6 +1958,7 @@ static void reporter_output_transfer_report_server_udp(struct ReporterData *stat
 }
 static void reporter_output_transfer_sum_report_server_udp(struct ReporterData *stats, int final) {
     if (final) {
+	reporter_set_timestamps_time(stats, TOTAL);
 	stats->info.cntOutofOrder = stats->cntOutofOrder;
 	// assume most of the  time out-of-order packets are not
 	// duplicate packets, so conditionally subtract them from the lost packets.
@@ -1992,11 +1993,12 @@ static void reporter_output_connect_final_report_tcp (struct MultiHeader *multih
 
 static void reporter_output_transfer_sum_report_client_udp(struct ReporterData *stats, int final) {
     if (final) {
+	reporter_set_timestamps_time(stats, TOTAL);
 	stats->info.sock_callstats.write.WriteErr = stats->info.sock_callstats.write.totWriteErr;
 	stats->info.sock_callstats.write.WriteCnt = stats->info.sock_callstats.write.totWriteCnt;
 	stats->info.sock_callstats.write.TCPretry = stats->info.sock_callstats.write.totTCPretry;
+	stats->info.cntDatagrams = stats->cntDatagrams;
 	stats->info.TotalLen = stats->TotalLen;
-	stats->info.startTime = 0.0;
 	reporter_print( stats, MULTIPLE_REPORT, 1 );
     } else {
 	stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
@@ -2013,8 +2015,10 @@ static void reporter_output_transfer_report_client_udp(struct ReporterData *stat
 	sumstats->info.sock_callstats.write.totWriteErr += stats->info.sock_callstats.write.WriteErr;
 	sumstats->info.sock_callstats.write.totWriteCnt += stats->info.sock_callstats.write.WriteCnt;
 	sumstats->cntDatagrams += stats->cntDatagrams;
-	sumstats->info.IPGsum += stats->info.IPGsum;
+	if (sumstats->info.IPGsum < stats->info.IPGsum)
+	    sumstats->info.IPGsum = stats->info.IPGsum;
 	sumstats->info.IPGcnt += stats->info.IPGcnt;
+
     }
     if (bidirstats) {
 	bidirstats->TotalLen += stats->TotalLen - stats->lastTotal;
