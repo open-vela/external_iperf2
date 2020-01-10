@@ -355,16 +355,16 @@ const char report_bw_jitter_loss_suppress_enhanced_format[] =
  * Frame interval reports
  */
 #define IPERFFTimeFrmt "%4.4f-%4.4f"
-#define IPERFFTimeSpace "            "
+#define IPERFFTimeSpace "       "
 const char report_frame_jitter_loss_enhanced_header[] =
-"[ ID] Interval" IPERFFTimeSpace "Transit  Transfer     Bandwidth        Jitter   Lost/Total \
+"[ ID] Interval(f-transit)" IPERFFTimeSpace "Transfer     Bandwidth    FrameID   Jitter   Lost/Total \
  Latency avg/min/max/stdev PPS  inP NetPwr\n";
 
 const char report_frame_jitter_loss_enhanced_format[] =
-"[%3d] " IPERFFTimeFrmt "(%0.4f) sec  %ss  %ss/sec  %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%) %6.3f/%6.3f/%6.3f/%6.3f ms %4.0f pps %2.0f pkts %4.2f\n";
+"[%3d] " IPERFFTimeFrmt "(%0.4f) sec %ss  %ss/sec %4" PRIdMAX "   %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%) %6.3f/%6.3f/%6.3f/%6.3f ms %4.0f pps %2.0f pkts %4.2f\n";
 
 const char report_frame_jitter_loss_suppress_enhanced_format[] =
-"[%3d] " IPERFTimeFrmt "(%0.4f) sec  %ss  %ss/sec  %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%) -/-/-/- ms %4.0f pps\n";
+"[%3d] " IPERFTimeFrmt "(%0.4f) sec %ld %ss  %ss/sec %4" PRIdMAX "   %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%) -/-/-/- ms %4.0f pps\n";
 
 /* -------------------------------------------------------------------
  * Bidir reports

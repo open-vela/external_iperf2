@@ -380,7 +380,6 @@ void reporter_bidirstats(struct TransferInfo *stats) {
 void reporter_framestats(struct TransferInfo *stats) {
     static char header_printed = 0;
     double bytesxfered;
-    double transit_time = 0.0;
 
     byte_snprintf( buffer, sizeof(buffer)/2, (double) stats->TotalLen,
                    toupper( (int)stats->mFormat));
@@ -399,23 +398,23 @@ void reporter_framestats(struct TransferInfo *stats) {
 	header_printed = 1;
     }
     if (stats->IPGcnt) {
-	transit_time = stats->endTime - stats->startTime;
+	double frame_transit_time = stats->endTime - stats->startTime;
 	// If the min latency is out of bounds of a realistic value
 	// assume the clocks are not synched and suppress the
 	// latency output
 	if ((stats->transit.minTransit > UNREALISTIC_LATENCYMINMAX) ||
 	    (stats->transit.minTransit < UNREALISTIC_LATENCYMINMIN)) {
 	    printf( report_frame_jitter_loss_suppress_enhanced_format, stats->transferID,
-		    stats->startTime, stats->endTime, transit_time,
-		    buffer, &buffer[sizeof(buffer)/2],
+		    stats->startTime, stats->endTime, frame_transit_time,
+		    buffer, &buffer[sizeof(buffer)/2], stats->frameID,
 		    stats->jitter*1000.0, stats->cntError, stats->cntDatagrams,
 		    (100.0 * stats->cntError) / stats->cntDatagrams,
 		    (stats->IPGcnt / stats->IPGsum));
 	} else {
 	    double meantransit = stats->transit.sumTransit / stats->transit.cntTransit;
 	    printf( report_frame_jitter_loss_enhanced_format, stats->transferID,
-		    stats->startTime, stats->endTime, transit_time,
-		    buffer, &buffer[sizeof(buffer)/2],
+		    stats->startTime, stats->endTime, frame_transit_time,
+		    buffer, &buffer[sizeof(buffer)/2], stats->frameID,
 		    stats->jitter*1e3, stats->cntError, stats->cntDatagrams,
 		    (100.0 * stats->cntError) / stats->cntDatagrams,
 		    (meantransit * 1e3),
@@ -432,7 +431,7 @@ void reporter_framestats(struct TransferInfo *stats) {
 	}
     } else {
 	printf( report_frame_jitter_loss_suppress_enhanced_format, stats->transferID,
-		stats->startTime, stats->endTime, transit_time,
+		stats->startTime, stats->endTime, 0.0,
 		buffer, &buffer[sizeof(buffer)/2],
 		0.0, stats->cntError,
 		stats->cntDatagrams,
