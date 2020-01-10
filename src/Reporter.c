@@ -130,7 +130,7 @@ char buffer[SNBUFFERSIZE]; // Buffer for printing
 struct ReportHeader *ReportRoot = NULL;
 struct ReportHeader *ReportPendingHead = NULL;
 struct ReportHeader *ReportPendingTail = NULL;
-int reporter_process_report ( struct ReportHeader *report );
+static int reporter_process_report (struct ReportHeader *report, struct thread_Settings *mSettings);
 void process_report ( struct ReportHeader *report );
 int reporter_print( struct ReporterData *stats, int type, int end );
 void PrintMSS( struct ReporterData *stats );
@@ -227,7 +227,6 @@ struct MultiHeader* InitSumReport(struct thread_Settings *agent, int inID) {
 	    }
 	    if ( isEnhanced( agent ) ) {
 		data->info.mEnhanced = 1;
-		multihdr->output_connect_handler = reporter_output_connect_final_report_tcp;
 	    } else {
 		data->info.mEnhanced = 0;
 	    }
@@ -452,8 +451,7 @@ void InitDataReport(struct thread_Settings *mSettings) {
 	data = &reporthdr->report;
 	data->mThreadMode = mSettings->mThreadMode;
 	reporthdr->packet_handler = NULL;
-	if (reporthdr->multireport)
-	    reporthdr->multireport->output_connect_handler = NULL;
+
 	if (!isConnectOnly(mSettings)) {
 	    // Create a new packet ring which is used to communicate
 	    // packet stats from the traffic thread to the reporter
@@ -498,8 +496,6 @@ void InitDataReport(struct thread_Settings *mSettings) {
 		    reporthdr->output_handler = reporter_output_transfer_report_client_tcp;
 		    if (reporthdr->multireport) {
 		        reporthdr->multireport->output_sum_handler = reporter_output_transfer_sum_report_client_tcp;
-			if (isEnhanced(mSettings))
-			    reporthdr->multireport->output_connect_handler = reporter_output_connect_final_report_tcp;
 		    }
 		    if (reporthdr->bidirreport)
 		        reporthdr->bidirreport->output_sum_handler = reporter_output_transfer_bidir_report_tcp;
@@ -687,9 +683,6 @@ void InitConnectionReport (struct thread_Settings *mSettings) {
     data->connection.WriteAckLen = (mSettings->mWriteAckLen > 0) ? mSettings->mWriteAckLen : mSettings->mBufLen;
     if (mSettings->mSock > 0)
 	UpdateConnectionReport(mSettings, reporthdr);
-    if (isConnectOnly(mSettings) && mSettings->multihdr) {
-	UpdateMultiHdrRefCounter(mSettings->multihdr, 1, 0);
-    }
 }
 
 // Read the actual socket window size data
@@ -711,7 +704,7 @@ void UpdateConnectionReport(struct thread_Settings *mSettings, struct ReportHead
 
 void PostReport (struct ReportHeader *reporthdr) {
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug( "Jobq report %p (0x%X) post", reporthdr, reporthdr->report.type);
+    thread_debug( "Jobq *POST* report %p (0x%X)", reporthdr, reporthdr->report.type);
 #endif
     if (reporthdr) {
 #ifdef HAVE_THREAD
@@ -1068,7 +1061,7 @@ static inline struct ReportHeader *reporter_jobq_set_root(void) {
 	if (!ReportPendingHead) {
 	    Condition_TimedWait(&ReportCond, 1);
 #ifdef HAVE_THREAD_DEBUG
-	    thread_debug( "Jobq *WAIT* exit  %p ", (void *) ReportPendingHead);
+	    thread_debug( "Jobq *WAIT* exit  %p/%p", (void *) ReportRoot, (void *) ReportPendingHead);
 #endif
 	}
     }
@@ -1090,7 +1083,7 @@ static inline struct ReportHeader *reporter_jobq_set_root(void) {
 /*
  * This function is the loop that the reporter thread processes
  */
-void reporter_spawn( struct thread_Settings *thread ) {
+void reporter_spawn (struct thread_Settings *thread) {
 #ifdef HAVE_THREAD_DEBUG
     thread_debug( "Reporter thread started");
 #endif
@@ -1129,7 +1122,7 @@ void reporter_spawn( struct thread_Settings *thread ) {
      */
     while ((reporter_jobq_set_root() != NULL) || (thread_numuserthreads() > 1)){
 #ifdef HAVE_THREAD_DEBUG
-	// thread_debug( "Jobq *HEAD* %p (%d)", (void *) ReportRoot, thread_numtrafficthreads());
+	thread_debug( "Jobq *HEAD* %p (%d)", (void *) ReportRoot, thread_numuserthreads());
 #endif
 	if (ReportRoot) {
 	    // https://blog.kloetzl.info/beautiful-code/
@@ -1150,7 +1143,7 @@ void reporter_spawn( struct thread_Settings *thread ) {
 		// Report process report returns true
 		// when a report needs to be removed
 		// from the jobq
-		if (reporter_process_report(*work_item)) {
+	        if (reporter_process_report(*work_item, thread)) {
 		    struct ReportHeader *tmp = *work_item;
 		    *work_item = (*work_item)->next;
 #ifdef HAVE_THREAD_DEBUG
@@ -1167,6 +1160,10 @@ void reporter_spawn( struct thread_Settings *thread ) {
 	    }
 	}
     }
+    if (thread->multihdr) {
+        reporter_output_connect_final_report_tcp(thread->multihdr);
+	free(thread->multihdr);
+    }
 #ifdef HAVE_THREAD_DEBUG
     if (sInterupted)
         reporter_jobq_dump();
@@ -1179,7 +1176,7 @@ void reporter_spawn( struct thread_Settings *thread ) {
  */
 void process_report ( struct ReportHeader *report ) {
     if ( report != NULL ) {
-        if ( reporter_process_report( report ) ) {
+      if ( reporter_process_report(report, NULL) ) {
 	    if (report->report.info.latency_histogram) {
 		histogram_delete(report->report.info.latency_histogram);
 	    }
@@ -1331,7 +1328,7 @@ static void reporter_compute_connect_times (struct MultiHeader *hdr, double conn
 /*
  * Process reports starting with "reporthdr"
  */
-int reporter_process_report (struct ReportHeader *reporthdr) {
+static int reporter_process_report (struct ReportHeader *reporthdr, struct thread_Settings *mSettings) {
     int need_free = 1;
     // report.type is a bit field which indicates the reports requested,
     // note the special case for a Transfer interval and Connection report
@@ -1345,10 +1342,10 @@ int reporter_process_report (struct ReportHeader *reporthdr) {
 	} else if ( (reporthdr->report.type & CONNECTION_REPORT) != 0 ) {
 	    reporthdr->report.type &= ~CONNECTION_REPORT;
 	    need_free = (reporthdr->report.type == 0 ? 1 : 0);
-	    if (reporthdr->multireport) {
-	        reporter_compute_connect_times(reporthdr->multireport, reporthdr->report.connection.connecttime);
+	    if (mSettings->multihdr) {
+	        reporter_compute_connect_times(mSettings->multihdr, reporthdr->report.connection.connecttime);
 	    }
-	    reporter_print( &reporthdr->report, CONNECTION_REPORT, need_free);
+	    reporter_print(&reporthdr->report, CONNECTION_REPORT, need_free);
 	} else if ( (reporthdr->report.type & SERVER_RELAY_REPORT) != 0 ) {
 	    reporthdr->report.type &= ~SERVER_RELAY_REPORT;
 	    reporter_print( &reporthdr->report, SERVER_RELAY_REPORT, need_free);
@@ -1448,8 +1445,6 @@ int reporter_process_report (struct ReportHeader *reporthdr) {
 				if (reporthdr->multireport->output_sum_handler) {
 				    (*reporthdr->multireport->output_sum_handler)(&reporthdr->multireport->report, 1);
 				}
-				if (reporthdr->multireport->output_connect_handler)
-				    (*reporthdr->multireport->output_connect_handler)(reporthdr->multireport);
 				FreeMultiReport(reporthdr->multireport);
 			    }
 			}
