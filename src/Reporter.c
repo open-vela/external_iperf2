@@ -1289,6 +1289,7 @@ static int reporter_condprint_frame_interval_report (struct ReportHeader *report
     if ((packet->packetLen == packet->remaining) && (packet->frameID == stats->matchframeID)) {
 	if ((stats->info.startTime = TimeDifference(stats->nextTime, stats->startTime)) < 0)
 	    stats->info.startTime = 0.0;
+	stats->info.frameID = packet->frameID;
 	stats->info.endTime = TimeDifference(packet->packetTime, stats->startTime);
 	stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
 	stats->info.cntOutofOrder = stats->cntOutofOrder - stats->lastOutofOrder;
