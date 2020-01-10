@@ -119,6 +119,7 @@ void server_spawn(thread_Settings *thread) {
  * o) Bidir (Server side) (listener starts server & client)
  * o) WriteAck
  *
+ * Note: This runs in client thread context
  */
 void client_spawn( thread_Settings *thread ) {
     Client *theClient = NULL;
@@ -130,13 +131,8 @@ void client_spawn( thread_Settings *thread ) {
     // start up the client
     // Note: socket connect() happens here in the constructor
     // that should be fixed as a clean up
-    theClient = new Client( thread );
+    theClient = new Client(thread);
     if (isConnectOnly(thread)) {
-      // add one to the multihdr reference to keep
-      // it around during connect_periodic.
-      // these reference will be decremented
-      // after the Client's destructor
-	UpdateMultiHdrRefCounter(thread->multihdr, 1, 0);
 	theClient->ConnectPeriodic();
     } else if (!theClient->isConnected()) {
         // the barrier needs to be called even
@@ -218,14 +214,6 @@ void client_spawn( thread_Settings *thread ) {
     }
     // Call the client's destructor which will close the socket
     DELETE_PTR( theClient );
-    if (isConnectOnly(thread)) {
-        // the client destructor may have posted to the reporter
-        // a thread_rest should yied to it such that
-        // the final min/mean/max message follows the
-        // last connect message
-        thread_rest();
-	UpdateMultiHdrRefCounter(thread->multihdr, -1, 0);
-    }
 }
 
 /*
@@ -234,6 +222,8 @@ void client_spawn( thread_Settings *thread ) {
  * specified. It also creates settings structures for all the
  * threads and arranges them so they can be managed and started
  * via the one settings structure that was passed in.
+ *
+ * Note: This runs in main thread context
  */
 void client_init( thread_Settings *clients ) {
     thread_Settings *itr = NULL;
@@ -246,7 +236,7 @@ void client_init( thread_Settings *clients ) {
 
     // See if we need to start a listener as well
     Settings_GenerateListenerSettings( clients, &next );
-    if ((clients->mThreads > 1) || isConnectOnly(clients)) {
+    if (clients->mThreads > 1) {
       // Create a multiple report header to handle reporting the
       // sum of multiple client threads
       Mutex_Lock( &groupCond );
