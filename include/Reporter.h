@@ -208,6 +208,7 @@ struct TransferInfo {
     intmax_t cntDatagrams;
     intmax_t IPGcnt;
     intmax_t IPGcnttot;
+    intmax_t frameID;
     int socket;
     struct TransitStats transit;
     union SendReadStats sock_callstats;
