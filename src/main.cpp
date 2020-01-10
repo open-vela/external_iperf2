@@ -248,6 +248,9 @@ int main( int argc, char **argv ) {
 	into->mThreadMode = ReporterThreadMode;
 	into->multihdr = NULL;
 	into->bidirhdr = NULL;
+	// Reporter thread maintains its own connection report
+	// used for sums and final reports
+	InitConnectionReport(into);
 	// Have the reporter launch the client or listener
 	into->runNow = ext_gSettings;
 
