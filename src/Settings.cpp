@@ -484,40 +484,42 @@ void Settings_Interpret( char option, const char *optarg, struct thread_Settings
 
         case 'i': // specify interval between periodic bw reports
 	    {
-	      char *tmp= new char [strlen(optarg) + 1];
-	      strcpy(tmp, optarg);
-	      // scan for packet or frames as units
-	      if ((((results = strtok(tmp, "p")) != NULL) && strcmp(results,optarg)) \
-		  || (((results = strtok(tmp, "P")) != NULL)  && strcmp(results,optarg))) {
-		mExtSettings->mInterval = bitorbyte_atoi(results);
-		mExtSettings->mIntervalMode = kInterval_Packets;
-	      } else if (((results = strtok(tmp, "f")) != NULL) || ((results = strtok(tmp, "F")) != NULL)) {
-		  mExtSettings->mIntervalMode = kInterval_Frames;
-	      } else {
-		char *end;
-		double itime = strtof(optarg, &end);
-		if (*end != '\0') {
-		  fprintf (stderr, "Invalid value of '%s' for -i interval\n", optarg);
-		  exit(1);
-		}
-		if (itime > (UINT_MAX / 1e6)) {
-		  fprintf (stderr, "Too large value of '%s' for -i interval, max is %f\n", optarg, (UINT_MAX / 1e6));
-		  exit(1);
-		}
-		mExtSettings->mInterval = (unsigned int) (itime * 1e6);
-		if (!mExtSettings->mInterval) {
-		  fprintf (stderr, "Interval per -i cannot be zero\n");
-		  exit(1);
-		}
-		mExtSettings->mIntervalMode = kInterval_Time;
-		if ( mExtSettings->mInterval < SMALLEST_INTERVAL ) {
-		  mExtSettings->mInterval = SMALLEST_INTERVAL;
+		char framechar;
+		char *tmp= new char [strlen(optarg) + 1];
+		strcpy(tmp, optarg);
+		// scan for packet or frames as units
+		if ((((results = strtok(tmp, "p")) != NULL) && strcmp(results,optarg)) \
+		    || (((results = strtok(tmp, "P")) != NULL)  && strcmp(results,optarg))) {
+		    mExtSettings->mInterval = bitorbyte_atoi(results);
+		    mExtSettings->mIntervalMode = kInterval_Packets;
+		} else if ((sscanf(optarg,"%c", &framechar)) && ((framechar == 'f') || (framechar == 'F'))) {
+		    mExtSettings->mIntervalMode = kInterval_Frames;
+		} else {
+		    char *end;
+		    strcpy(tmp, optarg);
+		    double itime = strtof(optarg, &end);
+		    if (*end != '\0') {
+			fprintf (stderr, "Invalid value of '%s' for -i interval\n", optarg);
+			exit(1);
+		    }
+		    if (itime > (UINT_MAX / 1e6)) {
+			fprintf (stderr, "Too large value of '%s' for -i interval, max is %f\n", optarg, (UINT_MAX / 1e6));
+			exit(1);
+		    }
+		    mExtSettings->mInterval = (unsigned int) (itime * 1e6);
+		    if (!mExtSettings->mInterval) {
+			fprintf (stderr, "Interval per -i cannot be zero\n");
+			exit(1);
+		    }
+		    mExtSettings->mIntervalMode = kInterval_Time;
+		    if ( mExtSettings->mInterval < SMALLEST_INTERVAL ) {
+			mExtSettings->mInterval = SMALLEST_INTERVAL;
 #ifndef HAVE_FASTSAMPLING
-		  fprintf (stderr, report_interval_small, mExtSettings->mInterval);
+			fprintf (stderr, report_interval_small, mExtSettings->mInterval);
 #endif
+		    }
 		}
-	      }
-	      delete [] tmp;
+		delete [] tmp;
 	    }
             break;
 
