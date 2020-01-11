@@ -244,7 +244,7 @@ int main( int argc, char **argv ) {
     {
 	thread_Settings *into = NULL;
 	// Create the settings structure for the reporter thread
-	Settings_Copy( ext_gSettings, &into );
+	Settings_Copy(ext_gSettings, &into);
 	into->mThreadMode = ReporterThreadMode;
 	into->multihdr = NULL;
 	into->bidirhdr = NULL;
