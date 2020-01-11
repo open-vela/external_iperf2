@@ -81,7 +81,7 @@ void reporter_printstats(struct TransferInfo *stats) {
         bytesxfered = (double) stats->TotalLen;
     }
     byte_snprintf( &buffer[sizeof(buffer)/2], sizeof(buffer)/2,
-                   (bytesxfered / (stats->endTime - stats->startTime)),
+                   (((stats->endTime - stats->startTime) > 0) ? (bytesxfered / (stats->endTime - stats->startTime)) : 0),
 		   stats->mFormat);
 
     // TCP reports
