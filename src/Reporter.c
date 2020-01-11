@@ -394,8 +394,10 @@ int UpdateMultiHdrRefCounter(struct MultiHeader *multihdr, int val, int sockfd) 
 
 void FreeReport(struct ReportHeader *reporthdr) {
     if (reporthdr) {
-	if (reporthdr->packetring && !TimeZero(reporthdr->report.intervalTime) && (reporthdr->reporter_thread_suspends < 3)) {
-	    fprintf(stdout, "WARN: this test was likley CPU bound (%d) (or may not be detecting the underlying network devices)\n", reporthdr->reporter_thread_suspends);
+	if (reporthdr->packetring && reporthdr->report.TotalLen && \
+	    !TimeZero(reporthdr->report.intervalTime) && (reporthdr->reporter_thread_suspends < 3)) {
+	    fprintf(stdout, "WARN: this test was likley CPU bound (%d) (or may not be detecting the underlying network devices)\n", \
+		    reporthdr->reporter_thread_suspends);
 	}
 	if (reporthdr->packetring) {
 	    packetring_free(reporthdr->packetring);
