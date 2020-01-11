@@ -331,13 +331,12 @@ struct MultiHeader {
     int maxrefcount;
     int sockfd;
     struct ReporterData report;
-    struct MeanMinMaxStats connect_times;
     void (*output_sum_handler) (struct ReporterData *stats, int final);
-    void (*output_connect_handler) (struct MultiHeader *multihdr);
 };
 
 struct ReportHeader {
     struct ReporterData report;
+    struct MeanMinMaxStats connect_times;
     // function pointer for per packet processing
     void (*packet_handler) (struct ReportHeader *report, struct ReportStruct *packet);
     void (*output_handler) (struct ReporterData *stats, struct ReporterData *sumstats, struct ReporterData *bidirstats, int final);

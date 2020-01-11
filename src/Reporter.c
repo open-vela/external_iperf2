@@ -168,7 +168,7 @@ static void reporter_output_transfer_sum_report_client_udp(struct ReporterData *
 static void reporter_output_transfer_sum_report_server_udp(struct ReporterData *stats, int final);
 static void reporter_output_transfer_bidir_report_tcp(struct ReporterData *stats, int final);
 static void reporter_output_transfer_bidir_report_udp(struct ReporterData *stats, int final);
-static void reporter_output_connect_final_report_tcp(struct MultiHeader *multihdr);
+static void reporter_output_connect_final_report_tcp(struct ReportHeader *multihdr);
 
 // Reporter's reset of stats after a print occurs
 static void reporter_reset_transfer_stats(struct ReporterData *stats);
@@ -193,11 +193,6 @@ struct MultiHeader* InitSumReport(struct thread_Settings *agent, int inID) {
 	multihdr->refcount = 0;
 	Mutex_Initialize(&multihdr->refcountlock);
 	multihdr->threads = 0;
-	multihdr->connect_times.min = FLT_MAX;
-	multihdr->connect_times.max = FLT_MIN;
-	multihdr->connect_times.vd = 0;
-	multihdr->connect_times.m2 = 0;
-	multihdr->connect_times.mean = 0;
 	if (isMultipleReport(agent)) {
 	    struct ReporterData *data = &multihdr->report;
 	    data->type = TRANSFER_REPORT;
@@ -661,13 +656,13 @@ void InitConnectionReport (struct thread_Settings *mSettings) {
     if (data->connection.l2mode)
 	data->connection.l2mode = ((isIPV6(mSettings) << 1) | data->connection.l2mode);
     if (isEnhanced(mSettings)) {
-      if (isTxStartTime(mSettings)) {
-	data->connection.epochStartTime.tv_sec = mSettings->txstart_epoch.tv_sec;
-	data->connection.epochStartTime.tv_usec = mSettings->txstart_epoch.tv_usec;
-      } else if (isTripTime(mSettings)) {
-	data->connection.epochStartTime.tv_sec = mSettings->accept_time.tv_sec;
-	data->connection.epochStartTime.tv_usec = mSettings->accept_time.tv_usec;
-      }
+	if (isTxStartTime(mSettings)) {
+	    data->connection.epochStartTime.tv_sec = mSettings->txstart_epoch.tv_sec;
+	    data->connection.epochStartTime.tv_usec = mSettings->txstart_epoch.tv_usec;
+	} else if (isTripTime(mSettings)) {
+	    data->connection.epochStartTime.tv_sec = mSettings->accept_time.tv_sec;
+	    data->connection.epochStartTime.tv_usec = mSettings->accept_time.tv_usec;
+	}
     }
     if (isFQPacing(data) && (data->mThreadMode == kMode_Client)) {
 	char tmpbuf[40];
@@ -681,6 +676,12 @@ void InitConnectionReport (struct thread_Settings *mSettings) {
     data->connection.flags_extend = mSettings->flags_extend;
     data->connection.mFormat = mSettings->mFormat;
     data->connection.WriteAckLen = (mSettings->mWriteAckLen > 0) ? mSettings->mWriteAckLen : mSettings->mBufLen;
+    reporthdr->connect_times.min = FLT_MAX;
+    reporthdr->connect_times.max = FLT_MIN;
+    reporthdr->connect_times.vd = 0;
+    reporthdr->connect_times.m2 = 0;
+    reporthdr->connect_times.mean = 0;
+
     if (mSettings->mSock > 0)
 	UpdateConnectionReport(mSettings, reporthdr);
 }
@@ -1147,7 +1148,7 @@ void reporter_spawn (struct thread_Settings *thread) {
 		    struct ReportHeader *tmp = *work_item;
 		    *work_item = (*work_item)->next;
 #ifdef HAVE_THREAD_DEBUG
-		    thread_debug( "Jobq *FREE* %p (%X) (%p)", (void *) tmp, tmp->report.type,(void *) *work_item);
+		    thread_debug( "Jobq *FREE* %p (%X) (%p) cr=%p", (void *) tmp, tmp->report.type,(void *) *work_item, thread->multihdr);
 #endif
 		    reporter_jobq_free_entry(tmp);
 		    if (!(*work_item))
@@ -1160,8 +1161,8 @@ void reporter_spawn (struct thread_Settings *thread) {
 	    }
 	}
     }
-    if (thread->multihdr) {
-        reporter_output_connect_final_report_tcp(thread->multihdr);
+    if (thread->reporthdr) {
+        reporter_output_connect_final_report_tcp(thread->reporthdr);
 	free(thread->multihdr);
     }
 #ifdef HAVE_THREAD_DEBUG
@@ -1302,7 +1303,7 @@ static int reporter_condprint_frame_interval_report (struct ReportHeader *report
     return rc;
 }
 
-static void reporter_compute_connect_times (struct MultiHeader *hdr, double connect_time) {
+static void reporter_compute_connect_times (struct ReportHeader *hdr, double connect_time) {
     // Compute end/end delay stats
     if (connect_time > 0.0) {
 	hdr->connect_times.sum += connect_time;
@@ -1339,11 +1340,11 @@ static int reporter_process_report (struct ReportHeader *reporthdr, struct threa
 	if ((reporthdr->report.type & SETTINGS_REPORT) != 0 ) {
 	    reporthdr->report.type &= ~SETTINGS_REPORT;
 	    reporter_print( &reporthdr->report, SETTINGS_REPORT, need_free );
-	} else if ( (reporthdr->report.type & CONNECTION_REPORT) != 0 ) {
+	} else if ((reporthdr->report.type & CONNECTION_REPORT) != 0) {
 	    reporthdr->report.type &= ~CONNECTION_REPORT;
 	    need_free = (reporthdr->report.type == 0 ? 1 : 0);
-	    if (mSettings->multihdr) {
-	        reporter_compute_connect_times(mSettings->multihdr, reporthdr->report.connection.connecttime);
+	    if (mSettings->reporthdr) {
+	        reporter_compute_connect_times(mSettings->reporthdr, reporthdr->report.connection.connecttime);
 	    }
 	    reporter_print(&reporthdr->report, CONNECTION_REPORT, need_free);
 	} else if ( (reporthdr->report.type & SERVER_RELAY_REPORT) != 0 ) {
@@ -2005,15 +2006,15 @@ static void reporter_output_transfer_sum_report_server_udp(struct ReporterData *
 	reporter_reset_transfer_stats_server_udp(stats);
     }
 }
-static void reporter_output_connect_final_report_tcp (struct MultiHeader *multihdr) {
-    if (multihdr->connect_times.cnt > 1) {
-        double variance = (multihdr->connect_times.cnt < 2) ? 0 : sqrt(multihdr->connect_times.m2 / (multihdr->connect_times.cnt - 1));
+static void reporter_output_connect_final_report_tcp (struct ReportHeader *reporthdr) {
+    if (reporthdr->connect_times.cnt > 1) {
+        double variance = (reporthdr->connect_times.cnt < 2) ? 0 : sqrt(reporthdr->connect_times.m2 / (reporthdr->connect_times.cnt - 1));
         fprintf(stdout, "[ CT] final connect times (min/avg/max/stdev) = %0.3f/%0.3f/%0.3f/%0.3f ms (tot/err) = %d/%d\n", \
-		multihdr->connect_times.min,  \
-	        (multihdr->connect_times.sum / multihdr->connect_times.cnt), \
-		multihdr->connect_times.max, variance,  \
-		(multihdr->connect_times.cnt + multihdr->connect_times.err), \
-		multihdr->connect_times.err);
+		reporthdr->connect_times.min,  \
+	        (reporthdr->connect_times.sum / reporthdr->connect_times.cnt), \
+		reporthdr->connect_times.max, variance,  \
+		(reporthdr->connect_times.cnt + reporthdr->connect_times.err), \
+		reporthdr->connect_times.err);
     }
 }
 
