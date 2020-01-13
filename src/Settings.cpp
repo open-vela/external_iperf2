@@ -154,7 +154,7 @@ const struct option long_options[] =
 {"ipv6_domain",      no_argument, NULL, 'V'},
 {"suggest_win_size", no_argument, NULL, 'W'},
 {"peer-detect",      no_argument, NULL, 'X'},
-{"linux-congestion", required_argument, NULL, 'Z'},
+{"tcp-congestion", required_argument, NULL, 'Z'},
 {"histograms", optional_argument, &rxhistogram, 1},
 {"l2checks", no_argument, &l2checks, 1},
 {"incr-dstip", no_argument, &incrdstip, 1},
