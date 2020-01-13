@@ -1424,6 +1424,7 @@ static int reporter_process_report (struct ReportHeader *reporthdr, struct threa
 			(*reporthdr->packet_handler)(reporthdr, packet);
 			struct ReporterData *sumstats = (reporthdr->multireport ? &reporthdr->multireport->report : NULL);
 			struct ReporterData *bidirstats = (reporthdr->bidirreport ? &reporthdr->bidirreport->report : NULL);
+			reporthdr->report.packetTime = packet->packetTime;
 			(*reporthdr->output_handler)(&reporthdr->report, sumstats, bidirstats, 1);
 			// This is a final report so set the sum report header's packet time
 			// Note, the thread with the max value will set this
