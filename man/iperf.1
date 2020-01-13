@@ -32,8 +32,8 @@ MBytes, GBytes (see NOTES for more)
 .BR -h ", " --help " "
 print a help synopsis
 .TP
-.BR -i ", " --interval " \fIn\fR[pf]"
-pause \fIn\fR seconds (default), packets (p suffix) or frames/bursts (f suffix) between interval reports
+.BR -i ", " --interval " < \fIn\fR[p] | f >"
+sample or display interval reports every \fIn\fR seconds (default) or \fIn\fR packets (per optional p suffix.) If f is used then the interval will be each frame or burst.
 .TP
 .BR -l ", " --len " \fIn\fR[kmKM]"
 set read/write buffer size (TCP) or length (UDP) to \fIn\fR (TCP default 128K, UDP default 1470)
@@ -82,6 +82,9 @@ exclude C(connection) D(data) M(multicast) S(settings) V(server) reports
 .TP
 .BR -y ", " --reportstyle " C|c"
 if set to C or c report results as CSV (comma separated values)
+.TP
+.BR -Z ", " --tcp-congestion " "
+Set the default congestion-control algorithm to be used for new connections. Platforms must support setsockopt's TCP_CONGESTION. (Notes: See sysctl and tcp_allowed_congestion_control for available options. May require root privileges.)
 .SH "SERVER SPECIFIC OPTIONS"
 .TP
 .BR -b ", " --bandwidth " \fIn\fR[kmgKMG]"
