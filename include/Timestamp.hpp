@@ -97,7 +97,7 @@ public:
     /* -------------------------------------------------------------------
      * Set timestamp to current time.
      * ------------------------------------------------------------------- */
-    void setnow( void ) {
+    void inline setnow( void ) {
 #ifdef HAVE_CLOCK_GETTIME
 	struct timespec t1;
 	clock_gettime(CLOCK_REALTIME, &t1);
@@ -130,14 +130,14 @@ public:
     /* -------------------------------------------------------------------
      * return seconds portion of timestamp
      * ------------------------------------------------------------------- */
-    long getSecs( void ) {
+    long inline getSecs( void ) {
         return mTime.tv_sec;
     }
 
     /* -------------------------------------------------------------------
      * return microseconds portion of timestamp
      * ------------------------------------------------------------------- */
-    long getUsecs( void ) {
+    long inline getUsecs( void ) {
         return mTime.tv_usec;
     }
 
