@@ -621,6 +621,7 @@ void Client::RunTCP( void ) {
 		    // printf("burstsize=%d\n",burst_size);
 		}
 		// RJM fix below, consider using the timer value vs re-reading the clock
+		// the choice depends on the schedulding latency per clock_nanosleep()
 		now.setnow();
 		reportstruct->packetTime.tv_sec = now.getSecs();
 		reportstruct->packetTime.tv_usec = now.getUsecs();
