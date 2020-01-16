@@ -366,6 +366,9 @@ const char report_frame_jitter_loss_enhanced_format[] =
 const char report_frame_jitter_loss_suppress_enhanced_format[] =
 "[%3d] " IPERFTimeFrmt "(%0.4f) sec %ld %ss  %ss/sec %4" PRIdMAX "   %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%) -/-/-/- ms %4.0f pps\n";
 
+const char report_frame_tcp_enhanced_header[] =
+"[ ID] Interval(f-transit)" IPERFFTimeSpace "Transfer     Bandwidth    FrameID\n";
+
 /* -------------------------------------------------------------------
  * Bidir reports
  * ------------------------------------------------------------------- */
