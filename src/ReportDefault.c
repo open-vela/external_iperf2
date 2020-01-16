@@ -69,7 +69,7 @@ extern "C" {
 /*
  * Prints transfer reports in default style
  */
-void reporter_printstats(struct TransferInfo *stats) {
+void reporter_printstats (struct TransferInfo *stats) {
     static char header_printed = 0;
     double bytesxfered;
 
@@ -281,7 +281,7 @@ void reporter_printstats(struct TransferInfo *stats) {
 /*
  * Prints multiple transfer reports in default style
  */
-void reporter_multistats(struct TransferInfo *stats) {
+void reporter_multistats (struct TransferInfo *stats) {
 
     byte_snprintf( buffer, sizeof(buffer)/2, (double) stats->TotalLen,
                    toupper( (int)stats->mFormat));
@@ -358,7 +358,7 @@ void reporter_multistats(struct TransferInfo *stats) {
 /*
  * Prints bidir sum transfer reports in default style
  */
-void reporter_bidirstats(struct TransferInfo *stats) {
+void reporter_bidirstats (struct TransferInfo *stats) {
     byte_snprintf( buffer, sizeof(buffer)/2, (double) stats->TotalLen,
 		   toupper( (int)stats->mFormat));
     byte_snprintf( &buffer[sizeof(buffer)/2], sizeof(buffer)/2,
@@ -377,7 +377,7 @@ void reporter_bidirstats(struct TransferInfo *stats) {
     }
 }
 
-void reporter_framestats(struct TransferInfo *stats) {
+void reporter_framestats_udp (struct TransferInfo *stats) {
     static char header_printed = 0;
     double bytesxfered;
 
@@ -450,19 +450,62 @@ void reporter_framestats(struct TransferInfo *stats) {
     }
 }
 
+void reporter_framestats_tcp (struct TransferInfo *stats) {
+    static char header_printed = 0;
+    double bytesxfered;
+
+    byte_snprintf( buffer, sizeof(buffer)/2, (double) stats->TotalLen,
+                   toupper( (int)stats->mFormat));
+    if (!stats->TotalLen || (stats->endTime < SMALLEST_INTERVAL_SEC)) {
+        bytesxfered = 0;
+    } else {
+        bytesxfered = (double) stats->TotalLen;
+    }
+    byte_snprintf( &buffer[sizeof(buffer)/2], sizeof(buffer)/2,
+                   (bytesxfered / (stats->endTime - stats->startTime)),
+		   stats->mFormat);
+
+    // TCP Frame Reporting
+    if( !header_printed ) {
+	printf( "%s", report_frame_tcp_enhanced_header);
+	header_printed = 1;
+    }
+    if (stats->mTCP == (char)kMode_Client) {
+      printf( report_sum_bw_write_enhanced_format,
+	      stats->startTime, stats->endTime,
+	      buffer, &buffer[sizeof(buffer)/2],
+	      stats->sock_callstats.write.WriteCnt,
+	      stats->sock_callstats.write.WriteErr,
+	      stats->sock_callstats.write.TCPretry);
+    } else {
+      printf( report_sum_bw_read_enhanced_format,
+	      stats->startTime, stats->endTime,
+	      buffer, &buffer[sizeof(buffer)/2],
+	      stats->sock_callstats.read.cntRead,
+	      stats->sock_callstats.read.bins[0],
+	      stats->sock_callstats.read.bins[1],
+	      stats->sock_callstats.read.bins[2],
+	      stats->sock_callstats.read.bins[3],
+	      stats->sock_callstats.read.bins[4],
+	      stats->sock_callstats.read.bins[5],
+	      stats->sock_callstats.read.bins[6],
+	      stats->sock_callstats.read.bins[7]);
+    }
+}
+
 
 /*
  * Prints server transfer reports in default style
  */
-void reporter_serverstats(struct ConnectionInfo *nused, struct TransferInfo *stats) {
+void reporter_serverstats (struct ConnectionInfo *nused, struct TransferInfo *stats) {
     printf( server_reporting, stats->transferID );
-    reporter_printstats( stats );
+    reporter_printstats(stats);
 }
 
 /*
  * Report the client or listener Settings in default style
  */
-void reporter_reportsettings(struct ReporterData *data) {
+void reporter_reportsettings (struct ReporterData *data) {
     int pid =  (int)  getpid();
 
     printf( "%s", separator_line );
@@ -571,7 +614,7 @@ void reporter_reportsettings(struct ReporterData *data) {
 /*
  * Report a socket's peer IP address in default style
  */
-void *reporter_reportpeer(struct ConnectionInfo *stats, int ID) {
+void *reporter_reportpeer (struct ConnectionInfo *stats, int ID) {
     if ( ID > 0 ) {
         // copy the inet_ntop into temp buffers, to avoid overwriting
         char local_addr[ REPORT_ADDRLEN ];
@@ -733,7 +776,7 @@ void reporter_peerversion (struct thread_Settings *inSettings, int upper, int lo
 
 #define checkMSS_MTU( inMSS, inMTU ) (inMTU-40) >= inMSS  &&  inMSS >= (inMTU-80)
 
-void reporter_reportMSS(int inMSS, struct thread_Settings *inSettings) {
+void reporter_reportMSS (int inMSS, struct thread_Settings *inSettings) {
     if ( inMSS <= 0 ) {
         printf( report_mss_unsupported, inSettings->mSock );
     } else {
