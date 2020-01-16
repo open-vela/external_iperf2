@@ -201,6 +201,9 @@ extern const char report_frame_jitter_loss_enhanced_header[];
 extern const char report_frame_jitter_loss_enhanced_format[];
 
 extern const char report_frame_jitter_loss_suppress_enhanced_format[];
+
+extern const char report_frame_tcp_enhanced_header[];
+
 /* -------------------------------------------------------------------
  * Misc reports
  * ------------------------------------------------------------------- */

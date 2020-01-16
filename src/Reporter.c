@@ -121,8 +121,12 @@ report_statistics bidir_reports[kReport_MAXIMUM] = {
     reporter_bidirstats,
     statistics_notimpl
 };
-report_statistics frame_reports[kReport_MAXIMUM] = {
-    reporter_framestats,
+report_statistics frame_udpreports[kReport_MAXIMUM] = {
+    reporter_framestats_udp,
+    statistics_notimpl
+};
+report_statistics frame_tcpreports[kReport_MAXIMUM] = {
+    reporter_framestats_tcp,
     statistics_notimpl
 };
 
@@ -131,9 +135,9 @@ struct ReportHeader *ReportRoot = NULL;
 struct ReportHeader *ReportPendingHead = NULL;
 struct ReportHeader *ReportPendingTail = NULL;
 static int reporter_process_report (struct ReportHeader *report, struct thread_Settings *mSettings);
-void process_report ( struct ReportHeader *report );
-int reporter_print( struct ReporterData *stats, int type, int end );
-void PrintMSS( struct ReporterData *stats );
+void process_report (struct ReportHeader *report);
+int reporter_print(struct ReporterData *stats, int type, int end);
+void PrintMSS(struct ReporterData *stats);
 
 // Reporter private routines below
 
@@ -150,7 +154,8 @@ static void reporter_handle_packet_pps(struct ReporterData *data, struct Transfe
 // Reporter's conditional print, right now only time based sampling, possibly add packet based
 static int reporter_condprint_time_interval_report(struct ReportHeader *reporthdr, struct ReportStruct *packet);
 static int reporter_condprint_packet_interval_report(struct ReportHeader *reporthdr, struct ReportStruct *packet);
-static int reporter_condprint_frame_interval_report(struct ReportHeader *reporthdr, struct ReportStruct *packet);
+static int reporter_condprint_frame_interval_report_udp(struct ReportHeader *reporthdr, struct ReportStruct *packet);
+static int reporter_condprint_frame_interval_report_tcp(struct ReportHeader *reporthdr, struct ReportStruct *packet);
 static void reporter_set_timestamps_time(struct ReporterData *stats, enum TimestampType);
 
 // Reporter's interval ouput specialize routines
@@ -543,7 +548,11 @@ void InitDataReport(struct thread_Settings *mSettings) {
 	    reporthdr->output_interval_report_handler = reporter_condprint_packet_interval_report;
 	    break;
 	case kInterval_Frames :
-	    reporthdr->output_interval_report_handler = reporter_condprint_frame_interval_report;
+	    if (isUDP(mSettings)) {
+	        reporthdr->output_interval_report_handler = reporter_condprint_frame_interval_report_udp;
+	    } else {
+	        reporthdr->output_interval_report_handler = reporter_condprint_frame_interval_report_tcp;
+	    }
 	    break;
 	default :
 	    reporthdr->output_interval_report_handler = NULL;
@@ -1275,7 +1284,7 @@ static int reporter_condprint_packet_interval_report (struct ReportHeader *repor
     return advance_jobq;
 }
 
-static int reporter_condprint_frame_interval_report (struct ReportHeader *reporthdr, struct ReportStruct *packet) {
+static int reporter_condprint_frame_interval_report_udp (struct ReportHeader *reporthdr, struct ReportStruct *packet) {
     int rc = 0;
     struct ReporterData *stats = &reporthdr->report;
     // first packet of a burst and not a duplicate
@@ -1298,8 +1307,34 @@ static int reporter_condprint_frame_interval_report (struct ReportHeader *report
 	stats->info.cntError = stats->cntError - stats->lastError;
 	stats->info.cntError -= stats->info.cntOutofOrder;
 	stats->info.cntDatagrams = stats->PacketID - stats->lastDatagrams;
-	reporter_print(stats, TRANSFER_FRAMEREPORT, 0);
+	reporter_print(stats, TRANSFER_FRAMEREPORTUDP, 0);
 	reporter_reset_transfer_stats_server_udp(stats);
+	rc = 1;
+    }
+    return rc;
+}
+
+static int reporter_condprint_frame_interval_report_tcp (struct ReportHeader *reporthdr, struct ReportStruct *packet) {
+    int rc = 0;
+    struct ReporterData *stats = &reporthdr->report;
+    // first packet of a burst and not a duplicate
+    if ((packet->burstsize == (packet->remaining + packet->packetLen)) && (stats->matchframeID != packet->frameID)) {
+	reporthdr->report.matchframeID=packet->frameID;
+	if (isTripTime(stats))
+	    stats->nextTime = packet->sentTime;
+	else
+	    stats->nextTime = packet->packetTime;
+    }
+    if ((packet->packetLen == packet->remaining) && (packet->frameID == stats->matchframeID)) {
+	if ((stats->info.startTime = TimeDifference(stats->nextTime, stats->startTime)) < 0)
+	    stats->info.startTime = 0.0;
+	stats->info.frameID = packet->frameID;
+	stats->info.endTime = TimeDifference(packet->packetTime, stats->startTime);
+	stats->info.TotalLen = stats->TotalLen - stats->lastTotal;
+	// assume most of the  time out-of-order packets are not
+	// duplicate packets, so conditionally subtract them from the lost packets.
+	reporter_print(stats, TRANSFER_FRAMEREPORTTCP, 0);
+	reporter_reset_transfer_stats_server_tcp(stats);
 	rc = 1;
     }
     return rc;
@@ -2286,8 +2321,11 @@ int reporter_print( struct ReporterData *stats, int type, int end ) {
         case BIDIR_REPORT:
             bidir_reports[stats->mode]( &stats->info );
             break;
-        case TRANSFER_FRAMEREPORT:
-            frame_reports[stats->mode]( &stats->info );
+        case TRANSFER_FRAMEREPORTUDP:
+            frame_udpreports[stats->mode]( &stats->info );
+            break;
+        case TRANSFER_FRAMEREPORTTCP:
+            frame_tcpreports[stats->mode]( &stats->info );
             break;
         default:
             fprintf( stderr, "Printing type not implemented! No Output\n" );

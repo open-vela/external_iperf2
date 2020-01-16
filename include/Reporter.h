@@ -192,7 +192,8 @@ struct L2Stats {
 #define    CONNECTION_REPORT     0x00000008
 #define    MULTIPLE_REPORT       0x00000010
 #define    BIDIR_REPORT          0x00000020
-#define    TRANSFER_FRAMEREPORT  0x00000040
+#define    TRANSFER_FRAMEREPORTUDP  0x00000040
+#define    TRANSFER_FRAMEREPORTTCP  0x00000080
 
 union SendReadStats {
     struct ReadStats read;
