@@ -496,7 +496,7 @@ void Client::InitTrafficLoop (void) {
     readAt = mBuf;
 
     // Set up trip time values that don't change
-    if (isTripTime(mSettings) || isWriteAck(mSettings)) {
+    if (isTripTime(mSettings) || isIsochronous(mSettings)) {
       struct TCP_burst_payload * mBuf_burst = (struct TCP_burst_payload *) mBuf;
       mBuf_burst->typelen.type = htonl(CLIENTTCPHDR);
       mBuf_burst->typelen.length =  htonl(sizeof(struct TCP_burst_payload));
@@ -618,7 +618,6 @@ void Client::RunTCP( void ) {
 		if (framecounter) {
 		    burst_size = (int) (lognormal(mSettings->mMean,mSettings->mVariance)) / (mSettings->mFPS * 8);
 		    burst_id =  framecounter->wait_tick();
-		    // printf("burstsize=%d\n",burst_size);
 		}
 		// RJM fix below, consider using the timer value vs re-reading the clock
 		// the choice depends on the schedulding latency per clock_nanosleep()

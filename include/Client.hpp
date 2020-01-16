@@ -92,8 +92,8 @@ public:
     bool isConnected(void);
 
 private:
-    void WritePacketID( intmax_t );
-    void WriteTcpTxHdr( ReportStruct *, int, int);
+    inline void WritePacketID(intmax_t);
+    inline void WriteTcpTxHdr(ReportStruct *, int, int);
     void InitTrafficLoop(void);
     void FinishTrafficActions(void);
     void FinalUDPHandshake(void);
