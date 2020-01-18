@@ -1288,6 +1288,7 @@ static int reporter_condprint_frame_interval_report_udp (struct ReportHeader *re
     int rc = 0;
     struct ReporterData *stats = &reporthdr->report;
     // first packet of a burst and not a duplicate
+    assert(packet->burstsize != 0);
     if ((packet->burstsize == (packet->remaining + packet->packetLen)) && (stats->matchframeID != packet->frameID)) {
 	reporthdr->report.matchframeID=packet->frameID;
 	if (isTripTime(stats))
@@ -1316,6 +1317,7 @@ static int reporter_condprint_frame_interval_report_udp (struct ReportHeader *re
 
 static int reporter_condprint_frame_interval_report_tcp (struct ReportHeader *reporthdr, struct ReportStruct *packet) {
     int rc = 0;
+    assert(packet->burstsize != 0);
     struct ReporterData *stats = &reporthdr->report;
     // first packet of a burst and not a duplicate
     if ((packet->burstsize == (packet->remaining + packet->packetLen)) && (stats->matchframeID != packet->frameID)) {
