@@ -127,7 +127,7 @@ Server::~Server() {
   FreeReport(myJob);
 }
 
-bool Server::InProgress (void) {
+inline bool Server::InProgress (void) {
     if (sInterupted ||
 	((isServerModeTime(mSettings) || (isModeTime(mSettings) && isReverse(mSettings))) && mEndTime.before(reportstruct->packetTime)))
 	return false;
@@ -388,7 +388,7 @@ void Server::InitTrafficLoop (void) {
     }
 }
 
-int Server::ReadWithRxTimestamp (int *readerr) {
+inline int Server::ReadWithRxTimestamp (int *readerr) {
     long currLen;
     int tsdone = 0;
 
@@ -433,7 +433,7 @@ int Server::ReadWithRxTimestamp (int *readerr) {
 }
 
 // Returns true if the client has indicated this is the final packet
-bool Server::ReadPacketID (void) {
+inline bool Server::ReadPacketID (void) {
     bool terminate = false;
     struct UDP_datagram* mBuf_UDP  = (struct UDP_datagram*) (mBuf + mSettings->l4payloadoffset);
 
@@ -583,7 +583,7 @@ int Server::L2_quintuple_filter(void) {
     return 0;
 }
 
-void Server::Isoch_processing (int rxlen) {
+inline void Server::Isoch_processing (int rxlen) {
     // Ignore runt sized isoch packets
     if (rxlen < (int) (sizeof(UDP_datagram) +  sizeof(client_hdr_v1) + sizeof(client_hdr_udp_isoch_tests))) {
 	reportstruct->burstsize = 0;

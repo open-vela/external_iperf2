@@ -1078,7 +1078,7 @@ void Client::RunUDPIsochronous (void) {
 
 
 
-void Client::WritePacketID (intmax_t packetID) {
+inline void Client::WritePacketID (intmax_t packetID) {
     struct UDP_datagram * mBuf_UDP = (struct UDP_datagram *) mBuf;
     // store datagram ID into buffer
 #ifdef HAVE_INT64_T
@@ -1101,7 +1101,7 @@ void Client::WritePacketID (intmax_t packetID) {
 #endif
 }
 
-void Client::WriteTcpTxHdr (ReportStruct *reportstruct, int burst_size, int burst_id) {
+inline void Client::WriteTcpTxHdr (ReportStruct *reportstruct, int burst_size, int burst_id) {
     struct TCP_burst_payload * mBuf_burst = (struct TCP_burst_payload *) mBuf;
     // store packet ID into buffer
     reportstruct->packetID += burst_size;
@@ -1133,7 +1133,7 @@ void Client::WriteTcpTxHdr (ReportStruct *reportstruct, int burst_size, int burs
     return;
 }
 
-bool Client::InProgress (void) {
+inline bool Client::InProgress (void) {
     // Read the next data block from
     // the file if it's file input
     if (isFileInput(mSettings)) {
