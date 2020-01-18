@@ -294,6 +294,8 @@ sInterupted == SIGALRM
                 }
             }
 
+            // See if we need to do summing
+            Mutex_Lock( &clients_mutex );
             // Create an entry for the connection list
             listtemp = new Iperf_ListEntry;
             memcpy(&listtemp->data, &server->peer, sizeof(iperf_sockaddr));
@@ -301,8 +303,6 @@ sInterupted == SIGALRM
             listtemp->server = server;
             listtemp->next = NULL;
 
-            // See if we need to do summing
-            Mutex_Lock( &clients_mutex );
             exist = Iperf_hostpresent( &server->peer, clients);
 
             if ( exist != NULL ) {
@@ -312,7 +312,7 @@ sInterupted == SIGALRM
 		if (tempSettings && isBidir(tempSettings))
 		    tempSettings->multihdr = listtemp->holder;
             } else {
-	        Mutex_Lock( &groupCond );
+	        Mutex_Lock(&groupCond);
                 groupID--;
 		Mutex_Unlock( &groupCond );
 		if (!server->multihdr) {
