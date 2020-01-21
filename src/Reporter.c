@@ -1025,10 +1025,8 @@ static inline void apply_consumption_detector(void) {
 
 #ifdef HAVE_THREAD_DEBUG
 static void reporter_jobq_dump(void) {
-  int wait;
-  wait = 3;
-  thread_debug("reporter thread job queue request lock (with %ld second wait)", wait);
-  Condition_TimedLock(ReportCond, wait);
+  thread_debug("reporter thread job queue request lock");
+  Condition_Lock(ReportCond);
   struct ReportHeader *itr = ReportRoot;
   while (itr) {
     thread_debug("Job in queue %p",(void *) itr);
