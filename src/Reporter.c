@@ -1121,9 +1121,10 @@ void reporter_spawn (struct thread_Settings *thread) {
     reporter_state.ready = 1;
     Condition_Unlock(reporter_state.await);
     Condition_Broadcast(&reporter_state.await);
-
+#if HAVE_SCHED_SETSCHEDULER
     // set reporter thread to realtime if requested
     thread_setscheduler(thread);
+#endif
     /*
      * Keep the reporter thread alive under the following conditions
      *

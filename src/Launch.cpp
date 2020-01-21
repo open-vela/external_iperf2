@@ -92,8 +92,9 @@ void server_spawn(thread_Settings *thread) {
 		 (void *) thread, (void *)thread->multihdr, thread->mSock);
 #endif
     // set traffic thread to realtime if needed
+#if HAVE_SCHED_SETSCHEDULER
     thread_setscheduler(thread);
-
+#endif
     // Start up the server
     theServer = new Server( thread );
     // Run the test
@@ -126,8 +127,9 @@ void client_spawn( thread_Settings *thread ) {
     thread_Settings *reverse_client = NULL;
 
     // set traffic thread to realtime if needed
+#if HAVE_SCHED_SETSCHEDULER
     thread_setscheduler(thread);
-
+#endif
     // start up the client
     // Note: socket connect() happens here in the constructor
     // that should be fixed as a clean up
@@ -290,8 +292,9 @@ void writeack_server_spawn(thread_Settings *thread) {
     thread_debug("Write ack server spawn settings=%p sock=%d", (void *) thread, thread->mSock);
 #endif
     // set traffic thread to realtime if needed
+#if HAVE_SCHED_SETSCHEDULER
     thread_setscheduler(thread);
-
+#endif
     // Start up the server
     theServerAck = new WriteAck(thread);
     // Run the thread
@@ -308,8 +311,10 @@ void writeack_client_spawn(thread_Settings *thread) {
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Write ack client spawn settings=%p sock=%d", (void *) thread, thread->mSock);
 #endif
+#if HAVE_SCHED_SETSCHEDULER
     // set traffic thread to realtime if needed
     thread_setscheduler(thread);
+#endif
     // the client side server doesn't do write acks
     unsetWriteAck(thread);
     // Start up the server
