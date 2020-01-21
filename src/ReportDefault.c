@@ -659,7 +659,7 @@ void *reporter_reportpeer (struct ConnectionInfo *stats, int ID) {
 	    b += strlen(b);
 	    if (stats->mThreadMode == kMode_Server) {
 		snprintf(b, PEERBUFSIZE-strlen(b), " (%ld.%ld)", \
-			 stats->epochStartTime.tv_sec, stats->epochStartTime.tv_usec);
+			 stats->epochStartTime.tv_sec, (long) stats->epochStartTime.tv_usec);
 		b += strlen(b);
 	    }
 	}
