@@ -407,10 +407,15 @@ void Client::ConnectPeriodic (void) {
 	    timespec tmp;
 	    tmp.tv_sec = next.getSecs();
 	    tmp.tv_nsec = next.getUsecs() * 1000;
+#if defined(HAVE_CLOCK_NANOSLEEP)
 	    int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &tmp, NULL);
 	    if (rc) {
 		fprintf(stderr, "ConnectPeriodic() failed clock_nanosleep()=%d\n", rc);
 	    }
+#else
+	    now.setnow();
+	    delay_loop(next.subUsec(now));
+#endif
 	    if (isConnected() && (mySocket != INVALID_SOCKET)) {
 		int rc = close(mySocket);
 		WARN_errno( rc == SOCKET_ERROR, "client close" );
@@ -432,11 +437,6 @@ void Client::ConnectPeriodic (void) {
 		PostReport(mSettings->reporthdr);
 	    }
 	    now.setnow();
-	    //  timespec tmp;
-	    // tmp.tv_sec = mSettings->txholdback_timer.tv_sec;
-	    // tmp.tv_nsec = mSettings->txholdback_timer.tv_usec * 1000;
-	    // See if this a delay between connect and data
-	    // int rc = clock_nanosleep(CLOCK_MONOTONIC, 0, &tmp, NULL);
 	}
     }
 }
