@@ -172,6 +172,8 @@ void Server::RunTCP( void ) {
 			burst_info.typelen.length = ntohl(burst_info.typelen.length);
 			burst_info.flags = ntohl(burst_info.flags);
 			burst_info.burst_size = ntohl(burst_info.burst_size);
+			assert(burst_info.burst_size > 0);
+			reportstruct->burstsize = burst_info.burst_size;
 			burst_info.burst_id = ntohl(burst_info.burst_id);
 			// printf("**** burst size = %d id = %d\n", burst_info.burst_size, burst_info.burst_id);
 			reportstruct->frameID = burst_info.burst_id;
@@ -182,6 +184,9 @@ void Server::RunTCP( void ) {
 			burst_nleft = burst_info.burst_size - n;
 			// thread_debug("***read burst header size %d id=%d", burst_info.burst_size, burst_info.burst_id);
 		    } else {
+#ifdef HAVE_THREAD_DEBUG
+		        thread_debug("TCP burst partial read of %d wanted %d", n, sizeof(struct TCP_burst_payload));
+#endif
 		        goto end;
 		    }
 		}
