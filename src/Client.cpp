@@ -696,7 +696,7 @@ void Client::RunRateLimitedTCP ( void ) {
     int burst_remaining = 0;
     int burst_id = 1;
 
-    int var_rate = mSettings->mUDPRate;
+    long var_rate = mSettings->mUDPRate;
     int fatalwrite_err = 0;
     while (InProgress() && !fatalwrite_err) {
 	// Add tokens per the loop time
@@ -836,7 +836,7 @@ void Client::RunUDP( void ) {
         if (isVaryLoad(mSettings) && mSettings->mUDPRateUnits == kRate_BW) {
 	    static Timestamp time3;
 	    if (now.subSec(time3) >= VARYLOAD_PERIOD) {
-		int var_rate = lognormal(mSettings->mUDPRate,variance);
+		long var_rate = lognormal(mSettings->mUDPRate,variance);
 		if (var_rate < 0)
 		    var_rate = 0;
 
