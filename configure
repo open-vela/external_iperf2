@@ -8537,6 +8537,35 @@ $as_echo "#define AC_APPLE_UNIVERSAL_BUILD 1" >>confdefs.h
  esac
 
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for gettid syscall" >&5
+$as_echo_n "checking for gettid syscall... " >&6; }
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <unistd.h>
+#include <sys/syscall.h>
+
+int
+main ()
+{
+syscall(SYS_gettid);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ok=yes
+else
+  ok=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+if test "$ok" = "yes"; then
+
+$as_echo "#define HAVE_GETTID_SYSCALL 1" >>confdefs.h
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: ${ok}" >&5
+$as_echo "${ok}" >&6; }
 
 if test "$ac_cv_multicast" != no; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for multicast support" >&5
