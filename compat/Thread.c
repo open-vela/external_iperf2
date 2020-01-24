@@ -104,7 +104,11 @@ static int __log(const char *level, const char *format, va_list args) {
     char *logformat="%s(%ld):[%s] %s\n";
 
     __gettimestamp(timestamp);
+  #if HAVE_GETTID_SYSCALL
     unsigned long tid = syscall(SYS_gettid);
+  #else
+    unsigned long tid = -1;
+  #endif
     len = snprintf(NULL, 0, logformat, level, tid, timestamp, format);
     len++;  // Trailing null byte + extra
     newformat = malloc(len);
