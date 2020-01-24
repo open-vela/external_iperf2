@@ -207,6 +207,14 @@ AC_C_BIGENDIAN
 
 dnl ===================================================================
 dnl Check for system services
+AC_MSG_CHECKING([for gettid syscall])
+AC_TRY_LINK([#include <unistd.h>
+#include <sys/syscall.h>
+], [syscall(SYS_gettid);], [ok=yes], [ok=no])
+if test "$ok" = "yes"; then
+	AC_DEFINE(HAVE_GETTID_SYSCALL,1,[Define if syscall(SYS_gettid) available.])
+fi
+AC_MSG_RESULT(${ok})
 
 dnl check for multicast
 if test "$ac_cv_multicast" != no; then
