@@ -305,7 +305,9 @@ void byte_snprintf( char* outString, int inLen,
     }
 
     /* print such that we always fit in 4 places */
-    if ( inNum < 9.995 ) {          /* 9.995 would be rounded to 10.0 */
+    if ( inNum < 0.9995 ) {          /* 9.995 would be rounded to 10.0 */
+        format = "%4.3f %s";        /* #.## */
+    } else if ( inNum < 9.995 ) {          /* 9.995 would be rounded to 10.0 */
         format = "%4.2f %s";        /* #.## */
     } else if ( inNum < 99.95 ) {   /* 99.95 would be rounded to 100 */
         format = "%4.1f %s";        /* ##.# */
