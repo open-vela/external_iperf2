@@ -1159,7 +1159,7 @@ void Client::FinishTrafficActions(void) {
     if (!isUDP(mSettings) && (mySocket != INVALID_SOCKET) && isConnected()) {
         int rc = shutdown(mySocket, SHUT_WR);
 #ifdef HAVE_THREAD_DEBUG
-        thread_debug("Shutdown client's writes on tcp socket %d", mySocket);
+        thread_debug("Client calls shutdown() SHUTW_WR on tcp socket %d", mySocket);
 #endif
         WARN_errno( rc == SOCKET_ERROR, "shutdown" );
     }
