@@ -1133,7 +1133,7 @@ void reporter_spawn (struct thread_Settings *thread) {
      */
     while ((reporter_jobq_set_root() != NULL) || (thread_numuserthreads() > 1)){
 #ifdef HAVE_THREAD_DEBUG
-	thread_debug( "Jobq *HEAD* %p (%d)", (void *) ReportRoot, thread_numuserthreads());
+	// thread_debug( "Jobq *HEAD* %p (%d)", (void *) ReportRoot, thread_numuserthreads());
 #endif
 	if (ReportRoot) {
 	    // https://blog.kloetzl.info/beautiful-code/
