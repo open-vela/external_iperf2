@@ -383,8 +383,10 @@ sInterupted == SIGALRM
             Settings_Copy( mSettings, &server );
             server->mThreadMode = kMode_Server;
         } while ( !sInterupted && (!mCount || ( mCount && mClients > 0 )) );
-
-        Settings_Destroy( server );
+#ifdef HAVE_THREAD_DEBUG
+	  thread_debug("Listener per port %d exiting", server->mPort);
+#endif
+	  Settings_Destroy(server);
     }
 } // end Run
 
