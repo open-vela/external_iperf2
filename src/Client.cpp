@@ -1157,8 +1157,6 @@ inline bool Client::InProgress (void) {
 void Client::FinishTrafficActions(void) {
     // Shutdown the TCP socket's writes as the event for the server to end its traffic loop
     if (!isUDP(mSettings) && (mySocket != INVALID_SOCKET) && isConnected()) {
-	// turn off the send timeout
-	SetSocketOptionsSendTimeout(mSettings, 0);
         int rc = shutdown(mySocket, SHUT_WR);
 #ifdef HAVE_THREAD_DEBUG
         thread_debug("Shutdown client's writes on tcp socket %d", mySocket);
