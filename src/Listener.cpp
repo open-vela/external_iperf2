@@ -928,7 +928,7 @@ void Listener::Accept(thread_Settings *server) {
 	    }
 	} else {
 #ifdef HAVE_THREAD_DEBUG
-	    thread_debug("Listener thread accepting for TCP (sock=%d)", ListenSocket);
+	    thread_debug("Listener thread accepting on TCP tcp pott (sock=%d)", server->mPort, ListenSocket);
 #endif
 	    // accept a TCP  connection
 	    server->mSock = accept( ListenSocket,  (sockaddr*) &server->peer, &server->size_peer );
