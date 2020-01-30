@@ -218,7 +218,7 @@ void Server::RunTCP( void ) {
 		    ) {
 		    err = 1;
   #ifdef HAVE_THREAD_DEBUG
-		    thread_debug("Server thread detected EOF on socket %d", inSettings->mSock);
+		    thread_debug("Server thread detected EOF on socket %d", mSettings->mSock);
   #endif
 		}
 		currLen = 0;
