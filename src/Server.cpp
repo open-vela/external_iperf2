@@ -210,13 +210,16 @@ void Server::RunTCP( void ) {
 		// End loop on 0 read or socket error
 		// except for socket read timeout
 		if (currLen == 0 ||
-#ifdef WIN32
+  #ifdef WIN32
 		    (WSAGetLastError() != WSAEWOULDBLOCK)
-#else
+  #else
 		    (errno != EAGAIN && errno != EWOULDBLOCK)
-#endif // WIN32
+  #endif // WIN32
 		    ) {
 		    err = 1;
+  #ifdef HAVE_THREAD_DEBUG
+		    thread_debug("Server thread detected EOF on socket %d", inSettings->mSock);
+  #endif
 		}
 		currLen = 0;
 	    }
