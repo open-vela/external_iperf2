@@ -152,6 +152,8 @@ void Server::RunTCP( void ) {
 
     int burst_nleft = 0;
     burst_info.burst_id = 0;
+    burst_info.send_tt.write_tv_sec = 0;
+    burst_info.send_tt.write_tv_usec = 0;
     int alignbytes = AlignPayloads();
 
     while (InProgress() && !err) {
@@ -177,12 +179,12 @@ void Server::RunTCP( void ) {
 			burst_info.burst_id = ntohl(burst_info.burst_id);
 			// printf("**** burst size = %d id = %d\n", burst_info.burst_size, burst_info.burst_id);
 			reportstruct->frameID = burst_info.burst_id;
+		        reportstruct->prevSentTime.tv_sec = burst_info.send_tt.write_tv_sec;
+		        reportstruct->prevSentTime.tv_usec = burst_info.send_tt.write_tv_usec;
 			burst_info.send_tt.write_tv_sec  = ntohl(burst_info.send_tt.write_tv_sec);
 			burst_info.send_tt.write_tv_usec  = ntohl(burst_info.send_tt.write_tv_usec);
 		        reportstruct->sentTime.tv_sec = burst_info.send_tt.write_tv_sec;
 		        reportstruct->sentTime.tv_usec = burst_info.send_tt.write_tv_usec;
-		        reportstruct->prevSentTime.tv_sec = ntohl(burst_info.send_tt.prev_write_tv_sec);
-		        reportstruct->prevSentTime.tv_usec = ntohl(burst_info.send_tt.prev_write_tv_usec);
 			burst_nleft = burst_info.burst_size - n;
 			// thread_debug("***read burst header size %d id=%d", burst_info.burst_size, burst_info.burst_id);
 		    } else {

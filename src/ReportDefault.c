@@ -104,6 +104,9 @@ void reporter_printstats (struct TransferInfo *stats) {
 	    }
 	    if (stats->mTCP == (char)kMode_Server) {
 		double meantransit = (stats->transit.sumTransit / stats->transit.cntTransit);
+		double L  = ((stats->arrivalSum > 0.0) ? ((((double) bytesxfered) / stats->arrivalSum) * meantransit) : NAN);
+		char Lbuf[80];
+		byte_snprintf(Lbuf, sizeof(Lbuf), L, 'A');
 		printf(((!isTripTime(stats) || !bytesxfered) ? report_bw_read_enhanced_format : report_bw_read_enhanced_netpwr_format),
 		       stats->transferID, stats->startTime, stats->endTime,
 		       buffer, &buffer[sizeof(buffer)/2],
@@ -122,7 +125,7 @@ void reporter_printstats (struct TransferInfo *stats) {
 		       (stats->transit.cntTransit < 2) ? 0 : sqrt(stats->transit.m2Transit / (stats->transit.cntTransit - 1)) / 1e3,
 		       stats->transit.cntTransit,
 		       stats->transit.cntTransit ? ((int) bytesxfered / stats->transit.cntTransit) : 0,
-		       (stats->arrivalSum > 0.0) ? ((((double) bytesxfered) / stats->arrivalSum) * meantransit) : NAN,
+		       Lbuf,
 		       (meantransit > 0.0) ? (NETPOWERCONSTANT * ((double) bytesxfered) / (double) (stats->endTime - stats->startTime) / meantransit) : NAN);
 		if (stats->framelatency_histogram) {
 		    histogram_print(stats->framelatency_histogram, stats->startTime, stats->endTime, stats->free);
