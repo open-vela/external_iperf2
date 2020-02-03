@@ -1596,8 +1596,9 @@ static inline void reporter_handle_burst_tcp_transit(struct ReporterData *data, 
     if (packet->frameID && packet->transit_ready) {
         double transit = reporter_handle_packet_oneway_transit(data, stats, packet);
 
-	if (!TimeZero(packet->prevSentTime))
+	if (!TimeZero(packet->prevSentTime)) {
 	    stats->arrivalSum += TimeDifference(packet->sentTime, packet->prevSentTime);
+	}
 
 	if (stats->framelatency_histogram) {
 	  histogram_insert(stats->framelatency_histogram, transit, isTripTime(data) ? &packet->sentTime : NULL);
