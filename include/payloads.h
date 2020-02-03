@@ -243,8 +243,6 @@ struct TCP_oneway_triptime {
     uint32_t write_tv_usec;
     uint32_t read_tv_sec;
     uint32_t read_tv_usec;
-    uint32_t prev_write_tv_sec;
-    uint32_t prev_write_tv_usec;
 };
 struct TCP_burst_payload {
     uint32_t flags;
