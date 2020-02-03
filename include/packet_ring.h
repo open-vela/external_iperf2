@@ -61,6 +61,7 @@ struct ReportStruct {
     intmax_t packetLen;
     struct timeval packetTime;
     struct timeval sentTime;
+    struct timeval prevSentTime;
     int errwrite;
     int emptyreport;
     int socket;

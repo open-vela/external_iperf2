@@ -624,8 +624,8 @@ void Client::RunTCP( void ) {
 		now.setnow();
 		reportstruct->packetTime.tv_sec = now.getSecs();
 		reportstruct->packetTime.tv_usec = now.getUsecs();
-		reportstruct->sentTime = reportstruct->packetTime;
 	        WriteTcpTxHdr(reportstruct, burst_size, burst_id++);
+		reportstruct->sentTime = reportstruct->packetTime;
 		burst_remaining = burst_size;
 		// perform write
 		n = writen(mSettings->mSock, mBuf, sizeof(struct TCP_burst_payload));
@@ -728,8 +728,8 @@ void Client::RunRateLimitedTCP ( void ) {
 		    now.setnow();
 		    reportstruct->packetTime.tv_sec = now.getSecs();
 		    reportstruct->packetTime.tv_usec = now.getUsecs();
-		    reportstruct->sentTime = reportstruct->packetTime;
 		    WriteTcpTxHdr(reportstruct, burst_size, burst_id++);
+		    reportstruct->sentTime = reportstruct->packetTime;
 		    burst_remaining = burst_size;
 		    // perform write
 		    n = writen(mSettings->mSock, mBuf, sizeof(struct TCP_burst_payload));
@@ -1126,6 +1126,8 @@ inline void Client::WriteTcpTxHdr (ReportStruct *reportstruct, int burst_size, i
 #endif
     mBuf_burst->send_tt.write_tv_sec  = htonl(reportstruct->packetTime.tv_sec);
     mBuf_burst->send_tt.write_tv_usec  = htonl(reportstruct->packetTime.tv_usec);
+    mBuf_burst->send_tt.prev_write_tv_sec  = htonl(reportstruct->sentTime.tv_sec);
+    mBuf_burst->send_tt.prev_write_tv_usec  = htonl(reportstruct->sentTime.tv_usec);
     mBuf_burst->burst_id  = htonl((uint32_t)burst_id);
     mBuf_burst->burst_size  = htonl((uint32_t)burst_size);
     mBuf_burst->burst_period_s  = htonl(0x0);
