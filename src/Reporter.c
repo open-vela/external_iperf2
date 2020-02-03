@@ -1595,6 +1595,10 @@ static inline double reporter_handle_packet_oneway_transit(struct ReporterData *
 static inline void reporter_handle_burst_tcp_transit(struct ReporterData *data, struct TransferInfo *stats, struct ReportStruct *packet) {
     if (packet->frameID && packet->transit_ready) {
         double transit = reporter_handle_packet_oneway_transit(data, stats, packet);
+
+	if (!TimeZero(packet->prevSentTime))
+	    stats->arrivalSum += TimeDifference(packet->sentTime, packet->prevSentTime);
+
 	if (stats->framelatency_histogram) {
 	  histogram_insert(stats->framelatency_histogram, transit, isTripTime(data) ? &packet->sentTime : NULL);
 	}
@@ -1940,6 +1944,7 @@ static inline void reporter_reset_transfer_stats_server_tcp(struct ReporterData 
     stats->info.transit.vdTransit = 0;
     stats->info.transit.meanTransit = 0;
     stats->info.transit.m2Transit = 0;
+    stats->info.arrivalSum = 0;
 }
 static inline void reporter_reset_transfer_stats_server_udp(struct ReporterData *stats) {
     // Reset the enhanced stats for the next report interval
