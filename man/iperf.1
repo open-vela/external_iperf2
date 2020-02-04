@@ -161,7 +161,7 @@ a reversed test, server-to-client
 time in seconds to listen for new traffic connections, receive traffic or transmit traffic (Defaults: transmit is 10 secs while listen and receive are indefinite)
 .TP
 .BR "    --trip-times "
-enable measurement of the write latency (or data transfer) per a TCP test (client/server clocks must be synchronized)
+enable measurements end to end write to read latencies (client/server clocks must be synchronized)
 .TP
 .BR "    --txdelay-time "
 time in seconds to hold back or delay after the TCP connect and prior to the socket writes.  For UDP it's the delay between the traffic thread starting and the first write.
@@ -317,45 +317,43 @@ example, the bins are 0-1K, 1K-2K, .., 7K-8K.
 .B TCP tests (server with --trip-times on client)
 
 .B
-iperf -s -e -i 1 and client enables trip-times (e.g. iperf -c 10.19.87.7 --trip-times)
-
-------------------------------------------------------------
-.br
-Server listening on TCP port 5001 with pid 30369
-.br
-Read buffer size:  128 KByte
-.br
-TCP window size: 85.3 KByte (default)
+iperf -s -i 1 -w 4M  and client enables trip-times (e.g. iperf -c 192.168.1.4 --trip-times)
 .br
 ------------------------------------------------------------
 .br
-[  4] local 10.19.87.7 port 5001 connected with 10.19.87.10 port 43338 (trip-times)
+Server listening on TCP port 5001
+.br
+TCP window size: 8.00 MByte (WARNING: requested 4.00 MByte)
+.br
+------------------------------------------------------------
+.br
+[  4] local 192.168.1.4 port 5001 connected with 192.168.1.1 port 41148 (WARN: winsize=8.00 MByte req=4.00 MByte) (trip-times) (0.0)
 .br
 [ ID] Interval        Transfer    Bandwidth       Reads   Dist(bin=16.0K)     Burst Latency avg/min/max/stdev (cnt/size) inP NetPwr
 .br
-[  4] 0.00-1.00 sec   112 MBytes   941 Mbits/sec  7000    1552:5447:1:0:0:0:0:0     8.749/ 1.583/10.340/ 1.011 ms (897/131127) 1029057 bytes 13444.08
+[  4] 0.00-1.00 sec  39.5 MBytes   331 Mbits/sec  1202    363:239:200:303:82:10:5:0    45.903/ 6.960/114.098/14.906 ms (315/131455) 1.93 MByte 902.10
 .br
-[  4] 1.00-2.00 sec   112 MBytes   941 Mbits/sec  7015    1562:5453:0:0:0:0:0:0     8.790/ 7.131/10.443/ 0.878 ms (898/131050) 1034467 bytes 13387.92
+[  4] 1.00-2.00 sec  41.2 MBytes   346 Mbits/sec  1243    366:225:244:315:82:8:3:0    43.851/ 4.879/66.138/13.416 ms (330/131067) 1.76 MByte 986.35
 .br
-[  4] 2.00-3.00 sec   112 MBytes   941 Mbits/sec  7009    1543:5466:0:0:0:0:0:0     8.799/ 7.050/10.389/ 0.869 ms (897/131170) 1035306 bytes 13371.80
+[  4] 2.00-3.00 sec  41.3 MBytes   346 Mbits/sec  1239    351:235:243:324:67:12:6:1    47.392/15.661/66.540/11.228 ms (331/130718) 2.00 MByte 912.98
 .br
-[  4] 3.00-4.00 sec   112 MBytes   941 Mbits/sec  7032    1589:5442:1:0:0:0:0:0     8.810/ 7.128/10.437/ 0.877 ms (898/131047) 1036818 bytes 13356.91
+[  4] 3.00-4.00 sec  41.5 MBytes   348 Mbits/sec  1263    375:234:239:330:75:7:2:1    46.354/ 5.241/67.501/13.129 ms (331/131329) 1.89 MByte 937.78
 .br
-[  4] 4.00-5.00 sec   112 MBytes   941 Mbits/sec  7013    1556:5457:0:0:0:0:0:0     8.805/ 7.244/10.352/ 0.874 ms (898/131050) 1036239 bytes 13365.03
+[  4] 4.00-5.00 sec  41.2 MBytes   346 Mbits/sec  1258    360:274:227:291:93:11:2:0    46.873/11.738/66.749/11.404 ms (330/131052) 1.93 MByte 922.65
 .br
-[  4] 5.00-6.00 sec   112 MBytes   941 Mbits/sec  6999    1554:5440:3:1:0:0:0:1    10.384/ 7.257/12.712/ 1.284 ms (898/131050) 1222077 bytes 11332.64
+[  4] 5.00-6.00 sec  41.2 MBytes   346 Mbits/sec  1260    384:242:207:325:89:8:4:1    43.894/ 5.754/71.663/14.187 ms (330/131026) 1.75 MByte 985.08
 .br
-[  4] 6.00-7.00 sec   112 MBytes   941 Mbits/sec  7015    1568:5447:0:0:0:0:0:0    10.682/ 8.714/12.711/ 1.121 ms (898/131045) 1257085 bytes 11016.23
+[  4] 6.00-7.00 sec  40.8 MBytes   342 Mbits/sec  1239    365:230:228:339:68:6:3:0    45.442/ 7.337/85.551/14.247 ms (326/131104) 1.95 MByte 940.53
 .br
-[  4] 7.00-8.00 sec   112 MBytes   941 Mbits/sec  7010    1557:5453:0:0:0:0:0:0    10.683/ 8.681/12.695/ 1.125 ms (898/131050) 1257237 bytes 11015.71
+[  4] 7.00-8.00 sec  40.9 MBytes   343 Mbits/sec  1253    399:218:228:301:91:15:1:0    46.583/ 5.054/80.795/12.346 ms (327/131127) 1.89 MByte 920.47
 .br
-[  4] 8.00-9.00 sec   112 MBytes   941 Mbits/sec  7016    1570:5446:0:0:0:0:0:0    10.674/ 8.704/12.679/ 1.128 ms (897/131193) 1256177 bytes 11024.46
+[  4] 8.00-9.00 sec  40.7 MBytes   341 Mbits/sec  1238    366:243:228:311:75:9:5:1    46.426/ 6.881/84.161/13.552 ms (326/130835) 1.90 MByte 918.71
 .br
-[  4] 9.00-10.00 sec   112 MBytes   941 Mbits/sec  7062    1624:5438:0:0:0:0:0:0    10.693/ 8.624/12.681/ 1.127 ms (898/131047) 1258342 bytes 11005.49
+[  4] 9.00-10.00 sec  41.3 MBytes   347 Mbits/sec  1258    377:251:222:314:75:10:9:0    45.013/ 7.351/71.681/13.149 ms (330/131280) 1.84 MByte 962.45
 .br
-[  4] 10.00-10.01 sec  1.28 MBytes   939 Mbits/sec  80    17:63:0:0:0:0:0:0    11.582/ 8.761/12.361/ 1.191 ms (11/121860) 1359148 bytes 10131.78
+[  4] 10.00-10.04 sec  1.54 MBytes   333 Mbits/sec  47    14:8:7:14:4:0:0:0    57.046/43.117/62.784/ 6.215 ms (13/124423) 3.98 MByte 729.76
 .br
-[  4] 0.00-10.01 sec  1.10 GBytes   941 Mbits/sec  70251    15692:54552:5:1:0:0:0:1     9.699/11.582/11.582/ 0.000 ms (8988/131072) 1141261 bytes 12133.03
+[  4] 0.00-10.04 sec   411 MBytes   344 Mbits/sec  12500    3720:2399:2273:3167:801:96:40:4    45.678/62.784/62.784/ 0.000 ms (3289/131072) 1.88 MByte 940.12
 .TP
 .B where (per -e,)
 .B Burst Latency
@@ -371,7 +369,7 @@ Number of completed bursts received and used for the burst latency calculations
 Average burst size in bytes (computed average and estimate only)
 .br
 .B inP
-inP, short for in progress, is the average number of bytes in progress or in flight. This is taken from an application write to read perspective. (See Little's law in NOTES.)
+inP, short for in progress, is the average number of bytes in progress or in flight. This is taken from an application write to read perspective. (Requires --trip-times on client. See Little's law in NOTES.)
 .br
 .B NetPwr
 Network power defined as (throughput / one way latency)
@@ -433,46 +431,45 @@ Transmit packet rate in packets per second
 .PP
 
 .B UDP tests (server)
-
-.B iperf -s -u -e -i 1
+.B iperf -s -i 1 -w 4M -u
 .br
 ------------------------------------------------------------
 .br
-Server listening on UDP port 5001 with pid 20157
+Server listening on UDP port 5001
 .br
 Receiving 1470 byte datagrams
 .br
-UDP buffer size:  208 KByte (default)
+UDP buffer size: 8.00 MByte (WARNING: requested 4.00 MByte)
 .br
 ------------------------------------------------------------
 .br
-[  3] local 10.19.87.7 port 5001 connected with 10.19.87.10 port 46039
+[  3] local 192.168.1.4 port 5001 connected with 192.168.1.1 port 60027 (WARN: winsize=8.00 MByte req=4.00 MByte) (trip-times) (0.0) (peer 2.0.14-alpha)
 .br
 [ ID] Interval        Transfer     Bandwidth        Jitter   Lost/Total  Latency avg/min/max/stdev PPS  inP NetPwr
 .br
-[  3] 0.00-1.00 sec   114 MBytes   957 Mbits/sec   0.021 ms    0/81398 (0%)  0.934/ 0.160/ 1.322/ 0.179 ms 81450 pps 76 pkts 128057.25
+[  3] 0.00-1.00 sec  44.5 MBytes   373 Mbits/sec   0.071 ms 52198/83938 (62%) 75.185/ 2.367/85.189/14.430 ms 31854 pps 3.64 MByte 620.58
 .br
-[  3] 1.00-2.00 sec   114 MBytes   957 Mbits/sec   0.009 ms    0/81379 (0%)  0.955/ 0.547/ 1.352/ 0.178 ms 81377 pps 78 pkts 125210.07
+[  3] 1.00-2.00 sec  44.8 MBytes   376 Mbits/sec   0.015 ms 59549/143701 (41%) 79.609/75.603/85.757/ 1.454 ms 31954 pps 3.56 MByte 590.04
 .br
-[  3] 2.00-3.00 sec   114 MBytes   957 Mbits/sec   0.023 ms    0/81372 (0%)  0.978/ 0.549/ 1.400/ 0.175 ms 81378 pps 80 pkts 122284.93
+[  3] 2.00-3.00 sec  44.5 MBytes   373 Mbits/sec   0.017 ms 59494/202975 (29%) 80.006/75.951/88.198/ 1.638 ms 31733 pps 3.56 MByte 583.07
 .br
-[  3] 3.00-4.00 sec   114 MBytes   957 Mbits/sec   0.014 ms    0/81381 (0%)  1.007/ 0.549/ 1.376/ 0.177 ms 81371 pps 82 pkts 118749.65
+[  3] 3.00-4.00 sec  44.5 MBytes   373 Mbits/sec   0.019 ms 59586/262562 (23%) 79.939/75.667/83.857/ 1.145 ms 31767 pps 3.56 MByte 583.57
 .br
-[  3] 4.00-5.00 sec   114 MBytes   957 Mbits/sec   0.023 ms    0/81381 (0%)  1.028/ 0.596/ 1.400/ 0.173 ms 81383 pps 84 pkts 116410.04
+[  3] 4.00-5.00 sec  44.5 MBytes   373 Mbits/sec   0.081 ms 59612/322196 (19%) 79.882/75.400/86.618/ 1.666 ms 31755 pps 3.55 MByte 584.40
 .br
-[  3] 5.00-6.00 sec   114 MBytes   957 Mbits/sec   0.010 ms    0/81372 (0%)  1.048/ 0.670/ 1.430/ 0.178 ms 81376 pps 85 pkts 114176.71
+[  3] 5.00-6.00 sec  44.7 MBytes   375 Mbits/sec   0.064 ms 59571/381918 (16%) 79.767/75.571/85.339/ 1.556 ms 31879 pps 3.56 MByte 588.02
 .br
-[  3] 6.00-7.00 sec   114 MBytes   957 Mbits/sec   0.019 ms    0/81380 (0%)  1.066/ 0.637/ 1.428/ 0.179 ms 81376 pps 87 pkts 112262.49
+[  3] 6.00-7.00 sec  44.6 MBytes   374 Mbits/sec   0.041 ms 58990/440820 (13%) 79.722/75.662/85.938/ 1.087 ms 31820 pps 3.58 MByte 586.73
 .br
-[  3] 7.00-8.00 sec   114 MBytes   957 Mbits/sec   0.036 ms    0/81369 (0%)  1.087/ 0.666/ 1.456/ 0.177 ms 81377 pps 88 pkts 110028.41
+[  3] 7.00-8.00 sec  44.7 MBytes   375 Mbits/sec   0.027 ms 59679/500548 (12%) 79.745/75.704/84.731/ 1.094 ms 31869 pps 3.55 MByte 587.46
 .br
-[  3] 8.00-9.00 sec   114 MBytes   957 Mbits/sec   0.037 ms    0/81383 (0%)  1.107/ 0.703/ 1.489/ 0.176 ms 81377 pps 90 pkts 108088.86
+[  3] 8.00-9.00 sec  44.3 MBytes   371 Mbits/sec   0.078 ms 59230/559499 (11%) 80.346/75.514/94.293/ 2.858 ms 31590 pps 3.58 MByte 577.97
 .br
-[  3] 9.00-10.00 sec   114 MBytes   957 Mbits/sec   0.009 ms    0/81370 (0%)  1.137/ 0.745/ 1.616/ 0.178 ms 81377 pps 93 pkts 105169.54
+[  3] 9.00-10.00 sec  44.4 MBytes   373 Mbits/sec   0.073 ms 58782/618394 (9.5%) 79.125/75.511/93.638/ 1.643 ms 31702 pps 3.55 MByte 588.99
 .br
-[  3] 10.00-10.00 sec  84.7 KBytes  1.03 Gbits/sec   0.048 ms    0/   59 (0%)  1.197/ 0.892/ 1.489/ 0.195 ms 72571 pps 87 pkts 107979.27
+[  3] 10.00-10.08 sec  3.53 MBytes   367 Mbits/sec   0.129 ms 6026/595236 (1%) 94.967/80.709/99.685/ 3.560 ms 31107 pps 3.58 MByte 483.12
 .br
-[  3] 0.00-10.00 sec  1.11 GBytes   957 Mbits/sec   0.048 ms    0/813844 (0%)  1.035/ 0.160/ 1.616/ 0.188 ms 81379 pps 84 pkts 115609.26
+[  3] 0.00-10.08 sec   449 MBytes   374 Mbits/sec   0.129 ms 592717/913046 (65%) 79.453/ 2.367/99.685/ 5.200 ms 31776 pps (null) 587.91
 .br
 
 .TP
@@ -487,7 +484,7 @@ PTP.  A GPS disciplined OCXO is a recommended reference.)
 Received packet rate in packets per second
 .br
 .B inP
-inP, short for in progress, is the average number of packets in progress or in flight. This is taken from an application write to read perspective. (See Little's law in NOTES.)
+inP, short for in progress, is the average number of bytes in progress or in flight. This is taken from an application write to read perspective. (Requires --trip-times on client. See Little's law in NOTES.)
 .br
 .B NetPwr
 Network power defined as (throughput / latency)
@@ -645,7 +642,7 @@ ct=<value> in the connected message, e.g.in '[ 3] local 192.168.1.4
 port 48736 connected with 192.168.1.1 port 5001 \fB(ct=1.84 ms)\fR'
 shows the 3WHS took 1.84 milliseconds.
 .P
-\fBLittle's Law\fR in queueing theory is a theorem that determines the average number of items (L) in a stationary queuing system based on the average waiting time (W) of an item within a system and the average number of items arriving at the system per unit of time (lambda). Mathematically, it's L = lambda * W. As used here, the TCP item units are bytes the UDP units are packets.
+\fBLittle's Law\fR in queueing theory is a theorem that determines the average number of items (L) in a stationary queuing system based on the average waiting time (W) of an item within a system and the average number of items arriving at the system per unit of time (lambda). Mathematically, it's L = lambda * W. As used here, the units are bytes. The arrival rate is the taken from the writes.
 .P
 The network power (NetPwr) metric is \fBexperimental\fR.  It's a
 convenience function defined as throughput/delay.  For TCP, the delay

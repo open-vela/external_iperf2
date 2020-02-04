@@ -87,7 +87,7 @@ void reporter_printstats (struct TransferInfo *stats) {
 
     // TCP reports
     if (!stats->mUDP) {
-	if (!stats->mEnhanced) {
+        if (!stats->mEnhanced && !isTripTime(stats)) {
 	    if( !header_printed ) {
 		printf( "%s", report_bw_header);
 		header_printed = 1;

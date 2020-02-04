@@ -666,14 +666,12 @@ void InitConnectionReport (struct thread_Settings *mSettings) {
     data->connection.l2mode = isL2LengthCheck(mSettings);
     if (data->connection.l2mode)
 	data->connection.l2mode = ((isIPV6(mSettings) << 1) | data->connection.l2mode);
-    if (isEnhanced(mSettings)) {
-	if (isTxStartTime(mSettings)) {
-	    data->connection.epochStartTime.tv_sec = mSettings->txstart_epoch.tv_sec;
-	    data->connection.epochStartTime.tv_usec = mSettings->txstart_epoch.tv_usec;
-	} else if (isTripTime(mSettings)) {
-	    data->connection.epochStartTime.tv_sec = mSettings->accept_time.tv_sec;
-	    data->connection.epochStartTime.tv_usec = mSettings->accept_time.tv_usec;
-	}
+    if (isEnhanced(mSettings) && isTxStartTime(mSettings)) {
+	data->connection.epochStartTime.tv_sec = mSettings->txstart_epoch.tv_sec;
+	data->connection.epochStartTime.tv_usec = mSettings->txstart_epoch.tv_usec;
+    } else if (isTripTime(mSettings)) {
+	data->connection.epochStartTime.tv_sec = mSettings->accept_time.tv_sec;
+	data->connection.epochStartTime.tv_usec = mSettings->accept_time.tv_usec;
     }
     if (isFQPacing(data) && (data->mThreadMode == kMode_Client)) {
 	char tmpbuf[40];
