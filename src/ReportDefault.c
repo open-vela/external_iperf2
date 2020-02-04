@@ -103,9 +103,12 @@ void reporter_printstats (struct TransferInfo *stats) {
 		header_printed = 1;
 	    }
 	    if (stats->mTCP == (char)kMode_Server) {
-		double meantransit = (stats->transit.sumTransit / stats->transit.cntTransit);
-		double L  = ((stats->arrivalSum > 0.0) ? ((((double) bytesxfered) / stats->arrivalSum) * meantransit) : NAN);
 		char Lbuf[80];
+		double meantransit = (stats->transit.sumTransit / stats->transit.cntTransit);
+		// long burstavg =  (stats->transit.cntTransit ? ((int) bytesxfered / stats->transit.cntTransit) : 0);
+		// byte_snprintf(Lbuf, sizeof(Lbuf), (double) bytesxfered / stats->arrivalSum, 'a');
+		// printf("arrival rate = %f %s timesum = %f transit = %f\n", ((double) bytesxfered / stats->arrivalSum), Lbuf, stats->arrivalSum, meantransit);
+		double L  = ((stats->arrivalSum > 0.0) ? (((double) bytesxfered / stats->arrivalSum) * meantransit) : NAN);
 		byte_snprintf(Lbuf, sizeof(Lbuf), L, 'A');
 		printf(((!isTripTime(stats) || !bytesxfered) ? report_bw_read_enhanced_format : report_bw_read_enhanced_netpwr_format),
 		       stats->transferID, stats->startTime, stats->endTime,

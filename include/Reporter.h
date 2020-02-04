@@ -221,6 +221,7 @@ struct TransferInfo {
     double IPGsum;
     double tripTime;
     double arrivalSum;
+    double totarrivalSum;
     // chars
     char   mFormat;                 // -f
     char   mEnhanced;               // -e
