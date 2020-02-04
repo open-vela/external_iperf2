@@ -1597,7 +1597,9 @@ static inline void reporter_handle_burst_tcp_transit(struct ReporterData *data, 
         double transit = reporter_handle_packet_oneway_transit(data, stats, packet);
 
 	if (!TimeZero(packet->prevSentTime)) {
-	    stats->arrivalSum += TimeDifference(packet->sentTime, packet->prevSentTime);
+	    double delta = TimeDifference(packet->sentTime, packet->prevSentTime);
+	    stats->arrivalSum += delta;
+	    stats->totarrivalSum += delta;
 	}
 
 	if (stats->framelatency_histogram) {
@@ -1666,8 +1668,8 @@ inline void reporter_handle_packet_server_tcp(struct ReportHeader *reporthdr, st
 	    stats->sock_callstats.read.bins[bin]++;
 	    stats->sock_callstats.read.totbins[bin]++;
 	}
+	reporter_handle_burst_tcp_transit(&reporthdr->report, stats, packet);
     }
-    reporter_handle_burst_tcp_transit(&reporthdr->report, stats, packet);
 }
 
 inline void reporter_handle_packet_server_udp(struct ReportHeader *reporthdr, struct ReportStruct *packet) {
@@ -2141,6 +2143,7 @@ static void reporter_output_transfer_report_server_tcp(struct ReporterData *stat
         }
 	reporter_set_timestamps_time(stats, TOTAL);
         stats->info.TotalLen = stats->TotalLen;
+	stats->info.arrivalSum = stats->info.totarrivalSum;
         stats->info.sock_callstats.read.cntRead = stats->info.sock_callstats.read.totcntRead;
         for (ix = 0; ix < TCPREADBINCOUNT; ix++) {
 	    stats->info.sock_callstats.read.bins[ix] = stats->info.sock_callstats.read.totbins[ix];
