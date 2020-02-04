@@ -1519,6 +1519,11 @@ static inline void reporter_handle_packet_pps(struct ReporterData *data, struct 
     }
     stats->IPGsum += TimeDifference(packet->packetTime, data->IPGstart);
     data->IPGstart = packet->packetTime;
+    if (!TimeZero(packet->prevSentTime)) {
+        double delta = TimeDifference(packet->sentTime, packet->prevSentTime);
+        stats->arrivalSum += delta;
+        stats->totarrivalSum += delta;
+    }
 #ifdef DEBUG_PPS
     printf("*** IPGsum = %f cnt=%ld ipg=%ld.%ld pt=%ld.%ld id=%ld empty=%d\n", stats->IPGsum, stats->IPGcnt, data->IPGstart.tv_sec, data->IPGstart.tv_usec, packet->packetTime.tv_sec, packet->packetTime.tv_usec, packet->packetID, packet->emptyreport);
 #endif
@@ -1973,6 +1978,7 @@ static inline void reporter_reset_transfer_stats_server_udp(struct ReporterData 
     stats->info.l2counts.unknown = 0;
     stats->info.l2counts.udpcsumerr = 0;
     stats->info.l2counts.lengtherr = 0;
+    stats->info.arrivalSum = 0;
 }
 
 // These are the output handlers that get the reports ready and then prints them

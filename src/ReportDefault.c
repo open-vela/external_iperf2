@@ -69,6 +69,7 @@ extern "C" {
 /*
  * Prints transfer reports in default style
  */
+
 void reporter_printstats (struct TransferInfo *stats) {
     static char header_printed = 0;
     double bytesxfered;
@@ -108,6 +109,10 @@ void reporter_printstats (struct TransferInfo *stats) {
 		// long burstavg =  (stats->transit.cntTransit ? ((int) bytesxfered / stats->transit.cntTransit) : 0);
 		// byte_snprintf(Lbuf, sizeof(Lbuf), (double) bytesxfered / stats->arrivalSum, 'a');
 		// printf("arrival rate = %f %s timesum = %f transit = %f\n", ((double) bytesxfered / stats->arrivalSum), Lbuf, stats->arrivalSum, meantransit);
+		//
+		//  Little's law is L = lambda * W, where L is queue depth,
+		//  lambda the arrival rate and W is the processing time
+		//
 		double L  = ((stats->arrivalSum > 0.0) ? (((double) bytesxfered / stats->arrivalSum) * meantransit) : NAN);
 		byte_snprintf(Lbuf, sizeof(Lbuf), L, 'A');
 		printf(((!isTripTime(stats) || !bytesxfered) ? report_bw_read_enhanced_format : report_bw_read_enhanced_netpwr_format),
@@ -191,13 +196,17 @@ void reporter_printstats (struct TransferInfo *stats) {
     } else {
         // UDP Server Reporting
         if( !header_printed ) {
-	    if (stats->mIsochronous)
-		printf("%s", report_bw_jitter_loss_enhanced_isoch_header);
-	    else
-		printf( "%s", (stats->mEnhanced ? report_bw_jitter_loss_enhanced_header : report_bw_jitter_loss_header));
+	    if (isTripTime(stats)) {
+	        if (stats->mIsochronous)
+		    printf("%s", report_bw_jitter_loss_enhanced_isoch_header);
+		else
+		    printf("%s", report_bw_jitter_loss_enhanced_header);
+	    } else {
+	        printf("%s", report_bw_jitter_loss_header);
+	    }
             header_printed = 1;
         }
-	if (stats->mEnhanced) {
+	if (isTripTime(stats)) {
 	    if (stats->IPGcnt) {
 		// If the min latency is out of bounds of a realistic value
 		// assume the clocks are not synched and suppress the
@@ -211,8 +220,14 @@ void reporter_printstats (struct TransferInfo *stats) {
 			    (100.0 * stats->cntError) / stats->cntDatagrams,
 			    (stats->IPGcnt / stats->IPGsum));
 		} else {
+		    char Lbuf[80];
+		    double meantransit = (stats->transit.sumTransit / stats->transit.cntTransit);
+		    // long burstavg =  (stats->transit.cntTransit ? ((int) bytesxfered / stats->transit.cntTransit) : 0);
+		    // byte_snprintf(Lbuf, sizeof(Lbuf), (double) bytesxfered / stats->arrivalSum, 'a');
+		    // printf("arrival rate = %f %s timesum = %f transit = %f\n", ((double) bytesxfered / stats->arrivalSum), Lbuf, stats->arrivalSum, meantransit);
+		    double L  = ((stats->arrivalSum > 0.0) ? (((double) bytesxfered / stats->arrivalSum) * meantransit) : NAN);
+		    byte_snprintf(Lbuf, sizeof(Lbuf), L, 'A');
 		    if (stats->mIsochronous) {
-			double meantransit = stats->transit.sumTransit / stats->transit.cntTransit;
 			printf( report_bw_jitter_loss_enhanced_isoch_format, stats->transferID,
 				stats->startTime, stats->endTime,
 				buffer, &buffer[sizeof(buffer)/2],
@@ -223,11 +238,10 @@ void reporter_printstats (struct TransferInfo *stats) {
 				stats->transit.maxTransit*1e3,
 				(stats->transit.cntTransit < 2) ? 0 : sqrt(stats->transit.m2Transit / (stats->transit.cntTransit - 1)) / 1e3,
 				(stats->IPGcnt / stats->IPGsum),
-				(meantransit > 0.0) ? (round((stats->IPGcnt / stats->IPGsum) * meantransit)) : 0,
+				((stats->arrivalSum > 0.0) ? Lbuf : 0),
 				((meantransit > 0.0) ? (NETPOWERCONSTANT * ((double) bytesxfered) / (double) (stats->endTime - stats->startTime) / meantransit) : 0),
 				stats->isochstats.framecnt, stats->isochstats.framelostcnt);
 		    } else {
-			    double meantransit = (stats->transit.sumTransit / stats->transit.cntTransit);
 			    printf( report_bw_jitter_loss_enhanced_format, stats->transferID,
 			    stats->startTime, stats->endTime,
 			    buffer, &buffer[sizeof(buffer)/2],
@@ -238,9 +252,9 @@ void reporter_printstats (struct TransferInfo *stats) {
 			    stats->transit.maxTransit*1e3,
 			    (stats->transit.cntTransit < 2) ? 0 : sqrt(stats->transit.m2Transit / (stats->transit.cntTransit - 1)) / 1e3,
 			    (stats->IPGcnt / stats->IPGsum),
-			    (meantransit > 0.0) ? (round((stats->IPGcnt / stats->IPGsum) * meantransit)) : 0,
+			    ((stats->arrivalSum > 0.0) ? Lbuf : 0),
 			    (meantransit > 0.0) ? (NETPOWERCONSTANT * ((double) bytesxfered) / (double) (stats->endTime - stats->startTime) / meantransit) : 0);
-			}
+		    }
 		}
 		if (stats->latency_histogram) {
 		    histogram_print(stats->latency_histogram, stats->startTime, stats->endTime, stats->free);

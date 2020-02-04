@@ -623,6 +623,7 @@ void Server::RunUDP( void ) {
     int rxlen;
     int readerr = 0;
     bool lastpacket = 0;
+    struct timeval prevsend = {.tv_sec = 0, .tv_usec = 0};
 
     InitTrafficLoop();
 
@@ -656,7 +657,9 @@ void Server::RunUDP( void ) {
 	    if (!(reportstruct->l2errors & L2UNKNOWN)) {
 		// ReadPacketID returns true if this is the last UDP packet sent by the client
 		// aslo sets the packet rx time in the reportstruct
+		reportstruct->prevSentTime = prevsend;
 		lastpacket = ReadPacketID();
+		prevsend = reportstruct->sentTime;
 		if (isIsochronous(mSettings)) {
 		    Isoch_processing(rxlen);
 		}
