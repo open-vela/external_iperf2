@@ -2154,6 +2154,9 @@ static void reporter_output_transfer_report_server_tcp(struct ReporterData *stat
         }
 	stats->info.transit.sumTransit = stats->info.transit.totsumTransit;
 	stats->info.transit.cntTransit = stats->info.transit.totcntTransit;
+	stats->info.transit.minTransit = stats->info.transit.totminTransit;
+	stats->info.transit.maxTransit = stats->info.transit.totmaxTransit;
+	stats->info.transit.m2Transit = stats->info.transit.totm2Transit;
 	if (!bidirstats || stats->info.mEnhanced) {
 	    reporter_print(stats, TRANSFER_REPORT, 1);
 	}
