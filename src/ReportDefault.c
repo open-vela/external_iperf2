@@ -132,7 +132,7 @@ void reporter_printstats (struct TransferInfo *stats) {
 		       stats->transit.maxTransit*1e3,
 		       (stats->transit.cntTransit < 2) ? 0 : sqrt(stats->transit.m2Transit / (stats->transit.cntTransit - 1)) / 1e3,
 		       stats->transit.cntTransit,
-		       stats->transit.cntTransit ? ((int) bytesxfered / stats->transit.cntTransit) : 0,
+		       stats->transit.cntTransit ? (long) (bytesxfered / (double) stats->transit.cntTransit) : 0,
 		       Lbuf,
 		       (meantransit > 0.0) ? (NETPOWERCONSTANT * ((double) bytesxfered) / (double) (stats->endTime - stats->startTime) / meantransit) : NAN);
 		if (stats->framelatency_histogram) {
