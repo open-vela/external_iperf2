@@ -101,6 +101,7 @@ struct thread_Settings;
 
 #if HAVE_THREAD_DEBUG
 void thread_debug(const char *format, ...);
+extern Mutex packetringdebug_mutex;
 #endif
 // initialize or destroy the thread subsystem
 void thread_init( );
