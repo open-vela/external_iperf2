@@ -238,7 +238,7 @@ void client_init( thread_Settings *clients ) {
 
     // See if we need to start a listener as well
     Settings_GenerateListenerSettings( clients, &next );
-    if (clients->mThreads > 1) {
+    if ((clients->mThreads > 1) && !isConnectOnly(clients)) {
       // Create a multiple report header to handle reporting the
       // sum of multiple client threads
       Mutex_Lock( &groupCond );
