@@ -379,13 +379,16 @@ int UpdateMultiHdrRefCounter(struct MultiHeader *multihdr, int val, int sockfd) 
 	multihdr->refcount += val;
 	if (multihdr->refcount > multihdr->maxrefcount)
 	    multihdr->maxrefcount = multihdr->refcount;
-	if ((multihdr->maxrefcount > 1) && (multihdr->refcount == 0) && (val < 0)) {
-	    if (sockfd && (multihdr->sockfd == sockfd)) {
+	if ((multihdr->refcount == 0) && (val < 0)) {
+	    if (multihdr->maxrefcount > 1) {
+
+		if (sockfd && (multihdr->sockfd == sockfd)) {
 #ifdef HAVE_THREAD_DEBUG
-		thread_debug("Close socket %d per last reference", sockfd);
+		    thread_debug("Close socket %d per last reference", sockfd);
 #endif
-		int rc = close(multihdr->sockfd);
-		WARN_errno( rc == SOCKET_ERROR, "client bidir close" );
+		    int rc = close(multihdr->sockfd);
+		    WARN_errno( rc == SOCKET_ERROR, "client bidir close" );
+		}
 	    }
 #ifdef HAVE_THREAD_DEBUG
 	    thread_debug("Request to free sum multiheader %p per last reference", (void *)multihdr);
