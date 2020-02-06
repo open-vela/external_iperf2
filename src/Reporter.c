@@ -809,6 +809,7 @@ void EndReport(struct ReportHeader *agent) {
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug( "Traffic thread thinks reporter is done with %p", (void *)agent);
 #endif
+	FreeReport(agent);
 #ifndef HAVE_THREAD
         /*
          * Process the report in this thread
