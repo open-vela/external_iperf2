@@ -61,7 +61,6 @@
 #define HEADERS()
 
 #include "headers.h"
-
 #include "Settings.hpp"
 #include "PerfSocket.hpp"
 #include "Locale.h"
@@ -100,6 +99,7 @@ extern "C" {
     AwaitMutex reporter_state;
     AwaitMutex threads_start;
 }
+
 
 // global variables only accessed within this file
 
@@ -147,6 +147,9 @@ int main( int argc, char **argv ) {
     Condition_Initialize ( &ReportCond );
     Mutex_Initialize( &groupCond );
     Mutex_Initialize( &clients_mutex );
+#ifdef HAVE_THREAD_DEBUG
+    Mutex_Initialize(&packetringdebug_mutex);
+#endif
     // Initialize reporter thread mutex
     reporter_state.ready = 0;
     threads_start.ready = 0;
@@ -274,6 +277,9 @@ int main( int argc, char **argv ) {
     Mutex_Destroy( &clients_mutex );
     Condition_Destroy(&reporter_state.await);
     Condition_Destroy(&threads_start.await);
+#ifdef HAVE_THREAD_DEBUG
+    Mutex_Destroy(&packetringdebug_mutex);
+#endif
 
     // all done!
     return 0;

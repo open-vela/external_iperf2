@@ -49,6 +49,12 @@
 #include "Condition.h"
 #include "Thread.h"
 
+#ifdef HAVE_THREAD_DEBUG
+#include "Mutex.h"
+static int totalpacketringcount = 0;
+Mutex packetringdebug_mutex;
+#endif
+
 struct PacketRing * packetring_init (int count, struct Condition *awake_consumer, struct Condition *awake_producer) {
     struct PacketRing *pr = NULL;
     if ((pr = (struct PacketRing *) calloc(1, sizeof(struct PacketRing)))) {
@@ -66,8 +72,11 @@ struct PacketRing * packetring_init (int count, struct Condition *awake_consumer
     pr->consumerdone = 0;
     pr->awaitcounter = 0;
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Init %d element packet ring=%p producer=%p consumer=%p", count, \
-		 (void *)pr, (void *) pr->awake_producer, (void *) pr->awake_consumer);
+    Mutex_Lock(&packetringdebug_mutex);
+    totalpacketringcount++;
+    thread_debug("Init %d element packet ring=%p producer=%p consumer=%p total rings=%d", count, \
+		 (void *)pr, (void *) pr->awake_producer, (void *) pr->awake_consumer, totalpacketringcount);
+    Mutex_Unlock(&packetringdebug_mutex);
 #endif
     return (pr);
 }
@@ -156,14 +165,19 @@ inline struct ReportStruct *dequeue_ackring (struct PacketRing *pr) {
 }
 
 void packetring_free (struct PacketRing *pr) {
-#ifdef HAVE_THREAD_DEBUG
-    thread_debug("Free packet ring=%p producer=%p (consumer=%p)", \
-		 (void *)pr, (void *) pr->awake_producer, (void *) pr->awake_consumer);
-#endif
     if (pr->awaitcounter > 1000) fprintf(stderr, "WARN: Reporter thread may be too slow, await counter=%d, " \
 					 "consider increasing NUM_REPORT_STRUCTS\n", pr->awaitcounter);
-    Condition_Destroy(pr->awake_producer);
-    if (pr->data) free(pr->data);
+
+    if (pr->data) {
+#ifdef HAVE_THREAD_DEBUG
+      Mutex_Lock(&packetringdebug_mutex);
+      totalpacketringcount--;
+      thread_debug("Free packet ring=%p producer=%p (consumer=%p) total rings = %d", \
+		   (void *)pr, (void *) pr->awake_producer, (void *) pr->awake_consumer, totalpacketringcount);
+      Mutex_Unlock(&packetringdebug_mutex);
+#endif
+      free(pr->data);
+    }
 }
 
 void free_ackring(struct PacketRing *pr) {
