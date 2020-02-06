@@ -124,7 +124,6 @@ Server::~Server() {
   }
 #endif
   DELETE_ARRAY(mBuf);
-  FreeReport(myJob);
 }
 
 inline bool Server::InProgress (void) {
