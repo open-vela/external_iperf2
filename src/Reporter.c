@@ -635,11 +635,12 @@ void InitDataReport(struct thread_Settings *mSettings) {
 void InitConnectionReport (struct thread_Settings *mSettings) {
     struct ReportHeader *reporthdr = mSettings->reporthdr;
     struct ReporterData *data = NULL;
-#ifdef HAVE_THREAD_DEBUG
-    thread_debug("Init connection report %p", reporthdr);
-#endif
 
     if (reporthdr == NULL) {
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug("Malloc connection report %p", reporthdr);
+#endif
+
 	/*
 	 * We don't have a Data Report structure in which to hang
 	 * the connection report so allocate a minimal one
@@ -651,6 +652,10 @@ void InitConnectionReport (struct thread_Settings *mSettings) {
 	mSettings->reporthdr = reporthdr;
 	reporthdr->multireport = mSettings->multihdr;
     }
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Init connection report %p", reporthdr);
+#endif
+
     // Fill out known fields for the connection report
     data = &reporthdr->report;
     data->info.transferID = mSettings->mSock;
@@ -1173,6 +1178,7 @@ void reporter_spawn (struct thread_Settings *thread) {
     if (thread->reporthdr) {
         reporter_output_connect_final_report_tcp(thread->reporthdr);
 	free(thread->multihdr);
+	FreeReport(thread->reporthdr);
     }
 #ifdef HAVE_THREAD_DEBUG
     if (sInterupted)
