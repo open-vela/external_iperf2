@@ -132,7 +132,7 @@ inline struct ReportStruct *packetring_dequeue (struct PacketRing *pr) {
     // when the ring goes from having something to empty
     if (pr->producer == pr->consumer) {
 #ifdef HAVE_THREAD_DEBUG
-      // thread_debug( "Consumer signal packet ring %p empty per %p", (void *)pr, (void *)&pr->awake_producer);
+	// thread_debug( "Consumer signal packet ring %p empty per %p", (void *)pr, (void *)&pr->awake_producer);
 #endif
 	Condition_Signal(pr->awake_producer);
     }
@@ -150,33 +150,35 @@ inline void enqueue_ackring (struct PacketRing *pr, struct ReportStruct *metapac
 }
 
 inline struct ReportStruct *dequeue_ackring (struct PacketRing *pr) {
-  struct ReportStruct *packet = NULL;
-  Condition_Lock((*(pr->awake_consumer)));
-  while ((packet = packetring_dequeue(pr)) == NULL) {
-      Condition_TimedWait(pr->awake_consumer, 1);
-  }
-  Condition_Unlock((*(pr->awake_consumer)));
-  if (packet) {
-    // Signal the producer thread for low latency
-    // indication of space available
-    Condition_Signal(pr->awake_producer);
-  }
-  return packet;
+    struct ReportStruct *packet = NULL;
+    Condition_Lock((*(pr->awake_consumer)));
+    while ((packet = packetring_dequeue(pr)) == NULL) {
+	Condition_TimedWait(pr->awake_consumer, 1);
+    }
+    Condition_Unlock((*(pr->awake_consumer)));
+    if (packet) {
+	// Signal the producer thread for low latency
+	// indication of space available
+	Condition_Signal(pr->awake_producer);
+    }
+    return packet;
 }
 
 void packetring_free (struct PacketRing *pr) {
-    if (pr->awaitcounter > 1000) fprintf(stderr, "WARN: Reporter thread may be too slow, await counter=%d, " \
-					 "consider increasing NUM_REPORT_STRUCTS\n", pr->awaitcounter);
-
-    if (pr->data) {
+    if (pr) {
+	if (pr->awaitcounter > 1000) fprintf(stderr, "WARN: Reporter thread may be too slow, await counter=%d, " \
+					     "consider increasing NUM_REPORT_STRUCTS\n", pr->awaitcounter);
+	if (pr->data) {
 #ifdef HAVE_THREAD_DEBUG
-      Mutex_Lock(&packetringdebug_mutex);
-      totalpacketringcount--;
-      thread_debug("Free packet ring=%p producer=%p (consumer=%p) total rings = %d", \
-		   (void *)pr, (void *) pr->awake_producer, (void *) pr->awake_consumer, totalpacketringcount);
-      Mutex_Unlock(&packetringdebug_mutex);
+	    Mutex_Lock(&packetringdebug_mutex);
+	    totalpacketringcount--;
+	    thread_debug("Free packet ring=%p producer=%p (consumer=%p) total rings = %d", \
+			 (void *)pr, (void *) pr->awake_producer, (void *) pr->awake_consumer, totalpacketringcount);
+	    Mutex_Unlock(&packetringdebug_mutex);
 #endif
-      free(pr->data);
+	    free(pr->data);
+	}
+	free(pr);
     }
 }
 
