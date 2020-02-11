@@ -334,7 +334,7 @@ struct MultiHeader {
     int maxrefcount;
     int sockfd;
     struct ReporterData report;
-    void (*output_sum_handler) (struct ReporterData *stats, int final);
+    void (*transfer_protocol_sum_handler) (struct ReporterData *stats, int final);
 };
 
 struct ReportHeader {
@@ -342,10 +342,10 @@ struct ReportHeader {
     struct MeanMinMaxStats connect_times;
     // function pointer for per packet processing
     void (*packet_handler) (struct ReportHeader *report, struct ReportStruct *packet);
-    void (*output_handler) (struct ReporterData *stats, struct ReporterData *sumstats, struct ReporterData *bidirstats, int final);
-    void (*output_sum_handler) (struct ReporterData *stats, int final);
-    void (*output_bidir_handler) (struct ReporterData *stats, int final);
-    int (*output_interval_report_handler) (struct ReportHeader *reporthdr, struct ReportStruct *packet);
+    void (*transfer_protocol_handler) (struct ReporterData *stats, struct ReporterData *sumstats, struct ReporterData *bidirstats, int final);
+    void (*transfer_protocol_sum_handler) (struct ReporterData *stats, int final);
+    void (*transfer_protocol_bidir_handler) (struct ReporterData *stats, int final);
+    int (*transfer_interval_handler) (struct ReportHeader *reporthdr, struct ReportStruct *packet);
     struct MultiHeader *multireport;
     struct MultiHeader *bidirreport;
     struct ReportHeader *next;
