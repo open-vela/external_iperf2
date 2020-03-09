@@ -100,8 +100,6 @@ private:
     void write_UDP_FIN(void);
     bool InProgress(void);
     bool connected;
-    inline void WriteSync(void);
-    inline void WriteSyncDone(void);
     ReportStruct *reportstruct;
     double delay_lower_bounds;
     intmax_t totLen;

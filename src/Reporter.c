@@ -299,48 +299,36 @@ struct MultiHeader* InitBiDirReport(struct thread_Settings *agent, int inID) {
 /*
  * BarrierClient allows for multiple stream clients to be syncronized
  */
-void BarrierClient(struct MultiHeader *multihdr, int starttime) {
+void BarrierClient(struct BarrierMutex *barrier) {
 #ifdef HAVE_THREAD
-    assert(multihdr == NULL);
-    Condition_Lock(multihdr->multibarrier_cond);
-    multihdr->multibarrier_cnt--;
-    if ( multihdr->multibarrier_cnt == 0 ) {
-        // store the wake up or start time in the shared multihdr
-        if (starttime) {
+    assert(barrier);
+    Condition_Lock(barrier->await);
+    if (--barrier->count <= 0) {
+      // store the barrier release timer
 #ifdef HAVE_CLOCK_GETTIME
-            struct timespec t1;
-            clock_gettime(CLOCK_REALTIME, &t1);
-            multihdr->report.startTime.tv_sec  = t1.tv_sec;
-            multihdr->report.startTime.tv_usec = t1.tv_nsec / 1000;
+      struct timespec t1;
+      clock_gettime(CLOCK_REALTIME, &t1);
+      barrier->go_time.tv_sec  = t1.tv_sec;
+      barrier->go_time.tv_usec = t1.tv_nsec / 1000;
 #else
-            gettimeofday( &multihdr->report.startTime, NULL );
+      gettimeofday(&barrier->go_time, NULL );
 #endif
-	    multihdr->report.nextTime= multihdr->report.startTime;
-	    TimeAdd(multihdr->report.nextTime, multihdr->report.intervalTime);
-	}
-        // last one wake's up everyone else
-        Condition_Broadcast(&multihdr->multibarrier_cond);
+      // last one wake's up everyone else
+      Condition_Broadcast(&barrier->await);
 #ifdef HAVE_THREAD_DEBUG
-	thread_debug("Barrier BROADCAST on condition %p", (void *)&multihdr->multibarrier_cond);
+      thread_debug("Barrier BROADCAST on condition %p", (void *)&barrier->await);
 #endif
     } else {
 #ifdef HAVE_THREAD_DEBUG
-        thread_debug("Barrier WAIT on condition %p count=%d", (void *)&multihdr->multibarrier_cond, multihdr->multibarrier_cnt);
+        thread_debug("Barrier WAIT on condition %p count=%d", (void *)&barrier->await, barrier->count);
 #endif
-        Condition_Wait(&multihdr->multibarrier_cond);
+        Condition_Wait(&barrier->await);
     }
-    multihdr->multibarrier_cnt++;
-    Condition_Unlock(multihdr->multibarrier_cond);
+    Condition_Unlock(barrier->await);
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Barrier EXIT on condition %p", (void *)&multihdr->multibarrier_cond);
+    thread_debug("Barrier EXIT on condition %p", (void *)&barrier->await);
 #endif
-
-#else
-    if (starttime) {
-        gettimeofday( &(multihdr->report.startTime), NULL );
-	TimeAdd(multihdr->report.nextTime, multihdr->report.intervalTime);
-    }
-#endif
+#endif // HAVE_THREAD
 }
 
 /*

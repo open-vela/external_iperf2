@@ -324,14 +324,22 @@ struct AwaitMutex {
     int ready;
 };
 
+struct BarrierMutex {
+    struct Condition await;
+    struct timeval go_time;
+    int count;
+};
+
+struct ReferenceMutex {
+    Mutex lock;
+    int count;
+    int maxcount;
+}
+
 struct MultiHeader {
     int groupID;
     int threads;
-    struct Condition multibarrier_cond;
-    int multibarrier_cnt;
-    Mutex refcountlock;
-    int refcount;
-    int maxrefcount;
+    struct ReferenceMutex reference;
     int sockfd;
     struct ReporterData report;
     void (*transfer_protocol_sum_handler) (struct ReporterData *stats, int final);
@@ -363,7 +371,7 @@ struct MultiHeader* InitBiDirReport( struct thread_Settings *agent, int inID);
 void InitReport( struct thread_Settings *agent );
 void InitConnectionReport( struct thread_Settings *agent );
 void UpdateConnectionReport(struct thread_Settings *mSettings, struct ReportHeader *reporthdr);
-void BarrierClient(struct MultiHeader *agent, int timeflag);
+void BarrierClient(struct BarrierMutex *barrier);
 void PostReport(struct ReportHeader *agent);
 void ReportPacket(struct ReportHeader *agent, struct ReportStruct *packet);
 void CloseReport(struct ReportHeader *agent,  struct ReportStruct *packet);
