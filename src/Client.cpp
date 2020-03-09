@@ -317,7 +317,9 @@ void Client::StartSynch (void) {
 #endif
     int barrier_needed = !isNoConnectSync(mSettings);
     // Perform delays, usually between connect() and data xfer though before connect
-    // if this is a connect only test
+    // Two delays are supported:
+    // o First is an absolute start time per unix epoch format
+    // o Second is a holdback, a relative amount of seconds between the connect and data xfers
 #if defined(HAVE_CLOCK_NANOSLEEP)
     // check for an epoch based start time
     if (isTxStartTime(mSettings)) {
@@ -351,7 +353,7 @@ void Client::StartSynch (void) {
 #endif
     if (!isServerReverse(mSettings) && mSettings->multihdr && \
 	barrier_needed) {
-	BarrierClient(mSettings->multihdr, 1);
+	BarrierClient(mSettings->connects_done);
     }
     SetReportStartTime();
 #ifdef HAVE_THREAD_DEBUG
@@ -506,29 +508,6 @@ void Client::InitTrafficLoop (void) {
     }
 }
 
-inline void Client::WriteSync(void) {
-#ifdef HAVE_THREAD
-  if (isWriteSync(mSettings) && mSettings->multihdr) {
-        BarrierClient(mSettings->multihdr, 0);
-#ifdef HAVE_THREAD_DEBUG
-	// thread_debug("Write-Sync done per %p", (void *)&mSettings->multihdr->multibarrier_cond);
-#endif
-  }
-#endif
-}
-inline void Client::WriteSyncDone(void) {
-#ifdef HAVE_THREAD
-    if (isWriteSync(mSettings) && mSettings->multihdr) {
-      Condition_Lock(mSettings->multihdr->multibarrier_cond);
-      mSettings->multihdr->multibarrier_cnt--;
-      if (mSettings->multihdr->multibarrier_cnt == 0 ) {
-          Condition_Broadcast(&mSettings->multihdr->multibarrier_cond);
-      }
-      Condition_Unlock(mSettings->multihdr->multibarrier_cond);
-    }
-#endif
-}
-
 
 /* -------------------------------------------------------------------
  * Run the appropriate send loop between
@@ -610,8 +589,6 @@ void Client::RunTCP( void ) {
 	    reportstruct->packetLen = mSettings->mBufLen;
 	}
 
-	// Sychronize threads if requested
-	WriteSync();
         int n = 0;
 	if (isTripTime(mSettings) || isWriteAck(mSettings) || isIsochronous(mSettings)) {
 	    if (burst_remaining == 0) {
@@ -721,7 +698,6 @@ void Client::RunRateLimitedTCP ( void ) {
 	        reportstruct->packetLen = mSettings->mBufLen;
 	    }
 	    // perform write
-	    WriteSync();
 	    int n = 0;
 	    if (isTripTime(mSettings) || isWriteAck(mSettings)) {
 		if (burst_remaining == 0) {
@@ -883,7 +859,6 @@ void Client::RunUDP( void ) {
 	reportstruct->emptyreport = 0;
 
 	// perform write
-	WriteSync();
 	if (isModeAmount(mSettings)) {
 	    currLen = write( mSettings->mSock, mBuf, (mSettings->mAmount < (unsigned) mSettings->mBufLen) ? mSettings->mAmount : mSettings->mBufLen);
 	} else {
@@ -1015,7 +990,6 @@ void Client::RunUDPIsochronous (void) {
 	    reportstruct->emptyreport = 0;
 
 	    // perform write
-	    WriteSync();
 	    if (isModeAmount(mSettings) && (mSettings->mAmount < (unsigned) mSettings->mBufLen)) {
 	        mBuf_isoch->remaining = htonl(mSettings->mAmount);
 		reportstruct->remaining=mSettings->mAmount;
@@ -1169,8 +1143,6 @@ void Client::FinishTrafficActions(void) {
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
     reportstruct->sentTime = reportstruct->packetTime;
-    // remove the thread from the write sync barrier
-    WriteSyncDone();
     /*
      *  For UDP, there is a final handshake between the client and the server,
      *  do that now (unless requested no to)

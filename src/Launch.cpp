@@ -140,7 +140,7 @@ void client_spawn( thread_Settings *thread ) {
         // the barrier needs to be called even
         // for threads that fail connect
 	if (thread->multihdr && !isNoConnectSync(thread))
-	    BarrierClient(thread->multihdr, 0);
+	    BarrierClient(thread->connects_done);
 	DELETE_PTR(theClient);
 	return;
     } else if (!isReverse(thread) && !isServerReverse(thread) && !isWriteAck(thread)) {
@@ -227,7 +227,7 @@ void client_spawn( thread_Settings *thread ) {
  *
  * Note: This runs in main thread context
  */
-void client_init( thread_Settings *clients ) {
+void client_init(thread_Settings *clients) {
     thread_Settings *itr = NULL;
     thread_Settings *next = NULL;
 
@@ -236,19 +236,14 @@ void client_init( thread_Settings *clients ) {
     if (isBidir(clients))
         clients->bidirhdr = InitBiDirReport(clients, 0);
 
-    // See if we need to start a listener as well
-    Settings_GenerateListenerSettings( clients, &next );
     if ((clients->mThreads > 1) && !isConnectOnly(clients)) {
       // Create a multiple report header to handle reporting the
       // sum of multiple client threads
-      Mutex_Lock( &groupCond );
-      groupID--;
-      if ((clients->multihdr = InitSumReport(clients, groupID)) != NULL) {
-          Condition_Initialize(&clients->multihdr->multibarrier_cond);
-	  clients->multihdr->multibarrier_cnt = clients->mThreads;
-      }
-      Mutex_Unlock( &groupCond );
+      InitSumReport(clients, groupID)
     }
+
+    // See if we need to start a listener as well
+    Settings_GenerateListenerSettings( clients, &next );
 
 #ifdef HAVE_THREAD
     if ( next != NULL ) {
