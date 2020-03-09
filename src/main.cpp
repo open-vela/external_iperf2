@@ -96,8 +96,9 @@ extern "C" {
     // be needed but is "belts and suspeners"
     struct Condition ReportCond;
     // Initialize reporter thread mutex
-    AwaitMutex reporter_state;
-    AwaitMutex threads_start;
+    struct AwaitMutex reporter_state;
+    struct AwaitMutex threads_start;
+    struct BarrierMutex transmits_start;
 }
 
 
@@ -153,8 +154,10 @@ int main( int argc, char **argv ) {
     // Initialize reporter thread mutex
     reporter_state.ready = 0;
     threads_start.ready = 0;
+    transmits_start.count = 0;
     Condition_Initialize(&reporter_state.await);
     Condition_Initialize(&threads_start.await);
+    Condition_Initialize(&transmits_start.await);
 
     // Initialize the thread subsystem
     thread_init( );
@@ -209,7 +212,9 @@ int main( int argc, char **argv ) {
 	    return 0;
 	}
         // initialize client(s)
-        client_init( ext_gSettings );
+	transmits_start.count = ext_gSettings->mThreads;
+	ext_gSettings->connects_done = &transmits_start;
+        client_init(ext_gSettings);
 	ReporterThreadMode = kMode_ReporterClient;
 	break;
     case kMode_Listener :
@@ -277,6 +282,7 @@ int main( int argc, char **argv ) {
     Mutex_Destroy( &clients_mutex );
     Condition_Destroy(&reporter_state.await);
     Condition_Destroy(&threads_start.await);
+    Condition_Destroy(&transmits_start.await);
 #ifdef HAVE_THREAD_DEBUG
     Mutex_Destroy(&packetringdebug_mutex);
 #endif
