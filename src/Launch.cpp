@@ -237,9 +237,9 @@ void client_init(thread_Settings *clients) {
         clients->bidirhdr = InitBiDirReport(clients, 0);
 
     if ((clients->mThreads > 1) && !isConnectOnly(clients)) {
-      // Create a multiple report header to handle reporting the
-      // sum of multiple client threads
-      InitSumReport(clients, groupID)
+	// Create a multiple report header to handle reporting the
+	// sum of multiple client threads
+	InitSumReport(clients, groupID);
     }
 
     // See if we need to start a listener as well
