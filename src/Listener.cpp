@@ -341,6 +341,7 @@ sInterupted == SIGALRM
 			free(server->multihdr);
 		    if (server)
 			delete server;
+		    delete listtemp;
 		}
 	    }
             Mutex_Unlock( &clients_mutex );

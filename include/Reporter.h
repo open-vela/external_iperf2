@@ -326,7 +326,7 @@ struct AwaitMutex {
 
 struct BarrierMutex {
     struct Condition await;
-    struct timeval go_time;
+    struct timeval release_time;
     int count;
 };
 
@@ -334,7 +334,7 @@ struct ReferenceMutex {
     Mutex lock;
     int count;
     int maxcount;
-}
+};
 
 struct MultiHeader {
     int groupID;
