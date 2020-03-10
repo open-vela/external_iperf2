@@ -1,4 +1,3 @@
-
 /*---------------------------------------------------------------
  * Copyright (c) 1999,2000,2001,2002,2003
  * The Board of Trustees of the University of Illinois
@@ -188,6 +187,60 @@ static void InitDataReport(struct thread_Settings *mSettings);
 static void gettcpistats(struct ReporterData *stats, struct ReporterData *sumstats, int final);
 #endif
 
+static void group_sum_by_peerhost() {
+    // See if we need to do summing
+    Mutex_Lock( &clients_mutex );
+    // Create an entry for the connection list
+    listtemp = new Iperf_ListEntry;
+    memcpy(&listtemp->data, &server->peer, sizeof(iperf_sockaddr));
+    listtemp->holder = NULL;
+    listtemp->server = server;
+    listtemp->next = NULL;
+
+    exist = Iperf_hostpresent( &server->peer, clients);
+
+    if ( exist != NULL ) {
+	// Copy the multiheader
+	listtemp->holder = exist->holder;
+	server->multihdr = exist->holder;
+	if (tempSettings && isBidir(tempSettings))
+	    tempSettings->multihdr = listtemp->holder;
+    } else {
+	Mutex_Lock(&groupCond);
+	groupID--;
+	Mutex_Unlock( &groupCond );
+	if (!server->multihdr) {
+	    listtemp->holder = InitSumReport(server, groupID);
+	    server->multihdr = listtemp->holder;
+	    if (tempSettings && isBidir(tempSettings))
+		tempSettings->multihdr = listtemp->holder;
+	}
+    }
+
+    // Perform L2 setup if needed
+    if (isUDP(mSettings) && (isL2LengthCheck(mSettings) || isL2LengthCheck(server))) {
+	if (L2_setup() < 0) {
+	    // L2 not allowed, abort this server try
+	    mSettings->mSock = -1;
+	}
+    }
+    // Store entry in connection list
+    if (mSettings->mSock > 0) {
+	Iperf_pushback(listtemp, &clients);
+    } else {
+	// Undo things done above
+	// RJM clean this up later
+	if (mSettings->mSock < 0) {
+	    if (server && server->multihdr)
+		free(server->multihdr);
+	    if (server)
+		delete server;
+	    delete listtemp;
+	}
+    }
+    Mutex_Unlock( &clients_mutex );
+}
+
 struct MultiHeader* InitSumReport(struct thread_Settings *agent, int inID) {
     struct MultiHeader *multihdr = (struct MultiHeader *) calloc(1, sizeof(struct MultiHeader));
     if (multihdr != NULL) {
@@ -304,19 +357,19 @@ void BarrierClient(struct BarrierMutex *barrier) {
     assert(barrier);
     Condition_Lock(barrier->await);
     if (--barrier->count <= 0) {
-      // store the barrier release timer
+	// store the barrier release timer
 #ifdef HAVE_CLOCK_GETTIME
-      struct timespec t1;
-      clock_gettime(CLOCK_REALTIME, &t1);
-      barrier->go_time.tv_sec  = t1.tv_sec;
-      barrier->go_time.tv_usec = t1.tv_nsec / 1000;
+	struct timespec t1;
+	clock_gettime(CLOCK_REALTIME, &t1);
+	barrier->release_time.tv_sec  = t1.tv_sec;
+	barrier->release_time.tv_usec = t1.tv_nsec / 1000;
 #else
-      gettimeofday(&barrier->go_time, NULL );
+	gettimeofday(&barrier->release_time, NULL );
 #endif
-      // last one wake's up everyone else
-      Condition_Broadcast(&barrier->await);
+	// last one wake's up everyone else
+	Condition_Broadcast(&barrier->await);
 #ifdef HAVE_THREAD_DEBUG
-      thread_debug("Barrier BROADCAST on condition %p", (void *)&barrier->await);
+	thread_debug("Barrier BROADCAST on condition %p", (void *)&barrier->await);
 #endif
     } else {
 #ifdef HAVE_THREAD_DEBUG
