@@ -1,4 +1,3 @@
-
 /*---------------------------------------------------------------
  * Copyright (c) 1999,2000,2001,2002,2003
  * The Board of Trustees of the University of Illinois
@@ -56,12 +55,6 @@
 #include "headers.h"
 #include "Settings.hpp"
 #include "Mutex.h"
-
-/*
- * List handling utilities to replace STD vector
- */
-
-struct Iperf_ListEntry;
 
 /*
  * A List entry that consists of a sockaddr
