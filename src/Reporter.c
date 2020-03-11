@@ -187,17 +187,10 @@ static void InitDataReport(struct thread_Settings *mSettings);
 static void gettcpistats(struct ReporterData *stats, struct ReporterData *sumstats, int final);
 #endif
 
-static void group_sum_by_peerhost() {
-    // See if we need to do summing
-    Mutex_Lock( &clients_mutex );
-    // Create an entry for the connection list
-    listtemp = new Iperf_ListEntry;
-    memcpy(&listtemp->data, &server->peer, sizeof(iperf_sockaddr));
-    listtemp->holder = NULL;
-    listtemp->server = server;
-    listtemp->next = NULL;
+static inline struct MultiHeader *sumgroup_by_peerhost(iperf_sockaddr *peer) {
+        Iperf_ListEntry *exist, *listtemp;
 
-    exist = Iperf_hostpresent( &server->peer, clients);
+	exist = Iperf_hostpresent(&server->peer, clients);
 
     if ( exist != NULL ) {
 	// Copy the multiheader
@@ -241,6 +234,24 @@ static void group_sum_by_peerhost() {
     Mutex_Unlock( &clients_mutex );
 }
 
+void BindSumReport (struct thread_Settings *agent, int inID) {
+    Mutex_Lock(&clients_mutex);
+    Iperf_ListEntry *exist, *insert;
+    if ((exist = Iperf_hostpresent(&agent->peer, clients))) {
+	agent->multihdr = exist->holder;
+    } else {
+	agent->multihdr = InitSumReport(agent, inID);
+	insert = new Iperf_ListEntry;
+	memcpy(&insert->data, &agent->peer, sizeof(iperf_sockaddr));
+	insert->holder = agent->multihdr;
+	insert->server = agent;
+	insert->next = NULL;
+	Iperf_pushback(insert, &clients);
+    }
+    IncrMultiHdrRefCounter(agent->multihdr);
+    Mutex_Unlock(&clients_mutex);
+}
+
 struct MultiHeader* InitSumReport(struct thread_Settings *agent, int inID) {
     struct MultiHeader *multihdr = (struct MultiHeader *) calloc(1, sizeof(struct MultiHeader));
     if (multihdr != NULL) {
@@ -249,8 +260,9 @@ struct MultiHeader* InitSumReport(struct thread_Settings *agent, int inID) {
 #endif
         agent->multihdr = multihdr;
 	multihdr->groupID = inID;
-	multihdr->refcount = 0;
-	Mutex_Initialize(&multihdr->refcountlock);
+	multihdr->reference.count = 0;
+	multihdr->reference.maxcount = 0;
+	Mutex_Initialize(&multihdr->reference.lock);
 	multihdr->threads = 0;
 	if (isMultipleReport(agent)) {
 	    struct ReporterData *data = &multihdr->report;
@@ -405,6 +417,32 @@ void InitReport(struct thread_Settings *mSettings) {
     }
 }
 
+void IncrMultiHdrRefCounter(struct MultiHeader *multihdr) {
+    assert(multihdr);
+    if (multihdr) {
+	Mutex_Lock(&multihdr->reference.lock);
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug("Sum multiheader %p ref=%d->%d", (void *)multihdr, multihdr->reference.count, (multihdr->reference.count + 1));
+#endif
+	multihdr->reference.count++;
+	if (multihdr->reference.count > multihdr->reference.maxcount)
+	    multihdr->reference.maxcount = multihdr->reference.count;
+	Mutex_Unlock(&multihdr->reference.lock);
+    }
+}
+
+void DecrMultiHdrRefCounter(struct MultiHeader *multihdr) {
+    assert(multihdr);
+    if (multihdr) {
+	Mutex_Lock(&multihdr->reference.lock);
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug("Sum multiheader %p ref=%d->%d", (void *)multihdr, multihdr->reference.count, (multihdr->reference.count - 1));
+#endif
+	multihdr->reference.count--;
+	Mutex_Unlock(&multihdr->reference.lock);
+    }
+}
+
 int UpdateMultiHdrRefCounter(struct MultiHeader *multihdr, int val, int sockfd) {
     int need_free = 0;
     if (multihdr) {
@@ -468,12 +506,13 @@ void FreeReport(struct ReportHeader *reporthdr) {
 }
 
 void FreeMultiReport(struct MultiHeader *multihdr) {
+    assert(multihdr);
     if (multihdr) {
 #ifdef HAVE_THREAD_DEBUG
         thread_debug("Free multi report hdr=%p", (void *)multihdr);
 #endif
-	Condition_Destroy(&multihdr->multibarrier_cond);
-	Mutex_Destroy(&multihdr->refcountlock);
+	Condition_Destroy(&multihdr->reference.lock);
+	Mutex_Destroy(&multihdr->reference.lock);
 	free(multihdr);
     }
 }
@@ -485,11 +524,12 @@ void InitDataReport(struct thread_Settings *mSettings) {
     struct ReportHeader *reporthdr = (struct ReportHeader *) calloc(1, sizeof(struct ReportHeader));
     struct ReporterData *data = NULL;
 
-    if ( reporthdr != NULL ) {
+    if (reporthdr != NULL) {
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug("Job report %p uses multireport %p and bidirreport is %p", (void *)mSettings->reporthdr, (void *)mSettings->multihdr, (void *)mSettings->bidirhdr);
 #endif
 	mSettings->reporthdr = reporthdr;
+	BindSumReport(mSettings);
 	reporthdr->multireport = mSettings->multihdr;
 	reporthdr->bidirreport = mSettings->bidirhdr;
 	if (reporthdr->bidirreport) {
@@ -558,13 +598,6 @@ void InitDataReport(struct thread_Settings *mSettings) {
 	    case kMode_Listener:
 	    default:
 		reporthdr->packet_handler = NULL;
-	    }
-	    // increment the reference counters for bidir and sum reports
-	    if (mSettings->bidirhdr != NULL) {
-	        UpdateMultiHdrRefCounter(mSettings->bidirhdr, 1, mSettings->mSock);
-	    }
-	    if (mSettings->multihdr != NULL) {
-	        UpdateMultiHdrRefCounter(mSettings->multihdr, 1, 0);
 	    }
 	}
 

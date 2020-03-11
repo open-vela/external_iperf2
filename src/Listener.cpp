@@ -169,7 +169,6 @@ void Listener::Run( void ) {
     {
         bool client = false, UDP = isUDP( mSettings ), mCount = (mSettings->mThreads != 0);
         thread_Settings *tempSettings = NULL;
-        Iperf_ListEntry *exist, *listtemp;
         client_hdr* hdr = ( UDP ? (client_hdr*) (((UDP_datagram*)mBuf) + 1) :
                                   (client_hdr*) mBuf);
 
@@ -303,7 +302,7 @@ sInterupted == SIGALRM
             listtemp->server = server;
             listtemp->next = NULL;
 
-            exist = Iperf_hostpresent( &server->peer, clients);
+            exist = Iperf_hostpresent(&server->peer, clients);
 
             if ( exist != NULL ) {
                 // Copy the multiheader
@@ -867,7 +866,7 @@ void Listener::Accept(thread_Settings *server) {
 	}
     }
 
-    while ( server->mSock == INVALID_SOCKET) {
+    while (server->mSock == INVALID_SOCKET) {
 	if (mMode_Time) {
 	    struct timeval t1;
 	    gettimeofday( &t1, NULL );
@@ -884,7 +883,7 @@ void Listener::Accept(thread_Settings *server) {
 		break;
 	    }
 	}
-	if ( isUDP( server ) ) {
+	if (isUDP(server)) {
 #ifdef HAVE_THREAD_DEBUG
 	    thread_debug("Listener thread listening for UDP (sock=%d)", ListenSocket);
 #endif
@@ -903,10 +902,10 @@ void Listener::Accept(thread_Settings *server) {
 	    if (sInterupted != 0) {
 		server->mSock = INVALID_SOCKET;
 	    } else {
-		Mutex_Lock( &clients_mutex );
+		Mutex_Lock(&clients_mutex);
 		// Handle connection for UDP sockets.
-		exist = Iperf_present( &server->peer, clients);
-		if ( exist == NULL ) {
+		exist = Iperf_present(&server->peer, clients);
+		if (exist == NULL) {
 		    // We have a new UDP flow so let's start the
 		    // process to handle it and in a new server thread (yet to be created)
 		    server->mSock = ListenSocket;
@@ -916,23 +915,23 @@ void Listener::Accept(thread_Settings *server) {
 		    // This connect() routing is only supported with AF_INET or AF_INET6 sockets,
 		    // e.g. AF_PACKET sockets can't do this.  We'll handle packet sockets later
 		    // All UDP accepts here will use AF_INET.  This is intentional and needed
-		    int rc = connect( server->mSock, (struct sockaddr*) &server->peer,
-				      server->size_peer );
-		    FAIL_errno( rc == SOCKET_ERROR, "connect UDP", mSettings );
+		    int rc = connect(server->mSock, (struct sockaddr*) &server->peer,
+				      server->size_peer);
+		    FAIL_errno(rc == SOCKET_ERROR, "connect UDP", mSettings);
 		} else {
 		    // This isn't a new flow so just ignore the packet
 		    // and continue with the while loop
 		    // printf("Debug: drop packet on sock %d\n",ListenSocket);
 		    server->mSock = INVALID_SOCKET;
 		}
-		Mutex_Unlock( &clients_mutex );
+		Mutex_Unlock(&clients_mutex);
 	    }
 	} else {
 #ifdef HAVE_THREAD_DEBUG
 	    thread_debug("Listener thread accepting on TCP tcp port %d (sock=%d)", server->mPort, ListenSocket);
 #endif
 	    // accept a TCP  connection
-	    server->mSock = accept( ListenSocket,  (sockaddr*) &server->peer, &server->size_peer );
+	    server->mSock = accept(ListenSocket,  (sockaddr*) &server->peer, &server->size_peer);
 	    if ( server->mSock == INVALID_SOCKET &&
 #if WIN32
 		 WSAGetLastError() == WSAEINTR
