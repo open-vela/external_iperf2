@@ -234,7 +234,7 @@ static inline struct MultiHeader *sumgroup_by_peerhost(iperf_sockaddr *peer) {
     Mutex_Unlock( &clients_mutex );
 }
 
-void BindSumReport (struct thread_Settings *agent, int inID) {
+static void BindSumReport (struct thread_Settings *agent, int inID) {
     Mutex_Lock(&clients_mutex);
     Iperf_ListEntry *exist, *insert;
     if ((exist = Iperf_hostpresent(&agent->peer, clients))) {
@@ -249,6 +249,31 @@ void BindSumReport (struct thread_Settings *agent, int inID) {
 	Iperf_pushback(insert, &clients);
     }
     IncrMultiHdrRefCounter(agent->multihdr);
+    Mutex_Unlock(&clients_mutex);
+}
+
+static void UnbindSumReport (struct ReportHeader *reporthdr) {
+    assert(reporthdr->multireport);
+    Mutex_Lock(&clients_mutex);
+    struct MultiHeader multihdr = reporthdr->multireport;
+    DecrMultiHdrRefCounter(multihdr);
+    if (multihdr->reference.count == 0) {
+	if (multihdr->transfer_protocol_sum_handler &&	\
+	    (multihdr->reference.count == 0) && (multihdr->reference.maxcount > 1)) {
+	    (*multihdr->transfer_protocol_sum_handler)(&multihdr->report, 1);
+	}
+	Iperf_ListEntry **tmp = root;
+	while ((*tmp) && !(SockAddr_are_Equal((sockaddr*)&(*tmp)->data, (sockaddr*) del))) {
+	    tmp = &(*tmp)->next;
+	}
+	if (*tmp) {
+	    Iperf_ListEntry *remove = (*tmp);
+	    *tmp = remove->next;
+	    delete remove;
+	}
+	FreeMultiReport(multihdr);
+    }
+    reporthdr->multihdr = NULL;
     Mutex_Unlock(&clients_mutex);
 }
 
@@ -308,7 +333,7 @@ struct MultiHeader* InitSumReport(struct thread_Settings *agent, int inID) {
     return multihdr;
 }
 
-struct MultiHeader* InitBiDirReport(struct thread_Settings *agent, int inID) {
+struct MultiHeader* InitBiDirReport (struct thread_Settings *agent, int inID) {
     struct MultiHeader *multihdr = (struct MultiHeader *) calloc(1, sizeof(struct MultiHeader));
     if ( multihdr != NULL ) {
 #ifdef HAVE_THREAD_DEBUG
@@ -364,7 +389,7 @@ struct MultiHeader* InitBiDirReport(struct thread_Settings *agent, int inID) {
 /*
  * BarrierClient allows for multiple stream clients to be syncronized
  */
-void BarrierClient(struct BarrierMutex *barrier) {
+void BarrierClient (struct BarrierMutex *barrier) {
 #ifdef HAVE_THREAD
     assert(barrier);
     Condition_Lock(barrier->await);
@@ -405,7 +430,7 @@ void BarrierClient(struct BarrierMutex *barrier) {
  * synchronize on compeleting their connect()
  */
 
-void InitReport(struct thread_Settings *mSettings) {
+void InitReport (struct thread_Settings *mSettings) {
     // Note, this must be called in order as
     // the data report structures need to be
     // initialized first
@@ -417,7 +442,7 @@ void InitReport(struct thread_Settings *mSettings) {
     }
 }
 
-void IncrMultiHdrRefCounter(struct MultiHeader *multihdr) {
+void IncrMultiHdrRefCounter (struct MultiHeader *multihdr) {
     assert(multihdr);
     if (multihdr) {
 	Mutex_Lock(&multihdr->reference.lock);
@@ -431,7 +456,7 @@ void IncrMultiHdrRefCounter(struct MultiHeader *multihdr) {
     }
 }
 
-void DecrMultiHdrRefCounter(struct MultiHeader *multihdr) {
+int DecrMultiHdrRefCounter (struct MultiHeader *multihdr) {
     assert(multihdr);
     if (multihdr) {
 	Mutex_Lock(&multihdr->reference.lock);
@@ -443,44 +468,8 @@ void DecrMultiHdrRefCounter(struct MultiHeader *multihdr) {
     }
 }
 
-int UpdateMultiHdrRefCounter(struct MultiHeader *multihdr, int val, int sockfd) {
-    int need_free = 0;
-    if (multihdr) {
-	// decrease the reference counter for mutliheaders
-	// and check to free the multiheader
-	Mutex_Lock(&multihdr->refcountlock);
-#ifdef HAVE_THREAD_DEBUG
-	thread_debug("Sum multiheader %p ref=%d->%d", (void *)multihdr, \
-		     multihdr->refcount, (multihdr->refcount + val));
-#endif
-	if ((multihdr->refcount == 0) && (val > 0)) {
-	    multihdr->sockfd = sockfd;
-	}
-	multihdr->refcount += val;
-	if (multihdr->refcount > multihdr->maxrefcount)
-	    multihdr->maxrefcount = multihdr->refcount;
-	if ((multihdr->refcount == 0) && (val < 0)) {
-	    if (multihdr->maxrefcount > 1) {
 
-		if (sockfd && (multihdr->sockfd == sockfd)) {
-#ifdef HAVE_THREAD_DEBUG
-		    thread_debug("Close socket %d per last reference", sockfd);
-#endif
-		    int rc = close(multihdr->sockfd);
-		    WARN_errno( rc == SOCKET_ERROR, "client bidir close" );
-		}
-	    }
-#ifdef HAVE_THREAD_DEBUG
-	    thread_debug("Request to free sum multiheader %p per last reference", (void *)multihdr);
-#endif
-	    need_free = 1;
-	}
-	Mutex_Unlock(&multihdr->refcountlock);
-    }
-    return need_free;
-}
-
-void FreeReport(struct ReportHeader *reporthdr) {
+void FreeReport (struct ReportHeader *reporthdr) {
     if (reporthdr) {
 	if (reporthdr->packetring && reporthdr->report.TotalLen && \
 	    !TimeZero(reporthdr->report.intervalTime) && (reporthdr->reporter_thread_suspends < 3)) {
@@ -505,7 +494,7 @@ void FreeReport(struct ReportHeader *reporthdr) {
     }
 }
 
-void FreeMultiReport(struct MultiHeader *multihdr) {
+void FreeMultiReport (struct MultiHeader *multihdr) {
     assert(multihdr);
     if (multihdr) {
 #ifdef HAVE_THREAD_DEBUG
@@ -517,7 +506,7 @@ void FreeMultiReport(struct MultiHeader *multihdr) {
     }
 }
 
-void InitDataReport(struct thread_Settings *mSettings) {
+void InitDataReport (struct thread_Settings *mSettings) {
     /*
      * Create in one big chunk
      */
@@ -529,6 +518,9 @@ void InitDataReport(struct thread_Settings *mSettings) {
 	thread_debug("Job report %p uses multireport %p and bidirreport is %p", (void *)mSettings->reporthdr, (void *)mSettings->multihdr, (void *)mSettings->bidirhdr);
 #endif
 	mSettings->reporthdr = reporthdr;
+	if(SockAddr_isZeroAddress(&mSettings->peer)) {
+	    FAIL(1, "Binding sum report invoked and peer not set!!\n", mSettings);
+	}
 	BindSumReport(mSettings);
 	reporthdr->multireport = mSettings->multihdr;
 	reporthdr->bidirreport = mSettings->bidirhdr;
@@ -1315,14 +1307,12 @@ static int reporter_condprint_time_interval_report (struct ReportHeader *reporth
     if (reporthdr->bidirreport && (reporthdr->bidirreport->refcount > 1) && \
 	(reporthdr->bidirreport->threads == reporthdr->bidirreport->refcount)) {
 	reporthdr->bidirreport->threads = 0;
-	// transfer_protocol_multireports(&reporthdr->multireport->report, packet);
 	reporter_set_timestamps_time(bidirstats, INTERVAL);
 	(*reporthdr->bidirreport->transfer_protocol_sum_handler)(&reporthdr->bidirreport->report, 0);
     }
-    if (reporthdr->multireport && (reporthdr->multireport->refcount > (reporthdr->bidirreport ? 2 : 1)) && \
+    if (reporthdr->multireport && (reporthdr->multireport->reference.count > (reporthdr->bidirreport ? 2 : 1)) && \
 	(reporthdr->multireport->threads == reporthdr->multireport->refcount))  {
 	reporthdr->multireport->threads = 0;
-	// transfer_protocol_multireports(&reporthdr->multireport->report, packet);
 	reporter_set_timestamps_time(sumstats, INTERVAL);
 	(*reporthdr->multireport->transfer_protocol_sum_handler)(&reporthdr->multireport->report, 0);
     }
@@ -1356,10 +1346,9 @@ static int reporter_condprint_packet_interval_report (struct ReportHeader *repor
 	(*reporthdr->bidirreport->transfer_protocol_sum_handler)(&reporthdr->bidirreport->report, 0);
 	TimeAdd(reporthdr->bidirreport->report.nextTime, reporthdr->report.intervalTime);
     }
-    if (reporthdr->multireport && (reporthdr->multireport->refcount > (reporthdr->bidirreport ? 2 : 1)) && \
-	(reporthdr->multireport->threads == reporthdr->multireport->refcount))  {
+    if (reporthdr->multireport && (reporthdr->multireport->reference.count > (reporthdr->bidirreport ? 2 : 1)) && \
+	(reporthdr->multireport->threads == reporthdr->multireport->reference.count))  {
 	reporthdr->multireport->threads = 0;
-	// transfer_protocol_multireports(&reporthdr->multireport->report, packet);
 	(*reporthdr->multireport->transfer_protocol_sum_handler)(&reporthdr->multireport->report, 0);
 	TimeAdd(reporthdr->multireport->report.nextTime, reporthdr->report.intervalTime);
     }
@@ -1564,11 +1553,11 @@ static int reporter_process_report (struct ReportHeader *reporthdr, struct threa
 			    if (TimeDifference(reporthdr->multireport->report.packetTime, packet->packetTime) > 0) {
 				reporthdr->multireport->report.packetTime = packet->packetTime;
 			    }
-			    if (UpdateMultiHdrRefCounter(reporthdr->multireport, -1, reporthdr->multireport->sockfd)) {
-				if (reporthdr->multireport->transfer_protocol_sum_handler) {
-				    (*reporthdr->multireport->transfer_protocol_sum_handler)(&reporthdr->multireport->report, 1);
-				}
-				FreeMultiReport(reporthdr->multireport);
+			    UnbindSumReport(reporthdr->multireport);
+			    if ((reporthdr->multireport->transfer_protocol_sum_handler) && \
+				(reporthdr->multireport->reference.count == 0) && (reporthdr->multireport->reference.maxcount > 1)) {
+				(*reporthdr->multireport->transfer_protocol_sum_handler)(&reporthdr->multireport->report, 1);
+				FreeMultiReport(multihdr);
 			    }
 			}
 		    }
