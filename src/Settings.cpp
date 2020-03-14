@@ -293,7 +293,7 @@ void Settings_Initialize( struct thread_Settings *main ) {
 void Settings_Copy( struct thread_Settings *from, struct thread_Settings **into ) {
     *into = new struct thread_Settings;
     memset(*into, 0, sizeof(struct thread_Settings));
-    memcpy( *into, from, sizeof(struct thread_Settings) );
+    memcpy(*into, from, sizeof(struct thread_Settings));
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Copy thread settings (malloc) from/to=%p/%p report/multi/bidir %p/%p/%p", \
 		 (void *)from, (void *)*into, (void *)(*into)->reporthdr, (void *)(*into)->multihdr, (void *)(*into)->bidirhdr);
