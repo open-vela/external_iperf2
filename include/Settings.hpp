@@ -61,8 +61,6 @@
 
 #include "headers.h"
 #include "Thread.h"
-#include "Condition.h"
-#include "packet_ring.h"
 
 /* -------------------------------------------------------------------
  * constants
@@ -71,58 +69,43 @@
 extern "C" {
 #endif
 
-/* Smallest report interval supported. Units is microseconds */
+/* Smallest report interval supported. Units is seconds */
 #ifndef HAVE_FASTSAMPLING
-#define SMALLEST_INTERVAL 5000 // 5ms
-#define SMALLEST_INTERVAL_SEC 0.005 // 5ms
+#define SMALLEST_INTERVAL 0.005
 #else
-#define SMALLEST_INTERVAL 100 // 100 usec
-#define SMALLEST_INTERVAL_SEC 0.0001 // 5ms
+#define SMALLEST_INTERVAL 0.0001
 #endif
 
-#define SLOPSECS 2
-
 // server/client mode
-enum ThreadMode {
+typedef enum ThreadMode {
     kMode_Unknown = 0,
     kMode_Server,
     kMode_Client,
     kMode_Reporter,
-    kMode_ReporterClient,
-    kMode_WriteAckServer,
-    kMode_WriteAckClient,
     kMode_Listener
-};
+} ThreadMode;
 
 // report mode
-enum ReportMode {
+typedef enum ReportMode {
     kReport_Default = 0,
     kReport_CSV,
     //kReport_XML,
     kReport_MAXIMUM
-};
+} ReportMode;
 
 // test mode
-enum TestMode {
+typedef enum TestMode {
     kTest_Normal = 0,
     kTest_DualTest,
     kTest_TradeOff,
     kTest_Unknown
-};
-
-// interval reporting mode
-enum IntervalMode {
-    kInterval_None = 0,
-    kInterval_Time,
-    kInterval_Frames,
-    kInterval_Packets
-};
+} TestMode;
 
 // rate request units
-enum RateUnits {
+typedef enum RateUnits {
     kRate_BW = 0,
     kRate_PPS
-};
+} RateUnits;
 
 #include "Reporter.h"
 
@@ -137,22 +120,20 @@ enum RateUnits {
  * and contains only C elements so it can be manipulated
  * by either C or C++.
  */
-#define PEERBUFSIZE 128
-struct thread_Settings {
+#define PEERBUFSIZE 80
+typedef struct thread_Settings {
     // Pointers
     char*  mFileName;               // -F
     char*  mHost;                   // -c
     char*  mLocalhost;              // -B
     char*  mOutputFileName;         // -o
-    char*  mIfrname;                // %<device> name (for rx)
-    char*  mIfrnametx;              // %<device> name (for tx)
+    char*  mIfrname;                 // %<device> name
     char*  mSSMMulticastStr;        // --ssm-host
     char*  mIsochronousStr;         // --isochronous
-    char*  mRxHistogramStr;         // --histograms (packets)
+    char*  mUDPHistogramStr;        // --udp-histogram
     FILE*  Extractor_file;
-    struct ReportHeader*  reporthdr;
-    struct MultiHeader*   multihdr;
-    struct MultiHeader*   bidirhdr;
+    ReportHeader*  reporthdr;
+    MultiHeader*   multihdr;
     struct thread_Settings *runNow;
     struct thread_Settings *runNext;
     // int's
@@ -168,7 +149,6 @@ struct thread_Settings {
 #endif
     int Extractor_size;
     int mBufLen;                    // -l
-    int mWriteAckLen;               // --write-ack
     int mMSS;                       // -M
     int mTCPWin;                    // -w
     /*   flags is a BitMask of old bools
@@ -196,19 +176,19 @@ struct thread_Settings {
     int flags;
     int flags_extend;
     // enums (which should be special int's)
-    enum ThreadMode mThreadMode;         // -s or -c
-    enum ReportMode mReportMode;
-    enum TestMode mMode;                 // -r or -d
+    ThreadMode mThreadMode;         // -s or -c
+    ReportMode mReportMode;
+    TestMode mMode;                 // -r or -d
     // Hopefully int64_t's
-    intmax_t mUDPRate;            // -b or -u
-    int mUDPRateUnits;            // -b is either bw or pps
-    uintmax_t mAmount;             // -n or -t
-    unsigned int mInterval;               // -i integer time units is usec
-    enum IntervalMode mIntervalMode;
+    max_size_t mUDPRate;            // -b or -u
+    RateUnits mUDPRateUnits;        // -b is either bw or pps
+    umax_size_t mAmount;             // -n or -t
+    // doubles
+    double mInterval;               // -i
     // shorts
     unsigned short mListenPort;     // -L
     unsigned short mPort;           // -p
-    unsigned short mBindPort;      // -B
+    unsigned short mBindPort;      // -B or --cport
     // chars
     char   mFormat;                 // -f
     int mTTL;                    // -T
@@ -220,34 +200,32 @@ struct thread_Settings {
     Socklen_t size_local;
     nthread_t mTID;
     int incrdstip;
-    int connectonly_count;
     char* mCongestion;
     char peerversion[PEERBUFSIZE];
-    int mRXbins;
-    int mRXbinsize;
-    int mRXunits;
-    double mRXci_lower;
-    double mRXci_upper;
+    int mUDPbins;
+    int mUDPbinsize;
+    unsigned short mUDPunits;
+    unsigned short mUDPci_lower;
+    unsigned short mUDPci_upper;
 #if defined( HAVE_WIN32_THREAD )
     HANDLE mHandle;
 #endif
+#ifdef HAVE_ISOCHRONOUS
     double mFPS; //frames per second
     double mMean; //variable bit rate mean
     int mJitterBufSize; //Server jitter buffer size, units is frames
     double mBurstIPG; //Interpacket gap
+#endif
     int l4offset; // used in l2 mode to offset the raw packet
     int l4payloadoffset;
     int recvflags; // used to set recv flags,e.g. MSG_TRUNC with L
     double mVariance; //vbr variance
     unsigned int mFQPacingRate;
-    struct timeval txholdback_timer;
     struct timeval txstart_epoch;
-    struct timeval accept_time;
-    struct Condition awake_me;
-    struct PacketRing *ackring;
-    struct BarrierMutex *connects_done;
-    int numreportstructs;
-};
+#ifdef HAVE_CLOCK_NANOSLEEP
+    struct timespec txstart;
+#endif
+} thread_Settings;
 
 /*
  * Thread based flags
@@ -298,22 +276,14 @@ struct thread_Settings {
 #define FLAG_REVERSE        0x00000004
 #define FLAG_ISOCHRONOUS    0x00000008
 #define FLAG_UDPUNUSED      0x00000010
-#define FLAG_RXHISTOGRAM    0x00000020
+#define FLAG_UDPHISTOGRAM   0x00000020
 #define FLAG_L2LENGTHCHECK  0x00000100
 #define FLAG_TXSTARTTIME    0x00000200
 #define FLAG_INCRDSTIP      0x00000400
 #define FLAG_VARYLOAD       0x00000800
 #define FLAG_FQPACING       0x00001000
 #define FLAG_TRIPTIME       0x00002000
-#define FLAG_TXHOLDBACK     0x00004000
-#define FLAG_TCPWRITETIME   0x00008000
-#define FLAG_MODEINFINITE   0x00010000
-#define FLAG_CONNECTONLY    0x00020000
-#define FLAG_SERVERREVERSE  0x00040000
-#define FLAG_BIDIR          0x00080000
-#define FLAG_WRITEACK       0x00100000
-#define FLAG_NOUDPFIN       0x00200000
-#define FLAG_NOCONNECTSYNC  0x00400000
+
 
 #define isBuflenSet(settings)      ((settings->flags & FLAG_BUFLENSET) != 0)
 #define isCompat(settings)         ((settings->flags & FLAG_COMPAT) != 0)
@@ -348,23 +318,14 @@ struct thread_Settings {
 #define isPeerVerDetect(settings)  ((settings->flags_extend & FLAG_PEERVER) != 0)
 #define isSeqNo64b(settings)       ((settings->flags_extend & FLAG_SEQNO64) != 0)
 #define isReverse(settings)        ((settings->flags_extend & FLAG_REVERSE) != 0)
-#define isBidir(settings)          ((settings->flags_extend & FLAG_BIDIR) != 0)
-#define isServerReverse(settings)  ((settings->flags_extend & FLAG_SERVERREVERSE) != 0)
 #define isIsochronous(settings)    ((settings->flags_extend & FLAG_ISOCHRONOUS) != 0)
-#define isRxHistogram(settings)    ((settings->flags_extend & FLAG_RXHISTOGRAM) != 0)
+#define isUDPHistogram(settings)   ((settings->flags_extend & FLAG_UDPHISTOGRAM) != 0)
 #define isL2LengthCheck(settings)  ((settings->flags_extend & FLAG_L2LENGTHCHECK) != 0)
 #define isIncrDstIP(settings)      ((settings->flags_extend & FLAG_INCRDSTIP) != 0)
-#define isTxStartTime(settings)    ((settings->flags_extend & FLAG_TXSTARTTIME) != 0)
-#define isTxHoldback(settings)     ((settings->flags_extend & FLAG_TXHOLDBACK) != 0)
+#define isTxStartTime(settings)         ((settings->flags_extend & FLAG_TXSTARTTIME) != 0)
 #define isVaryLoad(settings)       ((settings->flags_extend & FLAG_VARYLOAD) != 0)
 #define isFQPacing(settings)       ((settings->flags_extend & FLAG_FQPACING) != 0)
 #define isTripTime(settings)       ((settings->flags_extend & FLAG_TRIPTIME) != 0)
-#define isModeInfinite(settings)   ((settings->flags_extend & FLAG_MODEINFINITE) != 0)
-#define isModeAmount(settings)     (!isModeTime(settings) && !isModeInfinite(settings))
-#define isConnectOnly(settings)    ((settings->flags_extend & FLAG_CONNECTONLY) != 0)
-#define isWriteAck(settings)       ((settings->flags_extend & FLAG_WRITEACK) != 0)
-#define isNoUDPfin(settings)       ((settings->flags_extend & FLAG_NOUDPFIN) != 0)
-#define isNoConnectSync(settings)  ((settings->flags_extend & FLAG_NOCONNECTSYNC) != 0)
 
 #define setBuflenSet(settings)     settings->flags |= FLAG_BUFLENSET
 #define setCompat(settings)        settings->flags |= FLAG_COMPAT
@@ -397,22 +358,14 @@ struct thread_Settings {
 #define setPeerVerDetect(settings) settings->flags_extend |= FLAG_PEERVER
 #define setSeqNo64b(settings)      settings->flags_extend |= FLAG_SEQNO64
 #define setReverse(settings)       settings->flags_extend |= FLAG_REVERSE
-#define setBidir(settings)         settings->flags_extend |= FLAG_BIDIR
-#define setServerReverse(settings) settings->flags_extend |= FLAG_SERVERREVERSE
 #define setIsochronous(settings)   settings->flags_extend |= FLAG_ISOCHRONOUS
-#define setRxHistogram(settings)   settings->flags_extend |= FLAG_RXHISTOGRAM
-#define setL2LengthCheck(settings) settings->flags_extend |= FLAG_L2LENGTHCHECK
+#define setUDPHistogram(settings)  settings->flags_extend |= FLAG_UDPHISTOGRAM
+#define setL2LengthCheck(settings)    settings->flags_extend |= FLAG_L2LENGTHCHECK
 #define setIncrDstIP(settings)     settings->flags_extend |= FLAG_INCRDSTIP
-#define setTxStartTime(settings)   settings->flags_extend |= FLAG_TXSTARTTIME
-#define setTxHoldback(settings)    settings->flags_extend |= FLAG_TXHOLDBACK
+#define setTxStartTime(settings)        settings->flags_extend |= FLAG_TXSTARTTIME
 #define setVaryLoad(settings)      settings->flags_extend |= FLAG_VARYLOAD
 #define setFQPacing(settings)      settings->flags_extend |= FLAG_FQPACING
 #define setTripTime(settings)      settings->flags_extend |= FLAG_TRIPTIME
-#define setModeInfinite(settings)  settings->flags_extend |= FLAG_MODEINFINITE
-#define setConnectOnly(settings)   settings->flags_extend |= FLAG_CONNECTONLY
-#define setWriteAck(settings)      settings->flags_extend |= FLAG_WRITEACK
-#define setNoUDPfin(settings)      settings->flags_extend |= FLAG_NOUDPFIN
-#define setNoConnectSync(settings) settings->flags_extend |= FLAG_NOCONNECTSYNC
 
 #define unsetBuflenSet(settings)   settings->flags &= ~FLAG_BUFLENSET
 #define unsetCompat(settings)      settings->flags &= ~FLAG_COMPAT
@@ -445,38 +398,392 @@ struct thread_Settings {
 #define unsetPeerVerDetect(settings)    settings->flags_extend &= ~FLAG_PEERVER
 #define unsetSeqNo64b(settings)    settings->flags_extend &= ~FLAG_SEQNO64
 #define unsetReverse(settings)     settings->flags_extend &= ~FLAG_REVERSE
-#define unsetBidir(settings)       settings->flags_extend &= ~FLAG_BIDIR
-#define unsetServerReverse(settings) settings->flags_extend &= ~FLAG_SERVERREVERSE
-#define unsetIsochronous(settings)  settings->flags_extend &= ~FLAG_ISOCHRONOUS
-#define unsetRxHistogram(settings)    settings->flags_extend &= ~FLAG_RXHISTOGRAM
+#define unsetIsochronous(settings) settings->flags_extend &= ~FLAG_ISOCHRONOUS
+#define unsetUDPHistogram(settings)    settings->flags_extend &= ~FLAG_UDPHISTOGRAM
 #define unsetL2LengthCheck(settings)  settings->flags_extend &= ~FLAG_L2LENGTHCHECK
-#define unsetIncrDstIP(settings)    settings->flags_extend &= ~FLAG_INCRDSTIP
-#define unsetTxStartTime(settings)  settings->flags_extend &= ~FLAG_TXSTARTTIME
-#define unsetTxHoldback(settings)   settings->flags_extend &= ~FLAG_TXHOLDBACK
-#define unsetVaryLoad(settings)     settings->flags_extend &= ~FLAG_VARYLOAD
+#define unsetIncrDstIP(settings)   settings->flags_extend &= ~FLAG_INCRDSTIP
+#define unsetTxStartTime(settings)      settings->flags_extend &= ~FLAG_TXSTARTTIME
+#define unsetVaryLoad(settings)      settings->flags_extend &= ~FLAG_VARYLOAD
 #define unsetFQPacing(settings)     settings->flags_extend &= ~FLAG_FQPACING
 #define unsetTripTime(settings)     settings->flags_extend &= ~FLAG_TRIPTIME
-#define unsetModeInfinite(settings) settings->flags_extend &= ~FLAG_MODEINFINITE
-#define unsetConnectOnly(settings)  settings->flags_extend &= ~FLAG_CONNECTONLY
-#define unsetWriteAck(settings)     settings->flags_extend &= ~FLAG_WRITEACK
-#define unsetNoUDPfin(settings)     settings->flags_extend &= ~FLAG_NOUDPFIN
-#define unsetNoConnectSync(settings) settings->flags_extend &= ~FLAG_NOCONNECTSYNC
 
+/*
+ * Message header flags
+ *
+ * base flags, keep compatible with older versions
+ */
+#define HEADER_VERSION1 0x80000000
+#define HEADER_EXTEND   0x40000000
+#define HEADER_UDPTESTS 0x20000000
+#define HEADER_TIMESTAMP 0x10000000
+
+// Below flags are used to pass test settings in *every* UDP packet
+// and not just during the header exchange
+#define HEADER_UDP_ISOCH    0x00000001
+#define HEADER_L2ETHPIPV6   0x00000002
+#define HEADER_L2LENCHECK   0x00000004
+
+#define RUN_NOW         0x00000001
+// newer flags
+#define UNITS_PPS             0x00000001
+#define SEQNO64B              0x00000002
+#define REALTIME              0x00000004
+#define REVERSE               0x00000008
+
+// later features
+#define HDRXACKMAX 2500000 // default 2.5 seconds, units microseconds
+#define HDRXACKMIN   10000 // default 10 ms, units microseconds
+
+/*
+ * Structures used for test messages which
+ * are exchanged between the client and the Server/Listener
+ */
+typedef enum MsgType {
+    CLIENTHDR = 0x1,
+    CLIENTHDRACK,
+    SERVERHDR,
+    SERVERHDRACK
+} MsgType;
+
+/*
+ * Structures below will be passed as network i/o
+ * between the client, listener and server
+ * and must be packed by the compilers
+ * Align on 32 bits (4 bytes)
+ */
+#pragma pack(push,4)
+typedef struct UDP_datagram {
+// used to reference the 4 byte ID number we place in UDP datagrams
+// use int32_t if possible, otherwise a 32 bit bitfield (e.g. on J90)
+// Support 64 bit seqno on machines that support them
+#ifdef HAVE_INT32_T
+    u_int32_t id;
+    u_int32_t tv_sec;
+    u_int32_t tv_usec;
+#else
+    unsigned int id      : 32;
+    unsigned int tv_sec  : 32;
+    unsigned int tv_usec : 32;
+#endif //32
+#ifdef HAVE_INT32_T
+    u_int32_t id2;
+#else
+    unsigned int id2      : 32;
+#endif // 32
+} UDP_datagram;
+
+typedef struct hdr_typelen {
+#ifdef HAVE_INT32_T
+    int32_t type;
+    int32_t length;
+#else
+    signed int type     : 32;
+    signed int length    : 32;
+#endif
+} hdr_typelen;
+
+
+/*
+ * The client_hdr structure is sent from clients
+ * to servers to alert them of things that need
+ * to happen. Order must be perserved in all
+ * future releases for backward compatibility.
+ * 1.7 has flags, numThreads, mPort, and bufferlen
+ */
+typedef struct client_hdr_v1 {
+#ifdef HAVE_INT32_T
+    /*
+     * flags is a bitmap for different options
+     * the most significant bits are for determining
+     * which information is available. So 1.7 uses
+     * 0x80000000 and the next time information is added
+     * the 1.7 bit will be set and 0x40000000 will be
+     * set signifying additional information. If no
+     * information bits are set then the header is ignored.
+     * The lowest order diferentiates between dualtest and
+     * tradeoff modes, wheither the speaker needs to start
+     * immediately or after the audience finishes.
+     */
+    int32_t flags;
+    int32_t numThreads;
+    int32_t mPort;
+    int32_t bufferlen;
+    int32_t mWinBand;
+    int32_t mAmount;
+#else
+    signed int flags      : 32;
+    signed int numThreads : 32;
+    signed int mPort      : 32;
+    signed int bufferlen  : 32;
+    signed int mWinBand : 32;
+    signed int mAmount    : 32;
+#endif
+} client_hdr_v1;
+
+// This is used for tests that require
+// the initial handshake
+typedef struct client_hdrext {
+    hdr_typelen typelen;
+#ifdef HAVE_INT32_T
+    int32_t flags;
+    int32_t version_u;
+    int32_t version_l;
+    int32_t reserved;
+    int32_t mRate;
+    int32_t mUDPRateUnits;
+    int32_t mRealtime;
+#else
+    signed int flags       : 32;
+    signed int version_u   : 32;
+    signed int version_l   : 32;
+    signed int reserved    : 32;
+    signed int mRate      : 32;
+    signed int mUDPRateUnits : 32;
+    signed int mRealtime  : 32;
+#endif
+} client_hdrext;
+
+
+/*
+ * Isoch payload structure
+ *
+ *                 0      7 8     15 16    23 24    31
+ *                +--------+--------+--------+--------+
+ *      0x00  1   |          seqno lower              |
+ *                +--------+--------+--------+--------+
+ *      0x04  2   |             tv_sec                |
+ *                +--------+--------+--------+--------+
+ *      0x08  3   |             tv_usec               |
+ *                +--------+--------+--------+--------+
+ *      0x0c  4   |    (reserved) seqno upper         |
+ *                +--------+--------+--------+--------+
+ *            5   |         v1 hdr                    |
+ *                +--------+--------+--------+--------+
+ *            6   |         v1 hdr (continued)        |
+ *                +--------+--------+--------+--------+
+ *            7   |         v1 hdr (continued)        |
+ *                +--------+--------+--------+--------+
+ *            8   |         v1 hdr (continued)        |
+ *                +--------+--------+--------+--------+
+ *            9   |         v1 hdr (continued)        |
+ *                +--------+--------+--------+--------+
+ *            10  |         v1 hdr (final)            |
+ *                +--------+--------+--------+--------+
+ *            11  | udp test flags  | tlv offset      |
+ *                +--------+--------+--------+--------+
+ *            12  |        iperf version major        |
+ *                +--------+--------+--------+--------+
+ *            13  |        iperf version minor        |
+ *                +--------+--------+--------+--------+
+ *            14  |        ref sync sample tv_sec     |
+ *                +--------+--------+--------+--------+
+ *            15  |        ref sync sample tv_used    |
+ *                +--------+--------+--------+--------+
+ *            16  |        gps sync sample tv_sec     |
+ *                +--------+--------+--------+--------+
+ *            17  |        gps sync sample tv_usec    |
+ *                +--------+--------+--------+--------+
+ *            18  |        isoch burst period (us)    |
+ *                +--------+--------+--------+--------+
+ *            19  |        isoch start timestamp (s)  |
+ *                +--------+--------+--------+--------+
+ *            20  |        isoch start timestamp (us) |
+ *                +--------+--------+--------+--------+
+ *            21  |        isoch prev frameid         |
+ *                +--------+--------+--------+--------+
+ *            22  |        isoch frameid              |
+ *                +--------+--------+--------+--------+
+ *            23  |        isoch burtsize             |
+ *                +--------+--------+--------+--------+
+ *            24  |        isoch bytes remaining      |
+ *                +--------+--------+--------+--------+
+ *            25  |        isoch reserved             |
+ *                +--------+--------+--------+--------+
+ *            26  |        hw timestamps ...          |
+ *                +--------+--------+--------+--------+
+ *            n   |        hw timestamps ...
+ *                +--------+--------+--------+--------+
+ *
+ */
+
+typedef struct UDP_isoch_payload {
+#ifdef HAVE_INT32_T
+    u_int32_t burstperiod; //period units microseconds
+    u_int32_t start_tv_sec;
+    u_int32_t start_tv_usec;
+    u_int32_t prevframeid;
+    u_int32_t frameid;
+    u_int32_t burstsize;
+    u_int32_t remaining;
+    u_int32_t resevered;
+#else
+    unsigned int burstperiod : 32;
+    unsigned int start_tv_sec : 32;
+    unsigned int start_tv_usec : 32;
+    unsigned int prevframeid : 32;
+    unsigned int frameid : 32;
+    unsigned int burstsize : 32;
+    unsigned int remaining : 32;
+    unsigned int reserved : 32;
+#endif
+} UDP_isoch_payload;
+
+// This is used for UDP tests that don't
+// require any handshake, i.e they are stateless
+typedef struct client_hdr_udp_tests {
+// for 32 bit systems, skip over this field
+// so it remains interoperable with 64 bit peers
+#ifdef HAVE_INT32_T
+    u_int16_t testflags;
+    u_int16_t tlvoffset;
+    u_int32_t version_u;
+    u_int32_t version_l;
+#else
+    unsigned short testflags   : 16;
+    unsigned short tlvoffset   : 16;
+    unsigned int version_u   : 32;
+    unsigned int version_l   : 32;
+#endif
+} client_hdr_udp_tests;
+
+
+typedef struct client_hdr_udp_isoch_tests {
+    client_hdr_udp_tests udptests;
+    UDP_isoch_payload isoch;
+} client_hdr_udp_isoch_tests;
+
+typedef struct client_hdr_ack {
+    hdr_typelen typelen;
+#ifdef HAVE_INT32_T
+    int32_t flags;
+    int32_t version_u;
+    int32_t version_l;
+    int32_t reserved;
+#else
+    signed int flags    : 32;
+    signed int version_u   : 32;
+    signed int version_l   : 32;
+    signed int reserved    : 32;
+#endif
+} client_hdr_ack;
+
+typedef struct client_hdr {
+    client_hdr_v1 base;
+    union {
+	client_hdrext extend;
+	client_hdr_udp_tests udp;
+    };
+} client_hdr;
+
+/*
+ * The server_hdr structure facilitates the server
+ * report of jitter and loss on the client side.
+ * It piggy_backs on the existing clear to close
+ * packet.
+ */
+typedef struct server_hdr_v1 {
+#ifdef HAVE_INT32_T
+    /*
+     * flags is a bitmap for different options
+     * the most significant bits are for determining
+     * which information is available. So 1.7 uses
+     * 0x80000000 and the next time information is added
+     * the 1.7 bit will be set and 0x40000000 will be
+     * set signifying additional information. If no
+     * information bits are set then the header is ignored.
+     */
+    int32_t flags;
+    int32_t total_len1;
+    int32_t total_len2;
+    int32_t stop_sec;
+    int32_t stop_usec;
+    int32_t error_cnt;
+    int32_t outorder_cnt;
+    int32_t datagrams;
+#ifdef HAVE_SEQNO64b
+    int32_t datagrams2;
+#endif // SEQ
+    int32_t jitter1;
+    int32_t jitter2;
+#else // Int32
+    signed int flags        : 32;
+    signed int total_len1   : 32;
+    signed int total_len2   : 32;
+    signed int stop_sec     : 32;
+    signed int stop_usec    : 32;
+    signed int error_cnt    : 32;
+    signed int outorder_cnt : 32;
+    signed int datagrams    : 32;
+#ifdef HAVE_SEQNO64b
+    signed int datagrams2   : 32;
+#endif // SEQ
+    signed int jitter1      : 32;
+    signed int jitter2      : 32;
+#endif
+} server_hdr_v1;
+
+typedef struct server_hdr_extension {
+#ifdef HAVE_INT32_T
+    int32_t minTransit1;
+    int32_t minTransit2;
+    int32_t maxTransit1;
+    int32_t maxTransit2;
+    int32_t sumTransit1;
+    int32_t sumTransit2;
+    int32_t meanTransit1;
+    int32_t meanTransit2;
+    int32_t m2Transit1;
+    int32_t m2Transit2;
+    int32_t vdTransit1;
+    int32_t vdTransit2;
+    int32_t cntTransit;
+    int32_t IPGcnt;
+    int32_t IPGsum;
+#else
+    signed int minTransit1  : 32;
+    signed int minTransit2  : 32;
+    signed int maxTransit1  : 32;
+    signed int maxTransit2  : 32;
+    signed int sumTransit1  : 32;
+    signed int sumTransit2  : 32;
+    signed int meanTransit1  : 32;
+    signed int meanTransit2  : 32;
+    signed int m2Transit1  : 32;
+    signed int m2Transit2  : 32;
+    signed int vdTransit1  : 32;
+    signed int vdTransit2  : 32;
+    signed int cntTransit   : 32;
+    signed int IPGcnt       : 32;
+    signed int IPGsum       : 32;
+#endif
+} server_hdr_extension;
+
+typedef struct server_hdr {
+    server_hdr_v1 base;
+    server_hdr_extension extend;
+} server_hdr;
+
+#pragma pack(pop)
+
+#define SIZEOF_UDPCLIENTMSG (sizeof(client_hdr) + sizeof(UDP_datagram))
+#define SIZEOF_TCPHDRMSG (int) ((sizeof(client_hdr) > sizeof(server_hdr)) ? (int) sizeof(client_hdr) : (int) sizeof(server_hdr))
+#define SIZEOF_UDPHDRMSG (int) ((SIZEOF_UDPCLIENTMSG > sizeof(server_hdr)) ? SIZEOF_UDPCLIENTMSG : sizeof(server_hdr))
+#define SIZEOF_MAXHDRMSG (int) ((SIZEOF_TCPHDRMSG > SIZEOF_UDPHDRMSG) ? SIZEOF_TCPHDRMSG : SIZEOF_UDPHDRMSG)
 
 // set to defaults
-void Settings_Initialize( struct thread_Settings* main );
+void Settings_Initialize( thread_Settings* main );
 
 // copy structure
-void Settings_Copy( struct thread_Settings* from, struct thread_Settings** into );
+void Settings_Copy( thread_Settings* from, thread_Settings** into );
 
 // free associated memory
-void Settings_Destroy( struct thread_Settings *mSettings );
+void Settings_Destroy( thread_Settings *mSettings );
 
 // parse settings from user's environment variables
-void Settings_ParseEnvironment( struct thread_Settings *mSettings );
+void Settings_ParseEnvironment( thread_Settings *mSettings );
 
 // parse settings from app's command line
-void Settings_ParseCommandLine( int argc, char **argv, struct thread_Settings *mSettings );
+void Settings_ParseCommandLine( int argc, char **argv, thread_Settings *mSettings );
 
 // convert to lower case for [KMG]bits/sec
 void Settings_GetLowerCaseArg(const char *,char *);
@@ -485,16 +792,15 @@ void Settings_GetLowerCaseArg(const char *,char *);
 void Settings_GetUpperCaseArg(const char *,char *);
 
 // generate settings for listener instance
-void Settings_GenerateListenerSettings( struct thread_Settings *client, struct thread_Settings **listener);
+void Settings_GenerateListenerSettings( thread_Settings *client, thread_Settings **listener);
 
 // generate settings for speaker instance
-struct client_hdr; // forward declaration found in payloads.h
-void Settings_GenerateClientSettings( struct thread_Settings *server,
-				      struct thread_Settings **client,
-                                      struct client_hdr *hdr );
+void Settings_GenerateClientSettings( thread_Settings *server,
+				      thread_Settings **client,
+                                      client_hdr *hdr );
 
 // generate client header for server
-int Settings_GenerateClientHdr( struct thread_Settings *client, struct client_hdr *hdr );
+int Settings_GenerateClientHdr( thread_Settings *client, client_hdr *hdr );
 
 #ifdef __cplusplus
 } /* end extern "C" */

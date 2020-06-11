@@ -55,27 +55,21 @@
 namespace Isochronous {
     class FrameCounter {
     public :
-        FrameCounter(double, Timestamp start);
-        FrameCounter(double);
-	unsigned int get(void);
+	FrameCounter(double);
 	unsigned int get(long *);
-	unsigned int get(Timestamp);
 	unsigned int period_us(void);
 	unsigned int wait_tick(void);
 	unsigned int wait_sync(long sec, long usec);
 	long getSecs(void);
 	long getUsecs(void);
 	void reset(void);
-        Timestamp next_slot(void);
 	unsigned int slip;
 
     private :
-	double frequency;
 	Timestamp startTime;
-	Timestamp nextslotTime;
+	double frequency;
 	unsigned int period;  // units microseconds
 	unsigned int lastcounter;
-	unsigned int slot_counter;
     }; // end class FrameCounter
 }
 #endif // ISOCHRONOUS_H

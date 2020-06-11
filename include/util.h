@@ -73,7 +73,6 @@ int  getsock_tcp_mss( int inSock );
 bool setsock_blocking(int fd, bool blocking);
 
 int recvn( int inSock, char *outBuf, int inLen, int flags );
-int writen( int inSock, const void *inBuf, int inLen);
 /* -------------------------------------------------------------------
  * signal handlers
  * signal.c
@@ -171,30 +170,9 @@ void pattern( char *outBuf, int inBytes );
  * ------------------------------------------------------------------- */
 double byte_atof( const char *inString );
 double bitorbyte_atof( const char *inString );
-intmax_t byte_atoi( const char  *inString );
+max_size_t byte_atoi( const char  *inString );
 unsigned int bitorbyte_atoi( const char *inString );
 void byte_snprintf( char* outString, int inLen, double inNum, char inFormat );
-
-/*
- * Time macros for C-code (not the include Timestamp.hpp)
- */
-#define rMillion 1000000
-
-#define TimeZero(timeval) ((timeval.tv_sec == 0) && (timeval.tv_usec == 0))
-
-#define TimeDifference( left, right ) (left.tv_sec  - right.tv_sec) +   \
-        (left.tv_usec - right.tv_usec) / ((double) rMillion)
-
-#define TimeDouble(timeval) (timeval.tv_sec + timeval.tv_usec / ((double) rMillion))
-
-#define TimeAdd( left, right )  do {                                    \
-                                    left.tv_usec += right.tv_usec;      \
-                                    if ( left.tv_usec > rMillion ) {    \
-                                        left.tv_usec -= rMillion;       \
-                                        left.tv_sec++;                  \
-                                    }                                   \
-                                    left.tv_sec += right.tv_sec;        \
-                                } while ( 0 )
 
 /* -------------------------------------------------------------------
  * redirect the stdout to a specified file
@@ -217,14 +195,6 @@ void redirect(const char *inOutputFileName);
   do {                                          \
     if ( ptr != NULL ) {                        \
       delete [] ptr;                            \
-      ptr = NULL;                               \
-    }                                           \
-  } while( false )
-
-#define FREE_ARRAY( ptr )                     \
-  do {                                          \
-    if ( ptr != NULL ) {                        \
-      free(ptr); \
       ptr = NULL;                               \
     }                                           \
   } while( false )
