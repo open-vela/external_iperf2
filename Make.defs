@@ -34,5 +34,5 @@
 ############################################################################
 
 ifneq ($(CONFIG_TOOLS_IPERF2),)
-CONFIGURED_APPS += external/tools/iperf2
+CONFIGURED_APPS += $(APPDIR)/external/tools/iperf2
 endif
