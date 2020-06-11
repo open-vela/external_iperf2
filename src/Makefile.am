@@ -28,7 +28,6 @@ iperf_SOURCES = \
 		Reporter.c \
 		Server.cpp \
 		Settings.cpp \
-		Write_ack.cpp \
 		SocketAddr.c \
 		gnu_getopt.c \
 		gnu_getopt_long.c \
@@ -37,7 +36,6 @@ iperf_SOURCES = \
 		service.c \
 		sockets.c \
 		stdio.c \
-		packet_ring.c \
 		tcp_window_size.c \
 		pdfs.c
 iperf_LDADD = $(LIBCOMPAT_LDADDS)

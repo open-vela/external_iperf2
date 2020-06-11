@@ -184,7 +184,7 @@ int recvn( int inSock, char *outBuf, int inLen, int flags ) {
                 return -1;  /* error */
 	    }
 	} else if ( nread == 0 ) {
-	  // WARN_errno( 1, "recvn abort" );
+	    WARN_errno( 1, "recvn abort" );
             break;        /* EOF */
 	}
         nleft -= nread;
@@ -201,9 +201,9 @@ int recvn( int inSock, char *outBuf, int inLen, int flags ) {
  * from Stevens, 1998, section 3.9
  * ------------------------------------------------------------------- */
 
-int writen( int inSock, const void *inBuf, int inLen ) {
-    int nleft;
-    int nwritten;
+ssize_t writen( int inSock, const void *inBuf, size_t inLen ) {
+    size_t  nleft;
+    ssize_t nwritten;
     const char *ptr;
 
     assert( inSock >= 0 );
