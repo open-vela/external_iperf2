@@ -52,51 +52,25 @@
 
 using namespace Isochronous;
 
-FrameCounter::FrameCounter(double value, Timestamp start)  : frequency(value) {
-    period = (unsigned int) (1000000 / frequency);
-    startTime = start;
-    nextslotTime=start;
-    lastcounter = 0;
-    slot_counter = 0;
-}
+// Produce a frame counter with frequency in units of frames per second, e.g. 60 fps
 FrameCounter::FrameCounter(double value)  : frequency(value) {
     period = (unsigned int) (1000000 / frequency);
     lastcounter = 0;
-    slot_counter = 0;
 }
 
-#if defined(HAVE_CLOCK_NANOSLEEP)
-unsigned int FrameCounter::wait_tick(void) {
-    Timestamp now;
-    if (!slot_counter) {
-      slot_counter = 1;
-      nextslotTime = now;
-    } else {
-      while (!now.before(nextslotTime)) {
-        nextslotTime.add(period);
-	slot_counter++;
-      }
+unsigned int FrameCounter::get(long *ticks_remaining) {
+    Timestamp sampleTime;  // Constructor will initialize timestamp to now
+    long usecs = -startTime.subUsec(sampleTime);
+    // This will round towards zero per the integer divide
+    unsigned int counter = (unsigned int) (usecs / period);
+    if (ticks_remaining) {
+	// figure out how many usecs before the next frame counter tick
+	// the caller can use this to delay until the next tick
+	*ticks_remaining = ((counter + 1) * period) - usecs;
     }
-    timespec txtime_ts;
-    txtime_ts.tv_sec = nextslotTime.getSecs();
-    txtime_ts.tv_nsec = nextslotTime.getUsecs() * 1000;
-    if (lastcounter && ((slot_counter - lastcounter) > 1)) {
-#ifdef HAVE_THREAD_DEBUG
-      thread_debug("Client tick slip occurred per %ld.%ld %d %d", txtime_ts.tv_sec, txtime_ts.tv_nsec / 1000, lastcounter, slot_counter);
-#endif
-	slip++;
-    }
-    int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &txtime_ts, NULL);
-    if (rc) {
-	fprintf(stderr, "txstart failed clock_nanosleep()=%d\n", rc);
-    }
-#ifdef HAVE_THREAD_DEBUG
-    // thread_debug("Client tick occurred per %ld.%ld", txtime_ts.tv_sec, txtime_ts.tv_nsec / 1000);
-#endif
-    lastcounter = slot_counter;
-    return(slot_counter);
+    return(counter + 1); // Frame counter for packets starts at 1
 }
-#else
+
 unsigned int FrameCounter::wait_tick(void) {
     long remaining;
     unsigned int framecounter;
@@ -113,34 +87,6 @@ unsigned int FrameCounter::wait_tick(void) {
     }
     lastcounter = framecounter;
     return(framecounter);
-}
-#endif
-inline unsigned int FrameCounter::get(void) {
-    Timestamp now;
-    return slot_counter + 1;
-}
-
-inline unsigned int FrameCounter::get(Timestamp slot) {
-    return(slot_counter + 1); // Frame counter for packets starts at 1
-}
-
-inline unsigned int FrameCounter::get(long *ticks_remaining) {
-    assert(ticks_remaining);
-    Timestamp sampleTime;  // Constructor will initialize timestamp to now
-    long usecs = -startTime.subUsec(sampleTime);
-    unsigned int counter = (unsigned int) (usecs / period);
-    // figure out how many usecs before the next frame counter tick
-    // the caller can use this to delay until the next tick
-    *ticks_remaining = (counter * period) - usecs;
-    return(counter + 1); // Frame counter for packets starts at 1
-}
-
-inline Timestamp FrameCounter::next_slot(void) {
-    Timestamp next = startTime;
-    slot_counter = get();
-    // period unit is in microseconds, convert to seconds
-    next.add(slot_counter * (period / 1e6));
-    return next;
 }
 
 unsigned int FrameCounter::period_us(void) {

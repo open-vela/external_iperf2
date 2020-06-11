@@ -76,9 +76,9 @@ public:
     void runAsDaemon( const char *, int );
 
     void Listen( );
-
+#ifdef HAVE_MULTICAST
     void McastJoin( );
-
+#endif
     void McastSetTTL( int val );
 
     void Accept( thread_Settings *server );
@@ -100,12 +100,6 @@ private:
     int ReadClientHeader(client_hdr *hdr);
     int ClientHeaderAck(void);
     int L2_setup(void);
-#if WIN32
-    SOCKET ListenSocket;
-#else
-    int ListenSocket;
-#endif
-
 }; // end class Listener
 
 #endif // LISTENER_H
