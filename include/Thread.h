@@ -99,18 +99,23 @@ struct thread_Settings;
 #include "Condition.h"
 #include "Settings.hpp"
 
+#if HAVE_THREAD_DEBUG
+void thread_debug(const char *format, ...);
+extern Mutex packetringdebug_mutex;
+#endif
 // initialize or destroy the thread subsystem
 void thread_init( );
 void thread_destroy( );
 
 // start or stop a thread executing
+void thread_start_all( struct thread_Settings* thread );
 void thread_start( struct thread_Settings* thread );
 void thread_stop( struct thread_Settings* thread );
 
 /* wait for this or all threads to complete */
 void thread_joinall( void );
-
 int thread_numuserthreads( void );
+int thread_numtrafficthreads( void );
 
 // set a thread to be ignorable, so joinall won't wait on it
 void thread_setignore( void );
@@ -142,6 +147,10 @@ DWORD WINAPI thread_run_wrapper( void* paramPtr );
 void*thread_run_wrapper( void* paramPtr );
 #endif
 
+#if HAVE_SCHED_SETSCHEDULER
+void thread_setscheduler(struct thread_Settings *thread);
+#endif
+
 void thread_rest ( void );
 
 // defined in launch.cpp
@@ -149,6 +158,8 @@ void server_spawn( struct thread_Settings* thread );
 void client_spawn( struct thread_Settings* thread );
 void client_init( struct thread_Settings* clients );
 void listener_spawn( struct thread_Settings* thread );
+void writeack_server_spawn( struct thread_Settings* thread );
+void writeack_client_spawn( struct thread_Settings* thread );
 
 // defined in reporter.c
 void reporter_spawn( struct thread_Settings* thread );

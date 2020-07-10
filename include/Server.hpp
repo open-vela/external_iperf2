@@ -85,15 +85,25 @@ private:
     Timestamp now;
     ReportStruct *reportstruct;
 
-    void InitTimeStamping (void);
+    void InitKernelTimeStamping (void);
     void InitTrafficLoop (void);
+    int AlignPayloads (void);
     int ReadWithRxTimestamp (int *readerr);
     bool ReadPacketID (void);
     void L2_processing (void);
     int L2_quintuple_filter (void);
-    void Isoch_processing (void);
+    void Isoch_processing (int);
     bool InProgress(void);
+    void FirstReadBarrier(void);
     Timestamp connect_done;
+#if WIN32
+    SOCKET mySocket;
+    SOCKET myDropSocket;
+#else
+    int mySocket;
+    int myDropSocket;
+#endif
+    struct ReportHeader *myJob;
 
 #if HAVE_DECL_SO_TIMESTAMP
     // Structures needed for recvmsg

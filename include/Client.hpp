@@ -56,7 +56,7 @@
 
 #include "Settings.hpp"
 #include "Timestamp.hpp"
-
+#include "isochronous.hpp"
 
 // Define fatal and nonfatal write errors
 #ifdef WIN32
@@ -85,19 +85,24 @@ public:
 
     // For things like dual tests a server needs to be started by the client,
     // The code in src/launch.cpp will invoke this
-    void InitiateServer();
+    void InitiateServer(void);
+    void StartSynch(void);
+    void SetReportStartTime(void);
+    void ConnectPeriodic(void);
+    bool isConnected(void);
 
 private:
-    void WritePacketID(void);
+    inline void WritePacketID(intmax_t);
+    inline void WriteTcpTxHdr(ReportStruct *, int, int);
     void InitTrafficLoop(void);
     void FinishTrafficActions(void);
     void FinalUDPHandshake(void);
     void write_UDP_FIN(void);
     bool InProgress(void);
-
+    bool connected;
     ReportStruct *reportstruct;
     double delay_lower_bounds;
-    max_size_t totLen;
+    intmax_t totLen;
 
     // TCP plain
     void RunTCP( void );
@@ -112,12 +117,19 @@ private:
     void HdrXchange(int flags);
 
     thread_Settings *mSettings;
+#if WIN32
+    SOCKET mySocket;
+#else
+    int mySocket;
+#endif
+    struct ReportHeader *myJob;
     char* mBuf;
     Timestamp mEndTime;
     Timestamp lastPacketTime;
     Timestamp now;
     char* readAt;
     Timestamp connect_done, connect_start;
+    Isochronous::FrameCounter *framecounter;
 }; // end class Client
 
 #endif // CLIENT_H

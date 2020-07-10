@@ -77,13 +77,15 @@
 #include "PerfSocket.hpp"
 #include "SocketAddr.h"
 #include "util.h"
-
+#if HAVE_DECL_SO_BINDTODEVICE
+#include <net/if.h>
+#endif
 /* -------------------------------------------------------------------
  * Set socket options before the listen() or connect() calls.
  * These are optional performance tuning factors.
  * ------------------------------------------------------------------- */
 
-void SetSocketOptions( thread_Settings *inSettings ) {
+void SetSocketOptions( struct thread_Settings *inSettings ) {
     // set the TCP window size (socket buffer sizes)
     // also the UDP buffer size
     // must occur before call to accept() for large window sizes
@@ -104,6 +106,25 @@ void SetSocketOptions( thread_Settings *inSettings ) {
 	fprintf( stderr, "The -Z option is not available on this operating system\n");
 #endif
     }
+
+#if HAVE_DECL_SO_BINDTODEVICE
+    if ((inSettings->mThreadMode == kMode_Client) && inSettings->mIfrnametx) {
+        struct ifreq ifr;
+	memset(&ifr, 0, sizeof(ifr));
+	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), inSettings->mIfrnametx);
+	if (setsockopt(inSettings->mSock, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
+	    char *buf;
+	    int len = snprintf(NULL, 0, "%s %s", "bind to device", inSettings->mIfrnametx);
+	    len++;  // Trailing null byte + extra
+	    buf = (char *) malloc(len);
+	    len = snprintf(buf, len, "%s %s", "bind to device", inSettings->mIfrnametx);
+	    WARN_errno(1, buf );
+	    free(buf);
+	    free(inSettings->mIfrnametx);
+	    inSettings->mIfrnametx = NULL;
+	}
+    }
+#endif
 
     // check if we're sending multicast
     if (isMulticast(inSettings)) {
@@ -144,10 +165,11 @@ void SetSocketOptions( thread_Settings *inSettings ) {
     }
 
 #ifdef IP_TOS
-#if HAVE_DECL_IPV6_TCLASS
+#if HAVE_DECL_IPV6_TCLASS && ! defined HAVE_WINSOCK2_H
+    // IPV6_TCLASS is defined on Windows but not implemented.
     if (isIPV6(inSettings)) {
 	const int dscp = inSettings->mTOS;
-	int rc = setsockopt(inSettings->mSock, IPPROTO_IPV6, IPV6_TCLASS, &dscp, sizeof(dscp));
+	int rc = setsockopt(inSettings->mSock, IPPROTO_IPV6, IPV6_TCLASS, (char*) &dscp, sizeof(dscp));
         WARN_errno( rc == SOCKET_ERROR, "setsockopt IPV6_TCLASS" );
     } else
 #endif
@@ -162,12 +184,6 @@ void SetSocketOptions( thread_Settings *inSettings ) {
 #endif
 
     if ( !isUDP( inSettings ) ) {
-        // set so linger
-        struct linger ling;
-        ling.l_onoff  = 1;
-        ling.l_linger = 5;     /* timeout is seconds */
-        setsockopt( inSettings->mSock, SOL_SOCKET, SO_LINGER, (char *)&ling, sizeof(struct linger) );
-
         // set the TCP maximum segment size
         setsock_tcp_mss( inSettings->mSock, inSettings->mMSS );
 
@@ -193,7 +209,7 @@ void SetSocketOptions( thread_Settings *inSettings ) {
 #endif /* HAVE_SO_MAX_PACING_RATE */
 }
 
-void SetSocketOptionsSendTimeout( thread_Settings *mSettings, int timer) {
+void SetSocketOptionsSendTimeout( struct thread_Settings *mSettings, int timer) {
     if (timer > 0) {
 #ifdef WIN32
 	// Windows SO_SNDTIMEO uses ms

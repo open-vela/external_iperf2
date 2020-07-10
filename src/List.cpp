@@ -1,4 +1,3 @@
-
 /*---------------------------------------------------------------
  * Copyright (c) 1999,2000,2001,2002,2003
  * The Board of Trustees of the University of Illinois
@@ -53,12 +52,14 @@
 #include "List.h"
 #include "Mutex.h"
 #include "SocketAddr.h"
+#include "Reporter.h"
 
 /*
  * Global List and Mutex variables
  */
 Iperf_ListEntry *clients = NULL;
-Mutex clients_mutex;
+Mutex clients_mutex; // This is a list of active clients, mutex is to protect updates
+extern Mutex groupCond;
 
 /*
  * Add Entry add to the List
@@ -71,23 +72,24 @@ void Iperf_pushback ( Iperf_ListEntry *add, Iperf_ListEntry **root ) {
 /*
  * Delete Entry del from the List
  */
-void Iperf_delete ( iperf_sockaddr *del, Iperf_ListEntry **root ) {
-    Iperf_ListEntry *temp = Iperf_present( del, *root );
-    if ( temp != NULL ) {
-        if ( temp == *root ) {
-            *root = (*root)->next;
-        } else {
-            Iperf_ListEntry *itr = *root;
-            while ( itr->next != NULL ) {
-                if ( itr->next == temp ) {
-                    itr->next = itr->next->next;
-                    break;
-                }
-                itr = itr->next;
-            }
-        }
-        delete temp;
+void Iperf_delete (iperf_sockaddr *del, Iperf_ListEntry **root) {
+    // remove_list_entry(entry) {
+    //     indirect = &head;
+    //     while ((*indirect) != entry) {
+    //	       indirect = &(*indirect)->next;
+    //     }
+    //     *indirect = entry->next
+    Mutex_Lock(&clients_mutex);
+    Iperf_ListEntry **tmp = root;
+    while ((*tmp) && !(SockAddr_are_Equal((sockaddr*)&(*tmp)->data, (sockaddr*) del))) {
+	tmp = &(*tmp)->next;
     }
+    if (*tmp) {
+	Iperf_ListEntry *remove = (*tmp);
+	*tmp = remove->next;
+        delete remove;
+    }
+    Mutex_Unlock(&clients_mutex);
 }
 
 /*

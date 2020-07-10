@@ -60,53 +60,8 @@
 #include "Listener.hpp"
 #include "Server.hpp"
 #include "PerfSocket.hpp"
+#include "Write_ack.hpp"
 
-#ifdef HAVE_SCHED_SETSCHEDULER
-#include <sched.h>
-#endif
-#ifdef HAVE_MLOCKALL
-#include <sys/mman.h>
-#endif
-static void set_scheduler(thread_Settings *thread) {
-#ifdef HAVE_SCHED_SETSCHEDULER
-    if ( isRealtime( thread ) ) {
-	struct sched_param sp;
-	sp.sched_priority = sched_get_priority_max(SCHED_RR);
-	// SCHED_OTHER, SCHED_FIFO, SCHED_RR
-	if (sched_setscheduler(0, SCHED_RR, &sp) < 0)  {
-	    perror("Client set scheduler");
-#ifdef HAVE_MLOCKALL
-	} else if (mlockall(MCL_CURRENT | MCL_FUTURE) != 0) {
-	    // lock the threads memory
-	    perror ("mlockall");
-#endif // MLOCK
-	}
-    }
-#endif // SCHED
-}
-
-/*
- * listener server and client cleanup function.
- */
-#ifdef HAVE_PTHREAD_CLEANUP_PUSH
-static void listener_clean(void *arg)
-{
-    Listener *theListener = (Listener *)arg;
-    DELETE_PTR(theListener);
-}
-
-static void server_clean(void *arg)
-{
-    Server *theServer = (Server*)arg;
-    DELETE_PTR(theServer);
-}
-
-static void client_clean(void *arg)
-{
-    Client *theClient = (Client*)arg;
-    DELETE_PTR(theClient);
-}
-#endif
 
 /*
  * listener_spawn is responsible for creating a Listener class
@@ -115,21 +70,13 @@ static void client_clean(void *arg)
  */
 void listener_spawn( thread_Settings *thread ) {
     Listener *theListener = NULL;
-
+    // the Listener need to trigger a settings report
+    setReport(thread);
     // start up a listener
     theListener = new Listener( thread );
 
-#ifdef HAVE_PTHREAD_CLEANUP_PUSH
-    pthread_cleanup_push(listener_clean, theListener);
-#endif
-
     // Start listening
     theListener->Run();
-
-#ifdef HAVE_PTHREAD_CLEANUP_PUSH
-    pthread_cleanup_pop(0);
-#endif
-
     DELETE_PTR( theListener );
 }
 
@@ -138,29 +85,24 @@ void listener_spawn( thread_Settings *thread ) {
  * and launching the server. It is provided as a means for
  * the C thread subsystem to launch the server C++ object.
  */
-void server_spawn( thread_Settings *thread) {
+void server_spawn(thread_Settings *thread) {
     Server *theServer = NULL;
-
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Server spawn settings=%p multihdr=%p sock=%d", \
+		 (void *) thread, (void *)thread->multihdr, thread->mSock);
+#endif
+    // set traffic thread to realtime if needed
+#if HAVE_SCHED_SETSCHEDULER
+    thread_setscheduler(thread);
+#endif
     // Start up the server
     theServer = new Server( thread );
-
-#ifdef HAVE_PTHREAD_CLEANUP_PUSH
-    pthread_cleanup_push(server_clean, theServer);
-#endif
-
-    // set traffic thread to realtime if needed
-    set_scheduler(thread);
     // Run the test
     if ( isUDP( thread ) ) {
-	theServer->RunUDP();
+        theServer->RunUDP();
     } else {
-	theServer->RunTCP();
+        theServer->RunTCP();
     }
-
-#ifdef HAVE_PTHREAD_CLEANUP_PUSH
-    pthread_cleanup_pop(0);
-#endif
-
     DELETE_PTR( theServer);
 }
 
@@ -168,30 +110,111 @@ void server_spawn( thread_Settings *thread) {
  * client_spawn is responsible for creating a Client class
  * and launching the client. It is provided as a means for
  * the C thread subsystem to launch the client C++ object.
+ *
+ * There are a few different client startup modes
+ * o) Normal
+ * o) Dual (-d or -r) (legacy)
+ * o) Reverse (Client side) (client acts like server)
+ * o) Bidir (Client side) client starts server
+ * o) ServerReverse (Server side) (listener starts a client)
+ * o) Bidir (Server side) (listener starts server & client)
+ * o) WriteAck
+ *
+ * Note: This runs in client thread context
  */
 void client_spawn( thread_Settings *thread ) {
     Client *theClient = NULL;
-
-    //start up the client
-    theClient = new Client( thread );
-
-#ifdef HAVE_PTHREAD_CLEANUP_PUSH
-    pthread_cleanup_push(client_clean, theClient);
-#endif
+    thread_Settings *reverse_client = NULL;
 
     // set traffic thread to realtime if needed
-    set_scheduler(thread);
-
-    // Let the server know about our settings
-    theClient->InitiateServer();
-
-    // Run the test
-    theClient->Run();
-
-#ifdef HAVE_PTHREAD_CLEANUP_PUSH
-    pthread_cleanup_pop(0);
+#if HAVE_SCHED_SETSCHEDULER
+    thread_setscheduler(thread);
 #endif
-
+    // start up the client
+    // Note: socket connect() happens here in the constructor
+    // that should be fixed as a clean up
+    theClient = new Client(thread);
+    if (isConnectOnly(thread)) {
+	theClient->ConnectPeriodic();
+    } else if (!theClient->isConnected()) {
+        // the barrier needs to be called even
+        // for threads that fail connect
+	if (thread->multihdr && !isNoConnectSync(thread))
+	    BarrierClient(thread->connects_done);
+	DELETE_PTR(theClient);
+	return;
+    } else if (!isReverse(thread) && !isServerReverse(thread) && !isWriteAck(thread)) {
+	// Code for the normal case
+	// Perform any intial startup delays between the connect() and the data xfer phase
+	// this will also initiliaze the report header timestamps needed by the reporter thread
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug("Client spawn thread normal (sock=%d)", thread->mSock);
+#endif
+	theClient->StartSynch();
+	if (theClient->isConnected()) {
+	    theClient->InitiateServer();
+	    theClient->Run();
+	}
+    } else if (isServerReverse(thread)) {
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug("Client spawn thread server-reverse (sock=%d)", thread->mSock);
+#endif
+	// This is the case of the listener launching a client, no test exchange nor connect
+	theClient->SetReportStartTime();
+	theClient->Run();
+    } else if (isReverse(thread) || isWriteAck(thread)) {
+	// This is a client side initiated reverse test,
+	// Could be bidir or reverse only
+	// Create thread setting for the reverse_client (i.e. client as server)
+	// Note: Settings copy will malloc space for the
+	// reverse thread settings and the run_wrapper will free it
+	Settings_Copy(thread, &reverse_client);
+	FAIL((!reverse_client || !(thread->mSock > 0)), "Reverse test failed to start per thread settings or socket problem",  thread);
+	reverse_client->mSock = thread->mSock; // use the same socket for both directions
+	if (isWriteAck(thread))
+	    reverse_client->mThreadMode = kMode_WriteAckClient;
+	else
+	    reverse_client->mThreadMode = kMode_Server;
+	setServerReverse(reverse_client); // cause the connection report to show reverse
+	if (!isWriteAck(thread))
+	    reverse_client->bidirhdr = thread->bidirhdr; // reverse_client thread updates the bidir report
+	if (isModeTime(reverse_client)) {
+	    reverse_client->mAmount += (SLOPSECS * 100);  // add 2 sec for slop on reverse, units are 10 ms
+	    if (isTxHoldback(thread)) {
+		reverse_client->mAmount += (thread->txholdback_timer.tv_sec * 100);
+		reverse_client->mAmount += (thread->txholdback_timer.tv_usec / 1000000 * 100);
+	    }
+	}
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug("Client spawn thread reverse (sock=%d)", thread->mSock);
+#endif
+	theClient->StartSynch();
+	theClient->InitiateServer();
+	// RJM ADD a thread event here so reverse_client is in a known ready state prior to test exchange
+	// Now exchange client's test information with remote server
+	setReverse(reverse_client);
+	thread_start(reverse_client);
+	// Now handle bidir vs reverse-only for client side invocation
+	if (!isBidir(thread) && !isWriteAck(thread)) {
+	    // Reverse only, client thread waits on reverse_server and never runs any traffic
+	    if (!thread_equalid(reverse_client->mTID, thread_zeroid())) {
+#ifdef HAVE_THREAD_DEBUG
+		thread_debug("Reverse pthread join sock=%d", reverse_client->mSock);
+#endif
+		if (pthread_join(reverse_client->mTID, NULL) != 0) {
+		    WARN( 1, "pthread_join reverse failed" );
+		} else {
+#ifdef HAVE_THREAD_DEBUG
+		    thread_debug("Client reverse thread finished sock=%d", reverse_client->mSock);
+#endif
+		}
+	    }
+	} else {
+	    // bidir case or Write ack case, start the client traffic
+	    theClient->Run();
+	}
+    }
+    // Call the client's destructor which will close the socket
     DELETE_PTR( theClient );
 }
 
@@ -201,24 +224,26 @@ void client_spawn( thread_Settings *thread ) {
  * specified. It also creates settings structures for all the
  * threads and arranges them so they can be managed and started
  * via the one settings structure that was passed in.
+ *
+ * Note: This runs in main thread context
  */
-void client_init( thread_Settings *clients ) {
+void client_init(thread_Settings *clients) {
     thread_Settings *itr = NULL;
     thread_Settings *next = NULL;
 
-    // Set the first thread to report Settings
-    setReport( clients );
     itr = clients;
+    setReport(clients);
+    if (isBidir(clients))
+        clients->bidirhdr = InitBiDirReport(clients, 0);
+
+    if ((clients->mThreads > 1) && !isConnectOnly(clients)) {
+	// Create a multiple report header to handle reporting the
+	// sum of multiple client threads
+	InitSumReport(clients, groupID);
+    }
 
     // See if we need to start a listener as well
     Settings_GenerateListenerSettings( clients, &next );
-
-    // Create a multiple report header to handle reporting the
-    // sum of multiple client threads
-    Mutex_Lock( &groupCond );
-    groupID--;
-    clients->multihdr = InitMulti( clients, groupID );
-    Mutex_Unlock( &groupCond );
 
 #ifdef HAVE_THREAD
     if ( next != NULL ) {
@@ -227,19 +252,24 @@ void client_init( thread_Settings *clients ) {
         itr->runNow = next;
         itr = next;
     }
-#endif
     // For each of the needed threads create a copy of the
     // provided settings, unsetting the report flag and add
     // to the list of threads to start
     for (int i = 1; i < clients->mThreads; i++) {
-        Settings_Copy( clients, &next );
-	if (isIncrDstIP(clients))
-	    next->incrdstip = i;
-        unsetReport( next );
+        Settings_Copy(clients, &next);
+	if (next) {
+	    if (isIncrDstIP(clients))
+		next->incrdstip = i;
+	    if (isBidir(clients)) {
+		// Force a new bidir report for all the clients
+		next->bidirhdr = NULL;
+		next->bidirhdr = InitBiDirReport(next, 0);
+	    }
+	}
         itr->runNow = next;
         itr = next;
     }
-#ifndef HAVE_THREAD
+#else
     if ( next != NULL ) {
         // We don't have threads and we need to start a listener so
         // have it ran after the client is finished
@@ -248,3 +278,47 @@ void client_init( thread_Settings *clients ) {
 #endif
 }
 
+/*
+ * writeack_server_spawn
+ */
+void writeack_server_spawn(thread_Settings *thread) {
+    WriteAck *theServerAck = NULL;
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Write ack server spawn settings=%p sock=%d", (void *) thread, thread->mSock);
+#endif
+    // set traffic thread to realtime if needed
+#if HAVE_SCHED_SETSCHEDULER
+    thread_setscheduler(thread);
+#endif
+    // Start up the server
+    theServerAck = new WriteAck(thread);
+    // Run the thread
+    theServerAck->RunServer();
+    DELETE_PTR( theServerAck);
+}
+
+/*
+ * writeack_client_spawn
+ */
+void writeack_client_spawn(thread_Settings *thread) {
+    Server *theServer = NULL;
+    WriteAck *theClientAck = NULL;
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Write ack client spawn settings=%p sock=%d", (void *) thread, thread->mSock);
+#endif
+#if HAVE_SCHED_SETSCHEDULER
+    // set traffic thread to realtime if needed
+    thread_setscheduler(thread);
+#endif
+    // the client side server doesn't do write acks
+    unsetWriteAck(thread);
+    // Start up the server
+    theServer = new Server( thread );
+    // Run the test
+    if ( isUDP( thread ) ) {
+        theServer->RunUDP();
+    } else {
+        theServer->RunTCP();
+    }
+    DELETE_PTR( theServer);
+}

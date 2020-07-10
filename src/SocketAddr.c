@@ -67,7 +67,7 @@ extern "C" {
  * if that is what is desired.
  * ------------------------------------------------------------------- */
 
-void SockAddr_remoteAddr( thread_Settings *inSettings ) {
+void SockAddr_remoteAddr( struct thread_Settings *inSettings ) {
     SockAddr_zeroAddress( &inSettings->peer );
     if ( inSettings->mHost != NULL ) {
         SockAddr_setHostname( inSettings->mHost, &inSettings->peer,
@@ -97,7 +97,7 @@ void SockAddr_remoteAddr( thread_Settings *inSettings ) {
 }
 // end SocketAddr
 
-void SockAddr_localAddr( thread_Settings *inSettings ) {
+void SockAddr_localAddr( struct thread_Settings *inSettings ) {
     SockAddr_zeroAddress( &inSettings->local );
     inSettings->peerversion[0] = '\0';
 
@@ -140,17 +140,11 @@ void SockAddr_localAddr( thread_Settings *inSettings ) {
       */
      if (inSettings->mLocalhost == NULL) {
 	 if (inSettings->mThreadMode == kMode_Client) {
-	     if (inSettings->mBindPort) {
-		   /*
-		    * User specified port so use it
-		    */
-		    SockAddr_setPort( &inSettings->local, inSettings->mBindPort );
-	     } else {
-		   /*
-		    * No user specified port, let OS assign a free one
-		    */
-		    SockAddr_setPortAny (&inSettings->local);
-	     }
+	     /*
+	      * Client thread, -p and no -B,
+	      * OS will auto assign a free local port
+	      */
+	     SockAddr_setPortAny (&inSettings->local);
 	 } else {
 	     /* Server or Listener thread, -p and no -B */
 	     SockAddr_setPort( &inSettings->local, inSettings->mPort );
@@ -433,14 +427,14 @@ int SockAddr_isIPv6( iperf_sockaddr *inSockAddr ) {
 // end get_sizeof_sockaddr
 
 /* -------------------------------------------------------------------
- * Return true if the address is a IPv4 multicast address.
+ * Return true if the address is multicast ip address.
  * ------------------------------------------------------------------- */
 
 int SockAddr_isMulticast( iperf_sockaddr *inSockAddr ) {
 
 #if defined(HAVE_IPV6)
-    if ( ((struct sockaddr*)inSockAddr)->sa_family == AF_INET6 ) {
-        return( IN6_IS_ADDR_MULTICAST(&(((struct sockaddr_in6*) inSockAddr)->sin6_addr) ));
+    if (((struct sockaddr*)inSockAddr)->sa_family == AF_INET6) {
+        return(IN6_IS_ADDR_MULTICAST(&(((struct sockaddr_in6*) inSockAddr)->sin6_addr)));
     } else
 #endif
     {
@@ -454,12 +448,34 @@ int SockAddr_isMulticast( iperf_sockaddr *inSockAddr ) {
 // end isMulticast
 
 /* -------------------------------------------------------------------
+ * Return true if the address is multicast ip address.
+ * ------------------------------------------------------------------- */
+
+int SockAddr_isLinklocal (iperf_sockaddr *inSockAddr) {
+#if defined(HAVE_IPV6)
+  if (((struct sockaddr*)inSockAddr)->sa_family == AF_INET6) {
+      return(IN6_IS_ADDR_LINKLOCAL(&(((struct sockaddr_in6*) inSockAddr)->sin6_addr)));
+    } else
+#endif
+    {
+      return 0;
+    }
+}
+
+/* -------------------------------------------------------------------
  * Zero out the address structure.
  * ------------------------------------------------------------------- */
 
-void SockAddr_zeroAddress( iperf_sockaddr *inSockAddr ) {
-    memset( inSockAddr, 0, sizeof( iperf_sockaddr ));
+void SockAddr_zeroAddress(iperf_sockaddr *inSockAddr) {
+    memset( inSockAddr, 0, sizeof(iperf_sockaddr));
 }
+
+int SockAddr_isZeroAddress(iperf_sockaddr *inSockAddr) {
+    iperf_sockaddr zeroSockAddr;
+    memset( zeroSockAddr, 0, sizeof(iperf_sockaddr));
+    return(memcmp((void *)inSockAddr, (void *)&zerosockaddr, sizeof(iperf_sockaddr));
+}
+
 // zeroAddress
 
 /* -------------------------------------------------------------------
@@ -511,7 +527,7 @@ int SockAddr_Hostare_Equal( struct sockaddr* first, struct sockaddr* second ) {
  * Store (and cache) the results in the thread settings structure
  * Return 0 if set, -1 if not
  * ------------------------------------------------------------------- */
-int SockAddr_Ifrname(thread_Settings *inSettings) {
+int SockAddr_Ifrname(struct thread_Settings *inSettings) {
 #ifdef HAVE_IFADDRS_H
     if (inSettings->mIfrname == NULL) {
 	struct sockaddr_storage myaddr;

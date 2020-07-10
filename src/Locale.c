@@ -50,16 +50,8 @@
  * -------------------------------------------------------------------
  * Strings and other stuff that is locale specific.
  * ------------------------------------------------------------------- */
-#include <inttypes.h>
 #include "headers.h"
 #include "version.h"
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#else
-#ifdef WIN32
-#include "config.win32.h"
-#endif
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -85,11 +77,8 @@ Client/Server:\n\
   -m, --print_mss          print TCP maximum segment size (MTU - TCP/IP header)\n\
   -o, --output    <filename> output the report or error message to this specified file\n\
   -p, --port      #        server port to listen on/connect to\n\
-  -u, --udp                use UDP rather than TCP\n"
-#ifdef HAVE_SEQNO64b
-"      --udp-counters-64bit use 64 bit sequence numbers with UDP\n"
-#endif
-"  -w, --window    #[KM]    TCP window size (socket buffer size)\n"
+  -u, --udp                use UDP rather than TCP\n\
+  -w, --window    #[KM]    TCP window size (socket buffer size)\n"
 #ifdef HAVE_SCHED_SETSCHEDULER
 "  -z, --realtime           request realtime scheduler\n"
 #endif
@@ -117,12 +106,12 @@ const char usage_long2[] = "\
 \n\
 Client specific:\n\
   -c, --client    <host>   run in client mode, connecting to <host>\n\
-  -d, --dualtest           Do a bidirectional test simultaneously\n"
-#ifdef HAVE_ISOCHRONOUS
-"      --ipg                set the the interpacket gap (milliseconds) for packets within an isochronous frame\n\
-      --isochronous <frames-per-second>:<mean>,<stddev> send traffic in bursts (frames - emulate video traffic)\n"
-#endif
-"  -n, --num       #[kmgKMG]    number of bytes to transmit (instead of -t)\n\
+  -d, --dualtest           Do a bidirectional test simultaneously (multiple sockets)\n\
+      --bidir              run bidirectional test over same socket (full duplex mode)\n\
+      --ipg                set the the interpacket gap (milliseconds) for packets within an isochronous frame\n\
+      --isochronous <frames-per-second>:<mean>,<stddev> send traffic in bursts (frames - emulate video traffic)\n\
+      --incr-dstip         Increment the destination ip with parallel (-P) traffic threads\n\
+  -n, --num       #[kmgKMG]    number of bytes to transmit (instead of -t)\n\
   -r, --tradeoff           Do a bidirectional test individually\n\
   -t, --time      #        time in seconds to transmit for (default 10 secs)\n\
   -B, --bind [<ip> | <ip:port>] bind ip (and optional port) from which to source traffic\n\
@@ -132,6 +121,9 @@ Client specific:\n\
   -P, --parallel  #        number of parallel client threads to run\n"
 #ifndef WIN32
 "  -R, --reverse            reverse the test (client receives, server sends)\n"
+#else
+"  -R                       Remove the windows service\n"
+"      --reverse            reverse the test (client receives, server sends)\n"
 #endif
 "  -T, --ttl       #        time-to-live, for multicast (default 1)\n\
   -V, --ipv6_domain        Set the domain to IPv6 (send packets over IPv6)\n\
@@ -186,8 +178,14 @@ const char server_pid_port[] =
 const char client_pid_port[] =
 "Client connecting to %s, %s port %d with pid %d\n";
 
+const char client_pid_port_dev[] =
+"Client connecting to %s, %s port %d with pid %d via %s\n";
+
 const char bind_address[] =
 "Binding to local address %s\n";
+
+const char bind_address_iface[] =
+"Binding to local address %s and iface %s\n";
 
 const char multicast_ttl[] =
 "Setting multicast TTL to %d\n";
@@ -250,17 +248,19 @@ const char report_sum_bw_format[] =
 const char report_bw_jitter_loss_header[] =
 "[ ID] Interval       Transfer     Bandwidth        Jitter   Lost/Total Datagrams\n";
 const char report_bw_jitter_loss_format[] =
-"[%3d] %4.1f-%4.1f sec  %ss  %ss/sec  %6.3f ms %4" IPERFdMAX "/%5" IPERFdMAX " (%.2g%%)\n";
+"[%3d] %4.1f-%4.1f sec  %ss  %ss/sec  %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%)\n";
 
 const char report_sum_bw_jitter_loss_format[] =
-"[SUM] %4.1f-%4.1f sec  %ss  %ss/sec  %6.3f ms %4" IPERFdMAX "/%5" IPERFdMAX " (%.2g%%)\n";
+"[SUM] %4.1f-%4.1f sec  %ss  %ss/sec  %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%)\n";
 
 /* -------------------------------------------------------------------
  * Enhanced reports (per -e)
  * ------------------------------------------------------------------- */
 const char client_report_epoch_start[] =
-"[%3d] Client thread traffic started at %ld.%.6ld (epoch/unix format)\n";
+"[%3d] Client traffic to start at %s (%ld.%ld in epoch/unix format)\n";
 
+const char client_report_epoch_start_current[] =
+"[%3d] Client traffic to start at %s (%ld.%ld) current time %s\n";
 
 const char client_write_size[] =
 "Write buffer size";
@@ -280,6 +280,12 @@ const char report_bw_read_enhanced_header[] =
 const char report_bw_read_enhanced_format[] =
 "[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d    %d:%d:%d:%d:%d:%d:%d:%d\n";
 
+const char report_bw_read_enhanced_netpwr_header[] =
+"[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth       Reads   Dist(bin=%.1fK)     Burst Latency avg/min/max/stdev (cnt/size) inP NetPwr\n";
+
+const char report_bw_read_enhanced_netpwr_format[] =
+"[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d    %d:%d:%d:%d:%d:%d:%d:%d    %6.3f/%6.3f/%6.3f/%6.3f ms (%d/%d) %s %4.2f\n";
+
 const char report_sum_bw_read_enhanced_format[] =
 "[SUM] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d    %d:%d:%d:%d:%d:%d:%d:%d\n";
 
@@ -292,6 +298,9 @@ const char report_bw_write_enhanced_header[] =
 
 const char report_bw_write_enhanced_format[] =
 "[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %10d %8dK/%u us  %4.2f\n";
+
+const char report_bw_write_enhanced_nocwnd_format[] =
+"[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %10d       NA/%u us  %4.2f\n";
 
 const char report_sum_bw_write_enhanced_format[] =
 "[SUM] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d%10d\n";
@@ -324,23 +333,51 @@ const char report_sum_bw_pps_enhanced_format[] =
 
 const char report_bw_jitter_loss_enhanced_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer     Bandwidth        Jitter   Lost/Total \
- Latency avg/min/max/stdev PPS  NetPwr\n";
+ Latency avg/min/max/stdev PPS  inP NetPwr\n";
 
 const char report_bw_jitter_loss_enhanced_format[] =
-"[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %4" IPERFdMAX "/%5" IPERFdMAX " (%.2g%%) %6.3f/%6.3f/%6.3f/%6.3f ms %4.0f pps  %4.2f\n";
+"[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%) %6.3f/%6.3f/%6.3f/%6.3f ms %4.0f pps %s %4.2f\n";
 
 const char report_bw_jitter_loss_enhanced_isoch_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer     Bandwidth        Jitter   Lost/Total \
- Latency avg/min/max/stdev PPS  NetPwr  Frames/Lost\n";
+ Latency avg/min/max/stdev PPS  inP NetPwr  Frames/Lost\n";
 
 const char report_bw_jitter_loss_enhanced_isoch_format[] =
-"[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %4" IPERFdMAX "/%5" IPERFdMAX " (%.2g%%) %6.3f/%6.3f/%6.3f/%6.3f ms %4.0f pps  %4.2f  %3d/%d\n";
+"[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%) %6.3f/%6.3f/%6.3f/%6.3f ms %4.0f pps %s %4.2f  %3d/%d\n";
 
 const char report_sum_bw_jitter_loss_enhanced_format[] =
-"[SUM] " IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %4" IPERFdMAX "/%5" IPERFdMAX " (%.2g%%)  %4.0f pps\n";
+"[SUM] " IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%)  %4.0f pps\n";
 
 const char report_bw_jitter_loss_suppress_enhanced_format[] =
-"[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %4" IPERFdMAX "/%5" IPERFdMAX " (%.2g%%) -/-/-/- ms %4.0f pps\n";
+"[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%) -/-/-/- ms %4.0f pps\n";
+
+/*
+ * Frame interval reports
+ */
+#define IPERFFTimeFrmt "%4.4f-%4.4f"
+#define IPERFFTimeSpace "       "
+const char report_frame_jitter_loss_enhanced_header[] =
+"[ ID] Interval(f-transit)" IPERFFTimeSpace "Transfer     Bandwidth    FrameID   Jitter   Lost/Total \
+ Latency avg/min/max/stdev PPS  inP NetPwr\n";
+
+const char report_frame_jitter_loss_enhanced_format[] =
+"[%3d] " IPERFFTimeFrmt "(%0.4f) sec %ss  %ss/sec %4" PRIdMAX "   %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%) %6.3f/%6.3f/%6.3f/%6.3f ms %4.0f pps %2.0f pkts %4.2f\n";
+
+const char report_frame_jitter_loss_suppress_enhanced_format[] =
+"[%3d] " IPERFTimeFrmt "(%0.4f) sec %ld %ss  %ss/sec %4" PRIdMAX "   %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%) -/-/-/- ms %4.0f pps\n";
+
+const char report_frame_tcp_enhanced_header[] =
+"[ ID] Interval(f-transit)" IPERFFTimeSpace "Transfer     Bandwidth    FrameID\n";
+
+/* -------------------------------------------------------------------
+ * Bidir reports
+ * ------------------------------------------------------------------- */
+
+const char report_bw_sum_bidir_format[] =
+"[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec\n";
+
+const char report_bw_sum_bidir_enhanced_format[] =
+"[FD%d] " IPERFTimeFrmt " sec  %ss  %ss/sec\n";
 
 /* -------------------------------------------------------------------
  * Misc reports
@@ -349,7 +386,7 @@ const char report_outoforder[] =
 "[%3d] " IPERFTimeFrmt " sec  %d datagrams received out-of-order\n";
 
 const char report_l2statistics[] =
-"[%3d] " IPERFTimeFrmt " sec   L2 processing detected errors, total(length/checksum/unknown) = %" IPERFdMAX "(%" IPERFdMAX "/%" IPERFdMAX "/%" IPERFdMAX ")\n";
+"[%3d] " IPERFTimeFrmt " sec   L2 processing detected errors, total(length/checksum/unknown) = %" PRIdMAX "(%" PRIdMAX "/%" PRIdMAX "/%" PRIdMAX ")\n";
 
 const char report_sum_outoforder[] =
 "[SUM] " IPERFTimeFrmt " sec  %d datagrams received out-of-order\n";
@@ -380,10 +417,10 @@ const char report_l2length_error[] =
 
 
 const char reportCSV_bw_format[] =
-"%s,%s,%d,%.1f-%.1f,%" IPERFdMAX ",%" IPERFdMAX "\n";
+"%s,%s,%d,%.1f-%.1f,%" PRIdMAX ",%" PRIdMAX "\n";
 
 const char reportCSV_bw_jitter_loss_format[] =
-"%s,%s,%d,%.1f-%.1f,%" IPERFdMAX ",%" IPERFdMAX ",%.3f,%d,%d,%.3f,%d\n";
+"%s,%s,%d,%.1f-%.1f,%" PRIdMAX ",%" PRIdMAX ",%.3f,%d,%d,%.3f,%d\n";
 
  /* -------------------------------------------------------------------
  * warnings
@@ -441,7 +478,7 @@ const char warn_implied_compatibility[] =
 "WARNING: option -%c has implied compatibility mode\n";
 
 const char warn_buffer_too_small[] =
-"WARNING: %s UDP buffer size (-l value) increased to %d bytes for proper operation\n";
+"WARNING: %s socket buffer size (-l value) increased to %d bytes for proper operation\n";
 
 const char warn_invalid_single_threaded[] =
 "WARNING: option -%c is not valid in single threaded versions\n";
@@ -463,10 +500,6 @@ const char warn_len_too_small_peer_exchange[] =
 
 const char warn_compat_and_peer_exchange[] =
 "WARNING: Options of '-C' '--compatibility' AND '-X' '--peerdetect' are mutually exclusive, --peerdetect ignored\n";
-
-const char warn_seqno_wrap[] =
-"WARNING: Client UDP sequence number wrapped, suggest --udp-counters-64bit on both client and server\n";
-
 
 #ifdef __cplusplus
 } /* end extern "C" */
