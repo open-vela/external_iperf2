@@ -80,11 +80,17 @@ extern const char client_port[];
 
 extern const char client_report_epoch_start[];
 
+extern const char client_report_epoch_start_current[];
+
 extern const char server_pid_port[];
 
 extern const char client_pid_port[];
 
+extern const char client_pid_port_dev[];
+
 extern const char bind_address[];
+
+extern const char bind_address_iface[];
 
 extern const char multicast_ttl[];
 
@@ -146,6 +152,10 @@ extern const char report_sum_bw_enhanced_format[];
 
 extern const char report_bw_read_enhanced_header[];
 
+extern const char report_bw_read_enhanced_netpwr_header[];
+
+extern const char report_bw_read_enhanced_netpwr_format[];
+
 extern const char report_bw_read_enhanced_format[];
 
 extern const char report_sum_bw_read_enhanced_format[];
@@ -155,6 +165,8 @@ extern const char report_triptime_enhanced_format[];
 extern const char report_bw_write_enhanced_header[];
 
 extern const char report_bw_write_enhanced_format[];
+
+extern const char report_bw_write_enhanced_nocwnd_format[];
 
 extern const char report_sum_bw_write_enhanced_format[];
 
@@ -179,6 +191,18 @@ extern const char report_bw_jitter_loss_enhanced_isoch_format[];
 extern const char report_bw_jitter_loss_suppress_enhanced_format[];
 
 extern const char report_sum_bw_jitter_loss_enhanced_format[];
+
+extern const char report_bw_sum_bidir_format[];
+
+extern const char report_bw_sum_bidir_enhanced_format[];
+
+extern const char report_frame_jitter_loss_enhanced_header[];
+
+extern const char report_frame_jitter_loss_enhanced_format[];
+
+extern const char report_frame_jitter_loss_suppress_enhanced_format[];
+
+extern const char report_frame_tcp_enhanced_header[];
 
 /* -------------------------------------------------------------------
  * Misc reports

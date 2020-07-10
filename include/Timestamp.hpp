@@ -73,6 +73,14 @@ public:
     }
 
     /* -------------------------------------------------------------------
+     * Copy construcutor
+     * ------------------------------------------------------------------- */
+    Timestamp(const Timestamp &t2) {
+        mTime.tv_sec = t2.mTime.tv_sec;
+        mTime.tv_usec = t2.mTime.tv_usec;
+    }
+
+    /* -------------------------------------------------------------------
      * Create a timestamp, with the given seconds/microseconds
      * ------------------------------------------------------------------- */
     Timestamp( long sec, long usec ) {
@@ -89,7 +97,7 @@ public:
     /* -------------------------------------------------------------------
      * Set timestamp to current time.
      * ------------------------------------------------------------------- */
-    void setnow( void ) {
+    void inline setnow( void ) {
 #ifdef HAVE_CLOCK_GETTIME
 	struct timespec t1;
 	clock_gettime(CLOCK_REALTIME, &t1);
@@ -122,14 +130,14 @@ public:
     /* -------------------------------------------------------------------
      * return seconds portion of timestamp
      * ------------------------------------------------------------------- */
-    long getSecs( void ) {
+    long inline getSecs( void ) {
         return mTime.tv_sec;
     }
 
     /* -------------------------------------------------------------------
      * return microseconds portion of timestamp
      * ------------------------------------------------------------------- */
-    long getUsecs( void ) {
+    long inline getUsecs( void ) {
         return mTime.tv_usec;
     }
 
@@ -223,6 +231,16 @@ public:
 
         assert( mTime.tv_usec >= 0  &&
                 mTime.tv_usec <  kMillion );
+    }
+
+    /* -------------------------------------------------------------------
+     * add micro seconds to my timestamp.
+     * ------------------------------------------------------------------- */
+    void add(unsigned int usec ) {
+        mTime.tv_usec += usec;
+	mTime.tv_sec += mTime.tv_usec / kMillion;
+	mTime.tv_usec = mTime.tv_usec % kMillion;
+	// assert((mTime.tv_usec >= 0) && (mTime.tv_usec < kMillion));
     }
 
     /* -------------------------------------------------------------------

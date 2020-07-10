@@ -73,10 +73,59 @@
 #include "Thread.h"
 #include "Locale.h"
 #include "util.h"
-#include "delay.h"
 
 #ifdef __cplusplus
 extern "C" {
+#endif
+
+#if HAVE_THREAD_DEBUG
+#include <time.h>
+#include <unistd.h>
+#include <sys/syscall.h>
+#include <sys/types.h>
+#include <stdarg.h>
+static void __gettimestamp(char *timestr) {
+    struct timespec t1;
+    clock_gettime(CLOCK_REALTIME, &t1);
+    struct tm *t;
+    t=localtime(&t1.tv_sec);
+    if (t) {
+        strftime(timestr, 200, "%T", t);
+        // strftime(buf, len, "%F %T", &t);
+	snprintf(&timestr[strlen(timestr)], strlen(timestr), ".%09ld", t1.tv_nsec);
+    } else {
+        *timestr='\0';
+    }
+}
+static int __log(const char *level, const char *format, va_list args) {
+    int len;
+    char *newformat;
+    char timestamp[200];
+    char *logformat="%s(%ld):[%s] %s\n";
+
+    __gettimestamp(timestamp);
+  #if HAVE_GETTID_SYSCALL
+    unsigned long tid = syscall(SYS_gettid);
+  #else
+    unsigned long tid = -1;
+  #endif
+    len = snprintf(NULL, 0, logformat, level, tid, timestamp, format);
+    len++;  // Trailing null byte + extra
+    newformat = malloc(len);
+    len = snprintf(newformat, len, logformat, level, tid, timestamp, format);
+    if (len > 0) {
+      len = vprintf(newformat, args);
+    }
+    free(newformat);
+    return len;
+}
+
+void thread_debug(const char *format, ...) {
+    va_list ap;
+    va_start(ap, format);
+    __log("THREAD", format, ap);
+    va_end(ap);
+}
 #endif
 
 /* -------------------------------------------------------------------
@@ -85,11 +134,15 @@ extern "C" {
 
 // number of currently running threads
 int thread_sNum = 0;
+// number of currently running traffic threads
+int thread_trfc_sNum = 0;
+int thread_trfctx_sNum = 0;
+int thread_trfcrx_sNum = 0;
 // number of non-terminating running threads (ie listener thread)
 int nonterminating_num = 0;
 // condition to protect updating the above and alerting on
 // changes to above
-Condition thread_sNum_cond;
+struct Condition thread_sNum_cond;
 
 
 /* -------------------------------------------------------------------
@@ -97,8 +150,6 @@ Condition thread_sNum_cond;
  * level in solaris.
  * ------------------------------------------------------------------- */
 void thread_init( ) {
-    thread_sNum = 0;
-    nonterminating_num = 0;
     Condition_Initialize( &thread_sNum_cond );
 #if defined( sun )
     /* Solaris apparently doesn't default to timeslicing threads,
@@ -120,22 +171,28 @@ void thread_destroy( ) {
  * Start the specified object's thread execution. Increments thread
  * count, spawns new thread, and stores thread ID.
  * ------------------------------------------------------------------- */
-void thread_start( struct thread_Settings* thread ) {
+void thread_start_all(struct thread_Settings* thread) {
+    struct thread_Settings *ithread = thread;
+    while(ithread) {
+	thread_start(ithread);
+	ithread = ithread->runNow;
+    }
+}
 
+void thread_start( struct thread_Settings* thread ) {
     // Make sure this object has not been started already
     if ( thread_equalid( thread->mTID, thread_zeroid() ) ) {
 
-        // Check if we need to start another thread before this one
-        if ( thread->runNow != NULL ) {
-            thread_start( thread->runNow );
-        }
 
         // increment thread count
         Condition_Lock( thread_sNum_cond );
         thread_sNum++;
+	if ((thread->mThreadMode == kMode_Client) || (thread->mThreadMode == kMode_Server)) {
+	    thread_trfc_sNum++;
+	}
         Condition_Unlock( thread_sNum_cond );
 
-#if   defined( HAVE_POSIX_THREAD )
+#if defined( HAVE_POSIX_THREAD )
 
         // pthreads -- spawn new thread
         if ( pthread_create( &thread->mTID, NULL, thread_run_wrapper, thread ) != 0 ) {
@@ -144,8 +201,19 @@ void thread_start( struct thread_Settings* thread ) {
             // decrement thread count
             Condition_Lock( thread_sNum_cond );
             thread_sNum--;
+	    if (thread->mThreadMode == kMode_Client) {
+	        thread_trfc_sNum--;
+	        thread_trfctx_sNum--;
+	    }
+	    if (thread->mThreadMode == kMode_Server) {
+	        thread_trfc_sNum--;
+	        thread_trfcrx_sNum--;
+	    }
             Condition_Unlock( thread_sNum_cond );
         }
+#if HAVE_THREAD_DEBUG
+	thread_debug("Thread_run_wrapper(%p mode=%x) thread counts tot/trfc=%d/%d", (void *)thread,thread->mThreadMode, thread_sNum, thread_trfc_sNum);
+#endif
 
 #elif defined( HAVE_WIN32_THREAD )
 
@@ -158,6 +226,9 @@ void thread_start( struct thread_Settings* thread ) {
             // decrement thread count
             Condition_Lock( thread_sNum_cond );
             thread_sNum--;
+	    if ((thread->mThreadMode == kMode_Client) || (thread->mThreadMode == kMode_Server)) {
+	      thread_trfc_sNum--;
+	    }
             Condition_Unlock( thread_sNum_cond );
         }
 
@@ -172,16 +243,26 @@ void thread_start( struct thread_Settings* thread ) {
 /* -------------------------------------------------------------------
  * Stop the specified object's thread execution (if any) immediately.
  * Decrements thread count and resets the thread ID.
+ *
+ * Note: This does not free any objects and calling it without
+ * lots of conideration will likely cause memory leaks. Better to let
+ * thread_start's thread_run_wrapper run to completion and not
+ * preemptively stop a thread.
  * ------------------------------------------------------------------- */
 void thread_stop( struct thread_Settings* thread ) {
-
 #ifdef HAVE_THREAD
+  #ifdef HAVE_THREAD_DEBUG
+  thread_debug("Thread stop invoked %p (%d/%d)", (void *)thread, thread_sNum, thread_trfc_sNum);
+  #endif
     // Make sure we have been started
     if ( ! thread_equalid( thread->mTID, thread_zeroid() ) ) {
 
         // decrement thread count
         Condition_Lock( thread_sNum_cond );
         thread_sNum--;
+	if ((thread->mThreadMode == kMode_Client) || (thread->mThreadMode == kMode_Server)) {
+	    thread_trfc_sNum--;
+	}
         Condition_Signal( &thread_sNum_cond );
         Condition_Unlock( thread_sNum_cond );
 
@@ -189,10 +270,8 @@ void thread_stop( struct thread_Settings* thread ) {
         // use cancel() if called from a different thread
         if ( thread_equalid( thread_getid(), thread->mTID ) ) {
 
-#ifndef HAVE_PTHREAD_CLEANUP_PUSH
             // Destroy the object
             Settings_Destroy( thread );
-#endif
 
             // Exit
 #if   defined( HAVE_POSIX_THREAD )
@@ -215,25 +294,12 @@ void thread_stop( struct thread_Settings* thread ) {
             TerminateThread( thread->mHandle, 0 );
 #endif
 
-#ifndef HAVE_PTHREAD_CLEANUP_PUSH
             // Destroy the object only after killing the thread
             Settings_Destroy( thread );
-#endif
         }
     }
 #endif
 } // end Stop
-
-
-/* -------------------------------------------------------------------
- * This function is the callback function when thread canceled
- * ------------------------------------------------------------------- */
-#ifdef HAVE_PTHREAD_CLEANUP_PUSH
-static void setting_clean(void *arg)
-{
-    Settings_Destroy((thread_Settings*)arg);
-}
-#endif
 
 /* -------------------------------------------------------------------
  * This function is the entry point for new threads created in
@@ -247,10 +313,6 @@ void*
 thread_run_wrapper( void* paramPtr ) {
     struct thread_Settings* thread = (struct thread_Settings*) paramPtr;
 
-#ifdef HAVE_PTHREAD_CLEANUP_PUSH
-    pthread_cleanup_push(setting_clean, thread);
-#endif
-
     // which type of object are we
     switch ( thread->mThreadMode ) {
         case kMode_Server:
@@ -258,12 +320,23 @@ thread_run_wrapper( void* paramPtr ) {
                 /* Spawn a Server thread with these settings */
                 server_spawn( thread );
             } break;
+        case kMode_WriteAckServer:
+            {
+                /* Spawn a write-ack server thread with these settings */
+                writeack_server_spawn( thread );
+            } break;
+        case kMode_WriteAckClient:
+            {
+                /* Spawn a write-ack server thread with these settings */
+                writeack_client_spawn( thread );
+            } break;
         case kMode_Client:
             {
                 /* Spawn a Client thread with these settings */
                 client_spawn( thread );
             } break;
         case kMode_Reporter:
+        case kMode_ReporterClient:
             {
                 /* Spawn a Reporter thread with these settings */
                 reporter_spawn( thread );
@@ -287,12 +360,15 @@ thread_run_wrapper( void* paramPtr ) {
     // detach Thread. If someone already joined it will not do anything
     // If noone has then it will free resources upon return from this
     // function (Run_Wrapper)
-    pthread_detach(thread_getid());
+    pthread_detach(thread->mTID);
 #endif
 
     // decrement thread count and send condition signal
     Condition_Lock( thread_sNum_cond );
     thread_sNum--;
+    if ((thread->mThreadMode == kMode_Client) || (thread->mThreadMode == kMode_Server)) {
+       thread_trfc_sNum--;
+    }
     Condition_Signal( &thread_sNum_cond );
     Condition_Unlock( thread_sNum_cond );
 
@@ -300,10 +376,6 @@ thread_run_wrapper( void* paramPtr ) {
     if ( thread->runNext != NULL ) {
         thread_start( thread->runNext );
     }
-
-#ifdef HAVE_PTHREAD_CLEANUP_PUSH
-    pthread_cleanup_pop(0);
-#endif
 
     // Destroy this thread object
     Settings_Destroy( thread );
@@ -423,6 +495,40 @@ int thread_numuserthreads( void ) {
     return thread_sNum;
 }
 
+/* -------------------------------------------------------------------
+ * Return the number of taffic threads currently running
+ * ------------------------------------------------------------------- */
+int thread_numtrafficthreads( void ) {
+    return thread_trfc_sNum;
+}
+
+/* -------------------------------------------------------------------
+ * Support for realtime scheduling of threads
+ * ------------------------------------------------------------------- */
+#if HAVE_SCHED_SETSCHEDULER
+#include <sched.h>
+#endif
+#ifdef HAVE_MLOCKALL
+#include <sys/mman.h>
+#endif
+void thread_setscheduler(struct thread_Settings *thread) {
+#if HAVE_SCHED_SETSCHEDULER
+    if ( isRealtime( thread ) ) {
+	struct sched_param sp;
+	sp.sched_priority = sched_get_priority_max(SCHED_RR);
+	// SCHED_OTHER, SCHED_FIFO, SCHED_RR
+	if (sched_setscheduler(0, SCHED_RR, &sp) < 0)  {
+	    perror("Client set scheduler");
+#ifdef HAVE_MLOCKALL
+	} else if (mlockall(MCL_CURRENT | MCL_FUTURE) != 0) {
+	    // lock the threads memory
+	    perror ("mlockall");
+#endif // MLOCK
+	}
+    }
+#endif // SCHED
+}
+
 /*
  * -------------------------------------------------------------------
  * Allow another thread to execute. If no other threads are runable this
@@ -431,7 +537,9 @@ int thread_numuserthreads( void ) {
 void thread_rest ( void ) {
 #if defined( HAVE_THREAD )
 #if defined( HAVE_POSIX_THREAD )
-    delay_nanosleep(1000);
+  #if HAVE_SCHED_YIELD
+     sched_yield();
+  #endif
 #else // Win32
     SwitchToThread( );
 #endif
@@ -441,4 +549,3 @@ void thread_rest ( void ) {
 #ifdef __cplusplus
 } /* end extern "C" */
 #endif
-

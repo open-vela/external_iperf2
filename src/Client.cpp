@@ -64,6 +64,8 @@
 #include "isochronous.hpp"
 #include "pdfs.h"
 #include "version.h"
+#include "List.h"
+#include "payloads.h"
 
 // const double kSecs_to_usecs = 1e6;
 const double kSecs_to_nsecs = 1e9;
@@ -72,10 +74,21 @@ const int    kBytes_to_Bits = 8;
 #define VARYLOAD_PERIOD 0.1 // recompute the variable load every n seconds
 #define MAXUDPBUF 1470
 
+#ifndef INITIAL_PACKETID
+# define INITIAL_PACKETID 0
+#endif
+
 Client::Client( thread_Settings *inSettings ) {
+#ifdef HAVE_THREAD_DEBUG
+  thread_debug("Client thread started in constructor (%x/%x)", inSettings->flags, inSettings->flags_extend);
+#endif
+
     mSettings = inSettings;
     mBuf = NULL;
+    myJob = NULL;
+    mySocket = isServerReverse(inSettings) ? inSettings->mSock : INVALID_SOCKET;
     double ct = -1.0;
+    connected = isServerReverse(mSettings);
 
     if (isCompat(inSettings) && isPeerVerDetect(inSettings)) {
 	fprintf(stderr, "%s", warn_compat_and_peer_exchange);
@@ -96,6 +109,10 @@ Client::Client( thread_Settings *inSettings ) {
 	}
     }
     // initialize buffer
+    if (isTripTime(mSettings) && (mSettings->mBufLen < (int) (sizeof(struct TCP_datagram)))) {
+        mSettings->mBufLen = sizeof(struct TCP_datagram);
+        fprintf( stderr, warn_buffer_too_small, "Client", mSettings->mBufLen);
+    }
     mBuf = new char[((mSettings->mBufLen > MAXUDPBUF) ? mSettings->mBufLen : MAXUDPBUF)];
     FAIL_errno( mBuf == NULL, "No memory for buffer\n", mSettings );
     pattern( mBuf, ((mSettings->mBufLen > MAXUDPBUF) ? mSettings->mBufLen : MAXUDPBUF));
@@ -109,67 +126,98 @@ Client::Client( thread_Settings *inSettings ) {
             unsetFileInput( mSettings );
         }
     }
-#ifdef HAVE_ISOCHRONOUS
-    if (isIsochronous(mSettings) && isUDP(mSettings))
+    framecounter = NULL;
+    if (isIsochronous(mSettings)) {
 	FAIL_errno( !(mSettings->mFPS > 0.0), "Invalid value for frames per second in the isochronous settings\n", mSettings );
-#endif
+    }
 
-#ifdef HAVE_CLOCK_NANOSLEEP
-#ifdef HAVE_CLOCK_GETTIME
-    if (isTxStartTime(inSettings)) {
-	int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &inSettings->txstart, NULL);
-        if (rc) {
-	    fprintf(stderr, "failed clock_nanosleep()=%d\n", rc);
-	} else {
-	    // Mark the epoch start time before the bind call
-	    now.setnow();
-	    mSettings->txstart_epoch.tv_sec = now.getSecs();
-	    mSettings->txstart_epoch.tv_usec = now.getUsecs();
+    // ServerReverse traffic threads don't need a new connect()
+    // as they use the session created by the client's connect()
+    if (!isServerReverse(mSettings)) {
+	// let the reporter thread go first in the case of -P greater than 1
+        Condition_Lock(reporter_state.await);
+	while (!reporter_state.ready) {
+	    Condition_TimedWait(&reporter_state.await, 1);
 	}
-    }
-#endif
-#endif
-
-    ct = Connect( );
-
-    if ( isReport( inSettings ) ) {
-        ReportSettings( inSettings );
-        if ( mSettings->multihdr && isMultipleReport( inSettings ) ) {
-            mSettings->multihdr->report->connection.peer = mSettings->peer;
-            mSettings->multihdr->report->connection.size_peer = mSettings->size_peer;
-            mSettings->multihdr->report->connection.local = mSettings->local;
-            SockAddr_setPortAny( &mSettings->multihdr->report->connection.local );
-            mSettings->multihdr->report->connection.size_local = mSettings->size_local;
-        }
+        Condition_Unlock(reporter_state.await);
+	ct = Connect( );
     }
 
-    // InitDataReport handles Barrier for multiple Streams
-    InitReport(mSettings);
-    if (mSettings->reporthdr) {
-	mSettings->reporthdr->report.connection.connecttime = ct;
+    if (isConnected()) {
+	//  Tests that don't pass packet stats to the reporter thread
+	//  are Connect only or Reverse only
+	if (isConnectOnly(mSettings) || (isReverse(mSettings) && !isBidir(mSettings))) {
+	    if (!mSettings->reporthdr) {
+		InitConnectionReport(mSettings);
+		if (mSettings->reporthdr) {
+		    mSettings->reporthdr->report.connection.connecttime = ct;
+		}
+	    }
+	    // Post the settings report, the connection report will be posted later
+	    if (isReport(mSettings)) {
+		struct ReportHeader *tmp = ReportSettings(mSettings);
+		UpdateConnectionReport(mSettings, tmp);
+		// Post a settings report now
+		PostReport(tmp);
+	    }
+	    if (mSettings->reporthdr && isConnectionReport(mSettings))
+		// post the connection report
+		PostReport(mSettings->reporthdr);
+	    // printf("posted reports\n");
+	} else {
+	    InitReport(mSettings);
+	    // Squirrel this away so the destructor can free the memory
+	    // even when mSettings has already destroyed
+	    myJob = mSettings->reporthdr;
+	    // Initialize things for the packet ring and the connec time
+	    if (mSettings->reporthdr) {
+		mSettings->reporthdr->report.connection.connecttime = ct;
+		reportstruct = &mSettings->reporthdr->packetring->metapacket;
+		reportstruct->packetID = (isPeerVerDetect(mSettings)) ? 1 : INITIAL_PACKETID;
+		reportstruct->errwrite=WriteNoErr;
+		reportstruct->emptyreport=0;
+		reportstruct->socket = mSettings->mSock;
+		reportstruct->packetLen = 0;
+	    }
+	    if (mSettings->reporthdr) {
+		mSettings->reporthdr->report.connection.connecttime = ct;
+	    }
+	    // Post a settings report
+	    if (isReport(mSettings)) {
+		struct ReportHeader *tmp = ReportSettings(mSettings);
+		UpdateConnectionReport(mSettings, tmp);
+		PostReport(tmp);
+	    }
+	    // Finally, post this thread's "job report" which the reporter thread
+	    // will continuously process as long as there are packets flowing
+	    if (myJob && isDataReport(mSettings))
+		PostReport(myJob);
+	}
+    } else if (isReport(mSettings)) {
+        struct ReportHeader *tmp = ReportSettings(mSettings);
+	// Post a settings report on a failed connect
+	PostReport(tmp);
     }
-
-    reportstruct = new ReportStruct;
-    FAIL_errno( reportstruct == NULL, "No memory for report structure\n", mSettings );
-    memset(reportstruct, 0, sizeof(ReportStruct));
-    reportstruct->packetID = (isPeerVerDetect(mSettings)) ? 1 : 0;
-    reportstruct->errwrite=WriteNoErr;
-    reportstruct->emptyreport=0;
-    reportstruct->socket = mSettings->mSock;
-
 } // end Client
 
 /* -------------------------------------------------------------------
  * Destructor
  * ------------------------------------------------------------------- */
 Client::~Client() {
-    if ( mSettings->mSock != INVALID_SOCKET ) {
-        int rc = close( mSettings->mSock );
-        WARN_errno( rc == SOCKET_ERROR, "close" );
-        mSettings->mSock = INVALID_SOCKET;
+#if HAVE_THREAD_DEBUG
+    thread_debug("Client destructor sock=%d report=%p server-reverse=%s bidir=%s", \
+		 mySocket, (void *) mSettings->reporthdr, \
+		 (isServerReverse(mSettings) ? "true" : "false"), (isBidir(mSettings) ? "true" : "false"));
+#endif
+    if ((!isBidir(mSettings) || (myJob && !myJob->bidirreport)) && (mySocket != INVALID_SOCKET)) {
+        int rc = close( mySocket );
+	WARN_errno( rc == SOCKET_ERROR, "client close" );
+	mySocket = INVALID_SOCKET;
     }
-    DELETE_ARRAY( mBuf );
-    DELETE_PTR(reportstruct);
+    if (isServerReverse(mSettings))
+	Iperf_delete( &(mSettings->peer), &clients );
+
+    DELETE_ARRAY(mBuf);
 } // end ~Client
 
 
@@ -178,13 +226,11 @@ Client::~Client() {
  * If inLocalhost is not null, bind to that address, specifying
  * which outgoing interface to use.
  * ------------------------------------------------------------------- */
-double Client::Connect( ) {
+double Client::Connect() {
     int rc;
     double connecttime = -1.0;
 
     SockAddr_remoteAddr( mSettings );
-
-    assert( mSettings->inHostname != NULL );
 
     // create an internet socket
     int type = ( isUDP( mSettings )  ?  SOCK_DGRAM : SOCK_STREAM);
@@ -199,12 +245,13 @@ double Client::Connect( ) {
 
     mSettings->mSock = socket( domain, type, 0 );
     WARN_errno( mSettings->mSock == INVALID_SOCKET, "socket" );
-
+    // Socket is carried both by the object and the thread
+    mySocket=mSettings->mSock;
     SetSocketOptions( mSettings );
 
     SockAddr_localAddr( mSettings );
 
-    if ( mSettings->mLocalhost != NULL || mSettings->mBindPort != 0) {
+    if ( mSettings->mLocalhost != NULL ) {
         // bind socket to local address
         rc = bind( mSettings->mSock, (sockaddr*) &mSettings->local,
                    SockAddr_get_sizeof_sockaddr( &mSettings->local ) );
@@ -218,7 +265,13 @@ double Client::Connect( ) {
     }
 
     // connect socket
-    if (!isUDP(mSettings) && isEnhanced(mSettings)) {
+    if (!isUDP(mSettings)) {
+        // Synchronize prior to connect() only on a connect-only test
+        // Tests with data xfer will sync after the connect()
+        // and before the writes()
+        if (isConnectOnly(mSettings))
+	    StartSynch();
+
 	connect_start.setnow();
 	rc = connect( mSettings->mSock, (sockaddr*) &mSettings->peer,
 		      SockAddr_get_sizeof_sockaddr( &mSettings->peer ));
@@ -228,18 +281,167 @@ double Client::Connect( ) {
 	rc = connect( mSettings->mSock, (sockaddr*) &mSettings->peer,
 		      SockAddr_get_sizeof_sockaddr( &mSettings->peer ));
     }
-    FAIL_errno( rc == SOCKET_ERROR, "connect", mSettings );
-
-    getsockname( mSettings->mSock, (sockaddr*) &mSettings->local,
-                 &mSettings->size_local );
-    getpeername( mSettings->mSock, (sockaddr*) &mSettings->peer,
-                 &mSettings->size_peer );
-    SockAddr_Ifrname(mSettings);
+    WARN_errno( rc == SOCKET_ERROR, "connect");
+    if (rc != SOCKET_ERROR) {
+	getsockname( mSettings->mSock, (sockaddr*) &mSettings->local,
+		     &mSettings->size_local );
+	getpeername( mSettings->mSock, (sockaddr*) &mSettings->peer,
+		     &mSettings->size_peer );
+	SockAddr_Ifrname(mSettings);
+	connected = true;
+    } else {
+	connecttime = -1;
+	if (mySocket != INVALID_SOCKET) {
+	    int rc = close(mySocket);
+	    WARN_errno( rc == SOCKET_ERROR, "client connect close" );
+	    mySocket = INVALID_SOCKET;
+	}
+    }
     return connecttime;
 
 } // end Connect
 
+bool Client::isConnected(void) {
+#ifdef HAVE_THREAD_DEBUG
+  // thread_debug("Client is connected %d", connected);
+#endif
+    return connected;
+}
 
+// There are multiple startup synchronizations, this code
+// handles them all. The caller decides to apply them
+// either before connect() or after connect() and before writes()
+void Client::StartSynch (void) {
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Client start sync enterred");
+#endif
+    int barrier_needed = !isNoConnectSync(mSettings);
+    // Perform delays, usually between connect() and data xfer though before connect
+    // Two delays are supported:
+    // o First is an absolute start time per unix epoch format
+    // o Second is a holdback, a relative amount of seconds between the connect and data xfers
+#if defined(HAVE_CLOCK_NANOSLEEP)
+    // check for an epoch based start time
+    if (isTxStartTime(mSettings)) {
+	if (isIsochronous(mSettings)) {
+	    Timestamp tmp;
+	    tmp.set(mSettings->txstart_epoch.tv_sec, mSettings->txstart_epoch.tv_usec);
+	    framecounter = new Isochronous::FrameCounter(mSettings->mFPS, tmp);
+	} else {
+	    timespec tmp;
+	    tmp.tv_sec = mSettings->txstart_epoch.tv_sec;
+	    tmp.tv_nsec = mSettings->txstart_epoch.tv_usec * 1000;
+	    int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &tmp, NULL);
+	    if (rc) {
+		fprintf(stderr, "txstart failed clock_nanosleep()=%d\n", rc);
+		fflush(stderr);
+	    } else {
+		barrier_needed = 0;
+	    }
+	}
+    } else if (isTxHoldback(mSettings) && !isConnectOnly(mSettings)) {
+	timespec tmp;
+	tmp.tv_sec = mSettings->txholdback_timer.tv_sec;
+	tmp.tv_nsec = mSettings->txholdback_timer.tv_usec * 1000;
+	// See if this a delay between connect and data
+	int rc = clock_nanosleep(CLOCK_MONOTONIC, 0, &tmp, NULL);
+	if (rc) {
+	    fprintf(stderr, "txholdback failed clock_nanosleep()=%d\n", rc);
+	} else
+	    barrier_needed = 0;
+    }
+#endif
+    if (!isServerReverse(mSettings) && mSettings->multihdr && \
+	barrier_needed) {
+	BarrierClient(mSettings->connects_done);
+    }
+    SetReportStartTime();
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Client start sync exited");
+#endif
+}
+
+void Client::SetReportStartTime (void) {
+  struct ReportHeader *reporthdr = myJob;
+  //
+  // Now the reports are allocated and somewhat initialized,
+  // set the report start times and next report times
+  //
+  if (reporthdr && TimeZero(reporthdr->report.startTime)) {
+    // Note: multireport times can be used here because the barrier
+    // is the only writer per that mutex
+    if (reporthdr->multireport && !TimeZero(reporthdr->multireport->report.startTime)) {
+      reporthdr->report.startTime.tv_sec = reporthdr->multireport->report.startTime.tv_sec;
+      reporthdr->report.startTime.tv_usec = reporthdr->multireport->report.startTime.tv_usec;
+    } else {
+      //
+      // Can't set multi or bidir report starttimes here, will be set by the reporter thread
+      //
+      // Possible feature add - optionally use connect_start if the report timing should include
+      // the TCP 3WHS
+      Timestamp now;
+      reporthdr->report.startTime.tv_sec = now.getSecs();
+      reporthdr->report.startTime.tv_usec = now.getUsecs();
+    }
+    // Now that start times are set, set the next times if interval reporting is requested
+    if (!TimeZero(reporthdr->report.intervalTime)) {
+      reporthdr->report.nextTime = reporthdr->report.startTime;
+      TimeAdd(reporthdr->report.nextTime, reporthdr->report.intervalTime);
+    }
+  }
+}
+
+void Client::ConnectPeriodic (void) {
+    Timestamp now;
+    Timestamp end;
+    unsigned int amount_usec = 1000000;
+    if (isModeTime(mSettings)) {
+	amount_usec = (mSettings->mAmount * 10000);
+    }
+    end.add(amount_usec); // add in micro seconds
+    Timestamp next = now;
+    setNoConnectSync(mSettings);
+    while (!sInterupted && (mSettings->mInterval && isModeTime(mSettings) && now.before(end) && next.before(end))) {
+	while (!now.before(next)) {
+	    next.add(mSettings->mInterval);
+	}
+	if (next.before(end)) {
+	    timespec tmp;
+	    tmp.tv_sec = next.getSecs();
+	    tmp.tv_nsec = next.getUsecs() * 1000;
+#if defined(HAVE_CLOCK_NANOSLEEP)
+	    int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &tmp, NULL);
+	    if (rc) {
+		fprintf(stderr, "ConnectPeriodic() failed clock_nanosleep()=%d\n", rc);
+	    }
+#else
+	    now.setnow();
+	    delay_loop(next.subUsec(now));
+#endif
+	    if (isConnected() && (mySocket != INVALID_SOCKET)) {
+		int rc = close(mySocket);
+		WARN_errno( rc == SOCKET_ERROR, "client close" );
+		mySocket = INVALID_SOCKET;
+		unsetReport(mSettings);
+	    } else {
+		unsetReport(mSettings);
+	    }
+	    if (!isConnected() && isReport(mSettings)) {
+		struct ReportHeader *tmp = ReportSettings(mSettings);
+		// Post a settings report now
+		PostReport(tmp);
+	    }
+	    mSettings->reporthdr = NULL;
+	    double ct = Connect();
+	    InitConnectionReport(mSettings);
+	    if (mSettings->reporthdr) {
+		mSettings->reporthdr->report.connection.connecttime = ct;
+		PostReport(mSettings->reporthdr);
+	    }
+	    now.setnow();
+	}
+    }
+}
 /* -------------------------------------------------------------------
  * Common traffic loop intializations
  * ------------------------------------------------------------------- */
@@ -250,10 +452,10 @@ void Client::InitTrafficLoop (void) {
     //  default socket timeouts are preferred.
     int sosndtimer = 0;
     // sosndtimer units microseconds
-    if (mSettings->mInterval) {
-	sosndtimer = (int) (mSettings->mInterval * 1000000) / 2;
+    if ((mSettings->mIntervalMode == kInterval_Time) && mSettings->mInterval) {
+      sosndtimer = mSettings->mInterval / 2;
     } else if (isModeTime(mSettings)) {
-	sosndtimer = (mSettings->mAmount * 10000) / 2;
+      sosndtimer = (mSettings->mAmount * 10000) / 2;
     }
     SetSocketOptionsSendTimeout(mSettings, sosndtimer);
     // set the lower bounds delay based of the socket timeout timer
@@ -279,26 +481,31 @@ void Client::InitTrafficLoop (void) {
      *
      * Side note: An advantage of not using interval reports w/TCP is that
      * the code path won't make any clock syscalls in the main loop
+     *
+     * For Dual and TradeOff tests we can't use itimer in the Client
+     * thread because it is executed at both ends, conflicting with
+     * the Server thread's itimer.  The Client process then rejects
+     * the reverse connection, and the Server process exits early.  To
+     * resolve this, only use the itimer mechanism for "Normal" tests.
      */
 
     if (isModeTime(mSettings)) {
-#ifdef HAVE_SETITIMER
-        int err;
-        struct itimerval it;
-	memset (&it, 0, sizeof (it));
-	it.it_value.tv_sec = (int) (mSettings->mAmount / 100.0);
-	it.it_value.tv_usec = (int) (10000 * (mSettings->mAmount -
-					      it.it_value.tv_sec * 100.0));
-	err = setitimer( ITIMER_REAL, &it, NULL );
-	FAIL_errno( err != 0, "setitimer", mSettings );
-#else
         mEndTime.setnow();
         mEndTime.add( mSettings->mAmount / 100.0 );
-#endif
     }
 
     lastPacketTime.setnow();
     readAt = mBuf;
+
+    // Set up trip time values that don't change
+    if (isTripTime(mSettings) || isIsochronous(mSettings)) {
+      struct TCP_burst_payload * mBuf_burst = (struct TCP_burst_payload *) mBuf;
+      mBuf_burst->typelen.type = htonl(CLIENTTCPHDR);
+      mBuf_burst->typelen.length =  htonl(sizeof(struct TCP_burst_payload));
+      mBuf_burst->flags = htonl(HEADER_TRIPTIME | HEADER_SEQNO64B);
+      mBuf_burst->start_tv_sec = htonl(myJob->report.startTime.tv_sec);
+      mBuf_burst->start_tv_usec = htonl(myJob->report.startTime.tv_usec);
+    }
 }
 
 
@@ -313,10 +520,12 @@ void Client::InitTrafficLoop (void) {
  * ------------------------------------------------------------------- */
 void Client::Run( void ) {
 
-    // Post the very first report which will have connection, version and test information
-    PostFirstReport(mSettings);
+    if (isConnectOnly(mSettings))
+        return;
+
     // Peform common traffic setup
     InitTrafficLoop();
+
     /*
      * UDP specific setup
      */
@@ -364,16 +573,53 @@ void Client::Run( void ) {
 
 
 void Client::RunTCP( void ) {
-    int currLen = 0;
+    int burst_size = (mSettings->mWriteAckLen > 0) ? mSettings->mWriteAckLen : mSettings->mBufLen;
+    int burst_remaining = 0;
+    int burst_id = 1;
+
+    // RJM, consider moving this into the constructor
+    if (isIsochronous(mSettings)) {
+	framecounter = new Isochronous::FrameCounter(mSettings->mFPS);
+    }
 
     while (InProgress()) {
-        // perform write
-        if (!isModeTime(mSettings)) {
-	    currLen = write( mSettings->mSock, mBuf, (mSettings->mAmount < (unsigned) mSettings->mBufLen) ? mSettings->mAmount : mSettings->mBufLen);
+        if (isModeAmount(mSettings)) {
+	    reportstruct->packetLen = ((mSettings->mAmount < (unsigned) mSettings->mBufLen) ? mSettings->mAmount : mSettings->mBufLen);
 	} else {
-	    currLen = write( mSettings->mSock, mBuf, mSettings->mBufLen);
+	    reportstruct->packetLen = mSettings->mBufLen;
 	}
-        if ( currLen < 0 ) {
+
+        int n = 0;
+	if (isTripTime(mSettings) || isWriteAck(mSettings) || isIsochronous(mSettings)) {
+	    if (burst_remaining == 0) {
+		if (framecounter) {
+		    burst_size = (int) (lognormal(mSettings->mMean,mSettings->mVariance)) / (mSettings->mFPS * 8);
+		    burst_id =  framecounter->wait_tick();
+		}
+		// RJM fix below, consider using the timer value vs re-reading the clock
+		// the choice depends on the schedulding latency per clock_nanosleep()
+		now.setnow();
+		reportstruct->packetTime.tv_sec = now.getSecs();
+		reportstruct->packetTime.tv_usec = now.getUsecs();
+	        WriteTcpTxHdr(reportstruct, burst_size, burst_id++);
+		reportstruct->sentTime = reportstruct->packetTime;
+		burst_remaining = burst_size;
+		// perform write
+		n = writen(mSettings->mSock, mBuf, sizeof(struct TCP_burst_payload));
+		WARN(n != sizeof(struct TCP_burst_payload), "burst hdr write failed");
+		burst_remaining -= n;
+		reportstruct->packetLen -= n;
+		// thread_debug("***write burst header %d id=%d", burst_size, (burst_id - 1));
+	    }
+	    if (reportstruct->packetLen > burst_remaining) {
+		reportstruct->packetLen = burst_remaining;
+	    }
+	}
+	// printf("pl=%ld\n",reportstruct->packetLen);
+	// perform write
+	WARN(reportstruct->packetLen <= 0, "invalid write req size");
+	int len = write(mSettings->mSock, mBuf, reportstruct->packetLen);
+        if (len < 0) {
 	    if (NONFATALTCPWRITERR(errno)) {
 	        reportstruct->errwrite=WriteErrAccount;
 	    } else if (FATALTCPWRITERR(errno)) {
@@ -383,33 +629,33 @@ void Client::RunTCP( void ) {
 	    } else {
 	        reportstruct->errwrite=WriteErrNoAccount;
 	    }
-	    currLen = 0;
+	    len = 0;
 	} else {
-	    totLen += currLen;
+	    totLen += len + n;
 	    reportstruct->errwrite=WriteNoErr;
-	}
-// skip the packet time setting syscall() for the case of no interval reporting
-// or packet reporting needed and an itimer is available to stop the traffic/while loop
-#ifdef HAVE_SETITIMER
-	if ((mSettings->mInterval > 0) || isEnhanced(mSettings))
+#ifdef HAVE_THREAD_DEBUG
+	    {
+		if (len != reportstruct->packetLen)
+		    thread_debug("write size mismatch req=%ld, actual=%d", reportstruct->packetLen, len);
+	    }
 #endif
-	{
-	    now.setnow();
-	    reportstruct->packetTime.tv_sec = now.getSecs();
-	    reportstruct->packetTime.tv_usec = now.getUsecs();
 	}
-
-	if ((mSettings->mInterval > 0) || isEnhanced(mSettings)) {
-            reportstruct->packetLen = currLen;
-            ReportPacket( mSettings->reporthdr, reportstruct );
+	if (isTripTime(mSettings) || isWriteAck(mSettings) || isIsochronous(mSettings))
+	    burst_remaining -= len;
+	reportstruct->packetLen = len + n;
+	now.setnow();
+	reportstruct->packetTime.tv_sec = now.getSecs();
+	reportstruct->packetTime.tv_usec = now.getUsecs();
+	reportstruct->sentTime = reportstruct->packetTime;
+	if ((mSettings->mIntervalMode == kInterval_Time) || isEnhanced(mSettings)) {
+            ReportPacket(mSettings->reporthdr, reportstruct);
         }
-
-        if (!isModeTime(mSettings)) {
+        if (isModeAmount(mSettings)) {
             /* mAmount may be unsigned, so don't let it underflow! */
-            if( mSettings->mAmount >= (unsigned long) currLen ) {
-                mSettings->mAmount -= (unsigned long) currLen;
+	    if( mSettings->mAmount >= (unsigned long) (reportstruct->packetLen) ) {
+                mSettings->mAmount -= (unsigned long) (reportstruct->packetLen);
             } else {
-                mSettings->mAmount = 0;
+		mSettings->mAmount = 0;
             }
         }
     }
@@ -421,11 +667,13 @@ void Client::RunTCP( void ) {
  * A version of the transmit loop that supports TCP rate limiting using a token bucket
  */
 void Client::RunRateLimitedTCP ( void ) {
-    int currLen = 0;
     double tokens = 0;
     Timestamp time1, time2;
+    int burst_size = (mSettings->mWriteAckLen > 0) ? mSettings->mWriteAckLen : mSettings->mBufLen;
+    int burst_remaining = 0;
+    int burst_id = 1;
 
-    int var_rate = mSettings->mUDPRate;
+    long var_rate = mSettings->mUDPRate;
     int fatalwrite_err = 0;
     while (InProgress() && !fatalwrite_err) {
 	// Add tokens per the loop time
@@ -444,13 +692,34 @@ void Client::RunRateLimitedTCP ( void ) {
 	tokens += time2.subSec(time1) * (var_rate / 8.0);
 	time1 = time2;
 	if (tokens >= 0.0) {
-	    // perform write
-	    if (!isModeTime(mSettings)) {
-	        currLen = write( mSettings->mSock, mBuf, (mSettings->mAmount < (unsigned) mSettings->mBufLen) ? mSettings->mAmount : mSettings->mBufLen);
+	    if (isModeAmount(mSettings)) {
+	        reportstruct->packetLen = ((mSettings->mAmount < (unsigned) mSettings->mBufLen) ? mSettings->mAmount : mSettings->mBufLen);
 	    } else {
-	        currLen = write( mSettings->mSock, mBuf, mSettings->mBufLen);
+	        reportstruct->packetLen = mSettings->mBufLen;
 	    }
-	    if ( currLen < 0 ) {
+	    // perform write
+	    int n = 0;
+	    if (isTripTime(mSettings) || isWriteAck(mSettings)) {
+		if (burst_remaining == 0) {
+		    now.setnow();
+		    reportstruct->packetTime.tv_sec = now.getSecs();
+		    reportstruct->packetTime.tv_usec = now.getUsecs();
+		    WriteTcpTxHdr(reportstruct, burst_size, burst_id++);
+		    reportstruct->sentTime = reportstruct->packetTime;
+		    burst_remaining = burst_size;
+		    // perform write
+		    n = writen(mSettings->mSock, mBuf, sizeof(struct TCP_burst_payload));
+		    WARN(n != sizeof(struct TCP_burst_payload), "burst hdr write failed");
+		    burst_remaining -= n;
+		    reportstruct->packetLen -= n;
+		    // thread_debug("***write burst header %d id=%d", burst_size, (burst_id - 1));
+		} else if (reportstruct->packetLen > burst_remaining) {
+		    reportstruct->packetLen = burst_remaining;
+		}
+	    }
+
+	    int len = write( mSettings->mSock, mBuf, reportstruct->packetLen);
+	    if ( len < 0 ) {
 	        if (NONFATALTCPWRITERR(errno)) {
 		    reportstruct->errwrite=WriteErrAccount;
 		} else if (FATALTCPWRITERR(errno)) {
@@ -461,26 +730,30 @@ void Client::RunRateLimitedTCP ( void ) {
 		} else {
 		    reportstruct->errwrite=WriteErrNoAccount;
 	        }
-	        currLen = 0;
+		len = 0;
 	    } else {
-	      // Consume tokens per the transmit
-	        tokens -= currLen;
-	        totLen += currLen;
+		// Consume tokens per the transmit
+	        tokens -= (len + n);
+	        totLen += (len + n);;
 		reportstruct->errwrite=WriteNoErr;
 	    }
+	    if (isTripTime(mSettings) || isWriteAck(mSettings))
+		burst_remaining -= len;
+
 	    time2.setnow();
+	    reportstruct->packetLen = len + n;
 	    reportstruct->packetTime.tv_sec = time2.getSecs();
 	    reportstruct->packetTime.tv_usec = time2.getUsecs();
+	    reportstruct->sentTime = reportstruct->packetTime;
 
-	    if (isEnhanced(mSettings) || (mSettings->mInterval > 0)) {
-		reportstruct->packetLen = currLen;
+	    if (isEnhanced(mSettings) || (mSettings->mIntervalMode == kInterval_Time)) {
 		ReportPacket( mSettings->reporthdr, reportstruct );
 	    }
 
-	    if (!isModeTime(mSettings)) {
+	    if (isModeAmount(mSettings)) {
 		/* mAmount may be unsigned, so don't let it underflow! */
-		if( mSettings->mAmount >= (unsigned long) currLen ) {
-		    mSettings->mAmount -= (unsigned long) currLen;
+		if( mSettings->mAmount >= (unsigned long) reportstruct->packetLen ) {
+		    mSettings->mAmount -= (unsigned long) reportstruct->packetLen;
 		} else {
 		    mSettings->mAmount = 0;
 		}
@@ -535,10 +808,11 @@ void Client::RunUDP( void ) {
 	now.setnow();
 	reportstruct->packetTime.tv_sec = now.getSecs();
 	reportstruct->packetTime.tv_usec = now.getUsecs();
+	reportstruct->sentTime = reportstruct->packetTime;
         if (isVaryLoad(mSettings) && mSettings->mUDPRateUnits == kRate_BW) {
 	    static Timestamp time3;
 	    if (now.subSec(time3) >= VARYLOAD_PERIOD) {
-		int var_rate = lognormal(mSettings->mUDPRate,variance);
+		long var_rate = lognormal(mSettings->mUDPRate,variance);
 		if (var_rate < 0)
 		    var_rate = 0;
 
@@ -548,15 +822,10 @@ void Client::RunUDP( void ) {
 	    }
 	}
 	// store datagram ID into buffer
-	WritePacketID();
+	WritePacketID(reportstruct->packetID++);
 	mBuf_UDP->tv_sec  = htonl(reportstruct->packetTime.tv_sec);
 	mBuf_UDP->tv_usec = htonl(reportstruct->packetTime.tv_usec);
 
-	if (!isSeqNo64b(mSettings) && (reportstruct->packetID & 0x80000000L)) {
-	    // seqno wrapped
-	    fprintf(stderr, "%s", warn_seqno_wrap);
-	    break;
-	}
 	// Adjustment for the running delay
 	// o measure how long the last loop iteration took
 	// o calculate the delay adjust
@@ -590,7 +859,7 @@ void Client::RunUDP( void ) {
 	reportstruct->emptyreport = 0;
 
 	// perform write
-	if (!isModeTime(mSettings)) {
+	if (isModeAmount(mSettings)) {
 	    currLen = write( mSettings->mSock, mBuf, (mSettings->mAmount < (unsigned) mSettings->mBufLen) ? mSettings->mAmount : mSettings->mBufLen);
 	} else {
 	    currLen = write( mSettings->mSock, mBuf, mSettings->mBufLen);
@@ -605,10 +874,10 @@ void Client::RunUDP( void ) {
 	        reportstruct->errwrite = WriteErrAccount;
 	        currLen = 0;
 	    }
-	  reportstruct->emptyreport = 1;
+	    reportstruct->emptyreport = 1;
 	}
 
-	if (!isModeTime(mSettings)) {
+	if (isModeAmount(mSettings)) {
 	    /* mAmount may be unsigned, so don't let it underflow! */
 	    if( mSettings->mAmount >= (unsigned long) currLen ) {
 	        mSettings->mAmount -= (unsigned long) currLen;
@@ -620,15 +889,14 @@ void Client::RunUDP( void ) {
 	// report packets
 	reportstruct->packetLen = (unsigned long) currLen;
 	ReportPacket( mSettings->reporthdr, reportstruct );
-	// Insert delay here only if the running delay is greater than 1 usec,
+	// Insert delay here only if the running delay is greater than 100 usec,
 	// otherwise don't delay and immediately continue with the next tx.
-	if ( delay >= 1000 ) {
+	if ( delay >= 100000 ) {
 	    // Convert from nanoseconds to microseconds
 	    // and invoke the microsecond delay
 	    delay_loop((unsigned long) (delay / 1000));
 	}
     }
-
     FinishTrafficActions();
 }
 
@@ -636,16 +904,10 @@ void Client::RunUDP( void ) {
  * UDP isochronous send loop
  */
 void Client::RunUDPIsochronous (void) {
-#ifndef HAVE_ISOCHRONOUS
-    FAIL_errno(1, "UDP isochronous not supported, recompile after using config --enable-isochronous\n", mSettings );
-    return;
-#else
     struct UDP_datagram* mBuf_UDP = (struct UDP_datagram*) mBuf;
     // skip over the UDP datagram (seq no, timestamp) to reach the isoch fields
     struct client_hdr_udp_isoch_tests *testhdr = (client_hdr_udp_isoch_tests *)(mBuf + sizeof(client_hdr_v1) + sizeof(UDP_datagram));
     struct UDP_isoch_payload* mBuf_isoch = &(testhdr->isoch);
-
-    Isochronous::FrameCounter *fc = new Isochronous::FrameCounter(mSettings->mFPS);
 
     double delay_target = mSettings->mBurstIPG * 1000000;  // convert from milliseconds to nanoseconds
     double delay = 0;
@@ -653,46 +915,48 @@ void Client::RunUDPIsochronous (void) {
     int currLen = 1;
     int frameid=0;
     Timestamp t1;
-    int bytecntmin = sizeof(UDP_datagram) + sizeof(client_hdr_udp_tests);
-
-    mBuf_isoch->burstperiod = htonl(fc->period_us());
+    int bytecntmin;
+    // make sure the packet can carry the isoch payload
+    if (isModeTime(mSettings)) {
+	bytecntmin = sizeof(UDP_datagram) + sizeof(client_hdr_v1) + sizeof(struct client_hdr_udp_isoch_tests);
+    } else {
+	bytecntmin = 1;
+    }
+    if (!framecounter) {
+	framecounter = new Isochronous::FrameCounter(mSettings->mFPS);
+    }
+    mBuf_isoch->burstperiod = htonl(framecounter->period_us());
 
     int initdone = 0;
     int fatalwrite_err = 0;
     while (InProgress() && !fatalwrite_err) {
 	int bytecnt = (int) (lognormal(mSettings->mMean,mSettings->mVariance)) / (mSettings->mFPS * 8);
+	if (bytecnt < bytecntmin)
+	    bytecnt = bytecntmin;
 	delay = 0;
 
 	// printf("bits=%d\n", (int) (mSettings->mFPS * bytecnt * 8));
-	// adjust bytecnt so last packet of burst is greater or equal to min packet
-	int remainder = bytecnt % mSettings->mBufLen;
-	if (remainder < bytecntmin) {
-	    bytecnt += (bytecntmin - remainder);
-	}
 	mBuf_isoch->burstsize  = htonl(bytecnt);
 	mBuf_isoch->prevframeid  = htonl(frameid);
-	frameid =  fc->wait_tick();
+	reportstruct->burstsize=bytecnt;
+	frameid =  framecounter->wait_tick();
 	mBuf_isoch->frameid  = htonl(frameid);
 	lastPacketTime.setnow();
 	if (!initdone) {
 	    initdone = 1;
-	    mBuf_isoch->start_tv_sec = htonl(fc->getSecs());
-	    mBuf_isoch->start_tv_usec = htonl(fc->getUsecs());
+	    mBuf_isoch->start_tv_sec = htonl(framecounter->getSecs());
+	    mBuf_isoch->start_tv_usec = htonl(framecounter->getUsecs());
 	}
 
-	while ((bytecnt > 0) && InProgress()) {				\
+	while ((bytecnt > 0) && InProgress()) {
 	    t1.setnow();
 	    reportstruct->packetTime.tv_sec = t1.getSecs();
 	    reportstruct->packetTime.tv_usec = t1.getUsecs();
+	    reportstruct->sentTime = reportstruct->packetTime;
 	    mBuf_UDP->tv_sec  = htonl(reportstruct->packetTime.tv_sec);
 	    mBuf_UDP->tv_usec = htonl(reportstruct->packetTime.tv_usec);
-	    WritePacketID();
+	    WritePacketID(reportstruct->packetID++);
 
-	    if (!isSeqNo64b(mSettings) && (reportstruct->packetID & 0x80000000L)) {
-		// seqno wrapped
-		fprintf(stderr, "%s", warn_seqno_wrap);
-		break;
-	    }
 	    // Adjustment for the running delay
 	    // o measure how long the last loop iteration took
 	    // o calculate the delay adjust
@@ -726,30 +990,38 @@ void Client::RunUDPIsochronous (void) {
 	    reportstruct->emptyreport = 0;
 
 	    // perform write
-	    if (!isModeTime(mSettings) && (mSettings->mAmount < (unsigned) mSettings->mBufLen)) {
+	    if (isModeAmount(mSettings) && (mSettings->mAmount < (unsigned) mSettings->mBufLen)) {
 	        mBuf_isoch->remaining = htonl(mSettings->mAmount);
+		reportstruct->remaining=mSettings->mAmount;
 	        currLen = write(mSettings->mSock, mBuf, mSettings->mAmount);
 	    } else {
 	        mBuf_isoch->remaining = htonl(bytecnt);
+		reportstruct->remaining=bytecnt;
 	        currLen = write(mSettings->mSock, mBuf, (bytecnt < mSettings->mBufLen) ? bytecnt : mSettings->mBufLen);
 	    }
 
-	    if ( currLen < 0 ) {
+	    if (currLen < 0) {
 	        reportstruct->packetID--;
 		reportstruct->emptyreport = 1;
+		currLen = 0;
 		if (FATALUDPWRITERR(errno)) {
 	            reportstruct->errwrite = WriteErrFatal;
 	            WARN_errno( 1, "write" );
 		    fatalwrite_err = 1;
 	        } else {
 		    reportstruct->errwrite = WriteErrAccount;
-		    currLen = 0;
 		}
 	    } else {
 		bytecnt -= currLen;
+		// adjust bytecnt so last packet of burst is greater or equal to min packet
+		if ((bytecnt > 0) && (bytecnt < bytecntmin)) {
+		    bytecnt = bytecntmin;
+		    mBuf_isoch->burstsize  = htonl(bytecnt);
+		    reportstruct->burstsize=bytecnt;
+		}
 	    }
 
-	    if (!isModeTime(mSettings)) {
+	    if (isModeAmount(mSettings)) {
 	        /* mAmount may be unsigned, so don't let it underflow! */
 	        if( mSettings->mAmount >= (unsigned long) currLen ) {
 		    mSettings->mAmount -= (unsigned long) currLen;
@@ -774,25 +1046,68 @@ void Client::RunUDPIsochronous (void) {
     }
 
     FinishTrafficActions();
-
-    DELETE_PTR(fc);
-#endif
+    DELETE_PTR(framecounter);
 }
 // end RunUDPIsoch
 
 
 
-void Client::WritePacketID (void) {
+inline void Client::WritePacketID (intmax_t packetID) {
     struct UDP_datagram * mBuf_UDP = (struct UDP_datagram *) mBuf;
     // store datagram ID into buffer
-    mBuf_UDP->id = htonl((reportstruct->packetID & 0xFFFFFFFFL));
-    if (isSeqNo64b(mSettings)) {
-	mBuf_UDP->id2 = htonl(((reportstruct->packetID & 0xFFFFFFFF00000000LL) >> 32));
-    }
-    reportstruct->packetID++;
+#ifdef HAVE_INT64_T
+    // Pack signed 64bit packetID into unsigned 32bit id1 + unsigned
+    // 32bit id2.  A legacy server reading only id1 will still be able
+    // to reconstruct a valid signed packet ID number up to 2^31.
+    uint32_t id1, id2;
+    id1 = packetID & 0xFFFFFFFFLL;
+    id2 = (packetID  & 0xFFFFFFFF00000000LL) >> 32;
+
+    mBuf_UDP->id = htonl(id1);
+    mBuf_UDP->id2 = htonl(id2);
+
+#ifdef SHOW_PACKETID
+    printf("id %" PRIdMAX " (0x%" PRIxMAX ") -> 0x%x, 0x%x\n",
+	   packetID, packetID, id1, id2);
+#endif
+#else
+    mBuf_UDP->id = htonl((reportstruct->packetID));
+#endif
 }
 
-bool Client::InProgress (void) {
+inline void Client::WriteTcpTxHdr (ReportStruct *reportstruct, int burst_size, int burst_id) {
+    struct TCP_burst_payload * mBuf_burst = (struct TCP_burst_payload *) mBuf;
+    // store packet ID into buffer
+    reportstruct->packetID += burst_size;
+#ifdef HAVE_INT64_T
+    // Pack signed 64bit packetID into unsigned 32bit id1 + unsigned
+    // 32bit id2.  A legacy server reading only id1 will still be able
+    // to reconstruct a valid signed packet ID number up to 2^31.
+    uint32_t id1, id2;
+    id1 = reportstruct->packetID & 0xFFFFFFFFLL;
+    id2 = (reportstruct->packetID  & 0xFFFFFFFF00000000LL) >> 32;
+
+    mBuf_burst->seqno_lower = htonl(id1);
+    mBuf_burst->seqno_upper = htonl(id2);
+
+#ifdef SHOW_PACKETID
+    printf("id %" PRIdMAX " (0x%" PRIxMAX ") -> 0x%x, 0x%x\n",
+	   packetID, packetID, id1, id2);
+#endif
+#else
+    mBuf_burst->seqno_lower = htonl((reportstruct->packetID));
+    mBuf_burst->seqno_upper = htonl(0x0);
+#endif
+    mBuf_burst->send_tt.write_tv_sec  = htonl(reportstruct->packetTime.tv_sec);
+    mBuf_burst->send_tt.write_tv_usec  = htonl(reportstruct->packetTime.tv_usec);
+    mBuf_burst->burst_id  = htonl((uint32_t)burst_id);
+    mBuf_burst->burst_size  = htonl((uint32_t)burst_size);
+    mBuf_burst->burst_period_s  = htonl(0x0);
+    mBuf_burst->burst_period_us  = htonl(0x0);
+    return;
+}
+
+inline bool Client::InProgress (void) {
     // Read the next data block from
     // the file if it's file input
     if (isFileInput(mSettings)) {
@@ -803,16 +1118,10 @@ bool Client::InProgress (void) {
 	    return false;
     }
 
-#ifdef HAVE_SETITIMER
-    if (sInterupted ||
-	(!isModeTime(mSettings) && (mSettings->mAmount <= 0)))
-	return false;
-#else
     if (sInterupted ||
 	(isModeTime(mSettings) &&  mEndTime.before(reportstruct->packetTime))  ||
-	(!isModeTime(mSettings) && (mSettings->mAmount <= 0)))
+	(isModeAmount(mSettings) && (mSettings->mAmount <= 0)))
 	return false;
-#endif
     return true;
 }
 
@@ -820,31 +1129,38 @@ bool Client::InProgress (void) {
  * Common things to do to finish a traffic thread
  */
 void Client::FinishTrafficActions(void) {
+    // Shutdown the TCP socket's writes as the event for the server to end its traffic loop
+    if (!isUDP(mSettings) && (mySocket != INVALID_SOCKET) && isConnected()) {
+        int rc = shutdown(mySocket, SHUT_WR);
+#ifdef HAVE_THREAD_DEBUG
+        thread_debug("Client calls shutdown() SHUTW_WR on tcp socket %d", mySocket);
+#endif
+        WARN_errno( rc == SOCKET_ERROR, "shutdown" );
+    }
+
     // stop timing
     now.setnow();
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
-
+    reportstruct->sentTime = reportstruct->packetTime;
     /*
      *  For UDP, there is a final handshake between the client and the server,
-     *  do that now.
-     *
+     *  do that now (unless requested no to)
+     */
+    if (isUDP(mSettings)) {
+	FinalUDPHandshake();
+    }
+    /*
      *  For TCP and if not doing interval or enhanced reporting (needed for write accounting),
      *  then report the entire transfer as one big packet
      *
      */
-    if (isUDP(mSettings)) {
-	FinalUDPHandshake();
-    } else if(!isEnhanced(mSettings) && (0.0 == mSettings->mInterval)) {
+    if(!isUDP(mSettings) && !isEnhanced(mSettings) && (mSettings->mIntervalMode != kInterval_Time)) {
 	reportstruct->packetLen = totLen;
-	ReportPacket( mSettings->reporthdr, reportstruct );
+	ReportPacket(mSettings->reporthdr, reportstruct);
+	reportstruct->packetLen = 0;
     }
-    CloseReport( mSettings->reporthdr, reportstruct );
-    if (isEnhanced(mSettings) && mSettings->mSock != INVALID_SOCKET ) {
-        int rc = close( mSettings->mSock );
-        WARN_errno( rc == SOCKET_ERROR, "close" );
-        mSettings->mSock = INVALID_SOCKET;
-    }
+    CloseReport( mSettings->reporthdr, reportstruct);
     EndReport( mSettings->reporthdr );
 }
 
@@ -856,25 +1172,18 @@ void Client::FinishTrafficActions(void) {
  * ------------------------------------------------------------------- */
 void Client::FinalUDPHandshake(void) {
     struct UDP_datagram * mBuf_UDP = (struct UDP_datagram *) mBuf;
+
     // send a final terminating datagram
     // Don't count in the mTotalLen. The server counts this one,
     // but didn't count our first datagram, so we're even now.
     // The negative datagram ID signifies termination to the server.
-
-    // store datagram ID into buffer
-    if (isSeqNo64b(mSettings)) {
-	mBuf_UDP->id      = htonl((reportstruct->packetID & 0xFFFFFFFFL));
-	mBuf_UDP->id2     = htonl((((reportstruct->packetID & 0xFFFFFFFF00000000LL) >> 32) | 0x80000000L));
-    } else {
-	mBuf_UDP->id      = htonl(((reportstruct->packetID & 0xFFFFFFFFL) | 0x80000000L));
-    }
+    WritePacketID(-reportstruct->packetID);
     mBuf_UDP->tv_usec = htonl( reportstruct->packetTime.tv_usec );
+    write( mSettings->mSock, mBuf, mSettings->mBufLen );
 
-    if ( isMulticast( mSettings ) ) {
-	// Multicast threads only sends one negative sequence number packet
-	// and doesn't wait for a server ack
-	write(mSettings->mSock, mBuf, mSettings->mBufLen);
-    } else {
+    // Handle the acknowledgement and server report for
+    // cases where it's wanted and possible
+    if (!(isMulticast(mSettings) || isNoUDPfin(mSettings))) {
 	// Unicast send and wait for acks
 	write_UDP_FIN();
     }
@@ -884,38 +1193,32 @@ void Client::write_UDP_FIN (void) {
     int rc;
     fd_set readSet;
     struct timeval timeout;
-    struct UDP_datagram* mBuf_UDP = (struct UDP_datagram*) mBuf;
 
-    int count = 0;
-    int packetid;
-    while ( count < 10 ) {
-        count++;
-
-        // write data
-        write( mSettings->mSock, mBuf, mSettings->mBufLen );
-	// decrement the packet count
-	//
-	// Note: a negative packet id is used to tell the server
-        // this UDP stream is terminating.  The server will remove
-        // the sign.  So a decrement will be seen as increments by
-	// the server (e.g, -1000, -1001, -1002 as 1000, 1001, 1002)
-        // If the retries weren't decrement here the server can get out
-        // of order packets per these retries actually being received
-        // by the server (e.g. -1000, -1000, -1000)
-	packetid = ntohl(mBuf_UDP->id);
-        mBuf_UDP->id = htonl(--packetid);
-
+    int count = 10 ;
+    while (--count >= 0) {
         // wait until the socket is readable, or our timeout expires
         FD_ZERO( &readSet );
         FD_SET( mSettings->mSock, &readSet );
         timeout.tv_sec  = 0;
-        timeout.tv_usec = 250000; // quarter second, 250 ms
+        timeout.tv_usec = (count > 5) ? 5000 : 250000; // 5 millisecond or 0.25 second
 
         rc = select( mSettings->mSock+1, &readSet, NULL, NULL, &timeout );
         FAIL_errno( rc == SOCKET_ERROR, "select", mSettings );
 
+        // rc= zero means select's read timed out
 	if ( rc == 0 ) {
-            // select timed out
+	    // decrement the packet count
+	    //
+	    // Note: a negative packet id is used to tell the server
+	    // this UDP stream is terminating.  The server will remove
+	    // the sign.  So a decrement will be seen as increments by
+	    // the server (e.g, -1000, -1001, -1002 as 1000, 1001, 1002)
+	    // If the retries weren't decrement here the server can get out
+	    // of order packets per these retries actually being received
+	    // by the server (e.g. -1000, -1000, -1000)
+	    WritePacketID(-(++reportstruct->packetID));
+	    // write data
+	    write( mSettings->mSock, mBuf, mSettings->mBufLen );
             continue;
         } else {
             // socket ready to read, this packet size
@@ -932,13 +1235,13 @@ void Client::write_UDP_FIN (void) {
         }
     }
 
-    fprintf( stderr, warn_no_ack, mSettings->mSock, count );
+    fprintf( stderr, warn_no_ack, mSettings->mSock, (isModeTime(mSettings) ? 10 : 1));
 }
 // end write_UDP_FIN
 
 
-void Client::InitiateServer() {
-    if ( !isCompat( mSettings ) ) {
+void Client::InitiateServer(void) {
+    if (!isCompat(mSettings) && !isConnectOnly(mSettings)) {
 	int flags = 0;
         client_hdr* temp_hdr;
         if ( isUDP( mSettings ) ) {
@@ -955,17 +1258,6 @@ void Client::InitiateServer() {
 	    //  The extended headers require an exchange
 	    //  between the client and server/listener
 	    HdrXchange(flags);
-	}
-	if (!isUDP(mSettings) && isTripTime(mSettings)) {
-	    int inLen = (3 * sizeof(uint32_t));
-	    char buf[inLen];
-	    uint32_t *timers = (uint32_t *) buf;
-	    Timestamp t1;
-	    *timers++ = htonl(HEADER_TIMESTAMP);
-	    *timers++ = htonl(t1.getSecs());
-	    *timers++ = htonl(t1.getUsecs());
-	    int currLen = send( mSettings->mSock, buf, inLen, 0 );
-	    WARN_errno( currLen < 0, "send connect timestamps" );
 	}
     }
 }
@@ -992,10 +1284,12 @@ void Client::HdrXchange(int flags) {
 	    mBuf_UDP->tv_usec = htonl(now.getUsecs());
 	} else {
 	    len = sizeof(client_hdr);
+#ifdef TCP_NODELAY
 	    // Disable Nagle to reduce latency of this intial message
 	    optflag=1;
 	    if(setsockopt( mSettings->mSock, IPPROTO_TCP, TCP_NODELAY, (char *)&optflag, sizeof(int)) < 0 )
 		WARN_errno(0, "tcpnodelay" );
+#endif
 	}
 	currLen = send( mSettings->mSock, mBuf, len, 0 );
 	if ( currLen < 0 ) {
@@ -1003,25 +1297,14 @@ void Client::HdrXchange(int flags) {
 	} else {
 	    int n;
 	    client_hdr_ack ack;
-	    int sotimer = 0;
-	    // sotimer units microseconds convert
-	    if (mSettings->mInterval) {
-		sotimer = (int) ((mSettings->mInterval * 1e6) / 4);
-	    } else if (isModeTime(mSettings)) {
-		sotimer = (int) ((mSettings->mAmount * 1000) / 4);
-	    }
-	    if (sotimer > HDRXACKMAX) {
-		sotimer = HDRXACKMAX;
-	    } else if (sotimer < HDRXACKMIN) {
-		sotimer = HDRXACKMIN;
-	    }
+	    int sotimer = 2; // 2 seconds
 #ifdef WIN32
             // Windows SO_RCVTIMEO uses ms
-	    DWORD timeout = (double) sotimer / 1e3;
+	    DWORD timeout = (double) sotimer * 1e3;
 #else
 	    struct timeval timeout;
-	    timeout.tv_sec = sotimer / 1000000;
-	    timeout.tv_usec = sotimer % 1000000;
+	    timeout.tv_sec = sotimer;
+	    timeout.tv_usec = 0;
 #endif
 	    if (setsockopt( mSettings->mSock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0 ) {
 		WARN_errno( mSettings->mSock == SO_RCVTIMEO, "socket" );

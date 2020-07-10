@@ -1,11 +1,10 @@
-
 /*---------------------------------------------------------------
- * Copyright (c) 1999,2000,2001,2002,2003
- * The Board of Trustees of the University of Illinois
+ * Copyright (c) 2019
+ * Broadcom Corporation
  * All Rights Reserved.
  *---------------------------------------------------------------
  * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software (Iperf) and associated
+ * obtaining a copy of this software and associated
  * documentation files (the "Software"), to deal in the Software
  * without restriction, including without limitation the
  * rights to use, copy, modify, merge, publish, distribute,
@@ -25,7 +24,7 @@
  * provided with the distribution.
  *
  *
- * Neither the names of the University of Illinois, NCSA,
+ * Neither the name of Broadcom Coporation,
  * nor the names of its contributors may be used to endorse
  * or promote products derived from this Software without
  * specific prior written permission.
@@ -39,24 +38,31 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * ________________________________________________________________
- * National Laboratory for Applied Network Research
- * National Center for Supercomputing Applications
- * University of Illinois at Urbana-Champaign
- * http://www.ncsa.uiuc.edu
- * ________________________________________________________________
  *
- * report_CSV.h
- * by Kevin Gibbs <kgibbs@nlanr.net>
+ * write_acks
+ * Application level write ack's back to sender
  *
- * ________________________________________________________________ */
+ *
+ * by Robert J. McMahon (rjmcmahon@rjmcmahon.com, bob.mcmahon@broadcom.com)
+ * -------------------------------------------------------------------
+ */
+#ifndef WRITEACK_H
+#define WRITEACK_H
 
+#include "Settings.hpp"
+#include "Timestamp.hpp"
+#include "isochronous.hpp"
 
-#ifndef REPORT_CSV_H
-#define REPORT_CSV_H
-
-void CSV_stats(struct TransferInfo *stats );
-void *CSV_peer(struct ConnectionInfo *stats, int ID);
-void CSV_serverstats(struct ConnectionInfo *conn, struct TransferInfo *stats );
-
-
-#endif // REPORT_CSV_H
+/* ------------------------------------------------------------------- */
+class WriteAck {
+public:
+    // stores server hostname, port, UDP/TCP mode, and UDP rate
+    WriteAck(thread_Settings *inSettings);
+    ~WriteAck();
+    static void Close(PacketRing *pr);
+    void RunServer(void);
+    void RunClient(void);
+private:
+    thread_Settings *mSettings;
+};
+#endif // WRITEACK_H
