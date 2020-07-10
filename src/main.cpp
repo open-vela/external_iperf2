@@ -61,7 +61,6 @@
 #define HEADERS()
 
 #include "headers.h"
-
 #include "Settings.hpp"
 #include "PerfSocket.hpp"
 #include "Locale.h"
@@ -70,7 +69,6 @@
 #include "Listener.hpp"
 #include "List.h"
 #include "util.h"
-#include "gnu_getopt.h"
 
 #ifdef WIN32
 #include "service.h"
@@ -93,12 +91,16 @@ extern "C" {
     int groupID = 0;
     // Mutex to protect access to the above ID
     Mutex groupCond;
-    // Condition used to signify advances of the current
-    // records being accessed in a report and also to
-    // serialize modification of the report list
-    Condition ReportCond;
-    Condition ReportDoneCond;
+    // Condition used to signal the reporter thread
+    // when a packet ring is full.  Shouldn't really
+    // be needed but is "belts and suspeners"
+    struct Condition ReportCond;
+    // Initialize reporter thread mutex
+    struct AwaitMutex reporter_state;
+    struct AwaitMutex threads_start;
+    struct BarrierMutex transmits_start;
 }
+
 
 // global variables only accessed within this file
 
@@ -120,35 +122,23 @@ void waitUntilQuit( void );
  * starts up server or client thread
  * waits for all threads to complete
  * ------------------------------------------------------------------- */
-extern "C"
-{
-#if defined(BUILD_MODULE)
 int main( int argc, char **argv ) {
-#else
-int iperf2_main(int argc, char **argv) {
-#endif
-    // init Interupted
-    sInterupted = 0;
 
     // Set SIGTERM and SIGINT to call our user interrupt function
-#ifdef SIGTERM
     my_signal( SIGTERM, Sig_Interupt );
-#endif
     my_signal( SIGINT,  Sig_Interupt );
 #ifndef WIN32
     my_signal( SIGALRM,  Sig_Interupt );
 
-#ifdef SIGPIPE
     // Ignore broken pipes
     signal(SIGPIPE,SIG_IGN);
-#endif
 #else
     // Start winsock
     WSADATA wsaData;
     int rc = WSAStartup( 0x202, &wsaData );
     WARN_errno( rc == SOCKET_ERROR, "WSAStartup" );
-	if (rc == SOCKET_ERROR)
-		return 0;
+    if (rc == SOCKET_ERROR)
+	return 0;
 
     // Tell windows we want to handle our own signals
     SetConsoleCtrlHandler( sig_dispatcher, true );
@@ -156,12 +146,18 @@ int iperf2_main(int argc, char **argv) {
 
     // Initialize global mutexes and conditions
     Condition_Initialize ( &ReportCond );
-    Condition_Initialize ( &ReportDoneCond );
     Mutex_Initialize( &groupCond );
     Mutex_Initialize( &clients_mutex );
-
-    // reset gnu
-    gnu_reset();
+#ifdef HAVE_THREAD_DEBUG
+    Mutex_Initialize(&packetringdebug_mutex);
+#endif
+    // Initialize reporter thread mutex
+    reporter_state.ready = 0;
+    threads_start.ready = 0;
+    transmits_start.count = 0;
+    Condition_Initialize(&reporter_state.await);
+    Condition_Initialize(&threads_start.await);
+    Condition_Initialize(&transmits_start.await);
 
     // Initialize the thread subsystem
     thread_init( );
@@ -169,14 +165,14 @@ int iperf2_main(int argc, char **argv) {
     // Initialize the interrupt handling thread to 0
     sThread = thread_zeroid();
 
-#ifdef HAVE_ATEXIT
     // perform any cleanup when quitting Iperf
     atexit( cleanup );
-#endif
 
     // Allocate the "global" settings
     thread_Settings* ext_gSettings = new thread_Settings;
-
+    // Default reporting mode here to avoid unitialized warnings
+    // this won't be the actual mode
+    ThreadMode ReporterThreadMode = kMode_Reporter;
     // Initialize settings to defaults
     Settings_Initialize( ext_gSettings );
     // read settings from environment variables
@@ -185,78 +181,7 @@ int iperf2_main(int argc, char **argv) {
     Settings_ParseCommandLine( argc, argv, ext_gSettings );
 
     // Check for either having specified client or server
-    if ( ext_gSettings->mThreadMode == kMode_Client
-         || ext_gSettings->mThreadMode == kMode_Listener ) {
-#ifdef WIN32
-        // Start the server as a daemon
-        if ( isDaemon( ext_gSettings )) {
-	    if (ext_gSettings->mThreadMode == kMode_Listener) {
-		CmdInstallService(argc, argv);
-	    } else {
-		fprintf(stderr, "Client cannot be run as a daemon\n");
-	    }
-            return 0;
-        }
-
-        // Remove the Windows service if requested
-        if ( isRemoveService( ext_gSettings ) ) {
-            // remove the service
-            if ( CmdRemoveService() ) {
-                fprintf(stderr, "IPerf Service is removed.\n");
-                return 0;
-            }
-        }
-#else
-	if ( isDaemon( ext_gSettings ) ) {
-	    if (ext_gSettings->mThreadMode != kMode_Listener) {
-		fprintf(stderr, "Iperf client cannot be run as a daemon\n");
-		return 0;
-	    }
-	    if (daemon(1, 1) < 0) {
-	        perror("daemon");
-	    }
-	    fprintf( stderr, "Running Iperf Server as a daemon\n");
-	    fprintf( stderr, "The Iperf daemon process ID : %d\n",((int)getpid()));
-	    fclose(stdout);
-	    fclose(stderr);
-	    fclose(stdin);
-	}
-#endif
-        // initialize client(s)
-        if ( ext_gSettings->mThreadMode == kMode_Client ) {
-            client_init( ext_gSettings );
-        }
-#ifdef HAVE_CLOCK_NANOSLEEP
-#ifdef HAVE_CLOCK_GETTIME
-	if (isEnhanced(ext_gSettings) && isTxStartTime(ext_gSettings)) {
-	    struct timespec t1;
-	    clock_gettime(CLOCK_REALTIME, &t1);
-	    fprintf(stdout, "Client thread(s) traffic start time %ld.%.9ld current time is %ld.%.9ld (epoch/unix format)\n",ext_gSettings->txstart.tv_sec, ext_gSettings->txstart.tv_nsec, t1.tv_sec, t1.tv_nsec);
-	}
-#endif
-#endif
-
-
-
-#ifdef HAVE_THREAD
-        // start up the reporter and client(s) or listener
-        {
-            thread_Settings *into = NULL;
-            // Create the settings structure for the reporter thread
-            Settings_Copy( ext_gSettings, &into );
-            into->mThreadMode = kMode_Reporter;
-
-            // Have the reporter launch the client or listener
-            into->runNow = ext_gSettings;
-
-            // Start all the threads that are ready to go
-            thread_start( into );
-        }
-#else
-        // No need to make a reporter thread because we don't have threads
-        thread_start( ext_gSettings );
-#endif
-    } else {
+    if ((ext_gSettings->mThreadMode != kMode_Client) && (ext_gSettings->mThreadMode != kMode_Listener)) {
         // neither server nor client mode was specified
         // print usage and exit
 
@@ -265,28 +190,106 @@ int iperf2_main(int argc, char **argv) {
         // Starting in 2.0 to restart a previously defined service
         // you must call iperf with "iperf -D" or using the environment variable
         SERVICE_TABLE_ENTRY dispatchTable[] =
-        {
-            { (LPSTR)TEXT(SZSERVICENAME), (LPSERVICE_MAIN_FUNCTION)service_main},
-            { NULL, NULL}
-        };
+	    {
+		{ (LPSTR)TEXT(SZSERVICENAME), (LPSERVICE_MAIN_FUNCTION)service_main},
+		{ NULL, NULL}
+	    };
 
 	// starting the service by SCM, there is no arguments will be passed in.
 	// the arguments will pass into Service_Main entry.
         if (!StartServiceCtrlDispatcher(dispatchTable) )
             // If the service failed to start then print usage
 #endif
-        fprintf( stderr, usage_short, argv[0], argv[0] );
-
-        return 0;
+	    fprintf( stderr, usage_short, argv[0], argv[0] );
+	return 0;
     }
+
+    unsetReport(ext_gSettings);
+    switch (ext_gSettings->mThreadMode) {
+    case kMode_Client :
+	if ( isDaemon( ext_gSettings ) ) {
+	    fprintf(stderr, "Iperf client cannot be run as a daemon\n");
+	    return 0;
+	}
+        // initialize client(s)
+	transmits_start.count = ext_gSettings->mThreads;
+	ext_gSettings->connects_done = &transmits_start;
+        client_init(ext_gSettings);
+	ReporterThreadMode = kMode_ReporterClient;
+	break;
+    case kMode_Listener :
+#ifdef WIN32
+	// Remove the Windows service if requested
+	if ( isRemoveService( ext_gSettings ) ) {
+	    // remove the service
+	    if ( CmdRemoveService() ) {
+		fprintf(stderr, "IPerf Service is removed.\n");
+	    }
+	}
+	if ( isDaemon( ext_gSettings ) ) {
+	    CmdInstallService(argc, argv);
+	} else if (isRemoveService(ext_gSettings)) {
+	    return 0;
+	}
+#else // *nix system
+	if ( isDaemon( ext_gSettings ) ) {
+	    fprintf( stderr, "Running Iperf Server as a daemon\n");
+	    // Start the server as a daemon
+	    fflush(stderr);
+	    // redirect stdin, stdout and sterr to /dev/null (see dameon and no close flag)
+	    if (daemon(1, 0) < 0) {
+	        perror("daemon");
+	    }
+	}
+#endif
+	break;
+    default :
+	fprintf( stderr, "unknown mode");
+	break;
+    }
+#ifdef HAVE_THREAD
+    // Last step is to initialize the reporter then start all threads
+    {
+	thread_Settings *into = NULL;
+	// Create the settings structure for the reporter thread
+	Settings_Copy(ext_gSettings, &into);
+	into->mThreadMode = ReporterThreadMode;
+	into->multihdr = NULL;
+	into->bidirhdr = NULL;
+	// Reporter thread maintains its own connection report
+	// used for sums and final reports
+	InitConnectionReport(into);
+	// Have the reporter launch the client or listener
+	into->runNow = ext_gSettings;
+
+	// Start all the threads that are ready to go
+	thread_start_all(into);
+	threads_start.ready = 1;
+        Condition_Signal(&threads_start.await);
+    }
+#else
+    // No need to make a reporter thread because we don't have threads
+    thread_start( ext_gSettings );
+#endif
 
     // wait for other (client, server) threads to complete
     thread_joinall();
 
+    // done actions
+    // Destroy global mutexes and conditions
+    Condition_Destroy ( &ReportCond );
+    Mutex_Destroy( &groupCond );
+    Mutex_Destroy( &clients_mutex );
+    Condition_Destroy(&reporter_state.await);
+    Condition_Destroy(&threads_start.await);
+    Condition_Destroy(&transmits_start.await);
+#ifdef HAVE_THREAD_DEBUG
+    Mutex_Destroy(&packetringdebug_mutex);
+#endif
+
     // all done!
     return 0;
 } // end main
-}
 
 /* -------------------------------------------------------------------
  * Signal handler sets the sInterupted flag, so the object can
@@ -300,7 +303,9 @@ void Sig_Interupt( int inSigno ) {
     // then that is the only thread that can supply the next interrupt
     if ( (inSigno == SIGINT) && thread_equalid( sThread, thread_zeroid() ) ) {
         sThread = thread_getid();
-    } else {
+	// extern struct ReportHeader *ReportRoot;
+	// printf("ReportRoot=%p user_threads=%d\n", (void *) ReportRoot, thread_numuserthreads());
+    } else if ( thread_equalid( sThread, thread_getid() ) ) {
         sig_exit( inSigno );
     }
     // global variable used by threads to see if they were interrupted
@@ -405,7 +410,7 @@ VOID ServiceStart (DWORD dwArgc, LPTSTR *lpszArgv) {
 #else
         into = ext_gSettings;
 #endif
-        thread_start( into );
+        thread_start_all(into);
     }
 
     // report the status to the service control manager.

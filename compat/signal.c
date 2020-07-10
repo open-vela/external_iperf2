@@ -52,7 +52,6 @@
 
 #include "headers.h"
 #include "util.h"
-#include "Thread.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -169,13 +168,10 @@ SigfuncPtr my_signal( int inSigno, SigfuncPtr inFunc ) {
  * ------------------------------------------------------------------- */
 
 void sig_exit( int inSigno ) {
-#ifndef HAVE_THREAD
     static int num = 0;
-    if ( num++ == 0 )
-#endif
-    {
+    if ( num++ == 0 ) {
         fflush( 0 );
-        exit(0);
+	_exit(0);
     }
 } /* end sig_exit */
 

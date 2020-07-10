@@ -64,6 +64,7 @@
  * o Use a busy loop or nanosleep
  *
  * Some notes:
+ * o clock nanosleep with a relative is preferred (see man page for why)
  * o clock_gettime() (if available) is preferred over gettimeofday()
  *   as it give nanosecond resolution and should be more efficient.
  *   It also supports CLOCK_MONOTONIC and CLOCK_MONOTONIC_RAW
@@ -92,14 +93,23 @@
 
 void delay_loop(unsigned long usec)
 {
-#ifdef HAVE_KALMAN
+#ifdef HAVE_CLOCK_NANOSLEEP
+  {
+    struct timespec res;
+    res.tv_sec = usec/MILLION;
+    res.tv_nsec = (usec * 1000) % BILLION;
+    clock_nanosleep(CLOCK_MONOTONIC, 0, &res, NULL);
+  }
+#else
+  #ifdef HAVE_KALMAN
     delay_kalman(usec);
-#else
-#ifdef HAVE_NANOSLEEP
+  #else
+  #ifdef HAVE_NANOSLEEP
     delay_nanosleep(usec);
-#else
+  #else
     delay_busyloop(usec);
-#endif
+  #endif
+  #endif
 #endif
 }
 
@@ -117,7 +127,8 @@ void delay_nanosleep (unsigned long usec) {
 
 #if defined (HAVE_NANOSLEEP) || defined (HAVE_CLOCK_GETTIME)
 static void timespec_add_ulong (struct timespec *tv0, unsigned long value) {
-    tv0->tv_nsec += value;
+    tv0->tv_sec += (value / BILLION);
+    tv0->tv_nsec += (value % BILLION);
     if (tv0->tv_nsec >= BILLION) {
 	tv0->tv_sec++;
 	tv0->tv_nsec -= BILLION;
@@ -130,7 +141,7 @@ static void timespec_add_ulong (struct timespec *tv0, unsigned long value) {
 // accuracy over a minimum guaranteed delay by
 // prediciting the delay error. This is
 // the basic recursive algorithm.
-static void kalman_update (kalman_state *state, double measurement) {
+static void kalman_update (struct kalman_state *state, double measurement) {
     //prediction update
     state->p = state->p + state->q;
     //measurement update
@@ -196,7 +207,7 @@ void delay_busyloop (unsigned long usec) {
 void delay_kalman (unsigned long usec) {
     struct timespec t1, t2, finishtime, requested={0,0}, remaining;
     double nsec_adjusted, err;
-    static kalman_state kalmanerr={
+    static struct kalman_state kalmanerr={
 	0.00001, //q process noise covariance
 	0.1, //r measurement noise covariance
 	0.0, //x value, error predictio (units nanoseconds)
@@ -279,7 +290,7 @@ void delay_kalman (unsigned long usec) {
     struct timeval t1, t2, finishtime;
     long usec_adjusted;
     double err;
-    static kalman_state kalmanerr={
+    static struct kalman_state kalmanerr={
 	0.00001, //q process noise covariance
 	0.1, //r measurement noise covariance
 	0.0, //x value, error predictio (units nanoseconds)
@@ -322,5 +333,3 @@ void delay_kalman (unsigned long usec) {
 }
 #endif // Kalman
 #endif
-
-
