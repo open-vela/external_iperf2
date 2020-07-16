@@ -151,6 +151,7 @@ struct thread_Settings {
     char*  mRxHistogramStr;         // --histograms (packets)
     FILE*  Extractor_file;
     struct ReportHeader*  reporthdr;
+    struct MultiHeader*   totsumhdr;    
     struct MultiHeader*   multihdr;
     struct MultiHeader*   bidirhdr;
     struct MultiHeader*   sumhdr;
@@ -199,7 +200,8 @@ struct thread_Settings {
     // enums (which should be special int's)
     enum ThreadMode mThreadMode;         // -s or -c
     enum ReportMode mReportMode;
-    enum TestMode mMode;                 // -r or -d
+    enum TestMode mMode;              // -r or -d
+    bool clientListener;              // set to True if client mode listener per -r or -d
     // Hopefully int64_t's
     intmax_t mUDPRate;            // -b or -u
     int mUDPRateUnits;            // -b is either bw or pps
