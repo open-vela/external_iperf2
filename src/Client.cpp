@@ -78,7 +78,7 @@ const int    kBytes_to_Bits = 8;
 # define INITIAL_PACKETID 0
 #endif
 
-Client::Client( thread_Settings *inSettings ) {
+Client::Client(thread_Settings *inSettings) {
 #ifdef HAVE_THREAD_DEBUG
   thread_debug("Client thread started in constructor (%x/%x)", inSettings->flags, inSettings->flags_extend);
 #endif
@@ -94,41 +94,25 @@ Client::Client( thread_Settings *inSettings ) {
 	fprintf(stderr, "%s", warn_compat_and_peer_exchange);
 	unsetPeerVerDetect(inSettings);
     }
-    if (isUDP(inSettings) && !isCompat(inSettings)) {
-	if ((isPeerVerDetect(inSettings) || (inSettings->mMode != kTest_Normal)) && (inSettings->mBufLen < SIZEOF_UDPHDRMSG)) {
-	    mSettings->mBufLen = SIZEOF_UDPHDRMSG;
-	    fprintf( stderr, warn_buffer_too_small, "Client", mSettings->mBufLen);
-	} else if (mSettings->mBufLen < (int) sizeof( UDP_datagram ) ) {
-	    mSettings->mBufLen = sizeof( UDP_datagram );
-	    fprintf( stderr, warn_buffer_too_small, "Client", mSettings->mBufLen );
-	}
-    } else {
-	if ((isPeerVerDetect(inSettings) || (inSettings->mMode != kTest_Normal)) && (inSettings->mBufLen < SIZEOF_TCPHDRMSG)) {
-	    mSettings->mBufLen = SIZEOF_TCPHDRMSG;
-	    fprintf( stderr, warn_buffer_too_small, "Client", mSettings->mBufLen);
-	}
+    if (!isCompat(inSettings) && (mSettings->mBufLen < MINPAYLOAD_ALLOC)) {
+	mSettings->mBufLen = MINPAYLOAD_ALLOC;
     }
-    // initialize buffer
-    if (isTripTime(mSettings) && (mSettings->mBufLen < (int) (sizeof(struct TCP_datagram)))) {
-        mSettings->mBufLen = sizeof(struct TCP_datagram);
-        fprintf( stderr, warn_buffer_too_small, "Client", mSettings->mBufLen);
-    }
-    mBuf = new char[((mSettings->mBufLen > MAXUDPBUF) ? mSettings->mBufLen : MAXUDPBUF)];
-    FAIL_errno( mBuf == NULL, "No memory for buffer\n", mSettings );
-    pattern( mBuf, ((mSettings->mBufLen > MAXUDPBUF) ? mSettings->mBufLen : MAXUDPBUF));
-    if ( isFileInput( mSettings ) ) {
-        if ( !isSTDIN( mSettings ) )
-            Extractor_Initialize( mSettings->mFileName, mSettings->mBufLen, mSettings );
+    mBuf = new char[mSettings->mBufLen];
+    FAIL_errno(mBuf == NULL, "No memory for buffer\n", mSettings);
+    pattern(mBuf, mSettings->mBufLen);
+    if (isFileInput(mSettings)) {
+        if (!isSTDIN( mSettings) )
+            Extractor_Initialize(mSettings->mFileName, mSettings->mBufLen, mSettings);
         else
-            Extractor_InitializeFile( stdin, mSettings->mBufLen, mSettings );
+            Extractor_InitializeFile(stdin, mSettings->mBufLen, mSettings);
 
-        if ( !Extractor_canRead( mSettings ) ) {
-            unsetFileInput( mSettings );
+        if (!Extractor_canRead(mSettings)) {
+            unsetFileInput(mSettings);
         }
     }
     framecounter = NULL;
     if (isIsochronous(mSettings)) {
-	FAIL_errno( !(mSettings->mFPS > 0.0), "Invalid value for frames per second in the isochronous settings\n", mSettings );
+	FAIL_errno(!(mSettings->mFPS > 0.0), "Invalid value for frames per second in the isochronous settings\n", mSettings);
     }
 
     // ServerReverse traffic threads don't need a new connect()
@@ -532,25 +516,14 @@ void Client::Run( void ) {
     if (isUDP(mSettings)) {
 	// Preset any UDP fields in the mBuf, a non-zero
 	// return indicates some udptests were set
-	int udptests = Settings_GenerateClientHdr(mSettings, (client_hdr *) (mBuf + sizeof(struct UDP_datagram)));
+	Settings_GenerateClientHdr(mSettings, (client_hdr *) (mBuf + sizeof(struct UDP_datagram)));
 
-	if ( isFileInput( mSettings ) ) {
+	if (isFileInput(mSettings)) {
 	    // Due to the UDP timestamps etc, included
 	    // reduce the read size by an amount
 	    // equal to the header size
-	    if ( isCompat( mSettings ) ) {
-		Extractor_reduceReadSize( sizeof(struct UDP_datagram), mSettings );
-		readAt += sizeof(struct UDP_datagram);
-	    } else {
-		if (udptests) {
-		    Extractor_reduceReadSize(sizeof(client_hdr_udp_tests), mSettings );
-		    readAt += sizeof(client_hdr_udp_tests);
-		} else {
-		    Extractor_reduceReadSize( sizeof(struct UDP_datagram) +
-					      sizeof(struct client_hdr), mSettings );
-		    readAt += sizeof(struct UDP_datagram) + sizeof(struct client_hdr);
-		}
-	    }
+	    Extractor_reduceReadSize(sizeof(struct UDP_datagram), mSettings);
+	    readAt += sizeof(struct UDP_datagram);
 	}
 	// Launch the approprate UDP traffic loop
 	if (isIsochronous(mSettings)) {
@@ -1243,17 +1216,13 @@ void Client::write_UDP_FIN (void) {
 void Client::InitiateServer(void) {
     if (!isCompat(mSettings) && !isConnectOnly(mSettings)) {
 	int flags = 0;
-        client_hdr* temp_hdr;
-        if ( isUDP( mSettings ) ) {
-            UDP_datagram *UDPhdr = (UDP_datagram *)mBuf;
-	    // skip over the UDP datagram (seq no, timestamp)
-            temp_hdr = (client_hdr*)(UDPhdr + 1);
-        } else {
-            temp_hdr = (client_hdr*)mBuf;
-        }
-	flags = Settings_GenerateClientHdr( mSettings, temp_hdr );
+        struct client_hdr* tmp_hdr = \
+	    (isUDP(mSettings) ? (struct client_hdr *) (((struct UDP_datagram*)mBuf) + 1) \
+	     : (struct client_hdr *) mBuf);
 
-	if (flags & (HEADER_EXTEND | HEADER_VERSION1)) {
+	flags = Settings_GenerateClientHdr(mSettings, tmp_hdr);
+
+	if (!isUDP(mSettings) && (flags & (HEADER_EXTEND | HEADER_VERSION1))) {
 	    //  This test requires the pre-test header messages
 	    //  The extended headers require an exchange
 	    //  between the client and server/listener
@@ -1266,81 +1235,59 @@ void Client::InitiateServer(void) {
 void Client::HdrXchange(int flags) {
     int currLen = 0, len;
 
-    if (flags & HEADER_EXTEND) {
-	// Run compatability detection and test info exchange for tests that require it
-	int optflag;
-	if (isUDP(mSettings)) {
-	    struct UDP_datagram* mBuf_UDP = (struct UDP_datagram*) mBuf;
-	    Timestamp now;
-	    len = mSettings->mBufLen;
-	    // UDP header message must be mBufLen so server/Listener will read it
-	    // because the Listener read length uses  mBufLen
-	    if ((int) (sizeof(UDP_datagram) + sizeof(client_hdr)) > len) {
-	        fprintf( stderr, warn_len_too_small_peer_exchange, "Client", len, (sizeof(UDP_datagram) + sizeof(client_hdr)));
-	    }
-	    // store datagram ID and timestamp into buffer
-	    mBuf_UDP->id      = htonl(0);
-	    mBuf_UDP->tv_sec  = htonl(now.getSecs());
-	    mBuf_UDP->tv_usec = htonl(now.getUsecs());
-	} else {
-	    len = sizeof(client_hdr);
+    if (!isUDP(mSettings)) {
+	if (flags & HEADER_EXTEND) {
+	    // Run compatability detection and test info exchange for tests that require it
+	    int optflag;
+	    len = sizeof(client_tcphdr);
 #ifdef TCP_NODELAY
 	    // Disable Nagle to reduce latency of this intial message
 	    optflag=1;
 	    if(setsockopt( mSettings->mSock, IPPROTO_TCP, TCP_NODELAY, (char *)&optflag, sizeof(int)) < 0 )
 		WARN_errno(0, "tcpnodelay" );
 #endif
-	}
-	currLen = send( mSettings->mSock, mBuf, len, 0 );
-	if ( currLen < 0 ) {
-	    WARN_errno( currLen < 0, "send_hdr_v2" );
-	} else {
-	    int n;
-	    client_hdr_ack ack;
-	    int sotimer = 2; // 2 seconds
-#ifdef WIN32
-            // Windows SO_RCVTIMEO uses ms
-	    DWORD timeout = (double) sotimer * 1e3;
-#else
-	    struct timeval timeout;
-	    timeout.tv_sec = sotimer;
-	    timeout.tv_usec = 0;
-#endif
-	    if (setsockopt( mSettings->mSock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0 ) {
-		WARN_errno( mSettings->mSock == SO_RCVTIMEO, "socket" );
-	    }
-	    /*
-	     * Hang a TCP or UDP read and see if this is a header ack message
-	     */
-	    if ((n = recvn(mSettings->mSock, (char *)&ack, sizeof(client_hdr_ack), 0)) == sizeof(client_hdr_ack)) {
-		if (ntohl(ack.typelen.type) == CLIENTHDRACK && ntohl(ack.typelen.length) == sizeof(client_hdr_ack)) {
-		    reporter_peerversion (mSettings, ntohl(ack.version_u), ntohl(ack.version_l));
-		} else {
-		    sprintf(mSettings->peerversion, " (misformed server version)");
-		}
+	    currLen = send(mSettings->mSock, mBuf, len, 0);
+	    if ( currLen < 0 ) {
+		WARN_errno( currLen < 0, "send_hdr_v2" );
 	    } else {
-		WARN_errno(1, "recvack" );
-		sprintf(mSettings->peerversion, " (server version is old)");
+		int n;
+		client_hdr_ack ack;
+		int sotimer = 2; // 2 seconds
+#ifdef WIN32
+		// Windows SO_RCVTIMEO uses ms
+		DWORD timeout = (double) sotimer * 1e3;
+#else
+		struct timeval timeout;
+		timeout.tv_sec = sotimer;
+		timeout.tv_usec = 0;
+#endif
+		if (setsockopt( mSettings->mSock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0 ) {
+		    WARN_errno( mSettings->mSock == SO_RCVTIMEO, "socket" );
+		}
+		/*
+		 * Hang read and see if this is a header ack message
+		 */
+		if ((n = recvn(mSettings->mSock, (char *)&ack, sizeof(client_hdr_ack), 0)) == sizeof(client_hdr_ack)) {
+		    if (ntohl(ack.typelen.type) == CLIENTHDRACK && ntohl(ack.typelen.length) == sizeof(client_hdr_ack)) {
+			reporter_peerversion (mSettings, ntohl(ack.version_u), ntohl(ack.version_l));
+		    } else {
+			sprintf(mSettings->peerversion, " (misformed server version)");
+		    }
+		} else {
+		    WARN_errno(1, "recvack" );
+		    sprintf(mSettings->peerversion, " (server version is old)");
+		}
 	    }
-	}
-	if (!isUDP( mSettings ) && !isNoDelay(mSettings)) {
 	    optflag = 0;
 	    // Re-enable Nagle
 	    if (setsockopt( mSettings->mSock, IPPROTO_TCP, TCP_NODELAY, (char *)&optflag, sizeof(int)) < 0 ) {
 		WARN_errno(0, "tcpnodelay" );
 	    }
-	}
-    } else if (flags & HEADER_VERSION1) {
-	if (isUDP(mSettings)) {
-	    if ((int) (sizeof(UDP_datagram) + sizeof(client_hdr_v1)) > mSettings->mBufLen) {
-		fprintf( stderr, warn_len_too_small_peer_exchange, "Client", mSettings->mBufLen, (sizeof(UDP_datagram) + sizeof(client_hdr_v1)));
-	    }
-	    // UDP version1 header message is sent as part of normal traffic per Client::Run
-	} else {
+	} else if (flags & HEADER_VERSION1) {
 	    /*
 	     * Really should not need this warning as TCP is a byte protocol so the mBufLen shouldn't cause
-             * a problem.  Unfortunately, the ver 2.0.5 server didn't read() TCP properly and will fail
-             * if the full V1 message does come in a single read.  This was fixed in 2.0.10 but go ahead
+	     * a problem.  Unfortunately, the ver 2.0.5 server didn't read() TCP properly and will fail
+	     * if the full V1 message does come in a single read.  This was fixed in 2.0.10 but go ahead
 	     * and issue a warning in case the server is version 2.0.5
 	     */
 	    if (((int)sizeof(client_hdr_v1) - mSettings->mBufLen) > 0) {
@@ -1350,5 +1297,4 @@ void Client::HdrXchange(int flags) {
 	    currLen = send( mSettings->mSock, mBuf, sizeof(client_hdr_v1), 0 );
 	    WARN_errno( currLen < 0, "send_hdr_v1" );
 	}
-    }
-}
+    }}
