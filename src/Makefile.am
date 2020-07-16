@@ -26,6 +26,7 @@ iperf_SOURCES = \
 		ReportCSV.c \
 		ReportDefault.c \
 		Reporter.c \
+		Reports.c \
 		Server.cpp \
 		Settings.cpp \
 		Write_ack.cpp \

@@ -145,9 +145,9 @@ int main( int argc, char **argv ) {
 #endif
 
     // Initialize global mutexes and conditions
-    Condition_Initialize ( &ReportCond );
-    Mutex_Initialize( &groupCond );
-    Mutex_Initialize( &clients_mutex );
+    Iperf_initialize_active_table();
+    Condition_Initialize (&ReportCond);
+
 #ifdef HAVE_THREAD_DEBUG
     Mutex_Initialize(&packetringdebug_mutex);
 #endif
@@ -174,11 +174,11 @@ int main( int argc, char **argv ) {
     // this won't be the actual mode
     ThreadMode ReporterThreadMode = kMode_Reporter;
     // Initialize settings to defaults
-    Settings_Initialize( ext_gSettings );
+    Settings_Initialize(ext_gSettings);
     // read settings from environment variables
-    Settings_ParseEnvironment( ext_gSettings );
+    Settings_ParseEnvironment(ext_gSettings);
     // read settings from command-line parameters
-    Settings_ParseCommandLine( argc, argv, ext_gSettings );
+    Settings_ParseCommandLine(argc, argv, ext_gSettings);
 
     // Check for either having specified client or server
     if ((ext_gSettings->mThreadMode != kMode_Client) && (ext_gSettings->mThreadMode != kMode_Listener)) {
@@ -277,9 +277,8 @@ int main( int argc, char **argv ) {
 
     // done actions
     // Destroy global mutexes and conditions
-    Condition_Destroy ( &ReportCond );
-    Mutex_Destroy( &groupCond );
-    Mutex_Destroy( &clients_mutex );
+    Iperf_destroy_active_table();
+    Condition_Destroy (&ReportCond);
     Condition_Destroy(&reporter_state.await);
     Condition_Destroy(&threads_start.await);
     Condition_Destroy(&transmits_start.await);

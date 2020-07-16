@@ -130,17 +130,17 @@ igmp_querier_OBJECTS = $(am_igmp_querier_OBJECTS)
 igmp_querier_LDADD = $(LDADD)
 am__iperf_SOURCES_DIST = Client.cpp Extractor.c isochronous.cpp \
 	Launch.cpp List.cpp Listener.cpp Locale.c PerfSocket.cpp \
-	ReportCSV.c ReportDefault.c Reporter.c Server.cpp Settings.cpp \
-	Write_ack.cpp SocketAddr.c gnu_getopt.c gnu_getopt_long.c \
-	histogram.c main.cpp service.c sockets.c stdio.c packet_ring.c \
-	tcp_window_size.c pdfs.c checksums.c
+	ReportCSV.c ReportDefault.c Reporter.c Reports.c Server.cpp \
+	Settings.cpp Write_ack.cpp SocketAddr.c gnu_getopt.c \
+	gnu_getopt_long.c histogram.c main.cpp service.c sockets.c \
+	stdio.c packet_ring.c tcp_window_size.c pdfs.c checksums.c
 @AF_PACKET_TRUE@am__objects_1 = checksums.$(OBJEXT)
 am_iperf_OBJECTS = Client.$(OBJEXT) Extractor.$(OBJEXT) \
 	isochronous.$(OBJEXT) Launch.$(OBJEXT) List.$(OBJEXT) \
 	Listener.$(OBJEXT) Locale.$(OBJEXT) PerfSocket.$(OBJEXT) \
 	ReportCSV.$(OBJEXT) ReportDefault.$(OBJEXT) Reporter.$(OBJEXT) \
-	Server.$(OBJEXT) Settings.$(OBJEXT) Write_ack.$(OBJEXT) \
-	SocketAddr.$(OBJEXT) gnu_getopt.$(OBJEXT) \
+	Reports.$(OBJEXT) Server.$(OBJEXT) Settings.$(OBJEXT) \
+	Write_ack.$(OBJEXT) SocketAddr.$(OBJEXT) gnu_getopt.$(OBJEXT) \
 	gnu_getopt_long.$(OBJEXT) histogram.$(OBJEXT) main.$(OBJEXT) \
 	service.$(OBJEXT) sockets.$(OBJEXT) stdio.$(OBJEXT) \
 	packet_ring.$(OBJEXT) tcp_window_size.$(OBJEXT) pdfs.$(OBJEXT) \
@@ -347,7 +347,7 @@ AM_CFLAGS = -Wall
 iperf_LDFLAGS = @CFLAGS@ @PTHREAD_CFLAGS@ @WEB100_CFLAGS@ @DEFS@
 iperf_SOURCES = Client.cpp Extractor.c isochronous.cpp Launch.cpp \
 	List.cpp Listener.cpp Locale.c PerfSocket.cpp ReportCSV.c \
-	ReportDefault.c Reporter.c Server.cpp Settings.cpp \
+	ReportDefault.c Reporter.c Reports.c Server.cpp Settings.cpp \
 	Write_ack.cpp SocketAddr.c gnu_getopt.c gnu_getopt_long.c \
 	histogram.c main.cpp service.c sockets.c stdio.c packet_ring.c \
 	tcp_window_size.c pdfs.c $(am__append_1)
@@ -474,6 +474,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ReportCSV.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ReportDefault.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Reporter.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Reports.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Server.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Settings.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/SocketAddr.Po@am__quote@
