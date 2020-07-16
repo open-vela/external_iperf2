@@ -1181,6 +1181,12 @@ void Settings_ModalOptions( struct thread_Settings *mExtSettings ) {
 	}
 #endif
     }
+    // Create a sum total report for servers with -P != 1 and for clients with -P > 1
+    if (isDataReport(mSettings) && \
+	((mSettings->mThreadMode == kMode_Client) && (mSettings->mThreads > 1)) ||
+	((mSettings->mThreadMode == kMode_Server) && (mSettings->mThreads != 1))) {
+		InitSumTotalReport(mExtSettings);
+    }
 }
 
 

@@ -179,7 +179,7 @@ void thread_start_all(struct thread_Settings* thread) {
     }
 }
 
-void thread_start( struct thread_Settings* thread ) {
+void thread_start(struct thread_Settings* thread) {
     // Make sure this object has not been started already
     if ( thread_equalid( thread->mTID, thread_zeroid() ) ) {
 

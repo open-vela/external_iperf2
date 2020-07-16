@@ -199,6 +199,8 @@ void Listener::Run (void) {
 	    continue;
 	}
 	server->mThreadMode = kMode_Server;
+	if (!isDataReport(mSettings))
+	    setNoDataReport(server);
 
 	// accept a new socket and assign it to the server thread
 	if (!(my_accept(server) > 0)) {
@@ -274,6 +276,8 @@ void Listener::Run (void) {
 	    Settings_GenerateClientSettings(server, &listener_client_settings, \
 					    (UDP ? (struct client_hdr *) (((struct UDP_datagram*)mBuf) + 1) \
 					     : (struct client_hdr *) mBuf));
+	    if (isDataReport(mSettings))
+		BindSumGroup(server);
 	    // This is the case when --write-ack was used on the client requesting
 	    // application level acknowledgements. Useful for end/end or app/app latency testing
 	    if (isWriteAck(server)) {
@@ -282,20 +286,23 @@ void Listener::Run (void) {
 		server->ackring = packetring_init(ACKRING_DEFAULTSIZE, &server->awake_me, &writeackthread->awake_me);
 		writeackthread->ackring = server->ackring;
 		writeackthread->mThreadMode = kMode_WriteAckServer;
-#if HAVE_THREAD_DEBUG
+#if HAVE_THREAD_DEBUGg
 		thread_debug("Write acknowledgements enabled for read bytecount=%d (%p)", server->mWriteAckLen, (void *) writeackthread);
 #endif
 		thread_start(writeackthread);
-	    }	    // --bidir is following iperf3 naming, it's basically a full duplex test using the same socket
+	    }
+            // --bidir is following iperf3 naming, it's basically a full duplex test using the same socket
 	    // this is slightly different than the legacy iperf2's -d and -r.
 	    if (listener_client_settings && isBidir(listener_client_settings)) {
 		setBidir(server);
-		listener_client_settings->bidirhdr = InitBiDirReport(server, groupID);
-		server->bidirhdr = listener_client_settings->bidirhdr;
-		listener_client_settings->mThreadMode=kMode_Client;
+		if (isDataReport(server)) {
+		    listener_client_settings->bidirhdr = InitBiDirReport(server, groupID);
+		    server->bidirhdr = listener_client_settings->bidirhdr;
 #if HAVE_THREAD_DEBUG
-		thread_debug("BiDir report client=%p/%p server=%p/%p", (void *) listener_client_settings, (void *) listener_client_settings->bidirhdr, (void *) server, (void *) server->bidirhdr);
+		    thread_debug("BiDir report client=%p/%p server=%p/%p", (void *) listener_client_settings, (void *) listener_client_settings->bidirhdr, (void *) server, (void *) server->bidirhdr);
 #endif
+		}
+		listener_client_settings->mThreadMode=kMode_Client;
 	    } else if (isServerReverse(server)) {
 		// --reverse is used to get through firewalls.  The client initiates the connect
 		// but the server and client change roles with respect to traffic, i.e. the server sends
@@ -784,10 +791,8 @@ int Listener::udp_accept (thread_Settings *server) {
 		  (struct sockaddr*) &server->peer, &server->size_peer);
     FAIL_errno(rc == SOCKET_ERROR, "recvfrom", mSettings);
     if (!(rc < 0) && !sInterupted) {
-	Mutex_Lock(&clients_mutex);
 	// Handle connection for UDP sockets.
-	found = Iperf_present(&server->peer, clients);
-	if (!found) {
+	if (Iperf_push_host_conditional(&server->peer, server)) {
 	    // We have a new UDP flow so let's hand off this socket
 	    // to the server and create a new listener socket
 	    server->mSock = ListenSocket;
@@ -800,9 +805,7 @@ int Listener::udp_accept (thread_Settings *server) {
 	    // All UDP accepts here will use AF_INET.  This is intentional and needed
 	    rc = connect(server->mSock, (struct sockaddr*) &server->peer, server->size_peer);
 	    FAIL_errno(rc == SOCKET_ERROR, "connect UDP", mSettings);
-	    Iperf_pushback(found, &clients);
 	}
-	Mutex_Unlock(&clients_mutex);
 	if (ListenSocket == INVALID_SOCKET)
 	    my_listen(); // This will set ListenSocket to a new sock fd
     }
@@ -833,6 +836,7 @@ int Listener::my_accept (thread_Settings *server) {
 	Timestamp now;
 	server->accept_time.tv_sec = now.getSecs();
 	server->accept_time.tv_usec = now.getUsecs();
+	Iperf_push_host(server->peer, server);
     }
     return server->mSock;
 } // end my_accept

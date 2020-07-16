@@ -64,25 +64,25 @@
  */
 struct Iperf_ListEntry {
     iperf_sockaddr data;
-    MultiHeader *holder;
-    thread_Settings *server;
-    Iperf_ListEntry *next;
+    struct MultiHeader *sum_report;
+    int thread_count;
+    struct Iperf_ListEntry *next;
 };
 
-extern Mutex clients_mutex;
-extern Iperf_ListEntry *clients;
+struct Iperf_Table {
+    Mutex my_mutex;
+    struct Iperf_ListEntry *root;
+    int count;
+    int total_count;
+};
 
 /*
- * Functions to modify or search the List
+ * Functions to modify or search the list
  */
-void Iperf_pushback ( Iperf_ListEntry *add, Iperf_ListEntry **root );
-
-void Iperf_delete ( iperf_sockaddr *del, Iperf_ListEntry **root );
-
-void Iperf_destroy ( Iperf_ListEntry **root );
-
-Iperf_ListEntry* Iperf_present ( iperf_sockaddr *find, Iperf_ListEntry *root );
-
-Iperf_ListEntry* Iperf_hostpresent ( iperf_sockaddr *find, Iperf_ListEntry *root );
+void Iperf_initialize_active_table (void);
+void Iperf_destroy_active_table (void);
+void Iperf_push_host (iperf_sockaddr *host, struct thread_Settings *agent);
+bool Iperf_push_host_conditional (iperf_sockaddr *host, struct thread_Settings *agent);
+void Iperf_remove_host (iperf_sockaddr *host);
 
 #endif

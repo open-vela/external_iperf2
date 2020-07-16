@@ -383,6 +383,7 @@ struct ReportHeader *ReportSettings(struct thread_Settings *agent);
 void ReportConnections(struct thread_Settings *agent );
 void reporter_peerversion (struct thread_Settings *inSettings, int upper, int lower);
 void reporter_dump_job_queue(void);
+void IncrMultiHdrRefCounter(struct MultiHeader *multihdr);
 
 extern struct AwaitMutex reporter_state;
 extern struct AwaitMutex threads_start;
