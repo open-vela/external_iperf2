@@ -215,7 +215,7 @@ Client::~Client() {
 	mySocket = INVALID_SOCKET;
     }
     if (isServerReverse(mSettings))
-	Iperf_delete( &(mSettings->peer), &clients );
+	Iperf_remove_host(&mSettings->peer);
 
     DELETE_ARRAY(mBuf);
 } // end ~Client

@@ -45,7 +45,9 @@
  * ________________________________________________________________
  *
  * List.cpp
- * by Kevin Gibbs <kgibbs@ncsa.uiuc.edu>
+ * rewrite by Robert McMahon
+ * This is a list to hold active traffic and create sum groups
+ * sum groups are traffic sessions from the same client host
  * -------------------------------------------------------------------
  */
 
@@ -55,63 +57,109 @@
 #include "Reporter.h"
 
 /*
- * Global List and Mutex variables
+ * Global table with active hosts, their sum reports and active thread counts
  */
-Iperf_ListEntry *clients = NULL;
-Mutex clients_mutex; // This is a list of active clients, mutex is to protect updates
-extern Mutex groupCond;
+static struct Iperf_Table active_table;
+static Iperf_ListEntry* Iperf_present (iperf_sockaddr *find);
+static Iperf_ListEntry* Iperf_hostpresent (iperf_sockaddr *find);
+
+void Iperf_initialize_active_table (void) {
+    Mutex_Initialize(&active_table.my_mutex);
+    active_table.root = NULL;
+}
 
 /*
- * Add Entry add to the List
+ * Add Entry add to the list and optionally update thread count,
+ * return true if host is already in the table
  */
-void Iperf_pushback ( Iperf_ListEntry *add, Iperf_ListEntry **root ) {
-    add->next = *root;
-    *root = add;
+static inline void update_active_table (iperf_sockaddr *host, struct thread_Settings *agent) {
+    Iperf_ListEntry *found = Iperf_present(host);
+    if (!found) {
+	Iperf_ListEntry *add_entry = new Iperf_ListEntry();
+	add_entry->data = *host;
+	add_entry->next = active_table.root;
+	add_entry->thread_count = 1;
+	active_table.count++;
+	active_table.total_count++;
+	if (isDataReport(agent)) {
+	    add_entry->sum_report = InitSumReport(agent, active_table.total_count);
+	    agent->multihdr = add_entry->sum_report;
+	}
+	active_table.root = add_entry;
+    } else {
+	found->thread_count++;
+	if (isDataReport(agent)) {
+	    agent->multihdr = found->sum_report;
+	    IncrMultiHdrRefCounter(agent->multihdr);
+	} else {
+	    agent->multihdr = NULL;
+	}
+    }
+}
+
+void Iperf_push_host (iperf_sockaddr *host, struct thread_Settings *agent) {
+    Mutex_Lock(&active_table.my_mutex);
+    update_active_table(host, agent);
+    Mutex_Unlock(&active_table.my_mutex);
+}
+
+bool Iperf_push_host_conditional (iperf_sockaddr *host, struct thread_Settings *agent) {
+    Mutex_Lock(&active_table.my_mutex);
+    Iperf_ListEntry *found = Iperf_hostpresent(host);
+    if (!found) {
+	update_active_table(host, agent);
+    }
+    Mutex_Unlock(&active_table.my_mutex);
+    return (found != NULL);
 }
 
 /*
  * Delete Entry del from the List
  */
-void Iperf_delete (iperf_sockaddr *del, Iperf_ListEntry **root) {
+void Iperf_remove_host (iperf_sockaddr *del) {
     // remove_list_entry(entry) {
     //     indirect = &head;
     //     while ((*indirect) != entry) {
     //	       indirect = &(*indirect)->next;
     //     }
     //     *indirect = entry->next
-    Mutex_Lock(&clients_mutex);
-    Iperf_ListEntry **tmp = root;
+    Mutex_Lock(&active_table.my_mutex);
+    Iperf_ListEntry **tmp = &active_table.root;
     while ((*tmp) && !(SockAddr_are_Equal((sockaddr*)&(*tmp)->data, (sockaddr*) del))) {
 	tmp = &(*tmp)->next;
     }
-    if (*tmp) {
+    if ((*tmp) && ((--(*tmp)->thread_count) <= 0)) {
+	active_table.count--;
 	Iperf_ListEntry *remove = (*tmp);
 	*tmp = remove->next;
-        delete remove;
+	delete remove;
     }
-    Mutex_Unlock(&clients_mutex);
+    Mutex_Unlock(&active_table.my_mutex);
 }
 
 /*
  * Destroy the List (cleanup function)
  */
-void Iperf_destroy ( Iperf_ListEntry **root ) {
-    Iperf_ListEntry *itr1 = *root, *itr2;
-    while ( itr1 != NULL ) {
+void Iperf_destroy (void) {
+    Iperf_ListEntry *itr1 = active_table.root, *itr2;
+    while (itr1 != NULL) {
         itr2 = itr1->next;
         delete itr1;
         itr1 = itr2;
     }
-    *root = NULL;
+    Mutex_Destroy(&active_table.my_mutex);
+    active_table.root = NULL;
+    active_table.count = 0;
+    active_table.total_count = 0;
 }
 
 /*
  * Check if the exact Entry find is present
  */
-Iperf_ListEntry* Iperf_present ( iperf_sockaddr *find, Iperf_ListEntry *root ) {
-    Iperf_ListEntry *itr = root;
-    while ( itr != NULL ) {
-        if ( SockAddr_are_Equal( (sockaddr*)itr, (sockaddr*)find ) ) {
+Iperf_ListEntry* Iperf_present (iperf_sockaddr *find) {
+    Iperf_ListEntry *itr = active_table.root;
+    while (itr != NULL) {
+        if (SockAddr_are_Equal((sockaddr*)itr, (sockaddr*)find)) {
             return itr;
         }
         itr = itr->next;
@@ -124,13 +172,14 @@ Iperf_ListEntry* Iperf_present ( iperf_sockaddr *find, Iperf_ListEntry *root ) {
  * Entry exists that has the same host as the
  * Entry find
  */
-Iperf_ListEntry* Iperf_hostpresent ( iperf_sockaddr *find, Iperf_ListEntry *root ) {
-    Iperf_ListEntry *itr = root;
-    while ( itr != NULL ) {
-        if ( SockAddr_Hostare_Equal( (sockaddr*)itr, (sockaddr*)find ) ) {
+Iperf_ListEntry* Iperf_hostpresent (iperf_sockaddr *find) {
+    Iperf_ListEntry *itr = active_table.root;
+    while (itr != NULL) {
+        if (SockAddr_Hostare_Equal( (sockaddr*)itr, (sockaddr*)find)) {
             return itr;
         }
         itr = itr->next;
     }
+    Mutex_Destroy(&active_table.my_mutex);
     return NULL;
 }

@@ -153,6 +153,7 @@ struct thread_Settings {
     struct ReportHeader*  reporthdr;
     struct MultiHeader*   multihdr;
     struct MultiHeader*   bidirhdr;
+    struct MultiHeader*   sumhdr;
     struct thread_Settings *runNow;
     struct thread_Settings *runNext;
     // int's
