@@ -60,7 +60,7 @@ extern "C" {
 #define HEADER_EXTEND   0x40000000
 #define HEADER_UDPTESTS 0x20000000
 #define HEADER_TRIPTIME 0x10000000
-#define HEADER_SEQNO64B  0x08000000
+#define HEADER_SEQNO64B 0x08000000
 
 // Below flags are used to pass test settings in *every* UDP packet
 // and not just during the header exchange
@@ -330,11 +330,11 @@ struct UDP_isoch_payload {
 struct client_hdr_udp_tests {
 // for 32 bit systems, skip over this field
 // so it remains interoperable with 64 bit peers
-    int16_t testflags;
-    int16_t tlvoffset;
+    uint16_t testflags;
+    uint16_t tlvoffset;
     uint32_t version_u;
     uint32_t version_l;
-    int32_t mTOS;
+    uint32_t mTOS;
     struct client_hdrext_isoch isoch_ext;
 };
 
@@ -346,19 +346,22 @@ struct client_hdr_udp_isoch_tests {
 
 struct client_hdr_ack {
     struct hdr_typelen typelen;
-    int32_t flags;
-    int32_t version_u;
-    int32_t version_l;
-    int32_t reserved1;
-    int32_t reserved2;
+    uint32_t flags;
+    uint32_t version_u;
+    uint32_t version_l;
+    uint32_t reserved1;
+    uint32_t reserved2;
 };
 
-struct client_hdr {
+struct client_udphdr {
+    struct UDP_datagram udpbase;
     struct client_hdr_v1 base;
-    union {
-	struct client_hdrext extend;
-	struct client_hdr_udp_tests udp;
-    };
+    struct client_hdr_udp_tests udp;
+};
+
+struct client_tcphdr {
+    struct client_hdr_v1 base;
+    struct client_hdrext extend;
 };
 
 /*
@@ -422,10 +425,11 @@ struct server_hdr {
 
 #pragma pack(pop)
 
-#define SIZEOF_UDPCLIENTMSG (sizeof(struct client_hdr) + sizeof(UDP_datagram))
-#define SIZEOF_TCPHDRMSG (int) ((sizeof(struct client_hdr) > sizeof(server_hdr)) ? (int) sizeof(struct client_hdr) : (int) sizeof(server_hdr))
-#define SIZEOF_UDPHDRMSG (int) ((SIZEOF_UDPCLIENTMSG > sizeof(server_hdr)) ? SIZEOF_UDPCLIENTMSG : sizeof(server_hdr))
-#define SIZEOF_MAXHDRMSG (int) ((SIZEOF_TCPHDRMSG > SIZEOF_UDPHDRMSG) ? SIZEOF_TCPHDRMSG : SIZEOF_UDPHDRMSG)
+#define SIZEOF_UDPHDRMSG_V1 (sizeof(struct client_hdrv1) + sizeof(struct UDP_datagram))
+#define SIZEOF_UDPHDRMSG_EXT (sizeof(struct client_udphdr))
+#define SIZEOF_TCPHDRMSG_V1 (sizeof(struct client_hdr_v1))
+#define SIZEOF_TCPHDRMSG_EXT (sizeof(struct client_hdr_ext))
+#define MINPAYLOAD_ALLOC 64
 
 #ifdef __cplusplus
 } /* end extern "C" */
