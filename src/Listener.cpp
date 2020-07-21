@@ -232,7 +232,7 @@ void Listener::Run (void) {
 	    close(server->mSock);
 	    // Don't forget to delete the UDP entry (inserted in my_accept)
 	    if (isUDP(server))
-		Iperf_delete(&server->peer, &clients);
+		Iperf_remove_host(&server->peer);
 	    assert(server != mSettings);
 	    Settings_Destroy(server);
 	    continue;
@@ -257,7 +257,7 @@ void Listener::Run (void) {
 		if (!L2_setup(server, server->mSock)) {
 		    // Requested L2 testing but L2 setup failed
 		    close(server->mSock);
-		    Iperf_delete(&server->peer, &clients);
+		    Iperf_remove_host(&server->peer);
 		    assert(server != mSettings);
 		    Settings_Destroy(server);
 		    continue;
@@ -276,8 +276,6 @@ void Listener::Run (void) {
 	    Settings_GenerateClientSettings(server, &listener_client_settings, \
 					    (UDP ? (struct client_hdr *) (((struct UDP_datagram*)mBuf) + 1) \
 					     : (struct client_hdr *) mBuf));
-	    if (isDataReport(mSettings))
-		BindSumGroup(server);
 	    // This is the case when --write-ack was used on the client requesting
 	    // application level acknowledgements. Useful for end/end or app/app latency testing
 	    if (isWriteAck(server)) {
@@ -303,6 +301,7 @@ void Listener::Run (void) {
 #endif
 		}
 		listener_client_settings->mThreadMode=kMode_Client;
+		thread_start(listener_client_settings);
 	    } else if (isServerReverse(server)) {
 		// --reverse is used to get through firewalls.  The client initiates the connect
 		// but the server and client change roles with respect to traffic, i.e. the server sends
@@ -324,16 +323,11 @@ void Listener::Run (void) {
 		}
 	    }
 	}
-	// Now see if we need to do server side summing
-	server->multihdr = InitSumReport();
 	// Now start the server side traffic threads
-	if (isUDP(settings) && isSingleUDP(mSettings)) {
+	if (isUDP(mSettings) && isSingleUDP(mSettings)) {
 	    UDPSingleServer(server);
 	} else {
 	    thread_start_all(server);
-	    if (listener_client_settings && isBidir(listener_client_settings)) {
-		thread_start(listener_client_settings);
-	    }
 	}
     }
 #ifdef HAVE_THREAD_DEBUG
@@ -779,7 +773,6 @@ bool Listener::L2_setup (thread_Settings *server, int sockfd) {
 int Listener::udp_accept (thread_Settings *server) {
     assert(server);
     int rc;
-    Iperf_ListEntry *found;
     assert(ListenSocket > 0);
     // Start with a thread_rest - this allows the server thread
     // a shot at processing the
@@ -804,6 +797,9 @@ int Listener::udp_accept (thread_Settings *server) {
 	    // e.g. AF_PACKET sockets can't do this.  We'll handle packet sockets later
 	    // All UDP accepts here will use AF_INET.  This is intentional and needed
 	    rc = connect(server->mSock, (struct sockaddr*) &server->peer, server->size_peer);
+	    if (isConnectionReport(server)) {
+		InitConnectionReport(server);
+	    }
 	    FAIL_errno(rc == SOCKET_ERROR, "connect UDP", mSettings);
 	}
 	if (ListenSocket == INVALID_SOCKET)
@@ -836,7 +832,10 @@ int Listener::my_accept (thread_Settings *server) {
 	Timestamp now;
 	server->accept_time.tv_sec = now.getSecs();
 	server->accept_time.tv_usec = now.getUsecs();
-	Iperf_push_host(server->peer, server);
+	Iperf_push_host(&server->peer, server);
+	if (isConnectionReport(server)) {
+	    InitConnectionReport(server);
+	}
     }
     return server->mSock;
 } // end my_accept
@@ -847,10 +846,10 @@ int Listener::my_accept (thread_Settings *server) {
 // be part of traffic accounting
 void Listener::apply_client_settings (thread_Settings *server) {
     assert(server);
-    int n;
+    int n, peeklen;
     // Set the receive timeout for the very first read based upon the -t
     // and not -i.
-    if (mMode_Time) {
+    if (isModeTime(server)) {
 #ifdef WIN32
 	// Windows SO_RCVTIMEO uses ms
 	DWORD timeout = (double) sorcvtimer / 1e3;
@@ -867,7 +866,7 @@ void Listener::apply_client_settings (thread_Settings *server) {
 	peeklen = sizeof(struct client_udphdr);
 	n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK);
 	FAIL_errno((n < peeklen), "read flags", server);
-	struct client_hdr *hdr = (struct client_hdr *)(((struct UDP_datagram *)mBuf) + 1);
+	struct client_udphdr *hdr = (struct client_udphdr *) mBuf;
 	uint32_t flags = ntohl(hdr->base.flags);
 	if ((flags & HEADER_UDPTESTS) != 0) {
 	    uint16_t testflags = ntohs(hdr->udp.testflags);
@@ -895,7 +894,8 @@ void Listener::apply_client_settings (thread_Settings *server) {
     } else {
 	n = recvn(server->mSock, mBuf, sizeof(uint32_t), MSG_PEEK);
 	FAIL_errno((n != sizeof(uint32_t)), "read tcp flags", server);
-	uint32_t flags = ntohl(mBuf);
+	struct client_tcphdr *hdr = (struct client_tcphdr *) mBuf;
+	uint32_t flags = ntohl(hdr->base.flags);
 	peeklen = 0;
 	if (flags & HEADER_EXTEND) {
 	    peeklen = sizeof(struct client_tcphdr);

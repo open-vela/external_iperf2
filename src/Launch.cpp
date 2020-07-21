@@ -122,7 +122,7 @@ void server_spawn(thread_Settings *thread) {
  *
  * Note: This runs in client thread context
  */
-void client_spawn( thread_Settings *thread ) {
+void client_spawn(thread_Settings *thread) {
     Client *theClient = NULL;
     thread_Settings *reverse_client = NULL;
 

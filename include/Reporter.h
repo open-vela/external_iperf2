@@ -319,22 +319,6 @@ struct ReporterData {
     unsigned int FQPacingRate;
 };
 
-struct AwaitMutex {
-    struct Condition await;
-    int ready;
-};
-
-struct BarrierMutex {
-    struct Condition await;
-    struct timeval release_time;
-    int count;
-};
-
-struct ReferenceMutex {
-    Mutex lock;
-    int count;
-    int maxcount;
-};
 
 struct MultiHeader {
     int groupID;
@@ -383,7 +367,8 @@ struct ReportHeader *ReportSettings(struct thread_Settings *agent);
 void ReportConnections(struct thread_Settings *agent );
 void reporter_peerversion (struct thread_Settings *inSettings, int upper, int lower);
 void reporter_dump_job_queue(void);
-void IncrMultiHdrRefCounter(struct MultiHeader *multihdr);
+int IncrMultiHdrRefCounter(struct MultiHeader *multihdr);
+int DecrMultiHdrRefCounter(struct MultiHeader *multihdr);
 
 extern struct AwaitMutex reporter_state;
 extern struct AwaitMutex threads_start;
