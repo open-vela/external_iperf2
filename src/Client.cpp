@@ -147,6 +147,7 @@ Client::Client(thread_Settings *inSettings) {
 	    if (mSettings->reporthdr && isConnectionReport(mSettings))
 		// post the connection report
 		PostReport(mSettings->reporthdr);
+	    BarrierClient(mSettings->connects_done);
 	    // printf("posted reports\n");
 	} else {
 	    InitReport(mSettings);
@@ -246,6 +247,10 @@ double Client::Connect() {
     // otherwise let TCP use its defaul timeouts fo the connect()
     if (isModeTime(mSettings) && !isUDP(mSettings)) {
 	SetSocketOptionsSendTimeout(mSettings, (mSettings->mAmount * 10000));
+    }
+
+    if (isConnectionReport(mSettings)) {
+	InitConnectionReport(mSettings);
     }
 
     // connect socket
@@ -1297,4 +1302,40 @@ void Client::HdrXchange(int flags) {
 	    currLen = send( mSettings->mSock, mBuf, sizeof(client_hdr_v1), 0 );
 	    WARN_errno( currLen < 0, "send_hdr_v1" );
 	}
-    }}
+    }
+}
+
+/*
+ * BarrierClient allows for multiple stream clients to be syncronized
+ */
+void Client::BarrierClient (struct BarrierMutex *barrier) {
+#ifdef HAVE_THREAD
+    assert(barrier);
+    Condition_Lock(barrier->await);
+    if (--barrier->count <= 0) {
+	// store the barrier release timer
+#ifdef HAVE_CLOCK_GETTIME
+	struct timespec t1;
+	clock_gettime(CLOCK_REALTIME, &t1);
+	barrier->release_time.tv_sec  = t1.tv_sec;
+	barrier->release_time.tv_usec = t1.tv_nsec / 1000;
+#else
+	gettimeofday(&barrier->release_time, NULL );
+#endif
+	// last one wake's up everyone else
+	Condition_Broadcast(&barrier->await);
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug("Barrier BROADCAST on condition %p", (void *)&barrier->await);
+#endif
+    } else {
+#ifdef HAVE_THREAD_DEBUG
+        thread_debug("Barrier WAIT on condition %p count=%d", (void *)&barrier->await, barrier->count);
+#endif
+        Condition_Wait(&barrier->await);
+    }
+    Condition_Unlock(barrier->await);
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Barrier EXIT on condition %p", (void *)&barrier->await);
+#endif
+#endif // HAVE_THREAD
+}

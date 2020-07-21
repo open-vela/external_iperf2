@@ -705,14 +705,14 @@ static int reporter_condprint_time_interval_report (struct ReportHeader *reporth
 	    reporthdr->bidirreport->threads++;
 	}
     }
-    if (reporthdr->bidirreport && (reporthdr->bidirreport->refcount > 1) && \
-	(reporthdr->bidirreport->threads == reporthdr->bidirreport->refcount)) {
+    if (reporthdr->bidirreport && (reporthdr->bidirreport->reference.count > 1) && \
+	(reporthdr->bidirreport->threads == reporthdr->bidirreport->reference.count)) {
 	reporthdr->bidirreport->threads = 0;
 	reporter_set_timestamps_time(bidirstats, INTERVAL);
 	(*reporthdr->bidirreport->transfer_protocol_sum_handler)(&reporthdr->bidirreport->report, 0);
     }
     if (reporthdr->multireport && (reporthdr->multireport->reference.count > (reporthdr->bidirreport ? 2 : 1)) && \
-	(reporthdr->multireport->threads == reporthdr->multireport->refcount))  {
+	(reporthdr->multireport->threads == reporthdr->multireport->reference.count))  {
 	reporthdr->multireport->threads = 0;
 	reporter_set_timestamps_time(sumstats, INTERVAL);
 	(*reporthdr->multireport->transfer_protocol_sum_handler)(&reporthdr->multireport->report, 0);
@@ -740,8 +740,8 @@ static int reporter_condprint_packet_interval_report (struct ReportHeader *repor
 	    reporthdr->bidirreport->threads++;
 	}
     }
-    if (reporthdr->bidirreport && (reporthdr->bidirreport->refcount > 1) && \
-	(reporthdr->bidirreport->threads == reporthdr->bidirreport->refcount)) {
+    if (reporthdr->bidirreport && (reporthdr->bidirreport->reference.count > 1) && \
+	(reporthdr->bidirreport->threads == reporthdr->bidirreport->reference.count)) {
 	reporthdr->bidirreport->threads = 0;
 	// transfer_protocol_multireports(&reporthdr->multireport->report, packet);
 	(*reporthdr->bidirreport->transfer_protocol_sum_handler)(&reporthdr->bidirreport->report, 0);
@@ -943,7 +943,7 @@ static int reporter_process_report (struct ReportHeader *reporthdr, struct threa
 			    if (TimeDifference(reporthdr->bidirreport->report.packetTime, packet->packetTime) > 0) {
 				reporthdr->bidirreport->report.packetTime = packet->packetTime;
 			    }
-			    if (UpdateMultiHdrRefCounter(reporthdr->bidirreport, -1, reporthdr->bidirreport->sockfd)) {
+			    if (DecrMultiHdrRefCounter(reporthdr->bidirreport)) {
 				if (reporthdr->bidirreport->transfer_protocol_sum_handler) {
 				    (*reporthdr->bidirreport->transfer_protocol_sum_handler)(&reporthdr->bidirreport->report, 1);
 				}
@@ -954,11 +954,12 @@ static int reporter_process_report (struct ReportHeader *reporthdr, struct threa
 			    if (TimeDifference(reporthdr->multireport->report.packetTime, packet->packetTime) > 0) {
 				reporthdr->multireport->report.packetTime = packet->packetTime;
 			    }
-			    UnbindSumReport(reporthdr->multireport);
-			    if ((reporthdr->multireport->transfer_protocol_sum_handler) && \
-				(reporthdr->multireport->reference.count == 0) && (reporthdr->multireport->reference.maxcount > 1)) {
-				(*reporthdr->multireport->transfer_protocol_sum_handler)(&reporthdr->multireport->report, 1);
-				FreeMultiReport(multihdr);
+			    if (DecrMultiHdrRefCounter(reporthdr->multireport)) {
+				if ((reporthdr->multireport->transfer_protocol_sum_handler) && \
+				    (reporthdr->multireport->reference.maxcount > 1)) {
+				    (*reporthdr->multireport->transfer_protocol_sum_handler)(&reporthdr->multireport->report, 1);
+				}
+				FreeMultiReport(reporthdr->multireport);
 			    }
 			}
 		    }

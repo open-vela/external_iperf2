@@ -51,118 +51,10 @@
  * in a thread safe way
  * ------------------------------------------------------------------- */
 
-// Create traffic and connect reports and bind them to the settings object
-void InitTrafficReports (struct thread_Settings *mSettings) {
-    // Note, this must be called in order as
-    // the data report structures need to be
-    // initialized first
-    if (isDataReport(mSettings)) {
-	Mutex_Lock(&clients_mutex);
-	if ((mSettings->kMode_Client && (mSettings->mThreads > 1)) ||	\
-	    (exist = Iperf_hostactive(&mSettings->peer, clients))) {
-		InitSumGroupReport(mSettings);
-		Iperf_pushback(&mSettings->peer);
-	}
-	if (isBiDir(mSettings)) {
-	    InitBiDirReport(mSettings);
-	}
-	Mutex_Unlock(&clients_mutex);
-    }
-    if (isConnectionReport(mSettings)) {
-	InitConnectionReport(mSettings);
-    }
-}
+#include "headers.h"
+#include "Settings.hpp"
+#include "Reporter.h"
 
-
-static inline struct MultiHeader *sumgroup_by_peerhost(iperf_sockaddr *peer) {
-        Iperf_ListEntry *exist, *listtemp;
-
-	exist = Iperf_hostpresent(&server->peer, clients);
-
-    if ( exist != NULL ) {
-	// Copy the multiheader
-	listtemp->holder = exist->holder;
-	server->multihdr = exist->holder;
-	if (tempSettings && isBidir(tempSettings))
-	    tempSettings->multihdr = listtemp->holder;
-    } else {
-	Mutex_Lock(&groupCond);
-	groupID--;
-	Mutex_Unlock( &groupCond );
-	if (!server->multihdr) {
-	    listtemp->holder = InitSumReport(server, groupID);
-	    server->multihdr = listtemp->holder;
-	    if (tempSettings && isBidir(tempSettings))
-		tempSettings->multihdr = listtemp->holder;
-	}
-    }
-
-    // Perform L2 setup if needed
-    if (isUDP(mSettings) && (isL2LengthCheck(mSettings) || isL2LengthCheck(server))) {
-	if (L2_setup() < 0) {
-	    // L2 not allowed, abort this server try
-	    mSettings->mSock = -1;
-	}
-    }
-    // Store entry in connection list
-    if (mSettings->mSock > 0) {
-	Iperf_pushback(listtemp, &clients);
-    } else {
-	// Undo things done above
-	// RJM clean this up later
-	if (mSettings->mSock < 0) {
-	    if (server && server->multihdr)
-		free(server->multihdr);
-	    if (server)
-		delete server;
-	    delete listtemp;
-	}
-    }
-    Mutex_Unlock( &clients_mutex );
-}
-
-static void BindSumReport (struct thread_Settings *agent, int inID) {
-    Mutex_Lock(&clients_mutex);
-    Iperf_ListEntry *exist, *insert;
-    if ((exist = Iperf_hostpresent(&agent->peer, clients))) {
-	agent->multihdr = exist->holder;
-    } else {
-	agent->multihdr = InitSumReport(agent, inID);
-	insert = new Iperf_ListEntry;
-	memcpy(&insert->data, &agent->peer, sizeof(iperf_sockaddr));
-	insert->holder = agent->multihdr;
-	insert->server = agent;
-	insert->next = NULL;
-	Iperf_pushback(insert, &clients);
-    }
-    IncrMultiHdrRefCounter(agent->multihdr);
-    Mutex_Unlock(&clients_mutex);
-}
-
-static void UnbindSumReport (struct ReportHeader *reporthdr) {
-    assert(reporthdr->multireport);
-    Mutex_Lock(&clients_mutex);
-    struct MultiHeader multihdr = reporthdr->multireport;
-    DecrMultiHdrRefCounter(multihdr);
-    if (multihdr->reference.count == 0) {
-	if (multihdr->transfer_protocol_sum_handler &&	\
-	    (multihdr->reference.count == 0) && (multihdr->reference.maxcount > 1)) {
-	    (*multihdr->transfer_protocol_sum_handler)(&multihdr->report, 1);
-	}
-	Iperf_ListEntry **tmp = root;
-	while ((*tmp) && !(SockAddr_are_Equal((sockaddr*)&(*tmp)->data, (sockaddr*) del))) {
-	    tmp = &(*tmp)->next;
-	}
-	if (*tmp) {
-	    Iperf_ListEntry *remove = (*tmp);
-	    *tmp = remove->next;
-	    delete remove;
-	}
-	FreeMultiReport(multihdr);
-    }
-    reporthdr->multihdr = NULL;
-    Mutex_Unlock(&clients_mutex);
-}
 
 struct MultiHeader* InitSumReport(struct thread_Settings *agent, int inID) {
     struct MultiHeader *multihdr = (struct MultiHeader *) calloc(1, sizeof(struct MultiHeader));
@@ -319,28 +211,26 @@ void BarrierClient (struct BarrierMutex *barrier) {
 
 void IncrMultiHdrRefCounter (struct MultiHeader *multihdr) {
     assert(multihdr);
-    if (multihdr) {
-	Mutex_Lock(&multihdr->reference.lock);
+    Mutex_Lock(&multihdr->reference.lock);
 #ifdef HAVE_THREAD_DEBUG
-	thread_debug("Sum multiheader %p ref=%d->%d", (void *)multihdr, multihdr->reference.count, (multihdr->reference.count + 1));
+    thread_debug("Sum multiheader %p ref=%d->%d", (void *)multihdr, multihdr->reference.count, (multihdr->reference.count + 1));
 #endif
-	multihdr->reference.count++;
-	if (multihdr->reference.count > multihdr->reference.maxcount)
-	    multihdr->reference.maxcount = multihdr->reference.count;
-	Mutex_Unlock(&multihdr->reference.lock);
-    }
+    int rc = multihdr->reference.count++;
+    if (multihdr->reference.count > multihdr->reference.maxcount)
+	multihdr->reference.maxcount = multihdr->reference.count;
+    Mutex_Unlock(&multihdr->reference.lock);
+    return rc;
 }
 
 int DecrMultiHdrRefCounter (struct MultiHeader *multihdr) {
     assert(multihdr);
-    if (multihdr) {
-	Mutex_Lock(&multihdr->reference.lock);
+    Mutex_Lock(&multihdr->reference.lock);
 #ifdef HAVE_THREAD_DEBUG
-	thread_debug("Sum multiheader %p ref=%d->%d", (void *)multihdr, multihdr->reference.count, (multihdr->reference.count - 1));
+    thread_debug("Sum multiheader %p ref=%d->%d", (void *)multihdr, multihdr->reference.count, (multihdr->reference.count - 1));
 #endif
-	multihdr->reference.count--;
-	Mutex_Unlock(&multihdr->reference.lock);
-    }
+    int rc = --multihdr->reference.count;
+    Mutex_Unlock(&multihdr->reference.lock);
+    return rc;
 }
 
 
