@@ -75,6 +75,23 @@ struct Condition {
 };
 #endif
 
+struct AwaitMutex {
+    struct Condition await;
+    int ready;
+};
+
+struct BarrierMutex {
+    struct Condition await;
+    struct timeval release_time;
+    int count;
+};
+
+struct ReferenceMutex {
+    Mutex lock;
+    int count;
+    int maxcount;
+};
+
 #define Condition_Lock( Cond ) Mutex_Lock( &Cond.mMutex )
 
 #define Condition_Unlock( Cond ) Mutex_Unlock( &Cond.mMutex )

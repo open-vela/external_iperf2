@@ -57,6 +57,7 @@
 #include "Settings.hpp"
 #include "Timestamp.hpp"
 #include "isochronous.hpp"
+#include "Mutex.h"
 
 // Define fatal and nonfatal write errors
 #ifdef WIN32
@@ -90,6 +91,7 @@ public:
     void SetReportStartTime(void);
     void ConnectPeriodic(void);
     bool isConnected(void);
+    static void BarrierClient(struct BarrierMutex *);
 
 private:
     inline void WritePacketID(intmax_t);
