@@ -74,10 +74,6 @@ const int    kBytes_to_Bits = 8;
 #define VARYLOAD_PERIOD 0.1 // recompute the variable load every n seconds
 #define MAXUDPBUF 1470
 
-#ifndef INITIAL_PACKETID
-# define INITIAL_PACKETID 0
-#endif
-
 Client::Client(thread_Settings *inSettings) {
 #ifdef HAVE_THREAD_DEBUG
   thread_debug("Client thread started in constructor (%x/%x)", inSettings->flags, inSettings->flags_extend);
@@ -150,7 +146,7 @@ Client::Client(thread_Settings *inSettings) {
 	    BarrierClient(mSettings->connects_done);
 	    // printf("posted reports\n");
 	} else {
-	    InitReport(mSettings);
+	    InitIndividualReport(mSettings);
 	    // Squirrel this away so the destructor can free the memory
 	    // even when mSettings has already destroyed
 	    myJob = mSettings->reporthdr;
@@ -158,7 +154,7 @@ Client::Client(thread_Settings *inSettings) {
 	    if (mSettings->reporthdr) {
 		mSettings->reporthdr->report.connection.connecttime = ct;
 		reportstruct = &mSettings->reporthdr->packetring->metapacket;
-		reportstruct->packetID = (isPeerVerDetect(mSettings)) ? 1 : INITIAL_PACKETID;
+		reportstruct->packetID = (isPeerVerDetect(mSettings)) ? 1 : 0;
 		reportstruct->errwrite=WriteNoErr;
 		reportstruct->emptyreport=0;
 		reportstruct->socket = mSettings->mSock;
@@ -521,8 +517,9 @@ void Client::Run( void ) {
     if (isUDP(mSettings)) {
 	// Preset any UDP fields in the mBuf, a non-zero
 	// return indicates some udptests were set
+#if 0
 	Settings_GenerateClientHdr(mSettings, (client_hdr *) (mBuf + sizeof(struct UDP_datagram)));
-
+#endif
 	if (isFileInput(mSettings)) {
 	    // Due to the UDP timestamps etc, included
 	    // reduce the read size by an amount
@@ -1225,8 +1222,9 @@ void Client::InitiateServer(void) {
 	    (isUDP(mSettings) ? (struct client_hdr *) (((struct UDP_datagram*)mBuf) + 1) \
 	     : (struct client_hdr *) mBuf);
 
+#if 0
 	flags = Settings_GenerateClientHdr(mSettings, tmp_hdr);
-
+#endif
 	if (!isUDP(mSettings) && (flags & (HEADER_EXTEND | HEADER_VERSION1))) {
 	    //  This test requires the pre-test header messages
 	    //  The extended headers require an exchange

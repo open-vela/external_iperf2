@@ -93,7 +93,7 @@ Server::Server( thread_Settings *inSettings ) {
     }
 #endif
     // initialize buffer, length checking done by the Listener
-    mBuf = new char[((mSettings->mBufLen > SIZEOF_MAXHDRMSG) ? mSettings->mBufLen : SIZEOF_MAXHDRMSG)];
+    mBuf = new char[((mSettings->mBufLen > MINPAYLOAD_ALLOC) ? mSettings->mBufLen : MINPAYLOAD_ALLOC)];
     FAIL_errno( mBuf == NULL, "No memory for buffer\n", mSettings );
     SockAddr_Ifrname(mSettings);
 }
@@ -115,7 +115,7 @@ Server::~Server() {
       WARN_errno( rc == SOCKET_ERROR, "server close" );
       mySocket = INVALID_SOCKET;
   }
-  Iperf_delete( &(mSettings->peer), &clients );
+  Iperf_remove_host(&mSettings->peer);
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
   if ( myDropSocket != INVALID_SOCKET ) {
     int rc = close( myDropSocket );
@@ -286,23 +286,23 @@ void Server::InitKernelTimeStamping (void) {
 }
 
 int Server::AlignPayloads (void) {
-  int len=0;
-  int n;
-  uint32_t flags;
-  // align the burst header
-  if (isTripTime(mSettings) && !isUDP(mSettings) && \
-      ((n = recvn(mSettings->mSock, mBuf, 4, MSG_PEEK)) == 4)) {
-    flags = ntohl((uint32_t) * mBuf);
-    if ((flags & HEADER_EXTEND) != 0) {
-      len = sizeof(client_hdr);
-    } else if ((flags & HEADER_VERSION1) != 0) {
-      len = sizeof(client_hdr_v1);
+    int len=0;
+    int n;
+    uint32_t flags;
+    // align the burst header
+    if (isTripTime(mSettings) && !isUDP(mSettings) && \
+	((n = recvn(mSettings->mSock, mBuf, 4, MSG_PEEK)) == 4)) {
+	flags = ntohl((uint32_t) * mBuf);
+	if ((flags & HEADER_EXTEND) != 0) {
+	    len = SIZEOF_TCPHDRMSG_EXT;
+	} else if ((flags & HEADER_VERSION1) != 0) {
+	    len = SIZEOF_TCPHDRMSG_V1;
+	}
+	if (len && ((n = recvn(mSettings->mSock, mBuf, len, 0)) != len)) {
+	    len = 0;
+	}
     }
-    if (len && ((n = recvn(mSettings->mSock, mBuf, len, 0)) != len)) {
-      len = 0;
-    }
-  }
-  return len;
+    return len;
 }
 
 void Server::InitTrafficLoop (void) {
@@ -312,7 +312,7 @@ void Server::InitTrafficLoop (void) {
     if (mSettings->mSockDrop > 0)
         myDropSocket = mSettings->mSockDrop;
 #endif
-    InitReport(mSettings);
+    InitIndividualReport(mSettings);
     if (mSettings->reporthdr) {
         // Squirrel this away so the destructor can free the memory
         // even when mSettings has already destroyed

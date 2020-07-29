@@ -467,13 +467,13 @@ int SockAddr_isLinklocal (iperf_sockaddr *inSockAddr) {
  * ------------------------------------------------------------------- */
 
 void SockAddr_zeroAddress(iperf_sockaddr *inSockAddr) {
-    memset( inSockAddr, 0, sizeof(iperf_sockaddr));
+    memset(inSockAddr, 0, sizeof(iperf_sockaddr));
 }
 
 int SockAddr_isZeroAddress(iperf_sockaddr *inSockAddr) {
     iperf_sockaddr zeroSockAddr;
-    memset( zeroSockAddr, 0, sizeof(iperf_sockaddr));
-    return(memcmp((void *)inSockAddr, (void *)&zerosockaddr, sizeof(iperf_sockaddr));
+    memset(&zeroSockAddr, 0, sizeof(iperf_sockaddr));
+    return(memcmp((void *)inSockAddr, (void *)&zeroSockAddr, sizeof(iperf_sockaddr)));
 }
 
 // zeroAddress

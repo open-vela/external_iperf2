@@ -140,7 +140,7 @@ void Iperf_remove_host (iperf_sockaddr *del) {
 /*
  * Destroy the List (cleanup function)
  */
-void Iperf_destroy (void) {
+void Iperf_destroy_active_table (void) {
     Iperf_ListEntry *itr1 = active_table.root, *itr2;
     while (itr1 != NULL) {
         itr2 = itr1->next;

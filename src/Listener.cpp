@@ -137,7 +137,6 @@ Listener::~Listener () {
  *
  * ------------------------------------------------------------------- */
 void Listener::Run (void) {
-    bool UDP = isUDP(mSettings);
     // mCount is set True if -P was passed to the server
     int mCount = ((mSettings->mThreads != 0) ?  mSettings->mThreads : -1);
 
@@ -272,10 +271,12 @@ void Listener::Run (void) {
 	    // offsets per TCP or UDP. Basically, TCP starts at byte 0 but UDP
 	    // has to skip over the UDP seq no, etc.
 	    //
-	    thread_Settings *listener_client_settings;
+	    thread_Settings *listener_client_settings = NULL;
+#if 0
 	    Settings_GenerateClientSettings(server, &listener_client_settings, \
 					    (UDP ? (struct client_hdr *) (((struct UDP_datagram*)mBuf) + 1) \
 					     : (struct client_hdr *) mBuf));
+#endif
 	    // This is the case when --write-ack was used on the client requesting
 	    // application level acknowledgements. Useful for end/end or app/app latency testing
 	    if (isWriteAck(server)) {
@@ -294,7 +295,7 @@ void Listener::Run (void) {
 	    if (listener_client_settings && isBidir(listener_client_settings)) {
 		setBidir(server);
 		if (isDataReport(server)) {
-		    listener_client_settings->bidirhdr = InitBiDirReport(server, groupID);
+		    listener_client_settings->bidirhdr = InitSumReport(server, groupID);
 		    server->bidirhdr = listener_client_settings->bidirhdr;
 #if HAVE_THREAD_DEBUG
 		    thread_debug("BiDir report client=%p/%p server=%p/%p", (void *) listener_client_settings, (void *) listener_client_settings->bidirhdr, (void *) server, (void *) server->bidirhdr);
