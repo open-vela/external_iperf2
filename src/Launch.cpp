@@ -103,7 +103,7 @@ void server_spawn(thread_Settings *thread) {
     } else {
         theServer->RunTCP();
     }
-    DELETE_PTR( theServer);
+    DELETE_PTR(theServer);
 }
 
 /*
@@ -234,7 +234,7 @@ void client_init(thread_Settings *clients) {
     itr = clients;
     setReport(clients);
     if (isBidir(clients))
-        clients->bidirhdr = InitBiDirReport(clients, 0);
+        clients->bidirhdr = InitSumReport(clients, 0);
 
     if ((clients->mThreads > 1) && !isConnectOnly(clients)) {
 	// Create a multiple report header to handle reporting the
@@ -263,7 +263,7 @@ void client_init(thread_Settings *clients) {
 	    if (isBidir(clients)) {
 		// Force a new bidir report for all the clients
 		next->bidirhdr = NULL;
-		next->bidirhdr = InitBiDirReport(next, 0);
+		next->bidirhdr = InitSumReport(next, 0);
 	    }
 	}
         itr->runNow = next;
