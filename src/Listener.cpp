@@ -153,8 +153,12 @@ void Listener::Run (void) {
 #define SINGLECLIENTDELAY_DURATION 16000 // units is microseconds
     while (!sInterupted && (isSingleClient(mSettings) || mCount)) {
 	now.setnow();
-	if(isModeTime(mSettings) && mEndTime.before(now))
+	if(mMode_Time && mEndTime.before(now)) {
+#ifdef HAVE_THREAD_DEBUG
+	    thread_debug("Listener port %d (loop timer expired)", mSettings->mPort);
+#endif
 	    break;
+	}
 	// Serialize in the event -1 or SingleClient is set
 	if (isSingleClient(mSettings)) {
 	    // Start with a delay in the event some traffic
@@ -181,7 +185,10 @@ void Listener::Run (void) {
 		    WARN(1, "Failed setting socket to non-blocking mode");
 		}
 	    } else {
-		break;
+#ifdef HAVE_THREAD_DEBUG
+		thread_debug("Listener select timeout");
+#endif
+		continue;
 	    }
 	} else if (!setsock_blocking(mSettings->mSock, 1)) {
 	    WARN(1, "Failed setting socket to blocking mode");
@@ -332,13 +339,8 @@ void Listener::Run (void) {
 	}
     }
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Listener per port %d exiting", server->mPort);
+    thread_debug("Listener exiting port/sig/threads %d/%d/%d", mSettings->mPort, sInterupted, mCount);
 #endif
-    // This isn't needed but do it anyway
-    assert(server);
-    if (server) {
-	Settings_Destroy(server);
-    }
 } // end Run
 
 /* -------------------------------------------------------------------

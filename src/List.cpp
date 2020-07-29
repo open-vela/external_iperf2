@@ -73,7 +73,7 @@ void Iperf_initialize_active_table (void) {
  * return true if host is already in the table
  */
 static inline void update_active_table (iperf_sockaddr *host, struct thread_Settings *agent) {
-    Iperf_ListEntry *found = Iperf_present(host);
+    Iperf_ListEntry *found = Iperf_hostpresent(host);
     if (!found) {
 	Iperf_ListEntry *add_entry = new Iperf_ListEntry();
 	add_entry->data = *host;
@@ -84,6 +84,7 @@ static inline void update_active_table (iperf_sockaddr *host, struct thread_Sett
 	if (isDataReport(agent)) {
 	    add_entry->sum_report = InitSumReport(agent, active_table.total_count);
 	    agent->multihdr = add_entry->sum_report;
+	    IncrMultiHdrRefCounter(agent->multihdr);
 	}
 	active_table.root = add_entry;
     } else {
