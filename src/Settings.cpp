@@ -1182,10 +1182,10 @@ void Settings_ModalOptions( struct thread_Settings *mExtSettings ) {
 #endif
     }
     // Create a sum total report for servers with -P != 1 and for clients with -P > 1
-    if (isDataReport(mSettings) && \
-	((mSettings->mThreadMode == kMode_Client) && (mSettings->mThreads > 1)) ||
-	((mSettings->mThreadMode == kMode_Server) && (mSettings->mThreads != 1))) {
-		InitSumTotalReport(mExtSettings);
+    if (isDataReport(mExtSettings) &&					\
+	(((mExtSettings->mThreadMode == kMode_Client) && (mExtSettings->mThreads > 1)) ||
+	 (((mExtSettings->mThreadMode == kMode_Server) && (mExtSettings->mThreads != 1))))) {
+	mExtSettings->multihdr = InitSumReport(mExtSettings, 0);
     }
 }
 
@@ -1264,20 +1264,25 @@ void Settings_GenerateListenerSettings( struct thread_Settings *client, struct t
  * per things like dual tests.
  *
  */
-void Settings_GenerateClientSettings( struct thread_Settings *server,
-                                      struct thread_Settings **client,
-                                      struct client_hdr *hdr ) {
-    int extendflags = 0;
-    if (!server || !hdr)
-	return;
-    int flags = ntohl(hdr->base.flags);
+void Settings_GenerateClientSettings(struct thread_Settings *server, struct thread_Settings **client, struct client_tcphdr *hdr) {
+    assert(server);
+    assert(hdr);
+    uint32_t flags = ntohl(hdr->base.flags);
     if ((flags & HEADER_EXTEND) != 0 ) {
-	extendflags = ntohl(hdr->extend.flags);
+	uint32_t extendflags = ntohl(hdr->extend.flags);
 	struct thread_Settings *fullduplex = NULL;
 	if (extendflags & WRITEACK)
 	    setWriteAck(server);
 	if (extendflags & TCP_ISOCH)
 	    setIsochronous(server);
+	if (!isBWSet(server)) {
+	    (*client)->mUDPRate = ntohl(hdr->extend.mRate);
+	    if ((extendflags & UNITS_PPS) == UNITS_PPS) {
+		(*client)->mUDPRateUnits = kRate_PPS;
+	    } else {
+		(*client)->mUDPRateUnits = kRate_BW;
+	    }
+	}
 	if (((extendflags & BIDIR) == BIDIR) ||	 \
 	    ((extendflags & REVERSE) == REVERSE)) {
 	    if ((extendflags & BIDIR) == BIDIR) {
@@ -1315,13 +1320,13 @@ void Settings_GenerateClientSettings( struct thread_Settings *server,
 		}
 		if (isIsochronous(server)) {
 		    setIsochronous(fullduplex);
-		    fullduplex->mFPS = ntohl(hdr->udp.isoch_ext.FPSl);
-		    fullduplex->mFPS += ntohl(hdr->udp.isoch_ext.FPSu) / (double)rMillion;
+		    fullduplex->mFPS = ntohl(hdr->extend.isoch_ext.FPSl);
+		    fullduplex->mFPS += ntohl(hdr->extend.isoch_ext.FPSu) / (double)rMillion;
 		    printf("*** full duplex isoch fps=%f\n", fullduplex->mFPS);
 		}
 	    }
 	}
-    } else if ( (flags & HEADER_VERSION1) != 0 ) {
+    } else if ((flags & HEADER_VERSION1) != 0) {
         *client = new struct thread_Settings;
         memcpy(*client, server, sizeof( struct thread_Settings ));
         setCompat( (*client) );
@@ -1350,16 +1355,6 @@ void Settings_GenerateClientSettings( struct thread_Settings *server,
         (*client)->mMode       = ((flags & RUN_NOW) == 0 ?
 				  kTest_TradeOff : kTest_DualTest);
         (*client)->mThreadMode = kMode_Client;
-	if ((flags & HEADER_EXTEND) != 0 ) {
-	    if (!isBWSet(server)) {
-		(*client)->mUDPRate = ntohl(hdr->extend.mRate);
-		if ((extendflags & UNITS_PPS) == UNITS_PPS) {
-		    (*client)->mUDPRateUnits = kRate_PPS;
-		} else {
-		    (*client)->mUDPRateUnits = kRate_BW;
-		}
-	    }
-	}
         if ( server->mLocalhost != NULL ) {
             (*client)->mLocalhost = new char[strlen( server->mLocalhost ) + 1];
             strcpy( (*client)->mLocalhost, server->mLocalhost );
@@ -1391,7 +1386,8 @@ void Settings_GenerateClientSettings( struct thread_Settings *server,
  *
  * Returns hdr flags set
  */
-int Settings_GenerateClientHdr( struct thread_Settings *client, client_hdr *hdr ) {
+#if 0
+int Settings_GenerateClientHdr(struct thread_Settings *client, client_tcphdr *hdr) {
     uint32_t flags = 0, extendflags = 0;
     if (isPeerVerDetect(client) || (client->mMode != kTest_Normal && isBWSet(client))) {
 	flags |= HEADER_EXTEND;
@@ -1512,3 +1508,4 @@ int Settings_GenerateClientHdr( struct thread_Settings *client, client_hdr *hdr 
     }
     return (flags);
 }
+#endif

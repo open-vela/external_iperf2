@@ -97,6 +97,7 @@ extern "C" {
     int SockAddr_Hostare_Equal( struct sockaddr *first, struct sockaddr *second );
 
     void SockAddr_zeroAddress( iperf_sockaddr *inSockAddr );
+    int SockAddr_isZeroAddress(iperf_sockaddr *inSockAddr);
     void SockAddr_incrAddress( iperf_sockaddr *inSockAddr, int value);
     int SockAddr_Ifrname(struct thread_Settings *inSettings);
 #ifdef HAVE_LINUX_FILTER_H

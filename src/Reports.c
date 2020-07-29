@@ -52,9 +52,10 @@
  * ------------------------------------------------------------------- */
 
 #include "headers.h"
+#include <math.h>
 #include "Settings.hpp"
 #include "Reporter.h"
-
+#include "Locale.h"
 
 struct MultiHeader* InitSumReport(struct thread_Settings *agent, int inID) {
     struct MultiHeader *multihdr = (struct MultiHeader *) calloc(1, sizeof(struct MultiHeader));
@@ -62,7 +63,6 @@ struct MultiHeader* InitSumReport(struct thread_Settings *agent, int inID) {
 #ifdef HAVE_THREAD_DEBUG
         thread_debug("Init multiheader sum report %p id=%d", (void *)multihdr, inID);
 #endif
-        agent->multihdr = multihdr;
 	multihdr->groupID = inID;
 	multihdr->reference.count = 0;
 	multihdr->reference.maxcount = 0;
@@ -112,58 +112,6 @@ struct MultiHeader* InitSumReport(struct thread_Settings *agent, int inID) {
     return multihdr;
 }
 
-struct MultiHeader* InitBiDirReport (struct thread_Settings *agent, int inID) {
-    struct MultiHeader *multihdr = (struct MultiHeader *) calloc(1, sizeof(struct MultiHeader));
-    if ( multihdr != NULL ) {
-#ifdef HAVE_THREAD_DEBUG
-        thread_debug("Init multiheader bidir report %p id=%d", (void *)multihdr, inID);
-#endif
-        agent->bidirhdr = multihdr;
-	multihdr->groupID = inID;
-	multihdr->refcount = 0;
-	Mutex_Initialize(&multihdr->refcountlock);
-	if (isMultipleReport(agent)) {
-	    struct ReporterData *data = &multihdr->report;
-	    data->type = TRANSFER_REPORT;
-	    if ((agent->mInterval) && (agent->mIntervalMode == kInterval_Time)) {
-	      struct timeval *interval = &data->intervalTime;
-	      interval->tv_sec = (long) (agent->mInterval / rMillion);
-	      interval->tv_usec = (long) (agent->mInterval % rMillion);
-	    } else {
-	      setNoMultReport(agent);
-#ifdef HAVE_THREAD_DEBUG
-	      thread_debug("BiDir report supressed on this thread");
-#endif
-	    }
-	    data->mHost = agent->mHost;
-	    data->mLocalhost = agent->mLocalhost;
-	    data->mBufLen = agent->mBufLen;
-	    data->mMSS = agent->mMSS;
-	    data->mTCPWin = agent->mTCPWin;
-	    data->FQPacingRate = agent->mFQPacingRate;
-	    data->flags = agent->flags;
-	    data->mThreadMode = agent->mThreadMode;
-	    data->mode = agent->mReportMode;
-	    data->info.mFormat = agent->mFormat;
-	    data->info.mTTL = agent->mTTL;
-	    if (data->mThreadMode == kMode_Server)
-		data->info.sock_callstats.read.binsize = data->mBufLen / 8;
-	    if ( isEnhanced( agent ) ) {
-		data->info.mEnhanced = 1;
-	    } else {
-		data->info.mEnhanced = 0;
-	    }
-	    if ( isUDP( agent ) ) {
-		multihdr->report.info.mUDP = (char)agent->mThreadMode;
-	    } else {
-		multihdr->report.info.mTCP = (char)agent->mThreadMode;
-	    }
-	}
-    } else {
-	FAIL(1, "Out of Memory!!\n", agent);
-    }
-    return multihdr;
-}
 
 /*
  * BarrierClient allows for multiple stream clients to be syncronized
@@ -209,7 +157,7 @@ void BarrierClient (struct BarrierMutex *barrier) {
  * synchronize on compeleting their connect()
  */
 
-void IncrMultiHdrRefCounter (struct MultiHeader *multihdr) {
+int IncrMultiHdrRefCounter (struct MultiHeader *multihdr) {
     assert(multihdr);
     Mutex_Lock(&multihdr->reference.lock);
 #ifdef HAVE_THREAD_DEBUG
@@ -265,13 +213,12 @@ void FreeMultiReport (struct MultiHeader *multihdr) {
 #ifdef HAVE_THREAD_DEBUG
         thread_debug("Free multi report hdr=%p", (void *)multihdr);
 #endif
-	Condition_Destroy(&multihdr->reference.lock);
-	Mutex_Destroy(&multihdr->reference.lock);
+	Condition_Destroy_Reference(&multihdr->reference);
 	free(multihdr);
     }
 }
 
-void InitDataReports (struct thread_Settings *mSettings) {
+void InitIndividualReport (struct thread_Settings *mSettings) {
     /*
      * Create in one big chunk
      */
@@ -286,7 +233,6 @@ void InitDataReports (struct thread_Settings *mSettings) {
 	if(SockAddr_isZeroAddress(&mSettings->peer)) {
 	    FAIL(1, "Binding sum report invoked and peer not set!!\n", mSettings);
 	}
-	BindSumReport(mSettings);
 	reporthdr->multireport = mSettings->multihdr;
 	reporthdr->bidirreport = mSettings->bidirhdr;
 	if (reporthdr->bidirreport) {
@@ -363,9 +309,9 @@ void InitDataReports (struct thread_Settings *mSettings) {
 		     (void *)reporthdr, sizeof(struct ReportHeader),
 		     (void *)(reporthdr->packetring), (void *)(reporthdr->packetring->awake_producer));
 #endif
-	data->lastError = INITIAL_PACKETID;
-	data->lastDatagrams = INITIAL_PACKETID;
-	data->PacketID = INITIAL_PACKETID;
+	data->lastError = 0;
+	data->lastDatagrams = 0;
+	data->PacketID = 0;
 	data->info.transferID = mSettings->mSock;
 	data->info.groupID = (mSettings->multihdr != NULL ? mSettings->multihdr->groupID : -1);
 	data->type = TRANSFER_REPORT;

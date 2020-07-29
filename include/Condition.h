@@ -129,6 +129,9 @@ struct ReferenceMutex {
     #define Condition_Destroy( Cond )
 #endif
 
+#define Condition_Destroy_Reference(Ref) do { \
+	Mutex_Destroy(&(Ref)->lock);	     \
+    } while ( 0 )
 
 #if defined (HAVE_CLOCK_GETTIME)
   #define SETABSTIME(ts, seconds) do { \

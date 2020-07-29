@@ -351,8 +351,7 @@ typedef void (* report_statistics)( struct TransferInfo* );
 typedef void (* report_serverstatistics)( struct ConnectionInfo *, struct TransferInfo* );
 
 struct MultiHeader* InitSumReport( struct thread_Settings *agent, int inID);
-struct MultiHeader* InitBiDirReport( struct thread_Settings *agent, int inID);
-void InitReport( struct thread_Settings *agent );
+void InitIndividualReport( struct thread_Settings *agent );
 void InitConnectionReport( struct thread_Settings *agent );
 void UpdateConnectionReport(struct thread_Settings *mSettings, struct ReportHeader *reporthdr);
 void BarrierClient(struct BarrierMutex *barrier);
@@ -361,6 +360,7 @@ void ReportPacket(struct ReportHeader *agent, struct ReportStruct *packet);
 void CloseReport(struct ReportHeader *agent,  struct ReportStruct *packet);
 void EndReport(struct ReportHeader *agent);
 void FreeReport(struct ReportHeader *agent);
+void FreeMultiReport (struct MultiHeader *multihdr);
 struct TransferInfo* GetReport(struct ReportHeader *agent);
 void ReportServerUDP(struct thread_Settings *agent, struct server_hdr *server);
 struct ReportHeader *ReportSettings(struct thread_Settings *agent);
@@ -381,6 +381,40 @@ extern report_statistics multiple_reports[];
 
 #define SNBUFFERSIZE 120
 extern char buffer[SNBUFFERSIZE]; // Buffer for printing
+
+
+// Packet accounting routines
+void reporter_handle_packet_null(struct ReportHeader *report, struct ReportStruct *packet);
+void reporter_handle_packet_server_udp(struct ReportHeader *report, struct ReportStruct *packet);
+void reporter_handle_packet_server_tcp(struct ReportHeader *report, struct ReportStruct *packet);
+void reporter_handle_packet_client(struct ReportHeader *report, struct ReportStruct *packet);
+void reporter_handle_packet_pps(struct ReporterData *data, struct TransferInfo *stats, struct ReportStruct *packet);
+
+// Reporter's conditional print, right now only time based sampling, possibly add packet based
+int reporter_condprint_time_interval_report(struct ReportHeader *reporthdr, struct ReportStruct *packet);
+int reporter_condprint_packet_interval_report(struct ReportHeader *reporthdr, struct ReportStruct *packet);
+int reporter_condprint_frame_interval_report_udp(struct ReportHeader *reporthdr, struct ReportStruct *packet);
+int reporter_condprint_frame_interval_report_tcp(struct ReportHeader *reporthdr, struct ReportStruct *packet);
+//void reporter_set_timestamps_time(struct ReporterData *stats, enum TimestampType);
+
+// Reporter's interval ouput specialize routines
+void reporter_transfer_protocol_null(struct ReporterData *stats, struct ReporterData *sumstats, struct ReporterData *bidirstats, int final);
+//void reporter_transfer_protocol_reports(struct ReporterData *stats, struct ReportStruct *packet);
+//void reporter_transfer_protocol_multireports(struct ReporterData *stats, struct ReportStruct *packet);
+void reporter_transfer_protocol_client_tcp(struct ReporterData *stats, struct ReporterData *sumstats, struct ReporterData *bidirstats, int final);
+void reporter_transfer_protocol_client_udp(struct ReporterData *stats, struct ReporterData *sumstats, struct ReporterData *bidirstats, int final);
+void reporter_transfer_protocol_server_tcp(struct ReporterData *stats, struct ReporterData *sumstats, struct ReporterData *bidirstats, int final);
+void reporter_transfer_protocol_server_udp(struct ReporterData *stats, struct ReporterData *sumstats, struct ReporterData *bidirstats, int final);
+
+// Reporter's sum ouput routines (per -P > 1)
+void reporter_transfer_protocol_sum_client_tcp(struct ReporterData *stats, int final);
+void reporter_transfer_protocol_sum_server_tcp(struct ReporterData *stats, int final);
+void reporter_transfer_protocol_sum_client_udp(struct ReporterData *stats, int final);
+void reporter_transfer_protocol_sum_server_udp(struct ReporterData *stats, int final);
+void reporter_transfer_protocol_bidir_tcp(struct ReporterData *stats, int final);
+void reporter_transfer_protocol_bidir_udp(struct ReporterData *stats, int final);
+void reporter_connect_printf_tcp_final(struct ReportHeader *multihdr);
+
 
 #ifdef __cplusplus
 } /* end extern "C" */

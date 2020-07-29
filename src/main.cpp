@@ -108,6 +108,7 @@ extern "C" {
 // Used to ensure that if multiple threads receive the
 // signal we do not prematurely exit
 nthread_t sThread;
+static thread_Settings* ext_gSettings;
 // The main thread uses this function to wait
 // for all other threads to complete
 void waitUntilQuit( void );
@@ -165,11 +166,12 @@ int main( int argc, char **argv ) {
     // Initialize the interrupt handling thread to 0
     sThread = thread_zeroid();
 
-    // perform any cleanup when quitting Iperf
-    atexit( cleanup );
-
     // Allocate the "global" settings
-    thread_Settings* ext_gSettings = new thread_Settings;
+    ext_gSettings = new thread_Settings;
+
+    // perform any cleanup when quitting Iperf
+    atexit(cleanup);
+
     // Default reporting mode here to avoid unitialized warnings
     // this won't be the actual mode
     ThreadMode ReporterThreadMode = kMode_Reporter;
@@ -275,17 +277,6 @@ int main( int argc, char **argv ) {
     // wait for other (client, server) threads to complete
     thread_joinall();
 
-    // done actions
-    // Destroy global mutexes and conditions
-    Iperf_destroy_active_table();
-    Condition_Destroy (&ReportCond);
-    Condition_Destroy(&reporter_state.await);
-    Condition_Destroy(&threads_start.await);
-    Condition_Destroy(&transmits_start.await);
-#ifdef HAVE_THREAD_DEBUG
-    Mutex_Destroy(&packetringdebug_mutex);
-#endif
-
     // all done!
     return 0;
 } // end main
@@ -334,11 +325,21 @@ void cleanup( void ) {
     // Shutdown Winsock
     WSACleanup();
 #endif
-    // clean up the list of clients
-    Iperf_destroy ( &clients );
+    // clean up the list of active clients
+    Iperf_destroy_active_table();
+    // done actions
+    // Destroy global mutexes and conditions
 
+    Condition_Destroy (&ReportCond);
+    Condition_Destroy(&reporter_state.await);
+    Condition_Destroy(&threads_start.await);
+    Condition_Destroy(&transmits_start.await);
+#ifdef HAVE_THREAD_DEBUG
+    Mutex_Destroy(&packetringdebug_mutex);
+#endif
     // shutdown the thread subsystem
     thread_destroy( );
+    DELETE_PTR(ext_gSettings);
 } // end cleanup
 
 #ifdef WIN32

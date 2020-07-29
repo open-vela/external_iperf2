@@ -359,6 +359,44 @@ struct client_udphdr {
     struct client_hdr_udp_tests udp;
 };
 
+/*
+ * TCP payload structure
+ *
+ *                 0      7 8     15 16    23 24    31
+ *                +--------+--------+--------+--------+
+ *      0x00  1   |             flags (v1)            |
+ *                +--------+--------+--------+--------+
+ *            2   |         numThreads (v1)           |
+ *                +--------+--------+--------+--------+
+ *            3   |         mPort (v1)                |
+ *                +--------+--------+--------+--------+
+ *            4   |         bufferLen (v1)            |
+ *                +--------+--------+--------+--------+
+ *            5   |         mWinBand (v1)             |
+ *                +--------+--------+--------+--------+
+ *            6   |         mAmount (v1)              |
+ *                +--------+--------+--------+--------+
+ *            7   |        type                       |
+ *                +--------+--------+--------+--------+
+ *            8   |        len                        |
+ *                +--------+--------+--------+--------+
+ *            9   |        flags                      |
+ *                +--------+--------+--------+--------+
+ *            10  |        iperf version major        |
+ *                +--------+--------+--------+--------+
+ *            11  |        iperf version minor        |
+ *                +--------+--------+--------+--------+
+ *            12  |        reserved                   |
+ *                +--------+--------+--------+--------+
+ *            13  |        rate                       |
+ *                +--------+--------+--------+--------+
+ *            14  |        rate units                 |
+ *                +--------+--------+--------+--------+
+ *            15  |        realtime                   |
+ *                +--------+--------+--------+--------+
+ *            16  |        tos                        |
+ *                +--------+--------+--------+--------+
+ */
 struct client_tcphdr {
     struct client_hdr_v1 base;
     struct client_hdrext extend;
@@ -428,7 +466,7 @@ struct server_hdr {
 #define SIZEOF_UDPHDRMSG_V1 (sizeof(struct client_hdrv1) + sizeof(struct UDP_datagram))
 #define SIZEOF_UDPHDRMSG_EXT (sizeof(struct client_udphdr))
 #define SIZEOF_TCPHDRMSG_V1 (sizeof(struct client_hdr_v1))
-#define SIZEOF_TCPHDRMSG_EXT (sizeof(struct client_hdr_ext))
+#define SIZEOF_TCPHDRMSG_EXT (sizeof(struct client_tcphdr))
 #define MINPAYLOAD_ALLOC 64
 
 #ifdef __cplusplus
