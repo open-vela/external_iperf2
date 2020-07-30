@@ -306,6 +306,9 @@
 /* Define if winsock2.h exists. */
 #undef HAVE_WINSOCK2_H
 
+/* Define to disable asserts */
+#undef NDEBUG
+
 /* Name of package */
 #undef PACKAGE
 

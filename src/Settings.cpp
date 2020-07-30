@@ -1265,8 +1265,8 @@ void Settings_GenerateListenerSettings( struct thread_Settings *client, struct t
  *
  */
 void Settings_GenerateClientSettings(struct thread_Settings *server, struct thread_Settings **client, struct client_tcphdr *hdr) {
-    assert(server);
-    assert(hdr);
+    assert(server != NULL);
+    assert(hdr != NULL);
     uint32_t flags = ntohl(hdr->base.flags);
     if ((flags & HEADER_EXTEND) != 0 ) {
 	uint32_t extendflags = ntohl(hdr->extend.flags);
