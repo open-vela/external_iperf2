@@ -85,6 +85,8 @@ static inline void update_active_table (iperf_sockaddr *host, struct thread_Sett
 	    add_entry->sum_report = InitSumReport(agent, active_table.total_count);
 	    agent->multihdr = add_entry->sum_report;
 	    IncrMultiHdrRefCounter(agent->multihdr);
+	} else {
+	    agent->multihdr = NULL;
 	}
 	active_table.root = add_entry;
     } else {
