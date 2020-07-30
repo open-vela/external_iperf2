@@ -28,7 +28,7 @@ AC_ARG_ENABLE(threads, AC_HELP_STRING([--disable-threads],
 	    [disable thread support (default is autodetect)]))
 
 AC_ARG_ENABLE(debuginfo, AC_HELP_STRING([--enable-debuginfo],
-	    [enable debugging info for sockets (default is no)]),
+	    [enable asserts and debugging info for sockets (default is no)]),
 	enable_debuginfo=$enableval,
 	enable_debuginfo=no)
 
@@ -53,6 +53,7 @@ AC_ARG_ENABLE(checkprograms, AC_HELP_STRING([--enable-checkprograms],
 	    [enable support for building support programs such as checkdelay, checkpdfs, etc. (default is disable)]))
 AM_CONDITIONAL([CHECKPROGRAMS], [test "x$enable_checkprograms" = "xyes"])
 
+
 dnl AF_PACKET support
 AC_ARG_ENABLE(af-packet,
     AS_HELP_STRING([--enable-af-packet], [Enable AF_PACKET support [default=yes]]),,[enable_af_packet=yes])
@@ -65,7 +66,6 @@ AS_IF([test "x$enable_af_packet" = "xyes"], [
       #include <linux/if_packet.h>]])
    AM_CONDITIONAL([AF_PACKET], [test "x${enable_af_packet}" = "xyes"])
 ])
-
 
 
 dnl ===================================================================
@@ -277,6 +277,13 @@ if test "$enable_debuginfo" = yes; then
 AC_DEFINE([DBG_MJZ], 1, [Define if debugging info is desired])
 fi
 
+if test "$enable_thread_debug" = yes; then
+AC_DEFINE([HAVE_THREAD_DEBUG], 1, [Define for thread level debugging of the code])
+else
+AC_DEFINE([NDEBUG], [1], [Define to disable asserts])
+fi
+
+
 if test "$enable_web100" != no; then
 if test -e "/proc/web100"; then
 if test -d "/proc/web100"; then
@@ -307,10 +314,6 @@ fi
 
 if test "$enable_fastsampling" = yes; then
 AC_DEFINE([HAVE_FASTSAMPLING], 1, [Define if fast sampling for report intervals is desired])
-fi
-
-if test "$enable_thread_debug" = yes; then
-AC_DEFINE([HAVE_THREAD_DEBUG], 1, [Define for thread level debugging of the code])
 fi
 
 case "$ac_cv_host" in

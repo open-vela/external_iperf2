@@ -312,47 +312,43 @@ void Server::InitTrafficLoop (void) {
     if (mSettings->mSockDrop > 0)
         myDropSocket = mSettings->mSockDrop;
 #endif
-    InitIndividualReport(mSettings);
-    if (mSettings->reporthdr) {
-        // Squirrel this away so the destructor can free the memory
-        // even when mSettings has already destroyed
-        myJob = mSettings->reporthdr;
-	//
-	// Set the report start times and next report times, options
-	// are now, the accept time or the first write time
-	//
-	now.setnow();
-	myJob->report.startTime.tv_sec = now.getSecs();
-	myJob->report.startTime.tv_usec = now.getUsecs();
-	if (!isReverse(mSettings)) {
-	  if (isUDP(mSettings) && isTripTime(mSettings)) {
+    myJob = InitIndividualReport(mSettings);
+    assert(myJob != NULL);
+    //
+    // Set the report start times and next report times, options
+    // are now, the accept time or the first write time
+    //
+    now.setnow();
+    myJob->report.startTime.tv_sec = now.getSecs();
+    myJob->report.startTime.tv_usec = now.getUsecs();
+    if (!isReverse(mSettings)) {
+	if (isUDP(mSettings) && isTripTime(mSettings)) {
 	    // Trip times use the first packet's sent time
 	    // RJM add some defense to the below
 	    int n;
 	    if ((n = recvn(mSettings->mSock, mBuf, sizeof (struct UDP_datagram), MSG_PEEK)) \
 		== sizeof(struct UDP_datagram)) {
-	      struct UDP_datagram* mBuf_UDP  = (struct UDP_datagram *) mBuf;
-	      myJob->report.startTime.tv_sec = ntohl(mBuf_UDP->tv_sec);
-	      myJob->report.startTime.tv_usec = ntohl(mBuf_UDP->tv_usec);
+		struct UDP_datagram* mBuf_UDP  = (struct UDP_datagram *) mBuf;
+		myJob->report.startTime.tv_sec = ntohl(mBuf_UDP->tv_sec);
+		myJob->report.startTime.tv_usec = ntohl(mBuf_UDP->tv_usec);
 	    }
-	  } else {
-	      // Servers that aren't full duplex use the accept timestamp for start
-	      myJob->report.startTime.tv_sec = mSettings->accept_time.tv_sec;
-	      myJob->report.startTime.tv_usec = mSettings->accept_time.tv_usec;
-	  }
+	} else {
+	    // Servers that aren't full duplex use the accept timestamp for start
+	    myJob->report.startTime.tv_sec = mSettings->accept_time.tv_sec;
+	    myJob->report.startTime.tv_usec = mSettings->accept_time.tv_usec;
 	}
-	myJob->report.nextTime = myJob->report.startTime;
-	TimeAdd(myJob->report.nextTime, myJob->report.intervalTime);
-	// Initialze the reportstruct scratchpad
-	reportstruct = &myJob->packetring->metapacket;
-	reportstruct->packetID = 0;
-	reportstruct->l2len = 0;
-	reportstruct->l2errors = 0x0;
     }
+    myJob->report.nextTime = myJob->report.startTime;
+    TimeAdd(myJob->report.nextTime, myJob->report.intervalTime);
+    // Initialze the reportstruct scratchpad
+    reportstruct = &myJob->packetring->metapacket;
+    reportstruct->packetID = 0;
+    reportstruct->l2len = 0;
+    reportstruct->l2errors = 0x0;
 
     if (mSettings->mBufLen < (int) sizeof(UDP_datagram)) {
-       mSettings->mBufLen = sizeof( UDP_datagram );
-       fprintf( stderr, warn_buffer_too_small, mSettings->mBufLen );
+	mSettings->mBufLen = sizeof( UDP_datagram );
+	fprintf( stderr, warn_buffer_too_small, mSettings->mBufLen );
     }
     // This will only have the connection report
     PostReport(myJob);
@@ -366,7 +362,7 @@ void Server::InitTrafficLoop (void) {
     // mAmount integer, units 10 milliseconds
     // divide by two so timeout is 1/2 the interval
     if (mSettings->mInterval && (mSettings->mIntervalMode == kInterval_Time)) {
-      sorcvtimer = (mSettings->mInterval / 2);
+	sorcvtimer = (mSettings->mInterval / 2);
     } else if (isServerModeTime(mSettings)) {
 	sorcvtimer = (mSettings->mAmount * 1000) / 2;
     }

@@ -195,25 +195,24 @@ void Listener::Run (void) {
 	}
 	// Instantiate another settings object to be used by the server thread
 	Settings_Copy(mSettings, &server);
-	if (!server) {
-	    static bool msgdone = false;
-	    if (!msgdone) {
-		msgdone = true;
-		WARN(1, "Failed memory allocation for server settings");
-	    }
-	    delay_loop(SINGLECLIENTDELAY_DURATION);
-	    continue;
-	}
+	FAIL(!server, "Failed memory allocation for server settings", mSettings);
 	server->mThreadMode = kMode_Server;
 	if (!isDataReport(mSettings))
 	    setNoDataReport(server);
 
 	// accept a new socket and assign it to the server thread
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug("Listener thread before accept");
+#endif
+
 	if (!(my_accept(server) > 0)) {
 	    assert(server != mSettings);
 	    Settings_Destroy(server);
 	    continue;
 	}
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug("Listener thread accept (sock=%d)", server->mSock);
+#endif
 	// Decrement the -P counter, commonly usd to kill the listener
 	// after one test, i.e. -s -P 1
 	if (mCount > 0) {
@@ -335,7 +334,16 @@ void Listener::Run (void) {
 	if (isUDP(mSettings) && isSingleUDP(mSettings)) {
 	    UDPSingleServer(server);
 	} else {
+#ifdef HAVE_THREAD_DEBUG
+	    thread_debug("Listener thread start server");
+#endif
 	    thread_start_all(server);
+	    if (isSingleClient(mSettings))
+		delay_loop(SINGLECLIENTDELAY_DURATION);
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug("Listener thread after start");
+#endif
+
 	}
     }
 #ifdef HAVE_THREAD_DEBUG
@@ -387,8 +395,7 @@ void Listener::my_listen (void) {
     // reuse the address, so we can run if a former server was killed off
     int boolean = 1;
     Socklen_t len = sizeof(boolean);
-    setsockopt(ListenSocket, SOL_SOCKET, SO_REUSEADDR, (char*) &boolean, len);
-
+    rc = setsockopt(ListenSocket, SOL_SOCKET, SO_REUSEADDR, (char*) &boolean, len);
     // bind socket to server address
 #ifdef WIN32
     if (SockAddr_isMulticast( &mSettings->local)) {
@@ -774,7 +781,7 @@ bool Listener::L2_setup (thread_Settings *server, int sockfd) {
  * a listening UDP socket for new or first received datagram
  * ------------------------------------------------------------------- ----*/
 int Listener::udp_accept (thread_Settings *server) {
-    assert(server);
+    assert(server != NULL);
     int rc;
     assert(ListenSocket > 0);
     // Start with a thread_rest - this allows the server thread
@@ -814,7 +821,7 @@ int Listener::udp_accept (thread_Settings *server) {
  * This is called by the Listener thread main loop, return a socket or error
  * ------------------------------------------------------------------- */
 int Listener::my_accept (thread_Settings *server) {
-    assert(server);
+    assert(server != NULL);
 #ifdef HAVE_THREAD_DEBUG
     if (isUDP(server)) {
 	thread_debug("Listener thread listening for UDP (sock=%d)", ListenSocket);
@@ -837,7 +844,7 @@ int Listener::my_accept (thread_Settings *server) {
 	server->accept_time.tv_usec = now.getUsecs();
 	Iperf_push_host(&server->peer, server);
 	if (isConnectionReport(server)) {
-	    InitConnectionReport(server);
+	    // InitConnectionReport(server);
 	}
     }
     return server->mSock;
@@ -848,7 +855,7 @@ int Listener::my_accept (thread_Settings *server) {
 // preserve server thread accounting, i.e. these exchanges will
 // be part of traffic accounting
 void Listener::apply_client_settings (thread_Settings *server) {
-    assert(server);
+    assert(server != NULL);
     int n, peeklen;
     // Set the receive timeout for the very first read based upon the -t
     // and not -i.
@@ -979,7 +986,7 @@ int Listener::client_test_ack(thread_Settings *server) {
 }
 
 void Listener::UDPSingleServer(thread_Settings *server) {
-    assert(server);
+    assert(server != NULL);
     Settings_Destroy(server);
     fprintf(stderr, "UDP single server or non threaded code not implemented\n");
 }

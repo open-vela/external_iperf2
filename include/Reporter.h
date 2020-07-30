@@ -351,7 +351,7 @@ typedef void (* report_statistics)( struct TransferInfo* );
 typedef void (* report_serverstatistics)( struct ConnectionInfo *, struct TransferInfo* );
 
 struct MultiHeader* InitSumReport( struct thread_Settings *agent, int inID);
-void InitIndividualReport( struct thread_Settings *agent );
+struct ReportHeader* InitIndividualReport( struct thread_Settings *agent );
 void InitConnectionReport( struct thread_Settings *agent );
 void UpdateConnectionReport(struct thread_Settings *mSettings, struct ReportHeader *reporthdr);
 void BarrierClient(struct BarrierMutex *barrier);
@@ -367,7 +367,7 @@ struct ReportHeader *ReportSettings(struct thread_Settings *agent);
 void ReportConnections(struct thread_Settings *agent );
 void reporter_peerversion (struct thread_Settings *inSettings, int upper, int lower);
 void reporter_dump_job_queue(void);
-int IncrMultiHdrRefCounter(struct MultiHeader *multihdr);
+void IncrMultiHdrRefCounter(struct MultiHeader *multihdr);
 int DecrMultiHdrRefCounter(struct MultiHeader *multihdr);
 
 extern struct AwaitMutex reporter_state;

@@ -125,7 +125,7 @@ inline unsigned int FrameCounter::get(Timestamp slot) {
 }
 
 inline unsigned int FrameCounter::get(long *ticks_remaining) {
-    assert(ticks_remaining);
+    assert(ticks_remaining != NULL);
     Timestamp sampleTime;  // Constructor will initialize timestamp to now
     long usecs = -startTime.subUsec(sampleTime);
     unsigned int counter = (unsigned int) (usecs / period);

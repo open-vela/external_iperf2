@@ -1308,7 +1308,7 @@ void Client::HdrXchange(int flags) {
  */
 void Client::BarrierClient (struct BarrierMutex *barrier) {
 #ifdef HAVE_THREAD
-    assert(barrier);
+    assert(barrier != NULL);
     Condition_Lock(barrier->await);
     if (--barrier->count <= 0) {
 	// store the barrier release timer

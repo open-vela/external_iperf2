@@ -157,17 +157,16 @@ void BarrierClient (struct BarrierMutex *barrier) {
  * synchronize on compeleting their connect()
  */
 
-int IncrMultiHdrRefCounter (struct MultiHeader *multihdr) {
+void IncrMultiHdrRefCounter (struct MultiHeader *multihdr) {
     assert(multihdr);
     Mutex_Lock(&multihdr->reference.lock);
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Sum multiheader %p ref=%d->%d", (void *)multihdr, multihdr->reference.count, (multihdr->reference.count + 1));
 #endif
-    int rc = multihdr->reference.count++;
+    multihdr->reference.count++;
     if (multihdr->reference.count > multihdr->reference.maxcount)
 	multihdr->reference.maxcount = multihdr->reference.count;
     Mutex_Unlock(&multihdr->reference.lock);
-    return rc;
 }
 
 int DecrMultiHdrRefCounter (struct MultiHeader *multihdr) {
@@ -176,9 +175,9 @@ int DecrMultiHdrRefCounter (struct MultiHeader *multihdr) {
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Sum multiheader %p ref=%d->%d", (void *)multihdr, multihdr->reference.count, (multihdr->reference.count - 1));
 #endif
-    int rc = --multihdr->reference.count;
+    int refcnt = --multihdr->reference.count;
     Mutex_Unlock(&multihdr->reference.lock);
-    return rc;
+    return refcnt;
 }
 
 
@@ -209,16 +208,14 @@ void FreeReport (struct ReportHeader *reporthdr) {
 
 void FreeMultiReport (struct MultiHeader *multihdr) {
     assert(multihdr);
-    if (multihdr) {
 #ifdef HAVE_THREAD_DEBUG
-        thread_debug("Free multi report hdr=%p", (void *)multihdr);
+    thread_debug("Free multi report hdr=%p", (void *)multihdr);
 #endif
-	Condition_Destroy_Reference(&multihdr->reference);
-	free(multihdr);
-    }
+    Condition_Destroy_Reference(&multihdr->reference);
+    free(multihdr);
 }
 
-void InitIndividualReport (struct thread_Settings *mSettings) {
+struct ReportHeader* InitIndividualReport (struct thread_Settings *mSettings) {
     /*
      * Create in one big chunk
      */
@@ -230,9 +227,6 @@ void InitIndividualReport (struct thread_Settings *mSettings) {
 	thread_debug("Job report %p uses multireport %p and bidirreport is %p", (void *)mSettings->reporthdr, (void *)mSettings->multihdr, (void *)mSettings->bidirhdr);
 #endif
 	mSettings->reporthdr = reporthdr;
-	if(SockAddr_isZeroAddress(&mSettings->peer)) {
-	    FAIL(1, "Binding sum report invoked and peer not set!!\n", mSettings);
-	}
 	reporthdr->multireport = mSettings->multihdr;
 	reporthdr->bidirreport = mSettings->bidirhdr;
 	if (reporthdr->bidirreport) {
@@ -391,6 +385,7 @@ void InitIndividualReport (struct thread_Settings *mSettings) {
     } else {
 	FAIL(1, "Out of Memory!!\n", mSettings);
     }
+    return reporthdr;
 }
 
 
@@ -421,7 +416,6 @@ void InitConnectionReport (struct thread_Settings *mSettings) {
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug("Malloc connection report %p", reporthdr);
 #endif
-
 	/*
 	 * We don't have a Data Report structure in which to hang
 	 * the connection report so allocate a minimal one

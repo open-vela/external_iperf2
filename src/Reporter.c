@@ -248,7 +248,9 @@ void EndReport(struct ReportHeader *agent) {
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug( "Traffic thread thinks reporter is done with %p", (void *)agent);
 #endif
-	FreeReport(agent);
+	int refcnt = DecrMultiHdrRefCounter(agent->multireport);
+	if (!refcnt)
+	    FreeMultiReport(agent->multireport);
 #ifndef HAVE_THREAD
         /*
          * Process the report in this thread
@@ -778,12 +780,11 @@ int reporter_process_report (struct ReportHeader *reporthdr, struct thread_Setti
 			    if (TimeDifference(reporthdr->multireport->report.packetTime, packet->packetTime) > 0) {
 				reporthdr->multireport->report.packetTime = packet->packetTime;
 			    }
-			    if (DecrMultiHdrRefCounter(reporthdr->multireport)) {
-				if ((reporthdr->multireport->transfer_protocol_sum_handler) && \
-				    (reporthdr->multireport->reference.maxcount > 1)) {
-				    (*reporthdr->multireport->transfer_protocol_sum_handler)(&reporthdr->multireport->report, 1);
-				}
-				FreeMultiReport(reporthdr->multireport);
+			    if ((reporthdr->multireport->transfer_protocol_sum_handler) && \
+				    (reporthdr->multireport->reference.maxcount > 1) &&
+				    (reporthdr->multireport->reference.count == 1)) {
+				(*reporthdr->multireport->transfer_protocol_sum_handler)(&reporthdr->multireport->report, 1);
+				fflush(stdout);
 			    }
 			}
 		    }
