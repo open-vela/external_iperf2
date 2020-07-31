@@ -72,27 +72,29 @@ void Iperf_initialize_active_table (void) {
  * Add Entry add to the list and optionally update thread count,
  * return true if host is already in the table
  */
-static inline void update_active_table (iperf_sockaddr *host, struct thread_Settings *agent) {
-    Iperf_ListEntry *found = Iperf_hostpresent(host);
-    if (!found) {
-	Iperf_ListEntry *add_entry = new Iperf_ListEntry();
-	add_entry->data = *host;
-	add_entry->next = active_table.root;
-	add_entry->thread_count = 1;
+static void update_active_table (iperf_sockaddr *host, struct thread_Settings *agent) {
+    assert(host != NULL);
+    assert(agent != NULL);
+    Iperf_ListEntry *this_entry = Iperf_hostpresent(host);
+    if (!this_entry) {
+	this_entry = new Iperf_ListEntry();
+	this_entry->data = *host;
+	this_entry->next = active_table.root;
+	this_entry->thread_count = 1;
 	active_table.count++;
 	active_table.total_count++;
 	if (isDataReport(agent)) {
-	    add_entry->sum_report = InitSumReport(agent, active_table.total_count);
-	    agent->multihdr = add_entry->sum_report;
+	    this_entry->sum_report = InitSumReport(agent, active_table.total_count);
+	    agent->multihdr = this_entry->sum_report;
 	    IncrMultiHdrRefCounter(agent->multihdr);
 	} else {
 	    agent->multihdr = NULL;
 	}
-	active_table.root = add_entry;
+	active_table.root = this_entry;
     } else {
-	found->thread_count++;
+	this_entry->thread_count++;
 	if (isDataReport(agent)) {
-	    agent->multihdr = found->sum_report;
+	    agent->multihdr = this_entry->sum_report;
 	    IncrMultiHdrRefCounter(agent->multihdr);
 	} else {
 	    agent->multihdr = NULL;
@@ -127,15 +129,30 @@ void Iperf_remove_host (iperf_sockaddr *del) {
     //     }
     //     *indirect = entry->next
     Mutex_Lock(&active_table.my_mutex);
+#if HAVE_THREAD_DEBUG
+    char tmpaddr[80];
+    size_t len=80;
+    SockAddr_getHostAddress(del, tmpaddr, len);
+    thread_debug("remove host %s root=%p", tmpaddr, (void *) &active_table.root);
+#endif
     Iperf_ListEntry **tmp = &active_table.root;
-    while ((*tmp) && !(SockAddr_are_Equal((sockaddr*)&(*tmp)->data, (sockaddr*) del))) {
+    while ((*tmp) && !(SockAddr_Hostare_Equal((sockaddr*)&(*tmp)->data, (sockaddr*) del))) {
 	tmp = &(*tmp)->next;
     }
-    if ((*tmp) && ((--(*tmp)->thread_count) <= 0)) {
-	active_table.count--;
-	Iperf_ListEntry *remove = (*tmp);
-	*tmp = remove->next;
-	delete remove;
+    if (*tmp) {
+	if (--(*tmp)->thread_count == 0) {
+	    Iperf_ListEntry *remove = (*tmp);
+	    *tmp = remove->next;
+	    delete remove;
+	    active_table.count--;
+#if HAVE_THREAD_DEBUG
+	    thread_debug("Delete %s: active totcnt/activecnt/hostcnt = %d/%d/0", tmpaddr, active_table.total_count, active_table.count);
+#endif
+	} else {
+#if HAVE_THREAD_DEBUG
+	    thread_debug("Decr %s: active totcnt/activecnt/hostcnt = %d/%d/%d", tmpaddr, active_table.total_count, active_table.count, (*tmp)->thread_count);
+#endif
+	}
     }
     Mutex_Unlock(&active_table.my_mutex);
 }
@@ -183,6 +200,5 @@ Iperf_ListEntry* Iperf_hostpresent (iperf_sockaddr *find) {
         }
         itr = itr->next;
     }
-    Mutex_Destroy(&active_table.my_mutex);
     return NULL;
 }
