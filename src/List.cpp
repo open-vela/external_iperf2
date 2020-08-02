@@ -159,12 +159,12 @@ void Iperf_remove_host (iperf_sockaddr *del) {
     if (*tmp) {
 	if (--(*tmp)->thread_count == 0) {
 	    Iperf_ListEntry *remove = (*tmp);
+	    active_table.count--;	    
 #if HAVE_THREAD_DEBUG
 	    active_table_show_entry("delete", remove, 1);
 #endif
 	    *tmp = remove->next;
 	    delete remove;
-	    active_table.count--;
 	} else {
 #if HAVE_THREAD_DEBUG
 	    active_table_show_entry("decr", (*tmp), 1);
