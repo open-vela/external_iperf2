@@ -102,7 +102,7 @@ Listener::Listener (thread_Settings *inSettings) {
      */
     mSettings = inSettings;
     // alloc and initialize the buffer (mBuf) used for test messages in the payload
-    mBuf = new char[MINPAYLOAD_ALLOC];
+    mBuf = new char[MBUFALLOCSIZE]; // defined in payloads.h
     FAIL_errno( mBuf == NULL, "No memory for buffer\n", mSettings );
     // Open the listen socket
     my_listen();
@@ -787,11 +787,11 @@ int Listener::udp_accept (thread_Settings *server) {
 		  (struct sockaddr*) &server->peer, &server->size_peer);
 #if HAVE_THREAD_DEBUG
     {
-//	char tmpaddr[200];
-//	size_t len=200;
-//	unsigned short port = SockAddr_getPort(&server->peer);
-//	SockAddr_getHostAddress(&server->peer, tmpaddr, len);
-//	thread_debug("rcvfrom peer: %s port %d len=%d", tmpaddr, port, rc);
+	char tmpaddr[200];
+	size_t len=200;
+	unsigned short port = SockAddr_getPort(&server->peer);
+	SockAddr_getHostAddress(&server->peer, tmpaddr, len);
+	thread_debug("rcvfrom peer: %s port %d len=%d", tmpaddr, port, rc);
     }
 #endif
     FAIL_errno(rc == SOCKET_ERROR, "recvfrom", mSettings);
@@ -815,8 +815,6 @@ int Listener::udp_accept (thread_Settings *server) {
 	    if (isConnectionReport(server)) {
 		// InitConnectionReport(server);
 	    }
-	} else {
-	    printf("****Ignore packet\n");
 	}
     }
     return server->mSock;
@@ -862,6 +860,7 @@ int Listener::my_accept (thread_Settings *server) {
 // be part of traffic accounting
 void Listener::apply_client_settings (thread_Settings *server) {
     assert(server != NULL);
+    assert(mBuf != NULL);
     int n, peeklen;
     // Set the receive timeout for the very first read based upon the -t
     // and not -i.

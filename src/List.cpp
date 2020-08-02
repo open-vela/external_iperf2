@@ -71,10 +71,23 @@ static void active_table_show_entry(const char *action, Iperf_ListEntry *entry, 
     size_t len=200;
     unsigned short port = SockAddr_getPort(&(entry->host));
     SockAddr_getHostAddress(&(entry->host), tmpaddr, len);
-    thread_debug("active table: %s %s port %d (found=%d) rootp=%p entryp=%p totcnt/activecnt/hostcnt = %d/%d/%d", \
+    thread_debug("active table: %s %s port %d (flag=%d) rootp=%p entryp=%p totcnt/activecnt/hostcnt = %d/%d/%d", \
 		 action, tmpaddr, port, found, (void *) active_table.root, (void *) entry, active_table.total_count, \
 		 active_table.count, entry->thread_count);
 }
+static void active_table_show_compare(const char *action, Iperf_ListEntry *entry, iperf_sockaddr *host, const char *type) {
+    assert(action != NULL);
+    assert(entry != NULL);
+    char lookupaddr[200];
+    char findaddr[200];
+    size_t len=200;
+    unsigned short port = SockAddr_getPort(&(entry->host));
+    unsigned short findport = SockAddr_getPort(host);
+    SockAddr_getHostAddress(&(entry->host), lookupaddr, len);
+    SockAddr_getHostAddress(host, findaddr, len);
+    thread_debug("active table: compare %s %s/%d against %s/%d (%s)", type, lookupaddr, port, findaddr, findport, action);
+}
+
 #endif
 
 
@@ -91,6 +104,7 @@ static void active_table_update (iperf_sockaddr *host, struct thread_Settings *a
     assert(host != NULL);
     assert(agent != NULL);
     Iperf_ListEntry *this_entry = Iperf_host_present(host);
+    active_table.total_count++;
     if (this_entry == NULL) {
 	this_entry = new Iperf_ListEntry();
 	assert(this_entry != NULL);
@@ -98,7 +112,10 @@ static void active_table_update (iperf_sockaddr *host, struct thread_Settings *a
 	this_entry->next = active_table.root;
 	this_entry->thread_count = 1;
 	active_table.count++;
-	active_table.total_count++;
+	active_table.root = this_entry;
+#if HAVE_THREAD_DEBUG
+	active_table_show_entry("new entry", this_entry, ((SockAddr_are_Equal(&this_entry->host, host) && SockAddr_Hostare_Equal(&this_entry->host, host))));
+#endif
 	if (isDataReport(agent)) {
 	    this_entry->sum_report = InitSumReport(agent, active_table.total_count);
 	    agent->multihdr = this_entry->sum_report;
@@ -106,21 +123,17 @@ static void active_table_update (iperf_sockaddr *host, struct thread_Settings *a
 	} else {
 	    agent->multihdr = NULL;
 	}
-	active_table.root = this_entry;
-#if HAVE_THREAD_DEBUG
-	active_table_show_entry("new insert", this_entry, 0);
-#endif
     } else {
 	this_entry->thread_count++;
+#if HAVE_THREAD_DEBUG
+	active_table_show_entry("incr entry", this_entry, 1);
+#endif
 	if (isDataReport(agent)) {
 	    agent->multihdr = this_entry->sum_report;
 	    IncrMultiHdrRefCounter(agent->multihdr);
 	} else {
 	    agent->multihdr = NULL;
 	}
-#if HAVE_THREAD_DEBUG
-	active_table_show_entry("incr insert", this_entry, 1);
-#endif
     }
 }
 
@@ -159,7 +172,7 @@ void Iperf_remove_host (iperf_sockaddr *del) {
     if (*tmp) {
 	if (--(*tmp)->thread_count == 0) {
 	    Iperf_ListEntry *remove = (*tmp);
-	    active_table.count--;	    
+	    active_table.count--;
 #if HAVE_THREAD_DEBUG
 	    active_table_show_entry("delete", remove, 1);
 #endif
@@ -198,18 +211,15 @@ bool Iperf_host_port_present (iperf_sockaddr *find) {
     Iperf_ListEntry *itr = active_table.root;
     bool rc = false;
     while (itr != NULL) {
-#if HAVE_THREAD_DEBUG
-	active_table_show_entry("UDP compare against host port", itr, 0);
-#endif
         if (SockAddr_are_Equal(&itr->host, find)) {
 #if HAVE_THREAD_DEBUG
-	    active_table_show_entry("table match", itr, 0);
+	    active_table_show_compare("match", itr, find, "client ip/port");
 #endif
 	    rc = true;
             break;
         } else {
 #if HAVE_THREAD_DEBUG
-	    active_table_show_entry("table miss", itr, 0);
+	    active_table_show_compare("miss", itr, find, "client ip/port");
 #endif
 	    itr = itr->next;
 	}
@@ -225,17 +235,14 @@ bool Iperf_host_port_present (iperf_sockaddr *find) {
 static Iperf_ListEntry* Iperf_host_present (iperf_sockaddr *find) {
     Iperf_ListEntry *itr = active_table.root;
     while (itr != NULL) {
-#if HAVE_THREAD_DEBUG
-	active_table_show_entry("check for host", itr, 0);
-#endif
         if (SockAddr_Hostare_Equal(&itr->host, find)) {
 #if HAVE_THREAD_DEBUG
-	    active_table_show_entry("table match", itr, 0);
+	    active_table_show_compare("match", itr, find, "client ip");
 #endif
             break;
         } else {
 #if HAVE_THREAD_DEBUG
-	    active_table_show_entry("table miss", itr, 0);
+	    active_table_show_compare("miss", itr, find, "client ip");
 #endif
 	    itr = itr->next;
 	}

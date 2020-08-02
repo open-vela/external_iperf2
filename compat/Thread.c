@@ -118,7 +118,7 @@ static int __log(const char *level, const char *format, va_list args) {
     if (len > 0) {
       len = vprintf(newformat, args);
     }
-    // free(newformat);
+    free(newformat);
     return len;
 }
 
