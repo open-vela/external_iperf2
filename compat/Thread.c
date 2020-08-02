@@ -84,6 +84,7 @@ extern "C" {
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <stdarg.h>
+Mutex thread_debug_mutex;
 static void __gettimestamp(char *timestr) {
     struct timespec t1;
     clock_gettime(CLOCK_REALTIME, &t1);
@@ -93,6 +94,7 @@ static void __gettimestamp(char *timestr) {
         strftime(timestr, 200, "%T", t);
         // strftime(buf, len, "%F %T", &t);
 	snprintf(&timestr[strlen(timestr)], strlen(timestr), ".%09ld", t1.tv_nsec);
+        timestr[200]='\0';
     } else {
         *timestr='\0';
     }
@@ -101,7 +103,7 @@ static int __log(const char *level, const char *format, va_list args) {
     int len;
     char *newformat;
     char timestamp[200];
-    char *logformat="%s(%ld):[%s] %s\n";
+    char logformat[]="%s(%ld):[%s] %s\n";
 
     __gettimestamp(timestamp);
   #if HAVE_GETTID_SYSCALL
@@ -116,15 +118,18 @@ static int __log(const char *level, const char *format, va_list args) {
     if (len > 0) {
       len = vprintf(newformat, args);
     }
-    free(newformat);
+    // free(newformat);
     return len;
 }
 
 void thread_debug(const char *format, ...) {
+    Mutex_Lock(&thread_debug_mutex);
     va_list ap;
     va_start(ap, format);
     __log("THREAD", format, ap);
     va_end(ap);
+    fflush(stdout);
+    Mutex_Unlock(&thread_debug_mutex);
 }
 #endif
 
@@ -212,7 +217,7 @@ void thread_start(struct thread_Settings* thread) {
             Condition_Unlock( thread_sNum_cond );
         }
 #if HAVE_THREAD_DEBUG
-	thread_debug("Thread_run_wrapper(%p mode=%x) thread counts tot/trfc=%d/%d", (void *)thread,thread->mThreadMode, thread_sNum, thread_trfc_sNum);
+	thread_debug("Thread_run_wrapper(%p mode=%x) thread counts tot/trfc=%d/%d", (void *)thread, thread->mThreadMode, thread_sNum, thread_trfc_sNum);
 #endif
 
 #elif defined( HAVE_WIN32_THREAD )

@@ -171,12 +171,15 @@ void IncrMultiHdrRefCounter (struct MultiHeader *multihdr) {
 
 int DecrMultiHdrRefCounter (struct MultiHeader *multihdr) {
     assert(multihdr);
+//    thread_debug("before lock hdr=%p", (void *)multihdr);
     Mutex_Lock(&multihdr->reference.lock);
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Sum multiheader %p ref=%d->%d", (void *)multihdr, multihdr->reference.count, (multihdr->reference.count - 1));
 #endif
+//    thread_debug("in lock hdr=%p", (void *)multihdr);
     int refcnt = --multihdr->reference.count;
     Mutex_Unlock(&multihdr->reference.lock);
+//    thread_debug("unlock hdr=%p", (void *)multihdr);
     return refcnt;
 }
 

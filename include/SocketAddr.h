@@ -93,8 +93,8 @@ extern "C" {
 
     int SockAddr_isIPv6( iperf_sockaddr *inSockAddr );
 
-    int SockAddr_are_Equal( struct sockaddr *first, struct sockaddr *second );
-    int SockAddr_Hostare_Equal( struct sockaddr *first, struct sockaddr *second );
+    int SockAddr_are_Equal(iperf_sockaddr *first, iperf_sockaddr *second);
+    int SockAddr_Hostare_Equal(iperf_sockaddr *first, iperf_sockaddr *second);
 
     void SockAddr_zeroAddress( iperf_sockaddr *inSockAddr );
     int SockAddr_isZeroAddress(iperf_sockaddr *inSockAddr);
