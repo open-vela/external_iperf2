@@ -93,7 +93,7 @@ Server::Server( thread_Settings *inSettings ) {
     }
 #endif
     // initialize buffer, length checking done by the Listener
-    mBuf = new char[((mSettings->mBufLen > MINPAYLOAD_ALLOC) ? mSettings->mBufLen : MINPAYLOAD_ALLOC)];
+    mBuf = new char[MBUFALLOCSIZE]; // defined in payloads.h
     FAIL_errno( mBuf == NULL, "No memory for buffer\n", mSettings );
     SockAddr_Ifrname(mSettings);
 }
