@@ -467,8 +467,7 @@ struct server_hdr {
 #define SIZEOF_UDPHDRMSG_EXT (sizeof(struct client_udphdr))
 #define SIZEOF_TCPHDRMSG_V1 (sizeof(struct client_hdr_v1))
 #define SIZEOF_TCPHDRMSG_EXT (sizeof(struct client_tcphdr))
-#define MINPAYLOAD_ALLOC 64
-
+#define MBUFALLOCSIZE (((int) sizeof(struct client_udphdr) > mSettings->mBufLen) ? (int) sizeof(struct client_udphdr) : mSettings->mBufLen)
 #ifdef __cplusplus
 } /* end extern "C" */
 #endif

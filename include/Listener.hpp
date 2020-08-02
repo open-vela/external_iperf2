@@ -70,7 +70,7 @@ public:
     // accepts connections and starts Servers
     void Run( void );
 
-protected:
+private:
     int mClients;
     char* mBuf; // used for UDP packet or TCP  messages
     struct ether_header *eth_hdr;
@@ -79,8 +79,6 @@ protected:
     thread_Settings *mSettings;
     thread_Settings *server;
     Timestamp mEndTime;
-
-private:
     void apply_client_settings(thread_Settings *server);
     int client_test_ack(thread_Settings *server);
     void my_multicast_join(void);
