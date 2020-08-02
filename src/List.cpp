@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------
- * Copyright (c) 1999,2000,2001,2002,2003
+ * Copyrig h(c) 1999,2000,2001,2002,2003
  * The Board of Trustees of the University of Illinois
  * All Rights Reserved.
  *---------------------------------------------------------------
@@ -60,8 +60,23 @@
  * Global table with active hosts, their sum reports and active thread counts
  */
 static struct Iperf_Table active_table;
-static Iperf_ListEntry* Iperf_present (iperf_sockaddr *find);
-static Iperf_ListEntry* Iperf_hostpresent (iperf_sockaddr *find);
+static bool Iperf_host_port_present (iperf_sockaddr *find);
+static Iperf_ListEntry* Iperf_host_present (iperf_sockaddr *find);
+
+#if HAVE_THREAD_DEBUG
+static void active_table_show_entry(const char *action, Iperf_ListEntry *entry, int found) {
+    assert(action != NULL);
+    assert(entry != NULL);
+    char tmpaddr[200];
+    size_t len=200;
+    unsigned short port = SockAddr_getPort(&(entry->host));
+    SockAddr_getHostAddress(&(entry->host), tmpaddr, len);
+    thread_debug("active table: %s %s port %d (found=%d) rootp=%p entryp=%p totcnt/activecnt/hostcnt = %d/%d/%d", \
+		 action, tmpaddr, port, found, (void *) active_table.root, (void *) entry, active_table.total_count, \
+		 active_table.count, entry->thread_count);
+}
+#endif
+
 
 void Iperf_initialize_active_table (void) {
     Mutex_Initialize(&active_table.my_mutex);
@@ -72,13 +87,14 @@ void Iperf_initialize_active_table (void) {
  * Add Entry add to the list and optionally update thread count,
  * return true if host is already in the table
  */
-static void update_active_table (iperf_sockaddr *host, struct thread_Settings *agent) {
+static void active_table_update (iperf_sockaddr *host, struct thread_Settings *agent) {
     assert(host != NULL);
     assert(agent != NULL);
-    Iperf_ListEntry *this_entry = Iperf_hostpresent(host);
-    if (!this_entry) {
+    Iperf_ListEntry *this_entry = Iperf_host_present(host);
+    if (this_entry == NULL) {
 	this_entry = new Iperf_ListEntry();
-	this_entry->data = *host;
+	assert(this_entry != NULL);
+	this_entry->host = *host;
 	this_entry->next = active_table.root;
 	this_entry->thread_count = 1;
 	active_table.count++;
@@ -91,6 +107,9 @@ static void update_active_table (iperf_sockaddr *host, struct thread_Settings *a
 	    agent->multihdr = NULL;
 	}
 	active_table.root = this_entry;
+#if HAVE_THREAD_DEBUG
+	active_table_show_entry("new insert", this_entry, 0);
+#endif
     } else {
 	this_entry->thread_count++;
 	if (isDataReport(agent)) {
@@ -99,23 +118,27 @@ static void update_active_table (iperf_sockaddr *host, struct thread_Settings *a
 	} else {
 	    agent->multihdr = NULL;
 	}
+#if HAVE_THREAD_DEBUG
+	active_table_show_entry("incr insert", this_entry, 1);
+#endif
     }
 }
 
 void Iperf_push_host (iperf_sockaddr *host, struct thread_Settings *agent) {
     Mutex_Lock(&active_table.my_mutex);
-    update_active_table(host, agent);
+    active_table_update(host, agent);
     Mutex_Unlock(&active_table.my_mutex);
 }
 
-bool Iperf_push_host_conditional (iperf_sockaddr *host, struct thread_Settings *agent) {
+bool Iperf_push_host_port_conditional (iperf_sockaddr *host, struct thread_Settings *agent) {
+    bool rc = false;
     Mutex_Lock(&active_table.my_mutex);
-    Iperf_ListEntry *found = Iperf_hostpresent(host);
-    if (!found) {
-	update_active_table(host, agent);
+    if (!Iperf_host_port_present(host)) {
+	active_table_update(host, agent);
+	rc = true;
     }
     Mutex_Unlock(&active_table.my_mutex);
-    return (found != NULL);
+    return (rc);
 }
 
 /*
@@ -129,28 +152,22 @@ void Iperf_remove_host (iperf_sockaddr *del) {
     //     }
     //     *indirect = entry->next
     Mutex_Lock(&active_table.my_mutex);
-#if HAVE_THREAD_DEBUG
-    char tmpaddr[80];
-    size_t len=80;
-    SockAddr_getHostAddress(del, tmpaddr, len);
-    thread_debug("remove host %s root=%p", tmpaddr, (void *) &active_table.root);
-#endif
     Iperf_ListEntry **tmp = &active_table.root;
-    while ((*tmp) && !(SockAddr_Hostare_Equal((sockaddr*)&(*tmp)->data, (sockaddr*) del))) {
+    while ((*tmp) && !(SockAddr_Hostare_Equal(&(*tmp)->host, del))) {
 	tmp = &(*tmp)->next;
     }
     if (*tmp) {
 	if (--(*tmp)->thread_count == 0) {
 	    Iperf_ListEntry *remove = (*tmp);
+#if HAVE_THREAD_DEBUG
+	    active_table_show_entry("delete", remove, 1);
+#endif
 	    *tmp = remove->next;
 	    delete remove;
 	    active_table.count--;
-#if HAVE_THREAD_DEBUG
-	    thread_debug("Delete %s: active totcnt/activecnt/hostcnt = %d/%d/0", tmpaddr, active_table.total_count, active_table.count);
-#endif
 	} else {
 #if HAVE_THREAD_DEBUG
-	    thread_debug("Decr %s: active totcnt/activecnt/hostcnt = %d/%d/%d", tmpaddr, active_table.total_count, active_table.count, (*tmp)->thread_count);
+	    active_table_show_entry("decr", (*tmp), 1);
 #endif
 	}
     }
@@ -176,15 +193,28 @@ void Iperf_destroy_active_table (void) {
 /*
  * Check if the exact Entry find is present
  */
-Iperf_ListEntry* Iperf_present (iperf_sockaddr *find) {
+
+bool Iperf_host_port_present (iperf_sockaddr *find) {
     Iperf_ListEntry *itr = active_table.root;
+    bool rc = false;
     while (itr != NULL) {
-        if (SockAddr_are_Equal((sockaddr*)itr, (sockaddr*)find)) {
-            return itr;
-        }
-        itr = itr->next;
+#if HAVE_THREAD_DEBUG
+	active_table_show_entry("UDP compare against host port", itr, 0);
+#endif
+        if (SockAddr_are_Equal(&itr->host, find)) {
+#if HAVE_THREAD_DEBUG
+	    active_table_show_entry("table match", itr, 0);
+#endif
+	    rc = true;
+            break;
+        } else {
+#if HAVE_THREAD_DEBUG
+	    active_table_show_entry("table miss", itr, 0);
+#endif
+	    itr = itr->next;
+	}
     }
-    return NULL;
+    return rc;
 }
 
 /*
@@ -192,13 +222,23 @@ Iperf_ListEntry* Iperf_present (iperf_sockaddr *find) {
  * Entry exists that has the same host as the
  * Entry find
  */
-Iperf_ListEntry* Iperf_hostpresent (iperf_sockaddr *find) {
+static Iperf_ListEntry* Iperf_host_present (iperf_sockaddr *find) {
     Iperf_ListEntry *itr = active_table.root;
     while (itr != NULL) {
-        if (SockAddr_Hostare_Equal( (sockaddr*)itr, (sockaddr*)find)) {
-            return itr;
-        }
-        itr = itr->next;
+#if HAVE_THREAD_DEBUG
+	active_table_show_entry("check for host", itr, 0);
+#endif
+        if (SockAddr_Hostare_Equal(&itr->host, find)) {
+#if HAVE_THREAD_DEBUG
+	    active_table_show_entry("table match", itr, 0);
+#endif
+            break;
+        } else {
+#if HAVE_THREAD_DEBUG
+	    active_table_show_entry("table miss", itr, 0);
+#endif
+	    itr = itr->next;
+	}
     }
-    return NULL;
+    return itr;
 }

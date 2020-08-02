@@ -357,7 +357,7 @@ void SockAddr_setPortAny( iperf_sockaddr *inSockAddr ) {
  * Return the port. Handles the byte swapping.
  * ------------------------------------------------------------------- */
 
-unsigned short SockAddr_getPort( iperf_sockaddr *inSockAddr ) {
+unsigned short SockAddr_getPort(iperf_sockaddr *inSockAddr) {
     if ( ((struct sockaddr*)inSockAddr)->sa_family == AF_INET )
         return ntohs( ((struct sockaddr_in*) inSockAddr)->sin_port );
 #if defined(HAVE_IPV6)
@@ -481,14 +481,14 @@ int SockAddr_isZeroAddress(iperf_sockaddr *inSockAddr) {
 /* -------------------------------------------------------------------
  * Compare two sockaddrs and return true if they are equal
  * ------------------------------------------------------------------- */
-int SockAddr_are_Equal( struct sockaddr* first, struct sockaddr* second ) {
-    if ( first->sa_family == AF_INET && second->sa_family == AF_INET ) {
+int SockAddr_are_Equal(iperf_sockaddr *first, iperf_sockaddr *second) {
+    if (((struct sockaddr*)first)->sa_family == AF_INET && ((struct sockaddr*)second)->sa_family == AF_INET) {
         // compare IPv4 adresses
         return( ((long) ((struct sockaddr_in*)first)->sin_addr.s_addr == (long) ((struct sockaddr_in*)second)->sin_addr.s_addr)
                 && ( ((struct sockaddr_in*)first)->sin_port == ((struct sockaddr_in*)second)->sin_port) );
     }
 #if defined(HAVE_IPV6)
-    if ( first->sa_family == AF_INET6 && second->sa_family == AF_INET6 ) {
+    if (((struct sockaddr*)first)->sa_family == AF_INET6 && ((struct sockaddr*)second)->sa_family == AF_INET6) {
         // compare IPv6 addresses
         return( !memcmp(((struct sockaddr_in6*)first)->sin6_addr.s6_addr, ((struct sockaddr_in6*)second)->sin6_addr.s6_addr, sizeof(struct in6_addr))
                 && (((struct sockaddr_in6*)first)->sin6_port == ((struct sockaddr_in6*)second)->sin6_port) );
@@ -501,14 +501,14 @@ int SockAddr_are_Equal( struct sockaddr* first, struct sockaddr* second ) {
 /* -------------------------------------------------------------------
  * Compare two sockaddrs and return true if the hosts are equal
  * ------------------------------------------------------------------- */
-int SockAddr_Hostare_Equal( struct sockaddr* first, struct sockaddr* second ) {
-    if ( first->sa_family == AF_INET && second->sa_family == AF_INET ) {
+int SockAddr_Hostare_Equal(iperf_sockaddr* first, iperf_sockaddr *second) {
+    if (((struct sockaddr*)first)->sa_family == AF_INET && ((struct sockaddr*)second)->sa_family == AF_INET) {
         // compare IPv4 adresses
         return( (long) ((struct sockaddr_in*)first)->sin_addr.s_addr ==
                 (long) ((struct sockaddr_in*)second)->sin_addr.s_addr);
     }
 #if defined(HAVE_IPV6)
-    if ( first->sa_family == AF_INET6 && second->sa_family == AF_INET6 ) {
+    if (((struct sockaddr*)first)->sa_family == AF_INET6 && ((struct sockaddr*)second)->sa_family == AF_INET6) {
         // compare IPv6 addresses
         return( !memcmp(((struct sockaddr_in6*)first)->sin6_addr.s6_addr,
                         ((struct sockaddr_in6*)second)->sin6_addr.s6_addr, sizeof(struct in6_addr)));

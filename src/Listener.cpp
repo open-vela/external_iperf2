@@ -152,6 +152,9 @@ void Listener::Run (void) {
     Timestamp now;
 #define SINGLECLIENTDELAY_DURATION 16000 // units is microseconds
     while (!sInterupted && (isSingleClient(mSettings) || mCount)) {
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug("Listener main loop port %d ", mSettings->mPort);
+#endif
 	now.setnow();
 	if(mMode_Time && mEndTime.before(now)) {
 #ifdef HAVE_THREAD_DEBUG
@@ -201,17 +204,13 @@ void Listener::Run (void) {
 	    setNoDataReport(server);
 
 	// accept a new socket and assign it to the server thread
-#ifdef HAVE_THREAD_DEBUG
-	thread_debug("Listener thread before accept");
-#endif
-
 	if (!(my_accept(server) > 0)) {
 	    assert(server != mSettings);
 	    Settings_Destroy(server);
 	    continue;
 	}
 #ifdef HAVE_THREAD_DEBUG
-	thread_debug("Listener thread accept (sock=%d)", server->mSock);
+	thread_debug("Listener thread accepted server sock=%d", server->mSock);
 #endif
 	// Decrement the -P counter, commonly usd to kill the listener
 	// after one test, i.e. -s -P 1
@@ -231,7 +230,7 @@ void Listener::Run (void) {
 	// 2) The peer is using a V6 address but the listener/server didn't get -V (for v6) on
 	//    it's command line
 	//
-	if ((mSettings->clientListener && SockAddr_Hostare_Equal((sockaddr*) &mSettings->peer, (sockaddr*) &server->peer)) || \
+	if ((mSettings->clientListener && SockAddr_Hostare_Equal(&mSettings->peer, &server->peer)) || \
 	    (!isIPV6(mSettings) && SockAddr_isIPv6(&server->peer))) {
 	    // Not allowed, reset things and restart the loop
 	    close(server->mSock);
@@ -334,16 +333,9 @@ void Listener::Run (void) {
 	if (isUDP(mSettings) && isSingleUDP(mSettings)) {
 	    UDPSingleServer(server);
 	} else {
-#ifdef HAVE_THREAD_DEBUG
-	    thread_debug("Listener thread start server");
-#endif
 	    thread_start_all(server);
 	    if (isSingleClient(mSettings))
 		delay_loop(SINGLECLIENTDELAY_DURATION);
-#ifdef HAVE_THREAD_DEBUG
-	thread_debug("Listener thread after start");
-#endif
-
 	}
     }
 #ifdef HAVE_THREAD_DEBUG
@@ -411,11 +403,12 @@ void Listener::my_listen (void) {
 
     // update the reporter thread
     if (isReport(mSettings)) {
-        mSettings->reporthdr = ReportSettings(mSettings);
+        struct ReportHeader *report_settings = ReportSettings(mSettings);
+	assert(report_settings != NULL);
 	// disable future settings reports, listener should only do it once
 	unsetReport(mSettings);
-	UpdateConnectionReport(mSettings, mSettings->reporthdr);
-	PostReport(mSettings->reporthdr);
+	UpdateConnectionReport(mSettings, report_settings);
+	PostReport(report_settings);
     }
 
     // listen for connections (TCP only).
@@ -790,13 +783,23 @@ int Listener::udp_accept (thread_Settings *server) {
     // The INVALID socket is used to keep the while loop going
     server->mSock = INVALID_SOCKET;
     // Hang a 0 byte read with MSG_PEEK to get the sock addr struct populated
-    rc = recvfrom(ListenSocket, mBuf, 0, MSG_PEEK, \
+    rc = recvfrom(ListenSocket, NULL, 0, MSG_PEEK, \
 		  (struct sockaddr*) &server->peer, &server->size_peer);
+#if HAVE_THREAD_DEBUG
+    {
+//	char tmpaddr[200];
+//	size_t len=200;
+//	unsigned short port = SockAddr_getPort(&server->peer);
+//	SockAddr_getHostAddress(&server->peer, tmpaddr, len);
+//	thread_debug("rcvfrom peer: %s port %d len=%d", tmpaddr, port, rc);
+    }
+#endif
     FAIL_errno(rc == SOCKET_ERROR, "recvfrom", mSettings);
     if (!(rc < 0) && !sInterupted) {
-	// Handle connection for UDP sockets.
-	if (Iperf_push_host_conditional(&server->peer, server)) {
-	    // We have a new UDP flow so let's hand off this socket
+	// Handle connection for UDP sockets
+	if (Iperf_push_host_port_conditional(&server->peer, server)) {
+	    // We have a new UDP flow (based upon key of quintuple)
+	    // so let's hand off this socket
 	    // to the server and create a new listener socket
 	    server->mSock = ListenSocket;
 	    ListenSocket = INVALID_SOCKET;
@@ -807,13 +810,14 @@ int Listener::udp_accept (thread_Settings *server) {
 	    // e.g. AF_PACKET sockets can't do this.  We'll handle packet sockets later
 	    // All UDP accepts here will use AF_INET.  This is intentional and needed
 	    rc = connect(server->mSock, (struct sockaddr*) &server->peer, server->size_peer);
-	    if (isConnectionReport(server)) {
-		InitConnectionReport(server);
-	    }
 	    FAIL_errno(rc == SOCKET_ERROR, "connect UDP", mSettings);
-	}
-	if (ListenSocket == INVALID_SOCKET)
 	    my_listen(); // This will set ListenSocket to a new sock fd
+	    if (isConnectionReport(server)) {
+		// InitConnectionReport(server);
+	    }
+	} else {
+	    printf("****Ignore packet\n");
+	}
     }
     return server->mSock;
 }
@@ -834,15 +838,17 @@ int Listener::my_accept (thread_Settings *server) {
     server->accept_time.tv_usec = 0;
     if (isUDP(server)) {
 	server->mSock = udp_accept(server);
+	// note udp_accept will update the active host table
     } else {
 	// accept a TCP  connection
 	server->mSock = accept(ListenSocket, (sockaddr*) &server->peer, &server->size_peer);
+	if (server->mSock > 0)
+	    Iperf_push_host(&server->peer, server);
     }
     if (server->mSock > 0) {
 	Timestamp now;
 	server->accept_time.tv_sec = now.getSecs();
 	server->accept_time.tv_usec = now.getUsecs();
-	Iperf_push_host(&server->peer, server);
 	if (isConnectionReport(server)) {
 	    // InitConnectionReport(server);
 	}
