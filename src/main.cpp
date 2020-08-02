@@ -151,6 +151,7 @@ int main( int argc, char **argv ) {
 
 #ifdef HAVE_THREAD_DEBUG
     Mutex_Initialize(&packetringdebug_mutex);
+    Mutex_Initialize(&thread_debug_mutex);
 #endif
     // Initialize reporter thread mutex
     reporter_state.ready = 0;
@@ -263,7 +264,6 @@ int main( int argc, char **argv ) {
 	InitConnectionReport(into);
 	// Have the reporter launch the client or listener
 	into->runNow = ext_gSettings;
-
 	// Start all the threads that are ready to go
 	thread_start_all(into);
 	threads_start.ready = 1;
@@ -336,6 +336,7 @@ void cleanup( void ) {
     Condition_Destroy(&transmits_start.await);
 #ifdef HAVE_THREAD_DEBUG
     Mutex_Destroy(&packetringdebug_mutex);
+    Mutex_Destroy(&thread_debug_mutex);
 #endif
     // shutdown the thread subsystem
     thread_destroy( );

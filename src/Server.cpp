@@ -670,7 +670,7 @@ void Server::RunUDP( void ) {
 	// send back an acknowledgement of the terminating datagram
 	write_UDP_AckFIN( );
     }
-    EndReport( mSettings->reporthdr );
+    EndReport(mSettings->reporthdr);
 }
 // end Recv
 

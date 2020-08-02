@@ -355,7 +355,7 @@ void Settings_Copy( struct thread_Settings *from, struct thread_Settings **into 
  * Delete memory: Does not clean up open file pointers or ptr_parents
  * ------------------------------------------------------------------- */
 
-void Settings_Destroy( struct thread_Settings *mSettings) {
+void Settings_Destroy(struct thread_Settings *mSettings) {
 #if HAVE_THREAD_DEBUG
     thread_debug("Free thread settings=%p", mSettings);
 #endif

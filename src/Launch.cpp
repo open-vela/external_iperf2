@@ -96,7 +96,7 @@ void server_spawn(thread_Settings *thread) {
     thread_setscheduler(thread);
 #endif
     // Start up the server
-    theServer = new Server( thread );
+    theServer = new Server(thread);
     // Run the test
     if ( isUDP( thread ) ) {
         theServer->RunUDP();
