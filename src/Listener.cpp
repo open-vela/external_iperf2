@@ -150,7 +150,7 @@ void Listener::Run (void) {
 	mEndTime.add(mSettings->mAmount / 100.0);
     }
     Timestamp now;
-#define SINGLECLIENTDELAY_DURATION 16000 // units is microseconds
+#define SINGLECLIENTDELAY_DURATION 50000 // units is microseconds
     while (!sInterupted && (isSingleClient(mSettings) || mCount)) {
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug("Listener main loop port %d ", mSettings->mPort);
@@ -171,8 +171,12 @@ void Listener::Run (void) {
 	    // might better but also more complex. This delay
 	    // really should be good enough unless the os scheduler sucks
 	    delay_loop(SINGLECLIENTDELAY_DURATION);
-	    if (thread_numtrafficthreads() > 0)
+	    if (thread_numtrafficthreads() > 0) {
+#ifdef HAVE_THREAD_DEBUG
+		thread_debug("Listener single client loop");
+#endif
 		continue;
+	    }
 	}
 	// Use a select() with a timeout if -t is set
 	if (mMode_Time) {
@@ -204,8 +208,12 @@ void Listener::Run (void) {
 	    setNoDataReport(server);
 
 	// accept a new socket and assign it to the server thread
-	if (!(my_accept(server) > 0)) {
+	int accept_sock = my_accept(server);
+	if (!(accept_sock > 0)) {
 	    assert(server != mSettings);
+#ifdef HAVE_THREAD_DEBUG
+	    thread_debug("Listener thread accept fail %d", accept_sock);
+#endif
 	    Settings_Destroy(server);
 	    continue;
 	}
