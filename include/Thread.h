@@ -161,6 +161,8 @@ void client_init( struct thread_Settings* clients );
 void listener_spawn( struct thread_Settings* thread );
 void writeack_server_spawn( struct thread_Settings* thread );
 void writeack_client_spawn( struct thread_Settings* thread );
+int bidir_start_barrier(struct BarrierMutex *barrier);
+int bidir_stop_barrier(struct BarrierMutex *barrier);
 
 // defined in reporter.c
 void reporter_spawn( struct thread_Settings* thread );

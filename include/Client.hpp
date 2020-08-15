@@ -88,34 +88,35 @@ public:
     // The code in src/launch.cpp will invoke this
     void InitiateServer(void);
     void StartSynch(void);
-    void SetReportStartTime(void);
     void ConnectPeriodic(void);
+    double my_connect(void);
     bool isConnected(void);
-    static void BarrierClient(struct BarrierMutex *);
+    int BarrierClient(struct BarrierMutex *);
 
 private:
     inline void WritePacketID(intmax_t);
-    inline void WriteTcpTxHdr(ReportStruct *, int, int);
+    inline void WriteTcpTxHdr(struct ReportStruct *, int, int);
     void InitTrafficLoop(void);
+    inline void SetReportStartTime(void);
     void FinishTrafficActions(void);
     void FinalUDPHandshake(void);
     void write_UDP_FIN(void);
     bool InProgress(void);
     bool connected;
+    ReportStruct scratchpad;
     ReportStruct *reportstruct;
     double delay_lower_bounds;
     intmax_t totLen;
 
     // TCP plain
-    void RunTCP( void );
+    void RunTCP(void);
     // TCP version which supports rate limiting per -b
-    void RunRateLimitedTCP( void );
+    void RunRateLimitedTCP(void);
     // UDP traffic with isochronous and vbr support
-    void RunUDPIsochronous( void );
+    void RunUDPIsochronous(void);
     // UDP plain
-    void RunUDP( void );
+    void RunUDP(void);
     // client connect
-    double Connect( );
     void HdrXchange(int flags);
 
     thread_Settings *mSettings;
@@ -125,6 +126,7 @@ private:
     int mySocket;
 #endif
     struct ReportHeader *myJob;
+    struct ReporterData *myReport;
     char* mBuf;
     Timestamp mEndTime;
     Timestamp lastPacketTime;

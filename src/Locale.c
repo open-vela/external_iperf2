@@ -395,10 +395,10 @@ const char report_peer [] =
 "[%3d] local %s port %u connected with %s port %u%s\n";
 
 const char report_mss_unsupported[] =
-"[%3d] MSS and MTU size unknown (TCP_MAXSEG not supported by OS?)\n";
+"[%3d] MSS and MTU size unknown (TCP_MAXSEG not supported)\n";
 
 const char report_mss[] =
-"[%3d] MSS size %d bytes (MTU %d bytes, %s)\n";
+"[%3d] MSS size %d bytes\n";
 
 const char report_datagrams[] =
 "[%3d] Sent %d datagrams\n";

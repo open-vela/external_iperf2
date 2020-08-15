@@ -64,8 +64,13 @@
  */
 struct Iperf_ListEntry {
     iperf_sockaddr host;
-    struct MultiHeader *sum_report;
+    struct SumReport *sum_report;
     int thread_count;
+#if WIN32
+    SOCKET socket;
+#else
+    int socket;
+#endif
     struct Iperf_ListEntry *next;
 };
 
@@ -74,6 +79,7 @@ struct Iperf_Table {
     struct Iperf_ListEntry *root;
     int count;
     int total_count;
+    int groupid;
 };
 
 /*
@@ -81,8 +87,8 @@ struct Iperf_Table {
  */
 void Iperf_initialize_active_table (void);
 void Iperf_destroy_active_table (void);
-void Iperf_push_host (iperf_sockaddr *host, struct thread_Settings *agent);
-bool Iperf_push_host_port_conditional (iperf_sockaddr *host, struct thread_Settings *agent);
+int Iperf_push_host (iperf_sockaddr *host, struct thread_Settings *agent);
+int Iperf_push_host_port_conditional (iperf_sockaddr *host, struct thread_Settings *agent);
 void Iperf_remove_host (iperf_sockaddr *host);
 
 #endif

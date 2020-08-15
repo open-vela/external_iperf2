@@ -64,7 +64,6 @@ struct ReportStruct {
     struct timeval prevSentTime;
     int errwrite;
     int emptyreport;
-    int socket;
     int l2errors;
     int l2len;
     int expected_l2len;
@@ -86,7 +85,6 @@ struct PacketRing {
   int maxcount;
   int consumerdone;
   int awaitcounter;
-  struct ReportStruct metapacket;
 
   // Use a condition variables
   // o) awake_producer - producer waits for the consumer thread to

@@ -63,12 +63,48 @@
 #include "Write_ack.hpp"
 
 
+int bidir_start_barrier (struct BarrierMutex *barrier) {
+    int rc = 0;
+    assert(barrier != NULL);
+    Condition_Lock(barrier->await);
+    if (++barrier->count == 2) {
+	rc = 1;
+	// last one wake's up everyone else'
+	Condition_Broadcast(&barrier->await);
+    } else {
+        Condition_Wait(&barrier->await);
+    }
+    Condition_Unlock(barrier->await);
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("BiDir start barrier on condition %p last=%d", (void *)&barrier->await, rc);
+#endif
+    return rc;
+}
+
+int bidir_stop_barrier (struct BarrierMutex *barrier) {
+    assert(barrier != NULL);
+    int rc = 0;
+    Condition_Lock(barrier->await);
+    if (--barrier->count == 0) {
+	rc = 1;
+	// last one wake's up other and closes the socket
+	Condition_Broadcast(&barrier->await);
+    } else {
+        Condition_Wait(&barrier->await);
+    }
+    Condition_Unlock(barrier->await);
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("BiDir sttop barrier on condition %p last=%d", (void *)&barrier->await, rc);
+#endif
+    return rc;
+}
+
 /*
  * listener_spawn is responsible for creating a Listener class
  * and launching the listener. It is provided as a means for
  * the C thread subsystem to launch the listener C++ object.
  */
-void listener_spawn( thread_Settings *thread ) {
+void listener_spawn(struct thread_Settings *thread) {
     Listener *theListener = NULL;
     // the Listener need to trigger a settings report
     setReport(thread);
@@ -85,11 +121,11 @@ void listener_spawn( thread_Settings *thread ) {
  * and launching the server. It is provided as a means for
  * the C thread subsystem to launch the server C++ object.
  */
-void server_spawn(thread_Settings *thread) {
+void server_spawn(struct thread_Settings *thread) {
     Server *theServer = NULL;
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Server spawn settings=%p multihdr=%p sock=%d", \
-		 (void *) thread, (void *)thread->multihdr, thread->mSock);
+    thread_debug("Server spawn settings=%p GroupSumReport=%p sock=%d", \
+		 (void *) thread, (void *)thread->GroupSumReport, thread->mSock);
 #endif
     // set traffic thread to realtime if needed
 #if HAVE_SCHED_SETSCHEDULER
@@ -98,7 +134,7 @@ void server_spawn(thread_Settings *thread) {
     // Start up the server
     theServer = new Server(thread);
     // Run the test
-    if ( isUDP( thread ) ) {
+    if (isUDP(thread)) {
         theServer->RunUDP();
     } else {
         theServer->RunTCP();
@@ -122,100 +158,112 @@ void server_spawn(thread_Settings *thread) {
  *
  * Note: This runs in client thread context
  */
-void client_spawn(thread_Settings *thread) {
+void client_spawn(struct thread_Settings *thread) {
     Client *theClient = NULL;
-    thread_Settings *reverse_client = NULL;
+    struct thread_Settings *reverse_client = NULL;
+    double ct = -1;
 
     // set traffic thread to realtime if needed
 #if HAVE_SCHED_SETSCHEDULER
     thread_setscheduler(thread);
 #endif
     // start up the client
-    // Note: socket connect() happens here in the constructor
-    // that should be fixed as a clean up
     theClient = new Client(thread);
+    // let the reporter thread go first in the case of -P greater than 1
+    Condition_Lock(reporter_state.await);
+    while (!reporter_state.ready) {
+	Condition_TimedWait(&reporter_state.await, 1);
+    }
+    Condition_Unlock(reporter_state.await);
+    // Time for connect
+    //
+    // Note: ServerReverse traffic threads don't need a new connect()
+    // as they use the session created by the client's connect()
     if (isConnectOnly(thread)) {
 	theClient->ConnectPeriodic();
-    } else if (!theClient->isConnected()) {
-        // the barrier needs to be called even
-        // for threads that fail connect
-	if (thread->multihdr && !isNoConnectSync(thread))
-	    BarrierClient(thread->connects_done);
-	DELETE_PTR(theClient);
-	return;
-    } else if (!isReverse(thread) && !isServerReverse(thread) && !isWriteAck(thread)) {
-	// Code for the normal case
-	// Perform any intial startup delays between the connect() and the data xfer phase
-	// this will also initiliaze the report header timestamps needed by the reporter thread
+    } else if (!isServerReverse(thread)) {
+	ct = theClient->my_connect();
+	if (isConnectionReport(thread))
+	    PostReport(InitConnectionReport(thread, ct));
+    }
+    if (!isNoConnectSync(thread))
+	theClient->BarrierClient(thread->connects_done);
+
+    if (theClient->isConnected()) {
+	if (!isReverse(thread) && !isServerReverse(thread) && !isWriteAck(thread)) {
+	    // Code for the normal case
+	    // Perform any intial startup delays between the connect() and the data xfer phase
+	    // this will also initiliaze the report header timestamps needed by the reporter thread
 #ifdef HAVE_THREAD_DEBUG
-	thread_debug("Client spawn thread normal (sock=%d)", thread->mSock);
+	    thread_debug("Client spawn thread normal (sock=%d)", thread->mSock);
 #endif
-	theClient->StartSynch();
-	if (theClient->isConnected()) {
+	    theClient->StartSynch();
 	    theClient->InitiateServer();
 	    theClient->Run();
-	}
-    } else if (isServerReverse(thread)) {
+	} else if (isServerReverse(thread)) {
 #ifdef HAVE_THREAD_DEBUG
-	thread_debug("Client spawn thread server-reverse (sock=%d)", thread->mSock);
+	    thread_debug("Client spawn thread server-reverse (sock=%d)", thread->mSock);
 #endif
-	// This is the case of the listener launching a client, no test exchange nor connect
-	theClient->SetReportStartTime();
-	theClient->Run();
-    } else if (isReverse(thread) || isWriteAck(thread)) {
-	// This is a client side initiated reverse test,
-	// Could be bidir or reverse only
-	// Create thread setting for the reverse_client (i.e. client as server)
-	// Note: Settings copy will malloc space for the
-	// reverse thread settings and the run_wrapper will free it
-	Settings_Copy(thread, &reverse_client);
-	FAIL((!reverse_client || !(thread->mSock > 0)), "Reverse test failed to start per thread settings or socket problem",  thread);
-	reverse_client->mSock = thread->mSock; // use the same socket for both directions
-	if (isWriteAck(thread))
-	    reverse_client->mThreadMode = kMode_WriteAckClient;
-	else
-	    reverse_client->mThreadMode = kMode_Server;
-	setServerReverse(reverse_client); // cause the connection report to show reverse
-	if (!isWriteAck(thread))
-	    reverse_client->bidirhdr = thread->bidirhdr; // reverse_client thread updates the bidir report
-	if (isModeTime(reverse_client)) {
-	    reverse_client->mAmount += (SLOPSECS * 100);  // add 2 sec for slop on reverse, units are 10 ms
-	    if (isTxHoldback(thread)) {
-		reverse_client->mAmount += (thread->txholdback_timer.tv_sec * 100);
-		reverse_client->mAmount += (thread->txholdback_timer.tv_usec / 1000000 * 100);
+	    // This is the case of the listener launching a client, no test exchange nor connect
+	    theClient->Run();
+	} else if (isReverse(thread) || isWriteAck(thread)) {
+	    // This is a client side initiated reverse test,
+	    // Could be bidir or reverse only
+	    // Create thread setting for the reverse_client (i.e. client as server)
+	    // Note: Settings copy will malloc space for the
+	    // reverse thread settings and the run_wrapper will free it
+	    if (isBidir(thread)) {
+		Condition_Initialize(&thread->bidir_startstop.await);
+		thread->mBidirReport = InitSumReport(thread, thread->mSock);
+		IncrSumReportRefCounter(thread->mBidirReport);
 	    }
-	}
-#ifdef HAVE_THREAD_DEBUG
-	thread_debug("Client spawn thread reverse (sock=%d)", thread->mSock);
-#endif
-	theClient->StartSynch();
-	theClient->InitiateServer();
-	// RJM ADD a thread event here so reverse_client is in a known ready state prior to test exchange
-	// Now exchange client's test information with remote server
-	setReverse(reverse_client);
-	thread_start(reverse_client);
-	// Now handle bidir vs reverse-only for client side invocation
-	if (!isBidir(thread) && !isWriteAck(thread)) {
-	    // Reverse only, client thread waits on reverse_server and never runs any traffic
-	    if (!thread_equalid(reverse_client->mTID, thread_zeroid())) {
-#ifdef HAVE_THREAD_DEBUG
-		thread_debug("Reverse pthread join sock=%d", reverse_client->mSock);
-#endif
-		if (pthread_join(reverse_client->mTID, NULL) != 0) {
-		    WARN( 1, "pthread_join reverse failed" );
-		} else {
-#ifdef HAVE_THREAD_DEBUG
-		    thread_debug("Client reverse thread finished sock=%d", reverse_client->mSock);
-#endif
+	    Settings_Copy(thread, &reverse_client);
+	    FAIL((!reverse_client || !(thread->mSock > 0)), "Reverse test failed to start per thread settings or socket problem",  thread);
+	    reverse_client->mSock = thread->mSock; // use the same socket for both directions
+	    if (isWriteAck(thread))
+		reverse_client->mThreadMode = kMode_WriteAckClient;
+	    else
+		reverse_client->mThreadMode = kMode_Server;
+	    setServerReverse(reverse_client); // cause the connection report to show reverse
+	    if (isModeTime(reverse_client)) {
+		reverse_client->mAmount += (SLOPSECS * 100);  // add 2 sec for slop on reverse, units are 10 ms
+		if (isTxHoldback(thread)) {
+		    reverse_client->mAmount += (thread->txholdback_timer.tv_sec * 100);
+		    reverse_client->mAmount += (thread->txholdback_timer.tv_usec / 1000000 * 100);
 		}
 	    }
-	} else {
-	    // bidir case or Write ack case, start the client traffic
-	    theClient->Run();
+#ifdef HAVE_THREAD_DEBUG
+	    thread_debug("Client spawn thread reverse (sock=%d)", thread->mSock);
+#endif
+	    theClient->StartSynch();
+	    theClient->InitiateServer();
+	    // RJM ADD a thread event here so reverse_client is in a known ready state prior to test exchange
+	    // Now exchange client's test information with remote server
+	    setReverse(reverse_client);
+	    thread_start(reverse_client);
+	    // Now handle bidir vs reverse-only for client side invocation
+	    if (!isBidir(thread) && !isWriteAck(thread)) {
+		// Reverse only, client thread waits on reverse_server and never runs any traffic
+		if (!thread_equalid(reverse_client->mTID, thread_zeroid())) {
+#ifdef HAVE_THREAD_DEBUG
+		    thread_debug("Reverse pthread join sock=%d", reverse_client->mSock);
+#endif
+		    if (pthread_join(reverse_client->mTID, NULL) != 0) {
+			WARN( 1, "pthread_join reverse failed" );
+		    } else {
+#ifdef HAVE_THREAD_DEBUG
+			thread_debug("Client reverse thread finished sock=%d", reverse_client->mSock);
+#endif
+		    }
+		}
+	    } else {
+		// bidir case or Write ack case, start the client traffic
+		theClient->Run();
+	    }
 	}
     }
-    // Call the client's destructor which will close the socket
-    DELETE_PTR( theClient );
+    // Call the client's destructor
+    DELETE_PTR(theClient);
 }
 
 /*
@@ -227,26 +275,22 @@ void client_spawn(thread_Settings *thread) {
  *
  * Note: This runs in main thread context
  */
-void client_init(thread_Settings *clients) {
-    thread_Settings *itr = NULL;
-    thread_Settings *next = NULL;
+void client_init(struct thread_Settings *clients) {
+    struct thread_Settings *itr = NULL;
+    struct thread_Settings *next = NULL;
 
     itr = clients;
     setReport(clients);
-    if (isBidir(clients))
-        clients->bidirhdr = InitSumReport(clients, 0);
-
     if ((clients->mThreads > 1) && !isConnectOnly(clients)) {
 	// Create a multiple report header to handle reporting the
 	// sum of multiple client threads
 	InitSumReport(clients, groupID);
     }
-
     // See if we need to start a listener as well
-    Settings_GenerateListenerSettings( clients, &next );
+    Settings_GenerateListenerSettings(clients, &next);
 
 #ifdef HAVE_THREAD
-    if ( next != NULL ) {
+    if (next != NULL) {
         // We have threads and we need to start a listener so
         // have it ran before the client is launched
         itr->runNow = next;
@@ -260,17 +304,12 @@ void client_init(thread_Settings *clients) {
 	if (next) {
 	    if (isIncrDstIP(clients))
 		next->incrdstip = i;
-	    if (isBidir(clients)) {
-		// Force a new bidir report for all the clients
-		next->bidirhdr = NULL;
-		next->bidirhdr = InitSumReport(next, 0);
-	    }
 	}
         itr->runNow = next;
         itr = next;
     }
 #else
-    if ( next != NULL ) {
+    if (next != NULL) {
         // We don't have threads and we need to start a listener so
         // have it ran after the client is finished
         itr->runNext = next;
@@ -281,7 +320,7 @@ void client_init(thread_Settings *clients) {
 /*
  * writeack_server_spawn
  */
-void writeack_server_spawn(thread_Settings *thread) {
+void writeack_server_spawn(struct thread_Settings *thread) {
     WriteAck *theServerAck = NULL;
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Write ack server spawn settings=%p sock=%d", (void *) thread, thread->mSock);
@@ -300,7 +339,7 @@ void writeack_server_spawn(thread_Settings *thread) {
 /*
  * writeack_client_spawn
  */
-void writeack_client_spawn(thread_Settings *thread) {
+void writeack_client_spawn(struct thread_Settings *thread) {
     Server *theServer = NULL;
     WriteAck *theClientAck = NULL;
 #ifdef HAVE_THREAD_DEBUG
