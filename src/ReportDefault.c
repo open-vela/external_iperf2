@@ -74,12 +74,12 @@ void reporter_printstats (struct TransferInfo *stats) {
     static char header_printed = 0;
     double bytesxfered;
 
-    byte_snprintf( buffer, sizeof(buffer)/2, (double) stats->TotalLen,
+    byte_snprintf( buffer, sizeof(buffer)/2, (double) stats->cntBytes,
                    toupper( (int)stats->mFormat));
-    if (!stats->TotalLen || (stats->endTime < SMALLEST_INTERVAL_SEC)) {
+    if (!stats->cntBytes || (stats->endTime < SMALLEST_INTERVAL_SEC)) {
         bytesxfered = 0;
     } else {
-        bytesxfered = (double) stats->TotalLen;
+        bytesxfered = (double) stats->cntBytes;
     }
     byte_snprintf( &buffer[sizeof(buffer)/2], sizeof(buffer)/2,
                    (((stats->endTime - stats->startTime) > 0) ? (bytesxfered / (stats->endTime - stats->startTime)) : 0),
@@ -303,10 +303,10 @@ void reporter_printstats (struct TransferInfo *stats) {
  */
 void reporter_multistats (struct TransferInfo *stats) {
 
-    byte_snprintf( buffer, sizeof(buffer)/2, (double) stats->TotalLen,
+    byte_snprintf( buffer, sizeof(buffer)/2, (double) stats->cntBytes,
                    toupper( (int)stats->mFormat));
     byte_snprintf( &buffer[sizeof(buffer)/2], sizeof(buffer)/2,
-                   ((double) stats->TotalLen) / (stats->endTime - stats->startTime),
+                   ((double) stats->cntBytes) / (stats->endTime - stats->startTime),
                    stats->mFormat);
 
     if (!stats->mEnhanced) {
@@ -379,10 +379,10 @@ void reporter_multistats (struct TransferInfo *stats) {
  * Prints bidir sum transfer reports in default style
  */
 void reporter_bidirstats (struct TransferInfo *stats) {
-    byte_snprintf( buffer, sizeof(buffer)/2, (double) stats->TotalLen,
+    byte_snprintf( buffer, sizeof(buffer)/2, (double) stats->cntBytes,
 		   toupper( (int)stats->mFormat));
     byte_snprintf( &buffer[sizeof(buffer)/2], sizeof(buffer)/2,
-		   ((double) stats->TotalLen) / (stats->endTime - stats->startTime),
+		   ((double) stats->cntBytes) / (stats->endTime - stats->startTime),
 		   stats->mFormat);
 
     // TCP Reporting
@@ -401,12 +401,12 @@ void reporter_framestats_udp (struct TransferInfo *stats) {
     static char header_printed = 0;
     double bytesxfered;
 
-    byte_snprintf( buffer, sizeof(buffer)/2, (double) stats->TotalLen,
+    byte_snprintf( buffer, sizeof(buffer)/2, (double) stats->cntBytes,
                    toupper( (int)stats->mFormat));
-    if (!stats->TotalLen || (stats->endTime < SMALLEST_INTERVAL_SEC)) {
+    if (!stats->cntBytes || (stats->endTime < SMALLEST_INTERVAL_SEC)) {
         bytesxfered = 0;
     } else {
-        bytesxfered = (double) stats->TotalLen;
+        bytesxfered = (double) stats->cntBytes;
     }
     byte_snprintf( &buffer[sizeof(buffer)/2], sizeof(buffer)/2,
                    (bytesxfered / (stats->endTime - stats->startTime)),
@@ -474,12 +474,12 @@ void reporter_framestats_tcp (struct TransferInfo *stats) {
     static char header_printed = 0;
     double bytesxfered;
 
-    byte_snprintf( buffer, sizeof(buffer)/2, (double) stats->TotalLen,
+    byte_snprintf( buffer, sizeof(buffer)/2, (double) stats->cntBytes,
                    toupper( (int)stats->mFormat));
-    if (!stats->TotalLen || (stats->endTime < SMALLEST_INTERVAL_SEC)) {
+    if (!stats->cntBytes || (stats->endTime < SMALLEST_INTERVAL_SEC)) {
         bytesxfered = 0;
     } else {
-        bytesxfered = (double) stats->TotalLen;
+        bytesxfered = (double) stats->cntBytes;
     }
     byte_snprintf( &buffer[sizeof(buffer)/2], sizeof(buffer)/2,
                    (bytesxfered / (stats->endTime - stats->startTime)),
@@ -569,7 +569,6 @@ void reporter_reportsettings (struct ReporterData *data) {
 		printf( join_multicast_sg_dev, data->mSSMMulticastStr, data->mLocalhost, data->mIfrname);
         }
     }
-
     if (isIsochronous(data)) {
 	char meanbuf[40];
 	char variancebuf[40];

@@ -130,7 +130,7 @@ igmp_querier_OBJECTS = $(am_igmp_querier_OBJECTS)
 igmp_querier_LDADD = $(LDADD)
 am__iperf_SOURCES_DIST = Client.cpp Extractor.c isochronous.cpp \
 	Launch.cpp List.cpp Listener.cpp Locale.c PerfSocket.cpp \
-	ReportCSV.c ReportDefault.c Reporter.c Reports.c Server.cpp \
+	ReportCSV.c Reporter.c Reports.c ReportOutputs.c Server.cpp \
 	Settings.cpp Write_ack.cpp SocketAddr.c gnu_getopt.c \
 	gnu_getopt_long.c histogram.c main.cpp service.c sockets.c \
 	stdio.c packet_ring.c tcp_window_size.c pdfs.c checksums.c
@@ -138,8 +138,8 @@ am__iperf_SOURCES_DIST = Client.cpp Extractor.c isochronous.cpp \
 am_iperf_OBJECTS = Client.$(OBJEXT) Extractor.$(OBJEXT) \
 	isochronous.$(OBJEXT) Launch.$(OBJEXT) List.$(OBJEXT) \
 	Listener.$(OBJEXT) Locale.$(OBJEXT) PerfSocket.$(OBJEXT) \
-	ReportCSV.$(OBJEXT) ReportDefault.$(OBJEXT) Reporter.$(OBJEXT) \
-	Reports.$(OBJEXT) Server.$(OBJEXT) Settings.$(OBJEXT) \
+	ReportCSV.$(OBJEXT) Reporter.$(OBJEXT) Reports.$(OBJEXT) \
+	ReportOutputs.$(OBJEXT) Server.$(OBJEXT) Settings.$(OBJEXT) \
 	Write_ack.$(OBJEXT) SocketAddr.$(OBJEXT) gnu_getopt.$(OBJEXT) \
 	gnu_getopt_long.$(OBJEXT) histogram.$(OBJEXT) main.$(OBJEXT) \
 	service.$(OBJEXT) sockets.$(OBJEXT) stdio.$(OBJEXT) \
@@ -168,7 +168,7 @@ am__depfiles_remade = ./$(DEPDIR)/Client.Po ./$(DEPDIR)/Extractor.Po \
 	./$(DEPDIR)/Launch.Po ./$(DEPDIR)/List.Po \
 	./$(DEPDIR)/Listener.Po ./$(DEPDIR)/Locale.Po \
 	./$(DEPDIR)/PerfSocket.Po ./$(DEPDIR)/ReportCSV.Po \
-	./$(DEPDIR)/ReportDefault.Po ./$(DEPDIR)/Reporter.Po \
+	./$(DEPDIR)/ReportOutputs.Po ./$(DEPDIR)/Reporter.Po \
 	./$(DEPDIR)/Reports.Po ./$(DEPDIR)/Server.Po \
 	./$(DEPDIR)/Settings.Po ./$(DEPDIR)/SocketAddr.Po \
 	./$(DEPDIR)/Write_ack.Po ./$(DEPDIR)/checkdelay.Po \
@@ -363,7 +363,7 @@ AM_CFLAGS = -Wall
 iperf_LDFLAGS = @CFLAGS@ @PTHREAD_CFLAGS@ @WEB100_CFLAGS@ @DEFS@
 iperf_SOURCES = Client.cpp Extractor.c isochronous.cpp Launch.cpp \
 	List.cpp Listener.cpp Locale.c PerfSocket.cpp ReportCSV.c \
-	ReportDefault.c Reporter.c Reports.c Server.cpp Settings.cpp \
+	Reporter.c Reports.c ReportOutputs.c Server.cpp Settings.cpp \
 	Write_ack.cpp SocketAddr.c gnu_getopt.c gnu_getopt_long.c \
 	histogram.c main.cpp service.c sockets.c stdio.c packet_ring.c \
 	tcp_window_size.c pdfs.c $(am__append_1)
@@ -488,7 +488,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Locale.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/PerfSocket.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ReportCSV.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ReportDefault.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ReportOutputs.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Reporter.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Reports.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Server.Po@am__quote@ # am--include-marker
@@ -682,7 +682,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/Locale.Po
 	-rm -f ./$(DEPDIR)/PerfSocket.Po
 	-rm -f ./$(DEPDIR)/ReportCSV.Po
-	-rm -f ./$(DEPDIR)/ReportDefault.Po
+	-rm -f ./$(DEPDIR)/ReportOutputs.Po
 	-rm -f ./$(DEPDIR)/Reporter.Po
 	-rm -f ./$(DEPDIR)/Reports.Po
 	-rm -f ./$(DEPDIR)/Server.Po
@@ -758,7 +758,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/Locale.Po
 	-rm -f ./$(DEPDIR)/PerfSocket.Po
 	-rm -f ./$(DEPDIR)/ReportCSV.Po
-	-rm -f ./$(DEPDIR)/ReportDefault.Po
+	-rm -f ./$(DEPDIR)/ReportOutputs.Po
 	-rm -f ./$(DEPDIR)/Reporter.Po
 	-rm -f ./$(DEPDIR)/Reports.Po
 	-rm -f ./$(DEPDIR)/Server.Po

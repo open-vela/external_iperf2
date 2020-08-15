@@ -24,9 +24,9 @@ iperf_SOURCES = \
 		Locale.c \
 		PerfSocket.cpp \
 		ReportCSV.c \
-		ReportDefault.c \
 		Reporter.c \
 		Reports.c \
+		ReportOutputs.c \
 		Server.cpp \
 		Settings.cpp \
 		Write_ack.cpp \

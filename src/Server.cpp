@@ -82,6 +82,7 @@ Server::Server( thread_Settings *inSettings ) {
     mSettings = inSettings;
     mBuf = NULL;
     myJob = NULL;
+    reportstruct = &scratchpad;
     mySocket = inSettings->mSock;
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
     myDropSocket = inSettings->mSockDrop;
@@ -94,36 +95,71 @@ Server::Server( thread_Settings *inSettings ) {
 #endif
     // initialize buffer, length checking done by the Listener
     mBuf = new char[MBUFALLOCSIZE]; // defined in payloads.h
-    FAIL_errno( mBuf == NULL, "No memory for buffer\n", mSettings );
+    FAIL_errno(mBuf == NULL, "No memory for buffer\n", mSettings);
+    mSettings->mBufLen = MBUFALLOCSIZE;
+    if (mSettings->mBufLen < (int) sizeof(UDP_datagram)) {
+	fprintf(stderr, warn_buffer_too_small, mSettings->mBufLen);
+    }
     SockAddr_Ifrname(mSettings);
+    // Enable kernel level timestamping if available
+    InitKernelTimeStamping();
+    int sorcvtimer = 0;
+    // sorcvtimer units microseconds convert to that
+    // minterval double, units seconds
+    // mAmount integer, units 10 milliseconds
+    // divide by two so timeout is 1/2 the interval
+    if (mSettings->mInterval && (mSettings->mIntervalMode == kInterval_Time)) {
+	sorcvtimer = (mSettings->mInterval / 2);
+    } else if (isServerModeTime(mSettings)) {
+	sorcvtimer = (mSettings->mAmount * 1000) / 2;
+    }
+    if (sorcvtimer > 0) {
+#ifdef WIN32
+	// Windows SO_RCVTIMEO uses ms
+	DWORD timeout = (double) sorcvtimer / 1e3;
+#else
+	struct timeval timeout;
+	timeout.tv_sec = sorcvtimer / 1000000;
+	timeout.tv_usec = sorcvtimer % 1000000;
+#endif
+	if (setsockopt( mSettings->mSock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0 ) {
+	    WARN_errno( mSettings->mSock == SO_RCVTIMEO, "socket" );
+	}
+    }
+    myJob = InitIndividualReport(mSettings);
+    myReport = (struct ReporterData *)myJob->this_report;
+    assert(myJob != NULL);
 }
 
 /* -------------------------------------------------------------------
  * Destructor close socket.
  * ------------------------------------------------------------------- */
 
-Server::~Server() {
+Server::~Server (void) {
+    int do_close = 1;
 #if HAVE_THREAD_DEBUG
     thread_debug("Server destructor sock=%d bidir=%s", mySocket, (isBidir(mSettings) ? "true" : "false"));
 #endif
-    if ((mySocket != INVALID_SOCKET) && !isReverse(mSettings)		\
-      && !isBidir(mSettings) && (myJob && !myJob->bidirreport)) {
+    if (isBidir(mSettings) && (do_close = bidir_stop_barrier(&mSettings->bidir_startstop))) {
+	struct Condition *tmp = &mSettings->bidir_startstop.await;
+	Condition_Destroy(tmp);
+    }
+    if ((mySocket != INVALID_SOCKET) && do_close) {
 #if HAVE_THREAD_DEBUG
-      thread_debug("Socket close sock=%d (server destructor)", mySocket);
+	thread_debug("Socket close sock=%d (server destructor)", mySocket);
 #endif
-      int rc = close(mySocket);
-      WARN_errno( rc == SOCKET_ERROR, "server close" );
-      mySocket = INVALID_SOCKET;
-  }
-  Iperf_remove_host(&mSettings->peer);
+	int rc = close(mySocket);
+	WARN_errno( rc == SOCKET_ERROR, "server close" );
+	mySocket = INVALID_SOCKET;
+    }
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
-  if ( myDropSocket != INVALID_SOCKET ) {
-    int rc = close( myDropSocket );
-    WARN_errno( rc == SOCKET_ERROR, "server close drop" );
-    myDropSocket = INVALID_SOCKET;
-  }
+    if (myDropSocket != INVALID_SOCKET) {
+	int rc = close(myDropSocket);
+	WARN_errno( rc == SOCKET_ERROR, "server close drop" );
+	myDropSocket = INVALID_SOCKET;
+    }
 #endif
-  DELETE_ARRAY(mBuf);
+    DELETE_ARRAY(mBuf);
 }
 
 inline bool Server::InProgress (void) {
@@ -239,7 +275,7 @@ void Server::RunTCP( void ) {
 		tokens -= currLen;
 
 	    reportstruct->packetLen = currLen;
-	    ReportPacket(mSettings->reporthdr, reportstruct);
+	    ReportPacket(myJob, reportstruct);
 
 	    // Check for reverse and amount where
 	    // the server stops after receiving
@@ -253,16 +289,13 @@ void Server::RunTCP( void ) {
 	}
     }
   end:
+    Iperf_remove_host(&mSettings->peer);
     // stop timing
     now.setnow();
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
     reportstruct->packetLen = 0;
-    CloseReport(mSettings->reporthdr, reportstruct);
-    EndReport( mSettings->reporthdr );
-    if (isWriteAck(mSettings)) {
-        WriteAck::Close(mSettings->ackring);
-    }
+    CloseReport(myJob, reportstruct);
 }
 
 void Server::InitKernelTimeStamping (void) {
@@ -304,6 +337,54 @@ int Server::AlignPayloads (void) {
     }
     return len;
 }
+//
+// Set the report start times and next report times, options
+// are now, the accept time or the first write time
+//
+inline void Server::SetReportStartTime (void) {
+    if (!isReverse(mSettings) && isTripTime(mSettings)) {
+	// Start times come from the sender's timestamp
+	if (isUDP(mSettings)) {
+	    // Trip times use the first packet's sent time
+	    // RJM add some defense to the below
+	    int n;
+	    if ((n = recvn(mSettings->mSock, mBuf, sizeof(struct UDP_datagram), MSG_PEEK)) \
+		== sizeof(struct UDP_datagram)) {
+		struct UDP_datagram* mBuf_UDP  = (struct UDP_datagram *) mBuf;
+		myReport->startTime.tv_sec = ntohl(mBuf_UDP->tv_sec);
+		myReport->startTime.tv_usec = ntohl(mBuf_UDP->tv_usec);
+	    }
+	} else {
+	    // Set up trip time values that don't change
+	    struct TCP_burst_payload * mBuf_burst = (struct TCP_burst_payload *) mBuf;
+	    if ((n = recvn(mSettings->mSock, mBuf, sizeof(struct TCP_burst_payload *), MSG_PEEK)) \
+		== sizeof(struct TCP_burst_payload)) {
+		myReport->startTime.tv_sec =  = ntohl(mBuf_burst->start_tv_sec);
+		myReport->startTime.tv_usec =  = ntohl(mBuf_burst->start_tv_usec);
+	    }
+	}
+	if (TimeZero(myReport->startTime)) {
+	    // Servers that aren't full duplex use the accept timestamp for start
+	    myReport->report.startTime.tv_sec = mSettings->accept_time.tv_sec;
+	    myReport->report.startTime.tv_usec = mSettings->accept_time.tv_usec;
+	    fprintf(stderr, "--triptime set but failed to read sender's timestamp");
+	}
+    } else {
+	now.setnow();
+	myReport->startTime.tv_sec = now.getSecs();
+	myReport->startTime.tv_usec = now.getUsecs();
+    }
+    if (!TimeZero(reporthdr->intervalTime))
+	TimeAdd(myReport->nextTime, myReport->intervalTime);
+    if (myReport->multireport) {
+	myReport->multireport->report.startTime = myReport->startTime;
+	myReport->multireport->report.nextTime = myReport->nextTime;
+    }
+    if (myReport->bidirreport) {
+	myReport->bidirreport->report.startTime = myReport->startTime;
+	myReport->bidirreport->report.nextTime = myReport->nextTime;
+    }
+}
 
 void Server::InitTrafficLoop (void) {
     //  copy the thread drop socket to this object such
@@ -312,73 +393,21 @@ void Server::InitTrafficLoop (void) {
     if (mSettings->mSockDrop > 0)
         myDropSocket = mSettings->mSockDrop;
 #endif
-    myJob = InitIndividualReport(mSettings);
-    assert(myJob != NULL);
-    //
-    // Set the report start times and next report times, options
-    // are now, the accept time or the first write time
-    //
-    now.setnow();
-    myJob->report.startTime.tv_sec = now.getSecs();
-    myJob->report.startTime.tv_usec = now.getUsecs();
-    if (!isReverse(mSettings)) {
-	if (isUDP(mSettings) && isTripTime(mSettings)) {
-	    // Trip times use the first packet's sent time
-	    // RJM add some defense to the below
-	    int n;
-	    if ((n = recvn(mSettings->mSock, mBuf, sizeof (struct UDP_datagram), MSG_PEEK)) \
-		== sizeof(struct UDP_datagram)) {
-		struct UDP_datagram* mBuf_UDP  = (struct UDP_datagram *) mBuf;
-		myJob->report.startTime.tv_sec = ntohl(mBuf_UDP->tv_sec);
-		myJob->report.startTime.tv_usec = ntohl(mBuf_UDP->tv_usec);
-	    }
-	} else {
-	    // Servers that aren't full duplex use the accept timestamp for start
-	    myJob->report.startTime.tv_sec = mSettings->accept_time.tv_sec;
-	    myJob->report.startTime.tv_usec = mSettings->accept_time.tv_usec;
-	}
-    }
-    myJob->report.nextTime = myJob->report.startTime;
-    TimeAdd(myJob->report.nextTime, myJob->report.intervalTime);
+	// full duplex sockets need to be traffic synchronized
+    int barrier_flag = 0;
+    if (isBidir(mSettings))
+	barrier flag = bidir_start_barrier(&mSettings->bidir_startstop)
+    SetReportStartTime(barrier_flag);
+
     // Initialze the reportstruct scratchpad
     reportstruct = &myJob->packetring->metapacket;
     reportstruct->packetID = 0;
     reportstruct->l2len = 0;
     reportstruct->l2errors = 0x0;
 
-    if (mSettings->mBufLen < (int) sizeof(UDP_datagram)) {
-	mSettings->mBufLen = sizeof( UDP_datagram );
-	fprintf( stderr, warn_buffer_too_small, mSettings->mBufLen );
-    }
     // This will only have the connection report
     PostReport(myJob);
 
-    // Enable kernel level timestamping if available
-    InitKernelTimeStamping();
-
-    int sorcvtimer = 0;
-    // sorcvtimer units microseconds convert to that
-    // minterval double, units seconds
-    // mAmount integer, units 10 milliseconds
-    // divide by two so timeout is 1/2 the interval
-    if (mSettings->mInterval && (mSettings->mIntervalMode == kInterval_Time)) {
-	sorcvtimer = (mSettings->mInterval / 2);
-    } else if (isServerModeTime(mSettings)) {
-	sorcvtimer = (mSettings->mAmount * 1000) / 2;
-    }
-    if (sorcvtimer > 0) {
-#ifdef WIN32
-	// Windows SO_RCVTIMEO uses ms
-	DWORD timeout = (double) sorcvtimer / 1e3;
-#else
-	struct timeval timeout;
-	timeout.tv_sec = sorcvtimer / 1000000;
-	timeout.tv_usec = sorcvtimer % 1000000;
-#endif
-	if (setsockopt( mSettings->mSock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0 ) {
-	    WARN_errno( mSettings->mSock == SO_RCVTIMEO, "socket" );
-	}
-    }
     if (isServerModeTime(mSettings) || (isModeTime(mSettings) && isServerReverse(mSettings))) {
 #ifdef HAVE_SETITIMER
         int err;
@@ -387,7 +416,7 @@ void Server::InitTrafficLoop (void) {
 	it.it_value.tv_sec = (int) (mSettings->mAmount / 100.0);
 	it.it_value.tv_usec = (int) (10000 * (mSettings->mAmount -
 					      it.it_value.tv_sec * 100.0));
-	err = setitimer( ITIMER_REAL, &it, NULL );
+	err = setitimer(ITIMER_REAL, &it, NULL);
 	FAIL_errno( err != 0, "setitimer", mSettings );
 #endif
         mEndTime.setnow();
@@ -660,17 +689,17 @@ void Server::RunUDP( void ) {
 		}
 	    }
 	}
-	ReportPacket(mSettings->reporthdr, reportstruct);
+	ReportPacket(myJob, reportstruct);
     }
-    CloseReport(mSettings->reporthdr, reportstruct);
-    // send a acknowledgement back except when:
-    // 1) we're NOT receiving multicast
-    // 2) the user requested no final exchange
+    CloseReport(myJob, reportstruct);
+
     if (!isMulticast(mSettings) && !isNoUDPfin(mSettings)) {
-	// send back an acknowledgement of the terminating datagram
-	write_UDP_AckFIN( );
+	// send a UDP acknowledgement back except when:
+	// 1) we're NOT receiving multicast
+	// 2) the user requested no final exchange
+	write_UDP_AckFIN((struct TransferInfo *)&myJob->report.info);
     }
-    EndReport(mSettings->reporthdr);
+
 }
 // end Recv
 
@@ -709,101 +738,96 @@ void Server::FirstReadBarrier() {
  * come in, probably our AckFIN was lost and they are re-transmitted
  * termination datagrams, so re-transmit our AckFIN.
  * ------------------------------------------------------------------- */
+void Server::write_UDP_AckFIN (struct TransferInfo *stats) {
+    assert(stats!= NULL);
+    int ackpacket_length = (int) (sizeof(UDP_datagram) + sizeof(server_hdr));
+    // Make sure the final server report has a large enough packet
+    if (mSettings->mBufLen < ackpacket_length) {
+	DELETE_ARRAY(mBuf);
+	mSettings->mBufLen = ackpacket_length;
+	mBuf = new char[mSettings->mBufLen]; // defined in payloads.h
+	FAIL_errno(mBuf == NULL, "No memory for buffer per final packet\n", mSettings);
+    }
 
-void Server::write_UDP_AckFIN( ) {
+    struct UDP_datagram *UDP_Hdr = (struct UDP_datagram *)mBuf;
+    struct server_hdr *hdr = (struct server_hdr *)(UDP_Hdr+1);
 
-    int rc;
+    UDP_Hdr = (UDP_datagram*) mBuf;
+    int flags = (!isEnhanced(mSettings) ? HEADER_VERSION1 : (HEADER_VERSION1 | HEADER_EXTEND));
+#ifdef HAVE_INT64_T
+    flags |=  HEADER_SEQNO64B;
+#endif
+    hdr->base.flags        = htonl((long) flags);
+#ifdef HAVE_INT64_T
+    hdr->base.total_len1   = htonl((long) (stats->TotalLen >> 32));
+#else
+    hdr->base.total_len1   = htonl(0x0);
+#endif
+    hdr->base.total_len2   = htonl((long) (stats->TotalLen & 0xFFFFFFFF));
+    hdr->base.stop_sec     = htonl((long) stats->endTime);
+    hdr->base.stop_usec    = htonl((long)((stats->endTime - (long)stats->endTime) * rMillion));
+    hdr->base.error_cnt    = htonl((long) (stats->cntError & 0xFFFFFFFF));
+    hdr->base.outorder_cnt = htonl((long) (stats->cntOutofOrder  & 0xFFFFFFFF));
+    hdr->base.datagrams    = htonl((long) (stats->cntDatagrams & 0xFFFFFFFF));
+    if (flags & HEADER_SEQNO64B) {
+	hdr->extend2.error_cnt2    = htonl((long) (stats->cntError >> 32));
+	hdr->extend2.outorder_cnt2 = htonl((long) (stats->cntOutofOrder >> 32) );
+	hdr->extend2.datagrams2    = htonl((long) (stats->cntDatagrams >> 32));
+    }
+    hdr->base.jitter1      = htonl((long) stats->jitter);
+    hdr->base.jitter2      = htonl((long) ((stats->jitter - (long)stats->jitter) * rMillion));
+    if (flags & HEADER_EXTEND) {
+	hdr->extend.minTransit1  = htonl((long) stats->transit.totminTransit);
+	hdr->extend.minTransit2  = htonl((long) ((stats->transit.totminTransit - (long)stats->transit.totminTransit) * rMillion));
+	hdr->extend.maxTransit1  = htonl((long) stats->transit.totmaxTransit);
+	hdr->extend.maxTransit2  = htonl((long) ((stats->transit.totmaxTransit - (long)stats->transit.totmaxTransit) * rMillion));
+	hdr->extend.sumTransit1  = htonl((long) stats->transit.totsumTransit);
+	hdr->extend.sumTransit2  = htonl((long) ((stats->transit.totsumTransit - (long)stats->transit.totsumTransit) * rMillion));
+	hdr->extend.meanTransit1  = htonl((long) stats->transit.totmeanTransit);
+	hdr->extend.meanTransit2  = htonl((long) ((stats->transit.totmeanTransit - (long)stats->transit.totmeanTransit) * rMillion));
+	hdr->extend.m2Transit1  = htonl((long) stats->transit.totm2Transit);
+	hdr->extend.m2Transit2  = htonl((long) ((stats->transit.totm2Transit - (long)stats->transit.totm2Transit) * rMillion));
+	hdr->extend.vdTransit1  = htonl((long) stats->transit.totvdTransit);
+	hdr->extend.vdTransit2  = htonl((long) ((stats->transit.totvdTransit - (long)stats->transit.totvdTransit) * rMillion));
+	hdr->extend.cntTransit   = htonl(stats->transit.totcntTransit);
+	hdr->extend.IPGcnt = htonl((long) (stats->cntDatagrams / (stats->endTime - stats->startTime)));
+	hdr->extend.IPGsum = htonl(1);
+    }
 
     fd_set readSet;
-    FD_ZERO( &readSet );
+    FD_ZERO(&readSet);
 
-    struct timeval timeout;
-
-    int count = 0;
-    while ( count < 10 ) {
-        count++;
-
-        UDP_datagram *UDP_Hdr;
-        server_hdr *hdr;
-
-        UDP_Hdr = (UDP_datagram*) mBuf;
-        if (mSettings->mBufLen > (int) (sizeof(UDP_datagram) + sizeof(server_hdr))) {
-	    int flags = (!isEnhanced(mSettings) ? HEADER_VERSION1 : (HEADER_VERSION1 | HEADER_EXTEND));
-#ifdef HAVE_INT64_T
-	    flags |=  HEADER_SEQNO64B;
-#endif
-            struct TransferInfo *stats = GetReport( mSettings->reporthdr );
-            hdr = (server_hdr*) (UDP_Hdr+1);
-	    hdr->base.flags        = htonl((long) flags);
-#ifdef HAVE_INT64_T
-            hdr->base.total_len1   = htonl( (long) (stats->TotalLen >> 32) );
-#else
-            hdr->base.total_len1   = htonl(0x0);
-#endif
-            hdr->base.total_len2   = htonl( (long) (stats->TotalLen & 0xFFFFFFFF) );
-            hdr->base.stop_sec     = htonl( (long) stats->endTime );
-            hdr->base.stop_usec    = htonl( (long)((stats->endTime - (long)stats->endTime) * rMillion));
-            hdr->base.error_cnt    = htonl( (long) (stats->cntError & 0xFFFFFFFF) );
-            hdr->base.outorder_cnt = htonl( (long) (stats->cntOutofOrder  & 0xFFFFFFFF));
-	    hdr->base.datagrams    = htonl( (long) (stats->cntDatagrams & 0xFFFFFFFF) );
-	    if (flags & HEADER_SEQNO64B) {
-	      hdr->extend2.error_cnt2    = htonl( (long) ( stats->cntError >> 32) );
-	      hdr->extend2.outorder_cnt2 = htonl( (long) ( stats->cntOutofOrder >> 32)  );
-	      hdr->extend2.datagrams2    = htonl( (long) (stats->cntDatagrams >> 32) );
-	    }
-
-            hdr->base.jitter1      = htonl( (long) stats->jitter );
-            hdr->base.jitter2      = htonl( (long) ((stats->jitter - (long)stats->jitter) * rMillion) );
-	    if (flags & HEADER_EXTEND) {
-		hdr->extend.minTransit1  = htonl( (long) stats->transit.totminTransit );
-		hdr->extend.minTransit2  = htonl( (long) ((stats->transit.totminTransit - (long)stats->transit.totminTransit) * rMillion) );
-		hdr->extend.maxTransit1  = htonl( (long) stats->transit.totmaxTransit );
-		hdr->extend.maxTransit2  = htonl( (long) ((stats->transit.totmaxTransit - (long)stats->transit.totmaxTransit) * rMillion) );
-		hdr->extend.sumTransit1  = htonl( (long) stats->transit.totsumTransit );
-		hdr->extend.sumTransit2  = htonl( (long) ((stats->transit.totsumTransit - (long)stats->transit.totsumTransit) * rMillion) );
-		hdr->extend.meanTransit1  = htonl( (long) stats->transit.totmeanTransit );
-		hdr->extend.meanTransit2  = htonl( (long) ((stats->transit.totmeanTransit - (long)stats->transit.totmeanTransit) * rMillion) );
-		hdr->extend.m2Transit1  = htonl( (long) stats->transit.totm2Transit );
-		hdr->extend.m2Transit2  = htonl( (long) ((stats->transit.totm2Transit - (long)stats->transit.totm2Transit) * rMillion) );
-		hdr->extend.vdTransit1  = htonl( (long) stats->transit.totvdTransit );
-		hdr->extend.vdTransit2  = htonl( (long) ((stats->transit.totvdTransit - (long)stats->transit.totvdTransit) * rMillion) );
-		hdr->extend.cntTransit   = htonl( stats->transit.totcntTransit );
-		hdr->extend.IPGcnt = htonl( (long) (stats->cntDatagrams / (stats->endTime - stats->startTime)));
-		hdr->extend.IPGsum = htonl(1);
-	    }
-        }
-
+#define TRYCOUNT 40
+    int count = TRYCOUNT;
+    boolean success = false;
+    while (--count) {
+	int rc;
+	struct timeval timeout;
         // write data
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
 	// If in l2mode, use the AF_INET socket to write this packet
 	//
-	write(((mSettings->mSockDrop > 0 ) ? mSettings->mSockDrop : mSettings->mSock), mBuf, mSettings->mBufLen);
+	write(((mSettings->mSockDrop > 0) ? mSettings->mSockDrop : mSettings->mSock), mBuf, ackpacket_length);
 #else
-	write(mSettings->mSock, mBuf, mSettings->mBufLen);
+	write(mSettings->mSock, mBuf, ackpacket_length);
 #endif
         // wait until the socket is readable, or our timeout expires
-        FD_SET( mSettings->mSock, &readSet );
-        timeout.tv_sec  = 1;
-        timeout.tv_usec = 0;
-
-        rc = select( mSettings->mSock+1, &readSet, NULL, NULL, &timeout );
-        FAIL_errno( rc == SOCKET_ERROR, "select", mSettings );
-
-        if ( rc == 0 ) {
-            // select timed out
-            return;
-        } else {
-            // socket ready to read
-            rc = read( mSettings->mSock, mBuf, mSettings->mBufLen );
-            WARN_errno( rc < 0, "read" );
-            if ( rc <= 0 ) {
-                // Connection closed or errored
-                // Stop using it.
-                return;
-            }
-        }
+        FD_SET(mSettings->mSock, &readSet);
+        timeout.tv_sec  = 0;
+        timeout.tv_usec = 250000;
+        rc = select(mSettings->mSock+1, &readSet, NULL, NULL, &timeout);
+        FAIL_errno(rc == SOCKET_ERROR, "select", mSettings);
+        if (rc == 0) {
+	    continue; //select timeout
+	}
+        rc = read(mSettings->mSock, mBuf, mSettings->mBufLen);
+        WARN_errno(rc < 0, "read");
+	if (rc > 0) {
+	    success = true;
+	    break;
+	}
     }
-
-    fprintf( stderr, warn_ack_failed, mSettings->mSock, count );
+    if (!success)
+	fprintf(stderr, warn_ack_failed, mSettings->mSock, TRYCOUNT);
 }
 // end write_UDP_AckFIN

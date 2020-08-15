@@ -1,4 +1,4 @@
-/*---------------------------------------------------------------
+ /*---------------------------------------------------------------
  * Copyright (c) 1999,2000,2001,2002,2003
  * The Board of Trustees of the University of Illinois
  * All Rights Reserved.
@@ -59,7 +59,7 @@
 
 void CSV_stats(struct TransferInfo *stats) {
     // $TIMESTAMP,$ID,$INTERVAL,$BYTE,$SPEED,$JITTER,$LOSS,$PACKET,$%LOSS
-    intmax_t speed = (intmax_t) ((stats->TotalLen > 0) ? (((double)stats->TotalLen * 8.0) / (stats->endTime -  stats->startTime)) : 0);
+    intmax_t speed = (intmax_t) ((stats->cntBytes > 0) ? (((double)stats->cntBytes * 8.0) / (stats->ts.iEnd -  stats->ts.iStart)) : 0);
     char timestamp[160];
     int milliseconds;
 #ifdef HAVE_CLOCK_GETTIME
@@ -73,22 +73,22 @@ void CSV_stats(struct TransferInfo *stats) {
 #endif
 
    // localtime is not thread safe.  It's only used by the reporter thread.  Use localtime_r if thread safe is ever needed.
-    if (!stats->mEnhanced) {
+    if (!isEnhanced(stats->common)) {
 	strftime(timestamp, 80, "%Y%m%d%H%M%S", localtime(&t1.tv_sec));
     } else {
 	char  buffer[80];
 	strftime(buffer, 80, "%Y%m%d%H%M%S", localtime(&t1.tv_sec));
 	snprintf(timestamp, 160, "%s.%.3d", buffer, milliseconds);
     }
-    if ( stats->mUDP != (char)kMode_Server ) {
+    if (stats->common->ThreadMode != kMode_Server) {
         // TCP Reporting
         printf( reportCSV_bw_format,
                 timestamp,
                 (stats->reserved_delay == NULL ? ",,," : stats->reserved_delay),
                 stats->transferID,
-                stats->startTime,
-                stats->endTime,
-                stats->TotalLen,
+                stats->ts.iStart,
+                stats->ts.iEnd,
+                stats->cntBytes,
                 speed);
     } else {
         // UDP Reporting
@@ -96,18 +96,20 @@ void CSV_stats(struct TransferInfo *stats) {
                 timestamp,
                 (stats->reserved_delay == NULL ? ",,," : stats->reserved_delay),
                 stats->transferID,
-                stats->startTime,
-                stats->endTime,
-                stats->TotalLen,
+                stats->ts.iStart,
+                stats->ts.iEnd,
+                stats->cntBytes,
                 speed,
                 stats->jitter*1000.0,
                 stats->cntError,
                 stats->cntDatagrams,
                 (100.0 * stats->cntError) / stats->cntDatagrams, stats->cntOutofOrder );
     }
+#if 0
     if ( stats->free == 1 && stats->reserved_delay != NULL ) {
         free( stats->reserved_delay );
     }
+#endif
 }
 
 void *CSV_peer(struct ConnectionInfo *stats, int ID) {
@@ -161,7 +163,8 @@ void *CSV_peer(struct ConnectionInfo *stats, int ID) {
 
 void CSV_serverstats(struct ConnectionInfo *conn, struct TransferInfo *stats ) {
     stats->reserved_delay = CSV_peer( conn, stats->transferID );
+#if 0
     stats->free = 1;
+#endif
     CSV_stats( stats );
 }
-

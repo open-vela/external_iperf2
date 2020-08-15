@@ -210,7 +210,7 @@ int main( int argc, char **argv ) {
     unsetReport(ext_gSettings);
     switch (ext_gSettings->mThreadMode) {
     case kMode_Client :
-	if ( isDaemon( ext_gSettings ) ) {
+	if (isDaemon(ext_gSettings)) {
 	    fprintf(stderr, "Iperf client cannot be run as a daemon\n");
 	    return 0;
 	}

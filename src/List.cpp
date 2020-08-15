@@ -94,6 +94,7 @@ static void active_table_show_compare(const char *action, Iperf_ListEntry *entry
 void Iperf_initialize_active_table (void) {
     Mutex_Initialize(&active_table.my_mutex);
     active_table.root = NULL;
+    active_table.groupid = 0;
 }
 
 /*
@@ -111,44 +112,48 @@ static void active_table_update (iperf_sockaddr *host, struct thread_Settings *a
 	this_entry->host = *host;
 	this_entry->next = active_table.root;
 	this_entry->thread_count = 1;
+	this_entry->socket = agent->mSock;
 	active_table.count++;
+	active_table.groupid++;
 	active_table.root = this_entry;
 #if HAVE_THREAD_DEBUG
 	active_table_show_entry("new entry", this_entry, ((SockAddr_are_Equal(&this_entry->host, host) && SockAddr_Hostare_Equal(&this_entry->host, host))));
 #endif
 	if (isDataReport(agent)) {
 	    this_entry->sum_report = InitSumReport(agent, active_table.total_count);
-	    agent->multihdr = this_entry->sum_report;
-	    IncrMultiHdrRefCounter(agent->multihdr);
+	    agent->mSumReport = this_entry->sum_report;
+	    IncrSumReportRefCounter(this_entry->sum_report);
 	} else {
-	    agent->multihdr = NULL;
+	    this_entry->sum_report = NULL;
 	}
     } else {
 	this_entry->thread_count++;
+	agent->mSumReport = this_entry->sum_report;
 #if HAVE_THREAD_DEBUG
 	active_table_show_entry("incr entry", this_entry, 1);
 #endif
 	if (isDataReport(agent)) {
-	    agent->multihdr = this_entry->sum_report;
-	    IncrMultiHdrRefCounter(agent->multihdr);
+	    IncrSumReportRefCounter(this_entry->sum_report);
 	} else {
-	    agent->multihdr = NULL;
+	    agent->mSumReport = NULL;
 	}
     }
 }
 
-void Iperf_push_host (iperf_sockaddr *host, struct thread_Settings *agent) {
+int Iperf_push_host (iperf_sockaddr *host, struct thread_Settings *agent) {
     Mutex_Lock(&active_table.my_mutex);
     active_table_update(host, agent);
+    int groupid = active_table.groupid;
     Mutex_Unlock(&active_table.my_mutex);
+    return groupid;
 }
 
-bool Iperf_push_host_port_conditional (iperf_sockaddr *host, struct thread_Settings *agent) {
-    bool rc = false;
+int Iperf_push_host_port_conditional (iperf_sockaddr *host, struct thread_Settings *agent) {
+    int rc = -1;
     Mutex_Lock(&active_table.my_mutex);
     if (!Iperf_host_port_present(host)) {
 	active_table_update(host, agent);
-	rc = true;
+	rc = active_table.groupid;
     }
     Mutex_Unlock(&active_table.my_mutex);
     return (rc);
@@ -171,6 +176,10 @@ void Iperf_remove_host (iperf_sockaddr *del) {
     }
     if (*tmp) {
 	if (--(*tmp)->thread_count == 0) {
+	    if ((*tmp)->socket > 0) {
+		int rc = close((*tmp)->socket);
+		WARN_errno(rc == SOCKET_ERROR, "close socket" );
+	    }
 	    Iperf_ListEntry *remove = (*tmp);
 	    active_table.count--;
 #if HAVE_THREAD_DEBUG
