@@ -258,7 +258,7 @@ const char* kLabel_bit[]  =
  * ------------------------------------------------------------------- */
 
 void byte_snprintf( char* outString, int inLen,
-                    double inNum, char inFormat ) {
+                    double inNum, char inFormat, bool domalloc) {
     int conv = 0;
     const char* suffix;
     const char* format;
@@ -296,7 +296,7 @@ void byte_snprintf( char* outString, int inLen,
 	}
     }
 
-    if ( ! isupper ((int)inFormat) ) {
+    if (!isupper((int)inFormat)) {
         inNum *= kConversionForBits[ conv ];
         suffix = kLabel_bit[conv];
     } else {
@@ -318,7 +318,7 @@ void byte_snprintf( char* outString, int inLen,
 				     * this code will not control spaces*/
         format = "%4.0f %s";        /* #### */
     }
-    snprintf( outString, inLen, format, inNum, suffix );
+    snprintf(outString, inLen, format, inNum, suffix);
 } /* end byte_snprintf */
 
 /* -------------------------------------------------------------------

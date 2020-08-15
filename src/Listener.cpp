@@ -1,3 +1,4 @@
+
 /*---------------------------------------------------------------
  * Copyright (c) 1999,2000,2001,2002,2003
  * The Board of Trustees of the University of Illinois
@@ -103,7 +104,8 @@ Listener::Listener (thread_Settings *inSettings) {
     mSettings = inSettings;
     // alloc and initialize the buffer (mBuf) used for test messages in the payload
     mBuf = new char[MBUFALLOCSIZE]; // defined in payloads.h
-    FAIL_errno( mBuf == NULL, "No memory for buffer\n", mSettings );
+    FAIL_errno(mBuf == NULL, "No memory for buffer\n", mSettings);
+    mSettings->mBufLen = MBUFALLOCSIZE;
     // Open the listen socket
     my_listen();
 } // end Listener
@@ -123,7 +125,7 @@ Listener::~Listener () {
 } // end ~Listener
 
 /* -------------------------------------------------------------------
- * This is the main Listener thread loop, listens and accepts new
+ * This is the main Listener thread loop, listens and accept new
  * connections and starts traffic threads
  *
  * Flow is
@@ -241,10 +243,8 @@ void Listener::Run (void) {
 	if ((mSettings->clientListener && SockAddr_Hostare_Equal(&mSettings->peer, &server->peer)) || \
 	    (!isIPV6(mSettings) && SockAddr_isIPv6(&server->peer))) {
 	    // Not allowed, reset things and restart the loop
-	    close(server->mSock);
 	    // Don't forget to delete the UDP entry (inserted in my_accept)
-	    if (isUDP(server))
-		Iperf_remove_host(&server->peer);
+	    Iperf_remove_host(&server->peer);
 	    assert(server != mSettings);
 	    Settings_Destroy(server);
 	    continue;
@@ -268,7 +268,6 @@ void Listener::Run (void) {
 	    if (isUDP(server) && (isL2LengthCheck(mSettings) || isL2LengthCheck(server))) {
 		if (!L2_setup(server, server->mSock)) {
 		    // Requested L2 testing but L2 setup failed
-		    close(server->mSock);
 		    Iperf_remove_host(&server->peer);
 		    assert(server != mSettings);
 		    Settings_Destroy(server);
@@ -308,10 +307,10 @@ void Listener::Run (void) {
 	    if (listener_client_settings && isBidir(listener_client_settings)) {
 		setBidir(server);
 		if (isDataReport(server)) {
-		    listener_client_settings->bidirhdr = InitSumReport(server, groupID);
-		    server->bidirhdr = listener_client_settings->bidirhdr;
+		    listener_client_settings->mBidirReport = InitSumReport(server, groupID);
+		    server->mBidirReport = listener_client_settings->mBidirReport;
 #if HAVE_THREAD_DEBUG
-		    thread_debug("BiDir report client=%p/%p server=%p/%p", (void *) listener_client_settings, (void *) listener_client_settings->bidirhdr, (void *) server, (void *) server->bidirhdr);
+		    thread_debug("BiDir report client=%p/%p server=%p/%p", (void *) listener_client_settings, (void *) listener_client_settings->mBidirReport, (void *) server, (void *) server->mBidirReport);
 #endif
 		}
 		listener_client_settings->mThreadMode=kMode_Client;
@@ -398,7 +397,7 @@ void Listener::my_listen (void) {
     rc = setsockopt(ListenSocket, SOL_SOCKET, SO_REUSEADDR, (char*) &boolean, len);
     // bind socket to server address
 #ifdef WIN32
-    if (SockAddr_isMulticast( &mSettings->local)) {
+    if (SockAddr_isMulticast(&mSettings->local)) {
 	// Multicast on Win32 requires special handling
 	rc = WSAJoinLeaf( ListenSocket, (sockaddr*) &mSettings->local, mSettings->size_local,0,0,0,0,JL_BOTH);
 	WARN_errno( rc == SOCKET_ERROR, "WSAJoinLeaf (aka bind)" );
@@ -411,11 +410,10 @@ void Listener::my_listen (void) {
 
     // update the reporter thread
     if (isReport(mSettings)) {
-        struct ReportHeader *report_settings = ReportSettings(mSettings);
+        struct ReportHeader *report_settings = InitSettingsReport(mSettings);
 	assert(report_settings != NULL);
 	// disable future settings reports, listener should only do it once
 	unsetReport(mSettings);
-	UpdateConnectionReport(mSettings, report_settings);
 	PostReport(report_settings);
     }
 
@@ -805,7 +803,8 @@ int Listener::udp_accept (thread_Settings *server) {
     FAIL_errno(rc == SOCKET_ERROR, "recvfrom", mSettings);
     if (!(rc < 0) && !sInterupted) {
 	// Handle connection for UDP sockets
-	if (Iperf_push_host_port_conditional(&server->peer, server)) {
+	int gid = Iperf_push_host_port_conditional(&server->peer, server);
+	if (gid > 0) {
 	    // We have a new UDP flow (based upon key of quintuple)
 	    // so let's hand off this socket
 	    // to the server and create a new listener socket
@@ -820,9 +819,6 @@ int Listener::udp_accept (thread_Settings *server) {
 	    rc = connect(server->mSock, (struct sockaddr*) &server->peer, server->size_peer);
 	    FAIL_errno(rc == SOCKET_ERROR, "connect UDP", mSettings);
 	    my_listen(); // This will set ListenSocket to a new sock fd
-	    if (isConnectionReport(server)) {
-		// InitConnectionReport(server);
-	    }
 	}
     }
     return server->mSock;
@@ -855,9 +851,6 @@ int Listener::my_accept (thread_Settings *server) {
 	Timestamp now;
 	server->accept_time.tv_sec = now.getSecs();
 	server->accept_time.tv_usec = now.getUsecs();
-	if (isConnectionReport(server)) {
-	    // InitConnectionReport(server);
-	}
     }
     return server->mSock;
 } // end my_accept
@@ -869,6 +862,7 @@ int Listener::my_accept (thread_Settings *server) {
 void Listener::apply_client_settings (thread_Settings *server) {
     assert(server != NULL);
     assert(mBuf != NULL);
+    struct ReportHeader* connect_report = InitConnectionReport(server, 0.0);
     int n, peeklen;
     // Set the receive timeout for the very first read based upon the -t
     // and not -i.
@@ -934,6 +928,7 @@ void Listener::apply_client_settings (thread_Settings *server) {
 	if (flags & HEADER_EXTEND)
 	    reporter_peerversion(server, ntohl(hdr->extend.version_u), ntohl(hdr->extend.version_l));
     }
+    PostReport(connect_report);
     // Handle flags that require an ack back to the client
     if (!isMulticast(mSettings)) {
 	client_test_ack(server);

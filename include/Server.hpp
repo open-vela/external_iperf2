@@ -73,9 +73,6 @@ public:
     // accepts connection and receives data
     void RunUDP ( void );
     void RunTCP ( void );
-
-    void write_UDP_AckFIN( );
-
     static void Sig_Int( int inSigno );
 
 private:
@@ -83,10 +80,12 @@ private:
     char* mBuf;
     Timestamp mEndTime;
     Timestamp now;
+    ReportStruct scratchpad;
     ReportStruct *reportstruct;
 
     void InitKernelTimeStamping (void);
     void InitTrafficLoop (void);
+    inline void SetReportStartTime(void);
     int AlignPayloads (void);
     int ReadWithRxTimestamp (int *readerr);
     bool ReadPacketID (void);
@@ -95,6 +94,7 @@ private:
     void Isoch_processing (int);
     bool InProgress(void);
     void FirstReadBarrier(void);
+    void write_UDP_AckFIN(struct TransferInfo *stats);
     Timestamp connect_done;
 #if WIN32
     SOCKET mySocket;
@@ -104,6 +104,7 @@ private:
     int myDropSocket;
 #endif
     struct ReportHeader *myJob;
+    struct ReporterData *myReport;
 
 #if HAVE_DECL_SO_TIMESTAMP
     // Structures needed for recvmsg

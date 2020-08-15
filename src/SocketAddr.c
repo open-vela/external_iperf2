@@ -99,7 +99,6 @@ void SockAddr_remoteAddr( struct thread_Settings *inSettings ) {
 
 void SockAddr_localAddr( struct thread_Settings *inSettings ) {
     SockAddr_zeroAddress( &inSettings->local );
-    inSettings->peerversion[0] = '\0';
 
     if ( inSettings->mLocalhost != NULL ) {
         SockAddr_setHostname( inSettings->mLocalhost, &inSettings->local,

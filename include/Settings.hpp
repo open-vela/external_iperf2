@@ -137,7 +137,6 @@ enum RateUnits {
  * and contains only C elements so it can be manipulated
  * by either C or C++.
  */
-#define PEERBUFSIZE 128
 struct thread_Settings {
     // Pointers
     char*  mFileName;               // -F
@@ -151,10 +150,8 @@ struct thread_Settings {
     char*  mRxHistogramStr;         // --histograms (packets)
     FILE*  Extractor_file;
     struct ReportHeader*  reporthdr;
-    struct MultiHeader*   totsumhdr;    
-    struct MultiHeader*   multihdr;
-    struct MultiHeader*   bidirhdr;
-    struct MultiHeader*   sumhdr;
+    struct SumReport* mSumReport;
+    struct SumReport* mBidirReport;
     struct thread_Settings *runNow;
     struct thread_Settings *runNext;
     // int's
@@ -225,7 +222,6 @@ struct thread_Settings {
     int incrdstip;
     int connectonly_count;
     char* mCongestion;
-    char peerversion[PEERBUFSIZE];
     int mRXbins;
     int mRXbinsize;
     int mRXunits;
@@ -249,6 +245,7 @@ struct thread_Settings {
     struct Condition awake_me;
     struct PacketRing *ackring;
     struct BarrierMutex *connects_done;
+    struct BarrierMutex bidir_startstop;
     int numreportstructs;
 };
 

@@ -345,7 +345,6 @@ void Settings_Copy( struct thread_Settings *from, struct thread_Settings **into 
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
     (*into)->mSockDrop = INVALID_SOCKET;
 #endif
-
     Condition_Initialize(&(*into)->awake_me);
     // default copied settings to no reporter reporting
     unsetReport((*into));
@@ -1191,7 +1190,6 @@ void Settings_ModalOptions( struct thread_Settings *mExtSettings ) {
 
 
 void Settings_GetUpperCaseArg(const char *inarg, char *outarg) {
-
     int len = strlen(inarg);
     strcpy(outarg,inarg);
 
@@ -1201,7 +1199,6 @@ void Settings_GetUpperCaseArg(const char *inarg, char *outarg) {
 }
 
 void Settings_GetLowerCaseArg(const char *inarg, char *outarg) {
-
     int len = strlen(inarg);
     strcpy(outarg,inarg);
 
@@ -1286,6 +1283,9 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 	if (((extendflags & BIDIR) == BIDIR) ||	 \
 	    ((extendflags & REVERSE) == REVERSE)) {
 	    if ((extendflags & BIDIR) == BIDIR) {
+		Condition_Initialize(&server->bidir_startstop.await);
+		server->bidir_hdr = InitSumReport(server, server->mSock);
+		IncrMultiHdrRefCounter(server->bidir_hdr);
 	        Settings_Copy(server, &fullduplex);
 		if (fullduplex) {
 		    *client = fullduplex;
