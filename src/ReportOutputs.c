@@ -44,10 +44,12 @@
  * by Robert J. McMahon (rjmcmahon@rjmcmahon.com, bob.mcmahon@broadcom.com)
  * -------------------------------------------------------------------
  */
+#include <math.h>
 #include "headers.h"
 #include "Settings.hpp"
 #include "Reporter.h"
 #include "Locale.h"
+#include "SocketAddr.h"
 
 #define SNBUFFERSIZE 256
 #define SNBUFFEREXTENDSIZE 512
@@ -56,20 +58,15 @@ static char outbufferext[SNBUFFEREXTENDSIZE]; // Buffer for printing
 static char llaw_buf[100];
 static const int true = 1;
 
-static inline double _print_stats_common (struct TransferInfo *stats) {
-    double bytesxfered;
-    byte_snprintf(outbuffer, sizeof(outbuffer), (double) stats->TotalLen, toupper((int)stats->common->Format));
-    if (!stats->TotalLen || (stats->ts.iEnd < SMALLEST_INTERVAL_SEC)) {
-        bytesxfered = 0;
-    } else {
-        bytesxfered = (double) stats->TotalLen;
+static inline void _print_stats_common (struct TransferInfo *stats) {
+    byte_snprintf(outbuffer, sizeof(outbuffer), (double) stats->cntBytes, toupper((int)stats->common->Format));
+    if ((stats->ts.iEnd < SMALLEST_INTERVAL_SEC) || (stats->ts.iEnd - stats->ts.iStart)) {
+        stats->cntBytes = 0;
     }
-    byte_snprintf(outbufferext, sizeof(outbufferext), \
-		  (((stats->ts.iEnd - stats->ts.iStart) > 0) ? (bytesxfered / (stats->ts.iEnd - stats->ts.iStart)) : 0), \
+    byte_snprintf(outbufferext, sizeof(outbufferext), (double)stats->cntBytes / (stats->ts.iEnd - stats->ts.iStart), \
 		  stats->common->Format);
     outbuffer[sizeof(outbuffer)-1]='\0';
     outbufferext[sizeof(outbufferext)-1]='\0';
-    return bytesxfered;
 }
 
 static inline void _output_outoforder(struct TransferInfo *stats) {
@@ -102,7 +99,7 @@ void tcp_output_read (struct TransferInfo *stats) {
 	stats->header_printed = true;
 	printf("%s", report_bw_header);
     }
-    double bytesxfered = _print_stats_common(stats);
+    _print_stats_common(stats);
     printf(report_bw_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
 }
 //TCP read or server output
@@ -111,7 +108,7 @@ void tcp_output_read_enhanced (struct TransferInfo *stats) {
 	stats->header_printed = true;
 	printf(report_bw_read_enhanced_header, (stats->sock_callstats.read.binsize/1024.0));
     }
-    double bytesxfered = _print_stats_common(stats);
+    _print_stats_common(stats);
     printf(report_bw_read_enhanced_format,
 	   stats->transferID, stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext,
@@ -130,11 +127,11 @@ void tcp_output_read_enhanced_triptime (struct TransferInfo *stats) {
 	stats->header_printed = true;
 	printf(report_bw_read_enhanced_netpwr_header, (stats->sock_callstats.read.binsize/1024.0));
     }
-    double bytesxfered = _print_stats_common(stats);
     double meantransit = (stats->transit.sumTransit / stats->transit.cntTransit);
-    double lambda = (stats->arrivalSum > 0.0) ? (bytesxfered / stats->arrivalSum) : 0.0;
+    double lambda = (stats->arrivalSum > 0.0) ? ((double)stats->cntBytes / stats->arrivalSum) : 0.0;
     set_llawbuf(lambda, meantransit);
-    printf((!bytesxfered) ? report_bw_read_enhanced_format : report_bw_read_enhanced_netpwr_format),
+    if (stats->cntBytes) {
+    printf(report_bw_read_enhanced_netpwr_format,
 	   stats->transferID, stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext,
 	   stats->sock_callstats.read.cntRead,
@@ -151,21 +148,43 @@ void tcp_output_read_enhanced_triptime (struct TransferInfo *stats) {
 	   stats->transit.maxTransit*1e3,
 	   (stats->transit.cntTransit < 2) ? 0 : sqrt(stats->transit.m2Transit / (stats->transit.cntTransit - 1)) / 1e3,
 	   stats->transit.cntTransit,
-	   stats->transit.cntTransit ? (long) (bytesxfered / (double) stats->transit.cntTransit) : 0,
+	   stats->transit.cntTransit ? (long) ((double)stats->cntBytes / (double) stats->transit.cntTransit) : 0,
 	   llaw_buf,
-	   (meantransit > 0.0) ? (NETPOWERCONSTANT * ((double) bytesxfered) / (double) (stats->ts.iEnd - stats->ts.iStart) / meantransit) : NAN);
+	   (meantransit > 0.0) ? (NETPOWERCONSTANT * ((double) stats->cntBytes) / (double) (stats->ts.iEnd - stats->ts.iStart) / meantransit) : NAN);
+    } else {
+	printf(report_bw_read_enhanced_format,
+	   stats->transferID, stats->ts.iStart, stats->ts.iEnd,
+	   outbuffer, outbufferext,
+	   stats->sock_callstats.read.cntRead,
+	   stats->sock_callstats.read.bins[0],
+	   stats->sock_callstats.read.bins[1],
+	   stats->sock_callstats.read.bins[2],
+	   stats->sock_callstats.read.bins[3],
+	   stats->sock_callstats.read.bins[4],
+	   stats->sock_callstats.read.bins[5],
+	   stats->sock_callstats.read.bins[6],
+	   stats->sock_callstats.read.bins[7],
+	   (meantransit * 1e3),
+	   stats->transit.minTransit*1e3,
+	   stats->transit.maxTransit*1e3,
+	   (stats->transit.cntTransit < 2) ? 0 : sqrt(stats->transit.m2Transit / (stats->transit.cntTransit - 1)) / 1e3,
+	   stats->transit.cntTransit,
+	   stats->transit.cntTransit ? (long) ((double)stats->cntBytes / (double) stats->transit.cntTransit) : 0,
+	   llaw_buf,
+	   (meantransit > 0.0) ? (NETPOWERCONSTANT * ((double) stats->cntBytes) / (double) (stats->ts.iEnd - stats->ts.iStart) / meantransit) : NAN);
+    }
     if (stats->framelatency_histogram) {
-	histogram_print(stats->framelatency_histogram, stats->ts.iStart, stats->ts.iEnd, stats->free);
+	histogram_print(stats->framelatency_histogram, stats->ts.iStart, stats->ts.iEnd);
     }
 }
 
 //TCP write or client output
 void tcp_output_write (struct TransferInfo *stats) {
-    if(!stats->header_printed) {
+    if (!stats->header_printed) {
 	stats->header_printed = true;
-	printf(report_bw_write_header);
+	printf(report_bw_header);
     }
-    double bytesxfered = _print_stats_common(stats);
+    _print_stats_common(stats);
     printf(report_bw_format, stats->transferID,
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext);
@@ -176,7 +195,7 @@ void tcp_output_write_enhanced (struct TransferInfo *stats) {
 	stats->header_printed = true;
 	printf(report_bw_write_enhanced_header);
     }
-    double bytesxfered = _print_stats_common(stats);
+    _print_stats_common(stats);
 #ifndef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
     printf(report_sum_bw_write_enhanced_format,
 	   stats->ts.iStart, stats->ts.iEnd,
@@ -187,7 +206,7 @@ void tcp_output_write_enhanced (struct TransferInfo *stats) {
 #else
     double netpower = 0;
     if (stats->sock_callstats.write.rtt > 0) {
-	netpower = NETPOWERCONSTANT * (((double) bytesxfered / (double) (stats->ts.iEnd - stats->ts.iStart)) / (1e-6 * stats->sock_callstats.write.rtt));
+	netpower = NETPOWERCONSTANT * (((double)stats->cntBytes / (double) (stats->ts.iEnd - stats->ts.iStart)) / (1e-6 * stats->sock_callstats.write.rtt));
     }
     if (stats->sock_callstats.write.cwnd > 0) {
 	printf(report_bw_write_enhanced_format,
@@ -218,7 +237,7 @@ void udp_output_read (struct TransferInfo *stats) {
 	printf("%s", report_bw_jitter_loss_header);
 	stats->header_printed = true;
     }
-    double bytesxfered = _print_stats_common(stats);
+    _print_stats_common(stats);
     printf( report_bw_jitter_loss_format, stats->transferID,
 	    stats->ts.iStart, stats->ts.iEnd,
 	    outbuffer, outbufferext,
@@ -232,8 +251,8 @@ void udp_output_read_enhanced (struct TransferInfo *stats) {
 	printf("%s", report_bw_jitter_loss_enhanced_header);
 	stats->header_printed = true;
     }
-    double bytesxfered = _print_stats_common(stats);
-    if (!stats->IPGcnt) {
+    _print_stats_common(stats);
+    if (!stats->cntIPG) {
 	printf(report_bw_jitter_loss_suppress_enhanced_format, stats->transferID,
 	       stats->ts.iStart, stats->ts.iEnd,
 	       outbuffer, outbufferext,
@@ -242,7 +261,7 @@ void udp_output_read_enhanced (struct TransferInfo *stats) {
 	       0.0,0.0,0.0,0.0,0.0,0.0);
     } else {
 	double meantransit = (stats->transit.sumTransit / stats->transit.cntTransit);
-	double lambda = (stats->arrivalSum > 0.0) ? (bytesxfered / stats->arrivalSum) : 0.0;
+	double lambda = (stats->arrivalSum > 0.0) ? ((double)stats->cntBytes / stats->arrivalSum) : 0.0;
 	set_llawbuf(lambda, meantransit);
 	printf(report_bw_jitter_loss_enhanced_format, stats->transferID,
 	       stats->ts.iStart, stats->ts.iEnd,
@@ -253,9 +272,9 @@ void udp_output_read_enhanced (struct TransferInfo *stats) {
 	       stats->transit.minTransit*1e3,
 	       stats->transit.maxTransit*1e3,
 	       (stats->transit.cntTransit < 2) ? 0 : sqrt(stats->transit.m2Transit / (stats->transit.cntTransit - 1)) / 1e3,
-	       (stats->IPGcnt / stats->IPGsum),
-	       llaw_buf;
-	       (meantransit > 0.0) ? (NETPOWERCONSTANT * ((double) bytesxfered) / (double) (stats->ts.iEnd - stats->ts.iStart) / meantransit) : 0);
+	       (stats->cntIPG / stats->IPGsum),
+	       llaw_buf,
+	       (meantransit > 0.0) ? (NETPOWERCONSTANT * ((double)stats->cntBytes) / (double) (stats->ts.iEnd - stats->ts.iStart) / meantransit) : 0);
     }
     _output_outoforder(stats);
 }
@@ -264,8 +283,8 @@ void udp_output_read_enhanced_triptime (struct TransferInfo *stats) {
 	printf("%s", report_bw_jitter_loss_enhanced_isoch_header);
 	stats->header_printed = true;
     }
-    double bytesxfered = _print_stats_common(stats);
-    if (!stats->IPGcnt) {
+    _print_stats_common(stats);
+    if (!stats->cntIPG) {
 	printf(report_bw_jitter_loss_suppress_enhanced_format, stats->transferID,
 	       stats->ts.iStart, stats->ts.iEnd,
 	       outbuffer, outbufferext,
@@ -284,9 +303,11 @@ void udp_output_read_enhanced_triptime (struct TransferInfo *stats) {
 		   outbuffer, outbufferext,
 		   stats->jitter*1000.0, stats->cntError, stats->cntDatagrams,
 		   (100.0 * stats->cntError) / stats->cntDatagrams,
-		   (stats->IPGcnt / stats->IPGsum));
+		   (stats->cntIPG / stats->IPGsum));
 	} else {
-	    set_llawbuf(bytesfered, stats);
+	    double meantransit = (stats->transit.sumTransit / stats->transit.cntTransit);
+	    double lambda = (stats->arrivalSum > 0.0) ? ((double)stats->cntBytes / stats->arrivalSum) : 0.0;
+	    set_llawbuf(lambda, meantransit);
 	    printf(report_bw_jitter_loss_enhanced_isoch_format, stats->transferID,
 		   stats->ts.iStart, stats->ts.iEnd,
 		   outbuffer, outbufferext,
@@ -296,51 +317,51 @@ void udp_output_read_enhanced_triptime (struct TransferInfo *stats) {
 		   stats->transit.minTransit*1e3,
 		   stats->transit.maxTransit*1e3,
 		   (stats->transit.cntTransit < 2) ? 0 : sqrt(stats->transit.m2Transit / (stats->transit.cntTransit - 1)) / 1e3,
-		   (stats->IPGcnt / stats->IPGsum),
-		   ((stats->arrivalSum > 0.0) ? Lbuf : 0),
-		   ((meantransit > 0.0) ? (NETPOWERCONSTANT * ((double) bytesxfered) / (double) (stats->ts.iEnd - stats->ts.iStart) / meantransit) : 0),
+		   (stats->cntIPG / stats->IPGsum),
+		   ((stats->arrivalSum > 0.0) ? llaw_buf : 0),
+		   ((meantransit > 0.0) ? (NETPOWERCONSTANT * ((double) stats->cntBytes) / (double) (stats->ts.iEnd - stats->ts.iStart) / meantransit) : 0),
 		   stats->isochstats.framecnt, stats->isochstats.framelostcnt);
 	}
     }
     _output_outoforder(stats);
 }
-void udp_output_write (struct TranserInfo *stats) {
+void udp_output_write (struct TransferInfo *stats) {
     if(!stats->header_printed ) {
 	printf("%s", report_bw_header);
 	stats->header_printed = true;
     }
-    double bytesxfered = _print_stats_common(stats);
+    _print_stats_common(stats);
     printf(report_bw_format, stats->transferID,
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext);
 }
 
-void udp_output_write_enhanced (struct TranserInfo *stats) {
+void udp_output_write_enhanced (struct TransferInfo *stats) {
     if(!stats->header_printed ) {
 	printf("%s", report_bw_pps_enhanced_format);
 	stats->header_printed = true;
     }
-    double bytesxfered = _print_stats_common(stats);
+    _print_stats_common(stats);
     printf(report_bw_pps_enhanced_format, stats->transferID,
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext,
 	   stats->sock_callstats.write.WriteCnt,
 	   stats->sock_callstats.write.WriteErr,
-	   (stats->IPGcnt ? (stats->IPGcnt / stats->IPGsum) : 0.0));
+	   (stats->cntIPG ? (stats->cntIPG / stats->IPGsum) : 0.0));
 }
-void udp_output_enhanced_isoch_write (struct TranserInfo *stats) {
+void udp_output_enhanced_isoch_write (struct TransferInfo *stats) {
     // UDP Client reporting
     if(!stats->header_printed) {
 	printf("%s", report_bw_pps_enhanced_isoch_header);
 	stats->header_printed = true;
     }
-    double bytesxfered = _print_stats_common(stats);
+    _print_stats_common(stats);
     printf(report_bw_pps_enhanced_isoch_format, stats->transferID,
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext,
 	   stats->sock_callstats.write.WriteCnt,
 	   stats->sock_callstats.write.WriteErr,
-	   (stats->IPGcnt ? (stats->IPGcnt / stats->IPGsum) : 0.0),
+	   (stats->cntIPG ? (stats->cntIPG / stats->IPGsum) : 0.0),
 	   stats->isochstats.framecnt,
 	   stats->isochstats.framelostcnt, stats->isochstats.slipcnt);
 }
@@ -348,7 +369,7 @@ void udp_output_enhanced_isoch_write (struct TranserInfo *stats) {
 
 // Sum reports
 void udp_output_sum_read(struct TransferInfo *stats) {
-    double bytesxfered = _print_stats_common(stats);
+    _print_stats_common(stats);
     printf(report_sum_bw_jitter_loss_format,
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext,
@@ -361,57 +382,46 @@ void udp_output_sum_read(struct TransferInfo *stats) {
     }
 }
 void udp_output_sum_write(struct TransferInfo *stats) {
-    double bytesxfered = _print_stats_common(stats);
+    _print_stats_common(stats);
     printf(report_sum_bw_jitter_loss_format,
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext,
 	   stats->jitter*1000.0, stats->cntError, stats->cntDatagrams,
 	   (100.0 * stats->cntError) / stats->cntDatagrams);
-    if (stats->free == 1) {
-        printf(report_sum_datagrams, stats->cntDatagrams);
-    }
+    printf(report_sum_datagrams, stats->cntDatagrams);
 }
 void udp_output_sum_enhanced_read(struct TransferInfo *stats) {
-    double bytesxfered = _print_stats_common(stats);
+    _print_stats_common(stats);
     printf( report_sum_bw_pps_enhanced_format,
 	    stats->ts.iStart, stats->ts.iEnd,
 	    outbuffer, outbufferext,
 	    stats->cntError, stats->cntDatagrams,
-	    (stats->IPGcnt ? (stats->IPGcnt / stats->IPGsum) : 0.0));
+	    (stats->cntIPG ? (stats->cntIPG / stats->IPGsum) : 0.0));
 }
 void udp_output_sum_enhanced_write(struct TransferInfo *stats) {
-    double bytesxfered = _print_stats_common(stats);
+    _print_stats_common(stats);
     printf( report_sum_bw_pps_enhanced_format,
 	    stats->ts.iStart, stats->ts.iEnd,
 	    outbuffer, outbufferext,
 	    stats->sock_callstats.write.WriteCnt,
 	    stats->sock_callstats.write.WriteErr,
-	    (stats->IPGcnt ? (stats->IPGcnt / stats->IPGsum) : 0.0));
-    if (stats->free == 1) {
-        printf(report_sum_datagrams, stats->cntDatagrams);
-    }
-}
-void udp_output_sum_enhanced_read(struct TransferInfo *stats) {
-    double bytesxfered = _print_stats_common(stats);
-    printf( report_sum_bw_pps_enhanced_format,
-	    stats->ts.iStart, stats->ts.iEnd,
-	    outbuffer, outbufferext,
-	    stats->cntError, stats->cntDatagrams,
-	    (stats->IPGcnt ? (stats->IPGcnt / stats->IPGsum) : 0.0));
+	    (stats->cntIPG ? (stats->cntIPG / stats->IPGsum) : 0.0));
+    printf(report_sum_datagrams, stats->cntDatagrams);
 }
 void tcp_output_sum_read(struct TransferInfo *stats) {
-    double bytesxfered = _print_stats_common(stats);
+    _print_stats_common(stats);
     printf(report_sum_bw_format,
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext);
 }
 void tcp_output_sum_write(struct TransferInfo *stats) {
-    double bytesxfered = _print_stats_common(stats);
+    _print_stats_common(stats);
     printf(report_sum_bw_format,
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext);
 }
 void tcp_output_sum_enhanced_read(struct TransferInfo *stats) {
+    _print_stats_common(stats);
     printf(report_sum_bw_read_enhanced_format,
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext,
@@ -426,6 +436,7 @@ void tcp_output_sum_enhanced_read(struct TransferInfo *stats) {
 	   stats->sock_callstats.read.bins[7]);
 }
 void tcp_output_sum_enhanced_write(struct TransferInfo *stats) {
+    _print_stats_common(stats);
     printf(report_sum_bw_write_enhanced_format,
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext,
@@ -438,6 +449,7 @@ void tcp_output_sum_enhanced_write(struct TransferInfo *stats) {
  * Report the client or listener Settings in default style
  */
 void reporter_output_settings (struct ReportHeader *reporthdr) {
+#if 0
     assert(reporthdr != NULL);
     struct ReportSettings *data = (struct ReportSettings *) reporthdr->this_report;
     int pid =  (int)  getpid();
@@ -447,19 +459,19 @@ void reporter_output_settings (struct ReportHeader *reporthdr) {
 	       (isUDP(data->common) ? "UDP" : "TCP"), data->common->Port, pid );
     } else if (!data->common->Ifrnametx) {
 	printf(isEnhanced(data->common) ? client_pid_port : client_port, data->common->Host,
-	       (isUDP( data ) ? "UDP" : "TCP"), data->common->Port, pid);
+	       (isUDP(data->common) ? "UDP" : "TCP"), data->common->Port, pid);
     } else {
 	printf(client_pid_port_dev, data->common->Host,
 	       (isUDP(data->common) ? "UDP" : "TCP"), data->common->Port, pid, data->common->Ifrnametx);
     }
     if (data->common->Localhost != NULL) {
-	if (isEnhanced(data->common) && !SockAddr_isMulticast(&data->connection.local)) {
+	if (isEnhanced(data->common) && !SockAddr_isMulticast(&data->local)) {
 	    if (data->common->Ifrname)
 		printf(bind_address_iface, data->common->Localhost, data->common->Ifrname);
 	    else
 		printf(bind_address, data->common->Localhost);
 	}
-	if ((data->common->ThreadMode != kMode_Client) && SockAddr_isMulticast(&data->connection.local)) {
+	if ((data->common->ThreadMode != kMode_Client) && SockAddr_isMulticast(&data->local)) {
 	    if(!data->common->SSMMulticastStr)
 		if (!data->common->Ifrname)
 		    printf(join_multicast, data->common->Localhost );
@@ -529,4 +541,5 @@ void reporter_output_settings (struct ReportHeader *reporthdr) {
 	printf( warn_window_requested, buffer );
     }
     printf( "\n%s", separator_line );
+#endif
 }

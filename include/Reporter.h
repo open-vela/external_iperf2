@@ -65,6 +65,7 @@ struct server_hdr;
 
 #define NUM_REPORT_STRUCTS 10000
 #define PEERVERBUFSIZE 256
+#define NETPOWERCONSTANT 1e-6
 
 // If the minimum latency exceeds the boundaries below
 // assume the clocks are not synched and suppress the
@@ -253,6 +254,7 @@ struct ReportSettings {
     intmax_t UDPRate;            // -b or -u
     int UDPRateUnits;            // -b is either bw or pps
     struct IsochStats isochstats;
+    void (*output_handler) (struct ReportSettings *settings);
 };
 
 // Timestamps

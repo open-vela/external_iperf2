@@ -684,9 +684,9 @@ static inline void reporter_handle_burst_tcp_transit(struct ReporterData *data, 
 	    stats->totarrivalSum += delta;
 	}
 	if (stats->framelatency_histogram) {
-	  histogram_insert(stats->framelatency_histogram, transit, isTripTime(stats->common) ? &packet->sentTime : NULL);
+	    histogram_insert(stats->framelatency_histogram, transit, isTripTime(stats->common) ? &packet->sentTime : NULL);
 	}
-       // printf("***Burst id = %ld, transit = %f\n", packet->frameID, stats->transit.lastTransit);
+	// printf("***Burst id = %ld, transit = %f\n", packet->frameID, stats->transit.lastTransit);
     }
 }
 
@@ -1106,6 +1106,9 @@ void reporter_transfer_protocol_server_udp(struct ReporterData *data, int final)
 	stats->transit.meanTransit = stats->transit.totmeanTransit;
 	stats->transit.m2Transit = stats->transit.totm2Transit;
 	stats->transit.vdTransit = stats->transit.totvdTransit;
+	if (stats->latency_histogram) {
+	    stats->latency_histogram->final = 1;
+	}
     }
     (*stats->output_handler)(stats);
     if (!final)
@@ -1241,6 +1244,9 @@ void reporter_transfer_protocol_server_tcp(struct ReporterData *data, int final)
 	stats->transit.minTransit = stats->transit.totminTransit;
 	stats->transit.maxTransit = stats->transit.totmaxTransit;
 	stats->transit.m2Transit = stats->transit.totm2Transit;
+	if (stats->framelatency_histogram) {
+	    stats->framelatency_histogram->final = 1;
+	}
 	if (!bidirstats || isEnhanced(stats->common))
 	    (*stats->output_handler)(stats);
     }
