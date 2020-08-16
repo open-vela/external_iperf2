@@ -172,8 +172,8 @@ void histogram_add(struct histogram *to, struct histogram *from) {
     }
 }
 
-void histogram_print(struct histogram *h, double start, double end, int final) {
-    if (final && h->prev) {
+void histogram_print(struct histogram *h, double start, double end) {
+    if (h->final && h->prev) {
 	histogram_clear(h->prev);
     }
     if (!h->prev) {
@@ -184,7 +184,7 @@ void histogram_print(struct histogram *h, double start, double end, int final) {
     int intervalpopulation, oob_u, oob_l;
     intervalpopulation = h->populationcnt - h->prev->populationcnt;
     strcpy(h->outbuf, h->myname);
-    sprintf(h->outbuf, "[%3d] " IPERFTimeFrmt " sec %s%s%s bin(w=%d%s):cnt(%d)=", h->id, start, end, h->myname, (final ? "(f)" : ""), "-PDF:",h->binwidth, ((h->units == 1e3) ? "ms" : "us"), intervalpopulation);
+    sprintf(h->outbuf, "[%3d] " IPERFTimeFrmt " sec %s%s%s bin(w=%d%s):cnt(%d)=", h->id, start, end, h->myname, (h->final ? "(f)" : ""), "-PDF:",h->binwidth, ((h->units == 1e3) ? "ms" : "us"), intervalpopulation);
     n = strlen(h->outbuf);
     lowerci=0;
     upperci=0;
@@ -238,11 +238,11 @@ void histogram_print(struct histogram *h, double start, double end, int final) {
     else
       fprintf(stdout, "%s (%.2f/%.2f/99.7%%=%d/%d/%d,Outliers=%d,obl/obu=%d/%d)", \
 	      h->outbuf, h->ci_lower, h->ci_upper, lowerci, upperci, upper3stdev, outliercnt, oob_l, oob_u);
-    if (!final && (h->maxval > 0)) {
+    if (!h->final && (h->maxval > 0)) {
 	fprintf(stdout, " (%0.3f ms/%ld.%ld)\n", (h->maxval * 1e3), h->maxts.tv_sec, (long) h->maxts.tv_usec);
       h->maxbin = -1;
       h->maxval = 0;
-    } else if (final && (h->fmaxval > 0)) {
+    } else if (h->final && (h->fmaxval > 0)) {
 	fprintf(stdout, " (%0.3f ms/%ld.%ld)\n", (h->fmaxval * 1e3), h->fmaxts.tv_sec, (long) h->fmaxts.tv_usec);
     } else {
       fprintf(stdout, "\n");
