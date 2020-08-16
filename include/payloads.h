@@ -444,7 +444,7 @@ struct server_hdr_extension {
     int32_t vdTransit1;
     int32_t vdTransit2;
     int32_t cntTransit;
-    int32_t IPGcnt;
+    int32_t cntIPG;
     int32_t IPGsum;
 };
 
