@@ -275,7 +275,7 @@ void Server::RunTCP( void ) {
 		tokens -= currLen;
 
 	    reportstruct->packetLen = currLen;
-	    ReportPacket(myJob, reportstruct);
+	    ReportPacket(myReport, reportstruct);
 
 	    // Check for reverse and amount where
 	    // the server stops after receiving
@@ -347,26 +347,25 @@ inline void Server::SetReportStartTime (void) {
 	if (isUDP(mSettings)) {
 	    // Trip times use the first packet's sent time
 	    // RJM add some defense to the below
-	    int n;
-	    if ((n = recvn(mSettings->mSock, mBuf, sizeof(struct UDP_datagram), MSG_PEEK)) \
-		== sizeof(struct UDP_datagram)) {
+	    int n = recvn(mSettings->mSock, mBuf, sizeof(struct UDP_datagram), MSG_PEEK);
+	    if (n == sizeof(struct UDP_datagram)) {
 		struct UDP_datagram* mBuf_UDP  = (struct UDP_datagram *) mBuf;
 		myReport->info.ts.startTime.tv_sec = ntohl(mBuf_UDP->tv_sec);
 		myReport->info.ts.startTime.tv_usec = ntohl(mBuf_UDP->tv_usec);
 	    }
 	} else {
 	    // Set up trip time values that don't change
-	    struct TCP_burst_payload * mBuf_burst = (struct TCP_burst_payload *) mBuf;
-	    if ((n = recvn(mSettings->mSock, mBuf, sizeof(struct TCP_burst_payload *), MSG_PEEK)) \
-		== sizeof(struct TCP_burst_payload)) {
-		myReport->info.ts.startTime.tv_sec =  = ntohl(mBuf_burst->start_tv_sec);
-		myReport->info.ts.startTime.tv_usec =  = ntohl(mBuf_burst->start_tv_usec);
+	    int n = recvn(mSettings->mSock, mBuf, sizeof(struct TCP_burst_payload), MSG_PEEK);
+	    if (n == sizeof(struct TCP_burst_payload)) {
+		struct TCP_burst_payload * mBuf_burst = (struct TCP_burst_payload *) mBuf;
+		myReport->info.ts.startTime.tv_sec = ntohl(mBuf_burst->start_tv_sec);
+		myReport->info.ts.startTime.tv_usec = ntohl(mBuf_burst->start_tv_usec);
 	    }
 	}
 	if (TimeZero(myReport->info.ts.startTime)) {
 	    // Servers that aren't full duplex use the accept timestamp for start
-	    myReport->info.tsreport.startTime.tv_sec = mSettings->accept_time.tv_sec;
-	    myReport->info.tsreport.startTime.tv_usec = mSettings->accept_time.tv_usec;
+	    myReport->info.ts.startTime.tv_sec = mSettings->accept_time.tv_sec;
+	    myReport->info.ts.startTime.tv_usec = mSettings->accept_time.tv_usec;
 	    fprintf(stderr, "--triptime set but failed to read sender's timestamp");
 	}
     } else {
@@ -374,10 +373,10 @@ inline void Server::SetReportStartTime (void) {
 	myReport->info.ts.startTime.tv_sec = now.getSecs();
 	myReport->info.ts.startTime.tv_usec = now.getUsecs();
     }
-    myReport->info.ts.IPGstart = myReport->startTime;
+    myReport->info.ts.IPGstart = myReport->info.ts.startTime;
 
-    if (!TimeZero(reporthdr->intervalTime))
-	TimeAdd(myReport->info.tsnextTime, myReport->info.tsintervalTime);
+    if (!TimeZero(myReport->info.ts.intervalTime))
+	TimeAdd(myReport->info.ts.nextTime, myReport->info.ts.intervalTime);
 }
 
 void Server::InitTrafficLoop (void) {
@@ -393,11 +392,11 @@ void Server::InitTrafficLoop (void) {
 	barrier_flag = bidir_start_barrier(&mSettings->bidir_startstop);
     SetReportStartTime();
     if (barrier_flag && (myReport->FullDuplexReport != NULL)) {
-	myReport>FullDuplexReport.info.ts.startTime = myReport->info.ts.startTime;
-	myReport>FullDuplexReport.info.ts.nextTime = myReport->info.ts.nextTime;
+	myReport->FullDuplexReport->info.ts.startTime = myReport->info.ts.startTime;
+	myReport->FullDuplexReport->info.ts.nextTime = myReport->info.ts.nextTime;
     }
     // Initialze the reportstruct scratchpad
-    reportstruct = &myJob->packetring->metapacket;
+    reportstruct = &scratchpad;
     reportstruct->packetID = 0;
     reportstruct->l2len = 0;
     reportstruct->l2errors = 0x0;
@@ -686,7 +685,7 @@ void Server::RunUDP( void ) {
 		}
 	    }
 	}
-	ReportPacket(myJob, reportstruct);
+	ReportPacket(myReport, reportstruct);
     }
     CloseReport(myJob, reportstruct);
 
@@ -694,9 +693,8 @@ void Server::RunUDP( void ) {
 	// send a UDP acknowledgement back except when:
 	// 1) we're NOT receiving multicast
 	// 2) the user requested no final exchange
-	write_UDP_AckFIN((struct TransferInfo *)&myJob->report.info);
+	write_UDP_AckFIN((struct TransferInfo *)&myReport->info);
     }
-
 }
 // end Recv
 
@@ -756,13 +754,15 @@ void Server::write_UDP_AckFIN (struct TransferInfo *stats) {
 #endif
     hdr->base.flags        = htonl((long) flags);
 #ifdef HAVE_INT64_T
-    hdr->base.total_len1   = htonl((long) (stats->TotalLen >> 32));
+    hdr->base.total_len1   = htonl((long) (stats->cntBytes >> 32));
 #else
     hdr->base.total_len1   = htonl(0x0);
 #endif
-    hdr->base.total_len2   = htonl((long) (stats->TotalLen & 0xFFFFFFFF));
-    hdr->base.stop_sec     = htonl((long) stats->endTime);
+    hdr->base.total_len2   = htonl((long) (stats->cntBytes & 0xFFFFFFFF));
+#if 0
+    hdr->base.stop_sec     = htonl((long) stats->ts.endTime.tv_sec);
     hdr->base.stop_usec    = htonl((long)((stats->endTime - (long)stats->endTime) * rMillion));
+#endif
     hdr->base.error_cnt    = htonl((long) (stats->cntError & 0xFFFFFFFF));
     hdr->base.outorder_cnt = htonl((long) (stats->cntOutofOrder  & 0xFFFFFFFF));
     hdr->base.datagrams    = htonl((long) (stats->cntDatagrams & 0xFFFFFFFF));
@@ -787,7 +787,7 @@ void Server::write_UDP_AckFIN (struct TransferInfo *stats) {
 	hdr->extend.vdTransit1  = htonl((long) stats->transit.totvdTransit);
 	hdr->extend.vdTransit2  = htonl((long) ((stats->transit.totvdTransit - (long)stats->transit.totvdTransit) * rMillion));
 	hdr->extend.cntTransit   = htonl(stats->transit.totcntTransit);
-	hdr->extend.IPGcnt = htonl((long) (stats->cntDatagrams / (stats->endTime - stats->startTime)));
+	hdr->extend.cntIPG = htonl((long) (stats->cntDatagrams / (stats->ts.iEnd - stats->ts.iStart)));
 	hdr->extend.IPGsum = htonl(1);
     }
 
@@ -796,7 +796,7 @@ void Server::write_UDP_AckFIN (struct TransferInfo *stats) {
 
 #define TRYCOUNT 40
     int count = TRYCOUNT;
-    boolean success = false;
+    int success = 0;
     while (--count) {
 	int rc;
 	struct timeval timeout;
@@ -820,7 +820,7 @@ void Server::write_UDP_AckFIN (struct TransferInfo *stats) {
         rc = read(mSettings->mSock, mBuf, mSettings->mBufLen);
         WARN_errno(rc < 0, "read");
 	if (rc > 0) {
-	    success = true;
+	    success = 1;
 	    break;
 	}
     }
