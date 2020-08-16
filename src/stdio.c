@@ -257,8 +257,7 @@ const char* kLabel_bit[]  =
  * (4 digits + space + 5 chars max + null)
  * ------------------------------------------------------------------- */
 
-void byte_snprintf( char* outString, int inLen,
-                    double inNum, char inFormat, bool domalloc) {
+void byte_snprintf(char* outString, int inLen, double inNum, char inFormat) {
     int conv = 0;
     const char* suffix;
     const char* format;
