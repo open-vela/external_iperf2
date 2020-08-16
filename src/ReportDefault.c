@@ -64,8 +64,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#define NETPOWERCONSTANT 1e-6
 /*
  * Prints transfer reports in default style
  */

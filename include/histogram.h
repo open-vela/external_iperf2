@@ -54,6 +54,7 @@ struct histogram {
     unsigned int bincount;
     unsigned int binwidth;
     unsigned int populationcnt;
+    int final;
     int maxbin;
     int fmaxbin;
     double maxval;
@@ -77,5 +78,5 @@ extern void histogram_delete(struct histogram *h);
 extern int histogram_insert(struct histogram *h, float value, struct timeval *ts);
 extern void histogram_clear(struct histogram *h);
 extern void histogram_add(struct histogram *to, struct histogram *from);
-extern void histogram_print(struct histogram *h, double, double, int);
+extern void histogram_print(struct histogram *h, double, double);
 #endif // HISTOGRAMC_H
