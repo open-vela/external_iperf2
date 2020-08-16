@@ -76,12 +76,9 @@ WriteAck::~WriteAck() {
 }
 
 void WriteAck::Close(PacketRing *pr) {
-  pr->metapacket.packetID = -1;
-  pr->metapacket.packetLen = 0;
 #ifdef HAVE_THREAD_DEBUG
   thread_debug("Enqueue ackring final packet %p (%p)", (void *) &pr->metapacket, (void *) pr);
 #endif
-  enqueue_ackring(pr, &pr->metapacket);
   Condition_Lock((*(pr->awake_producer)));
   while (!pr->consumerdone) {
 #ifdef HAVE_THREAD_DEBUG

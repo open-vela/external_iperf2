@@ -296,7 +296,7 @@ void Settings_Copy( struct thread_Settings *from, struct thread_Settings **into 
     memcpy(*into, from, sizeof(struct thread_Settings));
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Copy thread settings (malloc) from/to=%p/%p report/multi/bidir %p/%p/%p", \
-		 (void *)from, (void *)*into, (void *)(*into)->reporthdr, (void *)(*into)->multihdr, (void *)(*into)->bidirhdr);
+		 (void *)from, (void *)*into, (void *)(*into)->reporthdr, (void *)(*into)->mSumReport, (void *)(*into)->mBidirReport);
 #endif
     if ( from->mHost != NULL ) {
         (*into)->mHost = new char[ strlen(from->mHost) + 1];
@@ -335,8 +335,8 @@ void Settings_Copy( struct thread_Settings *from, struct thread_Settings **into 
         strcpy( (*into)->mIsochronousStr, from->mIsochronousStr );
     }
     (*into)->txstart_epoch = from->txstart_epoch;
-    (*into)->multihdr = from->multihdr;
-    (*into)->bidirhdr = from->bidirhdr;
+    (*into)->mSumReport = from->mSumReport;
+    (*into)->mBidirReport = from->mBidirReport;
 
     // Zero out certain entries
     (*into)->mTID = thread_zeroid();
@@ -485,12 +485,8 @@ void Settings_Interpret( char option, const char *optarg, struct thread_Settings
 		char framechar;
 		char *tmp= new char [strlen(optarg) + 1];
 		strcpy(tmp, optarg);
-		// scan for packet or frames as units
-		if ((((results = strtok(tmp, "p")) != NULL) && strcmp(results,optarg)) \
-		    || (((results = strtok(tmp, "P")) != NULL)  && strcmp(results,optarg))) {
-		    mExtSettings->mInterval = bitorbyte_atoi(results);
-		    mExtSettings->mIntervalMode = kInterval_Packets;
-		} else if ((sscanf(optarg,"%c", &framechar)) && ((framechar == 'f') || (framechar == 'F'))) {
+		// scan for frames as units
+		if ((sscanf(optarg,"%c", &framechar)) && ((framechar == 'f') || (framechar == 'F'))) {
 		    mExtSettings->mIntervalMode = kInterval_Frames;
 		} else {
 		    char *end;
@@ -1184,7 +1180,7 @@ void Settings_ModalOptions( struct thread_Settings *mExtSettings ) {
     if (isDataReport(mExtSettings) &&					\
 	(((mExtSettings->mThreadMode == kMode_Client) && (mExtSettings->mThreads > 1)) ||
 	 (((mExtSettings->mThreadMode == kMode_Server) && (mExtSettings->mThreads != 1))))) {
-	mExtSettings->multihdr = InitSumReport(mExtSettings, 0);
+	mExtSettings->mSumReport = InitSumReport(mExtSettings, 0);
     }
 }
 
@@ -1284,8 +1280,8 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 	    ((extendflags & REVERSE) == REVERSE)) {
 	    if ((extendflags & BIDIR) == BIDIR) {
 		Condition_Initialize(&server->bidir_startstop.await);
-		server->bidir_hdr = InitSumReport(server, server->mSock);
-		IncrMultiHdrRefCounter(server->bidir_hdr);
+		server->mBidirReport = InitSumReport(server, server->mSock);
+		IncrSumReportRefCounter(server->mBidirReport);
 	        Settings_Copy(server, &fullduplex);
 		if (fullduplex) {
 		    *client = fullduplex;
