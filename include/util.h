@@ -173,7 +173,7 @@ double byte_atof( const char *inString );
 double bitorbyte_atof( const char *inString );
 intmax_t byte_atoi( const char  *inString );
 unsigned int bitorbyte_atoi( const char *inString );
-void byte_snprintf( char* outString, int inLen, double inNum, char inFormat );
+void byte_snprintf(char* outString, int inLen, double inNum, char inFormat);
 
 /*
  * Time macros for C-code (not the include Timestamp.hpp)
