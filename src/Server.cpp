@@ -351,39 +351,33 @@ inline void Server::SetReportStartTime (void) {
 	    if ((n = recvn(mSettings->mSock, mBuf, sizeof(struct UDP_datagram), MSG_PEEK)) \
 		== sizeof(struct UDP_datagram)) {
 		struct UDP_datagram* mBuf_UDP  = (struct UDP_datagram *) mBuf;
-		myReport->startTime.tv_sec = ntohl(mBuf_UDP->tv_sec);
-		myReport->startTime.tv_usec = ntohl(mBuf_UDP->tv_usec);
+		myReport->info.ts.startTime.tv_sec = ntohl(mBuf_UDP->tv_sec);
+		myReport->info.ts.startTime.tv_usec = ntohl(mBuf_UDP->tv_usec);
 	    }
 	} else {
 	    // Set up trip time values that don't change
 	    struct TCP_burst_payload * mBuf_burst = (struct TCP_burst_payload *) mBuf;
 	    if ((n = recvn(mSettings->mSock, mBuf, sizeof(struct TCP_burst_payload *), MSG_PEEK)) \
 		== sizeof(struct TCP_burst_payload)) {
-		myReport->startTime.tv_sec =  = ntohl(mBuf_burst->start_tv_sec);
-		myReport->startTime.tv_usec =  = ntohl(mBuf_burst->start_tv_usec);
+		myReport->info.ts.startTime.tv_sec =  = ntohl(mBuf_burst->start_tv_sec);
+		myReport->info.ts.startTime.tv_usec =  = ntohl(mBuf_burst->start_tv_usec);
 	    }
 	}
-	if (TimeZero(myReport->startTime)) {
+	if (TimeZero(myReport->info.ts.startTime)) {
 	    // Servers that aren't full duplex use the accept timestamp for start
-	    myReport->report.startTime.tv_sec = mSettings->accept_time.tv_sec;
-	    myReport->report.startTime.tv_usec = mSettings->accept_time.tv_usec;
+	    myReport->info.tsreport.startTime.tv_sec = mSettings->accept_time.tv_sec;
+	    myReport->info.tsreport.startTime.tv_usec = mSettings->accept_time.tv_usec;
 	    fprintf(stderr, "--triptime set but failed to read sender's timestamp");
 	}
     } else {
 	now.setnow();
-	myReport->startTime.tv_sec = now.getSecs();
-	myReport->startTime.tv_usec = now.getUsecs();
+	myReport->info.ts.startTime.tv_sec = now.getSecs();
+	myReport->info.ts.startTime.tv_usec = now.getUsecs();
     }
+    myReport->info.ts.IPGstart = myReport->startTime;
+
     if (!TimeZero(reporthdr->intervalTime))
-	TimeAdd(myReport->nextTime, myReport->intervalTime);
-    if (myReport->multireport) {
-	myReport->multireport->report.startTime = myReport->startTime;
-	myReport->multireport->report.nextTime = myReport->nextTime;
-    }
-    if (myReport->bidirreport) {
-	myReport->bidirreport->report.startTime = myReport->startTime;
-	myReport->bidirreport->report.nextTime = myReport->nextTime;
-    }
+	TimeAdd(myReport->info.tsnextTime, myReport->info.tsintervalTime);
 }
 
 void Server::InitTrafficLoop (void) {
@@ -393,12 +387,15 @@ void Server::InitTrafficLoop (void) {
     if (mSettings->mSockDrop > 0)
         myDropSocket = mSettings->mSockDrop;
 #endif
-	// full duplex sockets need to be traffic synchronized
-    int barrier_flag = 0;
+    // full duplex sockets need to be traffic synchronized
+    int barrier_flag=0;
     if (isBidir(mSettings))
-	barrier flag = bidir_start_barrier(&mSettings->bidir_startstop)
-    SetReportStartTime(barrier_flag);
-
+	barrier_flag = bidir_start_barrier(&mSettings->bidir_startstop);
+    SetReportStartTime();
+    if (barrier_flag && (myReport->FullDuplexReport != NULL)) {
+	myReport>FullDuplexReport.info.ts.startTime = myReport->info.ts.startTime;
+	myReport>FullDuplexReport.info.ts.nextTime = myReport->info.ts.nextTime;
+    }
     // Initialze the reportstruct scratchpad
     reportstruct = &myJob->packetring->metapacket;
     reportstruct->packetID = 0;

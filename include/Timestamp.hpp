@@ -104,7 +104,7 @@ public:
 	mTime.tv_sec  = t1.tv_sec;
         mTime.tv_usec = t1.tv_nsec / 1000;
 #else
-	gettimeofday( &mTime, NULL );
+	gettimeofday(&mTime, NULL);
 #endif
     }
 

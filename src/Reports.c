@@ -131,12 +131,16 @@ struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID) {
     // The startTime and nextTime for summing reports will be set by
     // the reporter thread in realtime
     if ((inSettings->mInterval) && (inSettings->mIntervalMode == kInterval_Time)) {
-	sumreport->intervalTime.tv_sec = (long) (inSettings->mInterval / rMillion);
-	sumreport->intervalTime.tv_usec = (long) (inSettings->mInterval % rMillion);
+	sumreport->info.ts.intervalTime.tv_sec = (long) (inSettings->mInterval / rMillion);
+	sumreport->info.ts.intervalTime.tv_usec = (long) (inSettings->mInterval % rMillion);
     }
     if (inSettings->mThreadMode == kMode_Server) {
 	sumreport->info.sock_callstats.read.binsize = inSettings->mBufLen / 8;
     }
+    gettimeofday(&sumreport->info.ts.startTime, NULL);
+    if (!TimeZero(sumreport->info.ts.intervalTime))
+	TimeAdd(sumreport->info.ts.nextTime, sumreport->info.ts.intervalTime);
+
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Init sum report %p id=%d", (void *)sumreport, inID);
 #endif
@@ -149,13 +153,37 @@ void FreeSumReport (struct SumReport *sumreport) {
     thread_debug("Free multi report hdr=%p", (void *)sumreport);
 #endif
     Condition_Destroy_Reference(&sumreport->reference);
-    free_common_copy(sumreport->report.info.common);
+    free_common_copy(sumreport->info.common);
     free(sumreport);
 }
 
 
-static void Free_iReport (struct ReporterData *report) {
+static void Free_iReport (struct ReporterData *ireport) {
+    assert(ireport != NULL);
+
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Free report hdr=%p reporter thread suspend count=%d packetring=%p histo=%p frame histo=%p", \
+		 (void *)ireport, ireport->reporter_thread_suspends, (void *) ireport->packetring, \
+		 (void *)ireport->report.info.latency_histogram, (void *) ireport->report.info.framelatency_histogram);
+#endif
+    if (ireport->packetring && ireport->info.total.Bytes.current && \
+	!TimeZero(ireport->info.ts.intervalTime) && (ireport->reporter_thread_suspends < 3)) {
+	fprintf(stdout, "WARN: this test was likley CPU bound (%d) (or may not be detecting the underlying network devices)\n", \
+		ireport->reporter_thread_suspends);
+    }
+    if (ireport->packetring) {
+	packetring_free(ireport->packetring);
+    }
+    if (ireport->info.latency_histogram) {
+	histogram_delete(ireport->info.latency_histogram);
+    }
+    if (ireport->info.framelatency_histogram) {
+	histogram_delete(ireport->info.framelatency_histogram);
+    }
+    free_common_copy(ireport->info.common);
+    free(ireport);
 }
+
 
 static void Free_cReport (struct ConnectionInfo *report) {
 }
@@ -240,7 +268,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	FAIL(1, "Out of Memory!!\n", inSettings);
     }
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Job report %p uses multireport %p and bidirreport is %p", reporthdr, (void *)inSettings->sumreport, (void *)inSettings->bidirhdr);
+    thread_debug("Job report %p uses multireport %p and bidirreport is %p", reporthdr, (void *)inSettings->mSumReport, (void *)inSettings->mFullDuplexReport);
 #endif
     reporthdr->this_report = (void *) calloc(1, sizeof(struct ReporterData));
     if (reporthdr->this_report == NULL) {
@@ -250,8 +278,8 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
     reporthdr->ReportMode = inSettings->mReportMode;
 
     struct ReporterData *ireport = (struct ReporterData *)(reporthdr->this_report);
-    ireport->multireport = inSettings->multihdr;
-    ireport->bidirreport = inSettings->bidirhdr;
+    ireport->GroupSumReport = inSettings->mSumReport;
+    ireport->FullDuplexReport = inSettings->mBidirReport;
 
     // Copy common settings into the transfer report section
     common_copy(&ireport->info.common, inSettings);
@@ -294,10 +322,10 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 		ireport->info.output_handler = tcp_output_read_enhanced;
 	    else
 		ireport->info.output_handler = tcp_output_read;
-	    if (ireport->multireport)
-		ireport->multireport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_tcp;
-	    if (ireport->bidirreport)
-		ireport->bidirreport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
+	    if (ireport->GroupSumReport)
+		ireport->GroupSumReport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_tcp;
+	    if (ireport->FullDuplexReport)
+		ireport->FullDuplexReport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
 	}
 	break;
     case kMode_Client :
@@ -310,21 +338,21 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 		ireport->info.output_handler = udp_output_write_enhanced;
 	    else
 		ireport->info.output_handler = udp_output_write;
-	    if (ireport->multireport)
-		ireport->multireport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_udp;
-	    if (ireport->bidirreport)
-		ireport->bidirreport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_udp;
+	    if (ireport->GroupSumReport)
+		ireport->GroupSumReport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_udp;
+	    if (ireport->FullDuplexReport)
+		ireport->FullDuplexReport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_udp;
 	} else {
 	    ireport->transfer_protocol_handler = reporter_transfer_protocol_client_tcp;
 	    if (isEnhanced(inSettings))
 		ireport->info.output_handler = tcp_output_write_enhanced;
 	    else
 		ireport->info.output_handler = tcp_output_write;
-	    if (ireport->multireport) {
-		ireport->multireport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_tcp;
+	    if (ireport->GroupSumReport) {
+		ireport->GroupSumReport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_tcp;
 	    }
-	    if (ireport->bidirreport)
-		ireport->bidirreport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
+	    if (ireport->FullDuplexReport)
+		ireport->FullDuplexReport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
 	}
 	break;
     case kMode_WriteAckClient :
@@ -344,18 +372,14 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 		 (void *)ireport, (void *)(ireport->packetring), (void *)(ireport->packetring->awake_producer));
 #endif
     ireport->info.transferID = inSettings->mSock;
-    ireport->info.groupID = inSettings->GroupID;
 
     switch (inSettings->mIntervalMode) {
     case kInterval_Time :
 	{
-	    ireport->intervalTime.tv_sec = (long) (inSettings->mInterval / rMillion);
-	    ireport->intervalTime.tv_usec = (long) (inSettings->mInterval % rMillion);
+	    ireport->info.ts.intervalTime.tv_sec = (long) (inSettings->mInterval / rMillion);
+	    ireport->info.ts.intervalTime.tv_usec = (long) (inSettings->mInterval % rMillion);
 	    ireport->transfer_interval_handler = reporter_condprint_time_interval_report;
 	}
-	break;
-    case kInterval_Packets :
-	ireport->transfer_interval_handler = reporter_condprint_packet_interval_report;
 	break;
     case kInterval_Frames :
 	if (isUDP(inSettings)) {
@@ -368,57 +392,25 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	ireport->transfer_interval_handler = NULL;
 	break;
     }
-    if (reporthdr->ThreadMode == kMode_Server)
+    if (inSettings->mThreadMode == kMode_Server) {
 	ireport->info.sock_callstats.read.binsize = inSettings->mBufLen / 8;
-    if (isUDP(inSettings)) {
-	gettimeofday(&data->IPGstart, NULL);
-	ireport->report.info.mUDP = (char)inSettings->mThreadMode;
-    } else {
-	ireport->report.info.mTCP = (char)inSettings->mThreadMode;
-    }
-    if (inSettings->ThreadMode == kMode_Server) {
 	if (isRxHistogram(inSettings) && isUDP(inSettings)) {
 	    char name[] = "T8";
 	    ireport->info.latency_histogram =  histogram_init(inSettings->mRXbins,inSettings->mRXbinsize,0,\
 							      pow(10,inSettings->mRXunits), \
-							      inSettings->mRXci_lower, inSettings->mRXci_upper, data->info.transferID, name);
+							      inSettings->mRXci_lower, inSettings->mRXci_upper, ireport->info.transferID, name);
 	}
 	if (isRxHistogram(inSettings) && (isIsochronous(inSettings) || isTripTime(inSettings))) {
 	    char name[] = "F8";
 	    // make sure frame bin size min is 100 microsecond
 	    ireport->info.framelatency_histogram =  histogram_init(inSettings->mRXbins,inSettings->mRXbinsize,0, \
 								   pow(10,inSettings->mRXunits), inSettings->mRXci_lower, \
-								   inSettings->mRXci_upper, data->info.transferID, name);
+								   inSettings->mRXci_upper, ireport->info.transferID, name);
 	}
     }
     return reporthdr;
 }
 
-static void Free_iReport (struct ReportData *ireport) {
-    assert(ireport != NULL);
-
-#ifdef HAVE_THREAD_DEBUG
-    thread_debug("Free report hdr=%p reporter thread suspend count=%d packetring=%p histo=%p frame histo=%p", \
-		 (void *)ireport, ireport->reporter_thread_suspends, (void *) ireport->packetring, \
-		 (void *)ireport->report.info.latency_histogram, (void *) ireport->report.info.framelatency_histogram);
-#endif
-    if (ireport->packetring && ireport->report.TotalLen && \
-	!TimeZero(ireport->report.intervalTime) && (ireport->reporter_thread_suspends < 3)) {
-	fprintf(stdout, "WARN: this test was likley CPU bound (%d) (or may not be detecting the underlying network devices)\n", \
-		ireport->reporter_thread_suspends);
-    }
-    if (ireport->packetring) {
-	packetring_free(ireport->packetring);
-    }
-    if (ireport->report.info.latency_histogram) {
-	histogram_delete(ireport->report.info.latency_histogram);
-    }
-    if (ireport->report.info.framelatency_histogram) {
-	histogram_delete(ireport->report.info.framelatency_histogram);
-    }
-    free_common_copy(ireport->info.common);
-    free(ireport);
-}
 
 /*
  * This init/update and print/finish (in the ReportDefault.c)
@@ -441,7 +433,7 @@ static void Free_iReport (struct ReportData *ireport) {
  */
 struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, double ct) {
     assert(inSettings != NULL);
-    reporthdr = calloc(sizeof(struct ReportHeader), sizeof(char*));
+    struct ReportHeader *reporthdr = calloc(sizeof(struct ReportHeader), sizeof(char*));
     if (reporthdr == NULL) {
 	FAIL(1, "Out of Memory!!\n", inSettings);
     }
@@ -449,12 +441,10 @@ struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, d
     if (reporthdr->this_report == NULL) {
 	FAIL(1, "Out of Memory!!\n", inSettings);
     }
-    reporthdr->type = CONNECT_REPORT;
-    reporthdr->ThreadMode = inSettings->mThreadMode;
+    reporthdr->type = CONNECTION_REPORT;
     reporthdr->ReportMode = inSettings->mReportMode;
 
-    struct ReporterData * creport = (struct ConnectInfo *)(reporthdr->this_report);
-    creport.peerversion[0] = '\0';
+    struct ConnectionInfo * creport = (struct ConnectionInfo *)(reporthdr->this_report);
     common_copy(&creport->common, inSettings);
 
     // Fill out known fields for the connection report
@@ -462,7 +452,7 @@ struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, d
     creport->size_peer = inSettings->size_peer;
     creport->local = inSettings->local;
     creport->size_local = inSettings->size_local;
-    creport->connect_time = ct;
+    creport->connecttime = ct;
     if (isEnhanced(inSettings) && isTxStartTime(inSettings)) {
 	creport->epochStartTime.tv_sec = inSettings->txstart_epoch.tv_sec;
 	creport->epochStartTime.tv_usec = inSettings->txstart_epoch.tv_usec;
@@ -473,7 +463,7 @@ struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, d
     // RJM FIX THIS
     if (isFQPacing(inSettings) && (inSettings->mThreadMode == kMode_Client)) {
 	char tmpbuf[40];
-	byte_snprintf(tmpbuf, sizeof(tmpbuf), data->FQPacingRate, 'a');
+	byte_snprintf(tmpbuf, sizeof(tmpbuf), inSettings->mFQPacingRate, 'a');
 	tmpbuf[39]='\0';
         printf(client_fq_pacing,tmpbuf);
     }
@@ -491,15 +481,16 @@ struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, d
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Init connection report %p", reporthdr);
 #endif
+    return reporthdr;
 }
 
 /*
  * ReportSettings will generate a summary report for
  * settings being used with Listeners or Clients
  */
-struct ReportHedaedr *InitSettingsReport (struct thread_Settings *inSettings) {
+struct ReportHeader *InitSettingsReport (struct thread_Settings *inSettings) {
     assert(inSettings != NULL);
-    reporthdr = calloc(sizeof(struct ReportHeader), sizeof(char*));
+    struct ReportHeader *reporthdr = calloc(sizeof(struct ReportHeader), sizeof(char*));
     if (reporthdr == NULL) {
 	FAIL(1, "Out of Memory!!\n", inSettings);
     }
@@ -508,20 +499,19 @@ struct ReportHedaedr *InitSettingsReport (struct thread_Settings *inSettings) {
 	FAIL(1, "Out of Memory!!\n", inSettings);
     }
     reporthdr->type = SETTINGS_REPORT;
-    reporthdr->ThreadMode = inSettings->mThreadMode;
     reporthdr->ReportMode = inSettings->mReportMode;
 
-    (struct ReportSettings *) sreport = (struct ReportSettings *)reporthdr->this_report;
+    struct ReportSettings *sreport = (struct ReportSettings *)reporthdr->this_report;
     common_copy(&sreport->common, inSettings);
-    sreport->peer = agent->peer;
-    sreport->size_peer = agent->size_peer;
-    sreport->local = agent->local;
-    sreport->size_local = agent->size_local;
-    sreport->isochstats.mFPS = agent->mFPS;
-    sreport->isochstats.mMean = agent->mMean/8;
-    sreport->isochstats.mVariance = agent->mVariance/8;
-    sreport->isochstats.mBurstIPG = (unsigned int) (agent->mBurstIPG*1000.0);
-    sreport->isochstats.mBurstInterval = (unsigned int) (1 / agent->mFPS * 1000000);
+    sreport->peer = inSettings->peer;
+    sreport->size_peer = inSettings->size_peer;
+    sreport->local = inSettings->local;
+    sreport->size_local = inSettings->size_local;
+    sreport->isochstats.mFPS = inSettings->mFPS;
+    sreport->isochstats.mMean = inSettings->mMean/8;
+    sreport->isochstats.mVariance = inSettings->mVariance/8;
+    sreport->isochstats.mBurstIPG = (unsigned int) (inSettings->mBurstIPG*1000.0);
+    sreport->isochstats.mBurstInterval = (unsigned int) (1 / inSettings->mFPS * 1000000);
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Init settings report %p", reporthdr);
 #endif
@@ -542,23 +532,19 @@ struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings
 	FAIL(1, "Out of Memory!!\n", inSettings);
     }
     reporthdr->this_report = (void *) calloc(1, sizeof(struct ServerRelay));
-    if (ireport == NULL) {
+    if (!reporthdr->this_report) {
 	FAIL(1, "Out of Memory!!\n", inSettings);
     }
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Init server relay report %p size %ld", (void *)reporthdr, sizeof(struct ReportHeader));
 #endif
     reporthdr->type = SERVER_RELAY_REPORT;
-    reporthdr->mode = inSettings->mReportMode;
-    common_copy(&reporthdr->this_report, inSettings);
-    struct ServerRelay *sr_report = (struct ServerRelay *)&reporthdr->this_report.info;
-    struct TransferInfo *stats = (struct TransferInfo *)&sr_report.info;
-    stats->mUDP = (char)kMode_Server;
+    reporthdr->ReportMode = inSettings->mReportMode;
+    struct ServerRelay *sr_report = (struct ServerRelay *)&reporthdr->this_report;
+    common_copy(&sr_report->info.common, inSettings);
+    struct TransferInfo *stats = (struct TransferInfo *)&sr_report->info;
     stats->transferID = inSettings->mSock;
-    stats->groupID = (inSettings->multihdr != NULL ? inSettings->multihdr->groupID \
-		      : -1);
-
-    stats->mFormat = inSettings->mFormat;
+#if 0
     stats->jitter = ntohl(server->base.jitter1);
     stats->jitter += ntohl(server->base.jitter2) / (double)rMillion;
 #ifdef HAVE_INT64_T
@@ -600,6 +586,7 @@ struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings
 	stats->IPGcnt = ntohl(server->extend.IPGcnt);
 	stats->IPGsum = ntohl(server->extend.IPGsum);
     }
+#endif
     sr_report->peer = inSettings->local;
     sr_report->size_peer = inSettings->size_local;
     sr_report->local = inSettings->peer;
