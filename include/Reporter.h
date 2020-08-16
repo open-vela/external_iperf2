@@ -241,11 +241,11 @@ struct ConnectionInfo {
     int winsize;
     int winsize_requested;
     char peerversion[PEERVERBUFSIZE];
+    struct MeanMinMaxStats connect_times;
 };
 
 struct ReportSettings {
     struct ReportCommon *common;
-    struct MeanMinMaxStats connect_times;
     iperf_sockaddr peer;
     Socklen_t size_peer;
     iperf_sockaddr local;
@@ -326,7 +326,7 @@ struct SumReport {
     struct ReferenceMutex reference;
     int threads;
     struct TransferInfo info;
-    void (*transfer_protocol_sum_handler) (struct SumReport *data, int final);
+    void (*transfer_protocol_sum_handler) (struct TransferInfo *stats, int final);
 };
 
 struct ReporterData {

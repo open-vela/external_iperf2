@@ -520,10 +520,13 @@ static int reporter_process_transfer_report (struct ReporterData *this_ireport) 
 		    if (TimeDifference(this_ireport->GroupSumReport->info.ts.packetTime, packet->packetTime) > 0) {
 			this_ireport->GroupSumReport->info.ts.packetTime = packet->packetTime;
 		    }
+		    if (TimeDifference(this_ireport->GroupSumReport->info.ts.startTime, this_ireport->info.ts.startTime) > 0) {
+			this_ireport->GroupSumReport->info.ts.startTime = this_ireport->info.ts.startTime;
+		    }
+		    (*this_ireport->GroupSumReport->transfer_protocol_sum_handler)(&this_ireport->GroupSumReport->info, 1);
 		    if (DecrSumReportRefCounter(this_ireport->GroupSumReport) == 0) {
 			if ((this_ireport->GroupSumReport->transfer_protocol_sum_handler) && \
 			    (this_ireport->GroupSumReport->reference.maxcount > 1)) {
-			    (*this_ireport->GroupSumReport->transfer_protocol_sum_handler)(&this_ireport->GroupSumReport->info, 1);
 			}
 			FreeSumReport(this_ireport->GroupSumReport);
 		    }
@@ -1442,11 +1445,15 @@ int reporter_condprint_time_interval_report (struct ReporterData *data, struct R
 	reporter_set_timestamps_time(&bidirstats->ts, INTERVAL);
 	(*bidirstats->output_handler)(bidirstats);
     }
-    if (data->GroupSumReport && (data->GroupSumReport->reference.count > (data->FullDuplexReport ? 2 : 1)) && \
-	(data->GroupSumReport->threads == data->GroupSumReport->reference.count))  {
-	data->GroupSumReport->threads = 0;
-	reporter_set_timestamps_time(&sumstats->ts, INTERVAL);
-	(*sumstats->output_handler)(bidirstats);
+    if (data->GroupSumReport) {
+	if (TimeDifference(sumstats->ts.startTime, stats->ts.startTime) > 0)
+	    sumstats->ts.startTime = stats->ts.startTime;
+	if ((data->GroupSumReport->reference.count > (data->FullDuplexReport ? 2 : 1) && \
+	     (data->GroupSumReport->threads == data->GroupSumReport->reference.count)))  {
+	    data->GroupSumReport->threads = 0;
+	    reporter_set_timestamps_time(&sumstats->ts, INTERVAL);
+	    (*sumstats->output_handler)(bidirstats);
+	}
     }
     return advance_jobq;
 }

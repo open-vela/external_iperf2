@@ -115,7 +115,6 @@ enum IntervalMode {
     kInterval_None = 0,
     kInterval_Time,
     kInterval_Frames,
-    kInterval_Packets
 };
 
 // rate request units
@@ -149,7 +148,7 @@ struct thread_Settings {
     char*  mIsochronousStr;         // --isochronous
     char*  mRxHistogramStr;         // --histograms (packets)
     FILE*  Extractor_file;
-    struct ReportHeader*  reporthdr;
+    struct ReportHeader* reporthdr;
     struct SumReport* mSumReport;
     struct SumReport* mBidirReport;
     struct thread_Settings *runNow;
