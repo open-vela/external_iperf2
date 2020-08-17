@@ -108,7 +108,9 @@ static void reporter_reset_transfer_stats_server_tcp(struct TransferInfo *stats)
 
 void PostReport (struct ReportHeader *reporthdr) {
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug( "Jobq *POST* report %p (0x%X)", reporthdr, reporthdr->type);
+    char rs[REPORTTXTMAX];
+    reporttype_text(reporthdr, &rs[0]);
+    thread_debug("Jobq *POST* report %p (%s)", reporthdr, &rs[0]);
 #endif
     if (reporthdr) {
 #ifdef HAVE_THREAD
@@ -164,7 +166,8 @@ void ReportPacket(struct ReporterData* agent, struct ReportStruct *packet) {
  * the report and signal transfer is over. Context is traffic thread
  */
 void CloseReport(struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
-    assert(reporthdr = NULL);
+    assert(reporthdr!=NULL);
+    assert(finalpacket!=NULL);
     struct ReportStruct packet;
     /*
      * Using PacketID of -1 ends reporting
