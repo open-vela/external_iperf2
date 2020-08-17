@@ -187,18 +187,26 @@ static void Free_iReport (struct ReporterData *ireport) {
 
 
 static void Free_cReport (struct ConnectionInfo *report) {
+    free_common_copy(report->common);
+    free(report);
 }
 
 static void Free_sReport (struct ReportSettings *report) {
+    free_common_copy(report->common);
+    free(report);
 }
 
 static void Free_srReport (struct TransferInfo *report) {
+    free_common_copy(report->common);
+    free(report);
 }
 
 void FreeReport (struct ReportHeader *reporthdr) {
     assert(reporthdr != NULL);
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug( "Report *FREE* %p", (void *) reporthdr);
+    char rs[REPORTTXTMAX];
+    reporttype_text(reporthdr, &rs[0]);
+    thread_debug("Jobq *FREE* report %p (%s)", reporthdr, &rs[0]);
 #endif
     switch (reporthdr->type) {
     case DATA_REPORT:

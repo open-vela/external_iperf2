@@ -66,6 +66,7 @@ struct server_hdr;
 #define NUM_REPORT_STRUCTS 10000
 #define PEERVERBUFSIZE 256
 #define NETPOWERCONSTANT 1e-6
+#define REPORTTXTMAX 80
 
 // If the minimum latency exceeds the boundaries below
 // assume the clocks are not synched and suppress the
