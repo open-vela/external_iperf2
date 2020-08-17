@@ -86,6 +86,7 @@ Client::Client(thread_Settings *inSettings) {
 
     Iperf_push_host(&inSettings->peer, inSettings);
     myJob = InitIndividualReport(inSettings);;
+    myReport = (struct ReporterData *)myJob->this_report;
     reportstruct = &scratchpad;
     mySocket = isServerReverse(inSettings) ? inSettings->mSock : INVALID_SOCKET;
     connected = isServerReverse(mSettings);
@@ -273,6 +274,7 @@ void Client::StartSynch (void) {
 }
 
 inline void Client::SetReportStartTime (void) {
+    assert(myReport!=NULL);
     now.setnow();
     myReport->info.ts.startTime.tv_sec = now.getSecs();
     myReport->info.ts.startTime.tv_usec = now.getUsecs();
@@ -408,11 +410,10 @@ void Client::Run(void) {
     // will continuously process as long as there are packets flowing
     // right now the ring is empty
     if (isDataReport(mSettings)) {
-
 	assert(myJob!=NULL);
+	assert(myReport!=NULL);
 	PostReport(myJob);
     }
-    myReport = (struct ReporterData *)myJob->this_report;
     // Peform common traffic setup
     InitTrafficLoop();
     /*

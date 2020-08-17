@@ -84,6 +84,30 @@ extern "C" {
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <stdarg.h>
+#include "Reporter.h"
+void reporttype_text(struct ReportHeader *reporthdr, char *rs) {
+    switch (reporthdr->type) {
+    case DATA_REPORT:
+	strncpy(rs,"data", REPORTTXTMAX);
+	break;
+    case SUM_REPORT:
+	strncpy(rs,"sum", REPORTTXTMAX);
+	break;
+    case SETTINGS_REPORT:
+	strncpy(rs,"settings", REPORTTXTMAX);
+	break;
+    case CONNECTION_REPORT:
+	strncpy(rs,"connection", REPORTTXTMAX);
+	break;
+    case SERVER_RELAY_REPORT:
+	strncpy(rs,"server", REPORTTXTMAX);
+	break;
+    default :
+	strncpy(rs,"unknown", REPORTTXTMAX);
+    }
+    rs[REPORTTXTMAX-1] = '\0';
+}
+
 Mutex thread_debug_mutex;
 static void __gettimestamp(char *timestr) {
     struct timespec t1;
