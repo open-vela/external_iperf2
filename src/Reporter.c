@@ -85,50 +85,7 @@ void statistics_notimpl( struct TransferInfo * nused ) { }
 void serverstatistics_notimpl( struct ConnectionInfo *nused1, struct TransferInfo *nused2 ) { }
 
 // To add a reporting style include its header here.
-#include "report_default.h"
 #include "report_CSV.h"
-
-// The following array of report structs contains the
-// pointers required for reporting in different reporting
-// styles. To add a reporting style add a report struct
-// below.
-report_connection connection_reports[kReport_MAXIMUM] = {
-    reporter_reportpeer,
-    CSV_peer
-};
-
-report_settings settings_reports[kReport_MAXIMUM] = {
-    reporter_reportsettings,
-    settings_notimpl
-};
-
-report_statistics statistics_reports[kReport_MAXIMUM] = {
-    reporter_printstats,
-    CSV_stats
-};
-
-report_serverstatistics serverstatistics_reports[kReport_MAXIMUM] = {
-    reporter_serverstats,
-    CSV_serverstats
-};
-
-report_statistics multiple_reports[kReport_MAXIMUM] = {
-    reporter_multistats,
-    CSV_stats
-};
-
-report_statistics bidir_reports[kReport_MAXIMUM] = {
-    reporter_bidirstats,
-    statistics_notimpl
-};
-report_statistics frame_udpreports[kReport_MAXIMUM] = {
-    reporter_framestats_udp,
-    statistics_notimpl
-};
-report_statistics frame_tcpreports[kReport_MAXIMUM] = {
-    reporter_framestats_tcp,
-    statistics_notimpl
-};
 
 struct ReportHeader *ReportRoot = NULL;
 struct ReportHeader *ReportPendingHead = NULL;
@@ -1140,20 +1097,6 @@ void reporter_transfer_protocol_sum_server_udp(struct TransferInfo *stats, int f
 	reporter_reset_transfer_stats_server_udp(stats);
 
 }
-#if 0
-void reporter_connect_printf_tcp_final (struct ReportHeader *reporthdr) {
-    struct TransferInfo *stats = &data->info;
-    if (reporthdr->connect_times.cnt > 1) {
-        double variance = (reporthdr->connect_times.cnt < 2) ? 0 : sqrt(reporthdr->connect_times.m2 / (reporthdr->connect_times.cnt - 1));
-        fprintf(stdout, "[ CT] final connect times (min/avg/max/stdev) = %0.3f/%0.3f/%0.3f/%0.3f ms (tot/err) = %d/%d\n", \
-		reporthdr->connect_times.min,  \
-	        (reporthdr->connect_times.sum / reporthdr->connect_times.cnt), \
-		reporthdr->connect_times.max, variance,  \
-		(reporthdr->connect_times.cnt + reporthdr->connect_times.err), \
-		reporthdr->connect_times.err);
-    }
-}
-#endif
 void reporter_transfer_protocol_sum_client_udp(struct TransferInfo *stats, int final) {
     assert(stats->output_handler != NULL);
     if (final) {

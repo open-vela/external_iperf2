@@ -378,10 +378,10 @@ struct ReportHeader* InitIndividualReport(struct thread_Settings *inSettings);
 struct ReportHeader* InitConnectionReport(struct thread_Settings *inSettings, double ct);
 struct ReportHeader *InitSettingsReport(struct thread_Settings *inSettings);
 struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings, struct server_hdr *server);
-void PostReport(struct ReportHeader *agent);
-void ReportPacket(struct ReporterData *agent, struct ReportStruct *packet);
-void CloseReport(struct ReportHeader *agent,  struct ReportStruct *packet);
-void FreeReport(struct ReportHeader *agent);
+void PostReport(struct ReportHeader *reporthdr);
+void ReportPacket(struct ReporterData *reporthdr, struct ReportStruct *packet);
+void CloseReport(struct ReportHeader *reporthdr,  struct ReportStruct *packet);
+void FreeReport(struct ReportHeader *reporthdr);
 void FreeSumReport (struct SumReport *sumreport);
 void ReportServerUDP(struct thread_Settings *inSettings, struct server_hdr *server);
 void ReportConnections(struct thread_Settings *inSettings );
@@ -445,6 +445,13 @@ void udp_output_read_enhanced_triptime(struct TransferInfo *stats);
 void udp_output_write(struct TransferInfo *stats);
 void udp_output_write_enhanced(struct TransferInfo *stats);
 void udp_output_write_enhanced_isoch(struct TransferInfo *stats);
+
+// Rest of the reporter output routines
+void reporter_connect_printf_tcp_final (struct ReportHeader *reporthdr);
+void reporter_peerversion (struct thread_Settings *inSettings, int upper, int lower);
+void reporter_print_connection_report(struct ConnectionInfo *report);
+void reporter_print_settings_report(struct ReportSettings *report);
+void reporter_print_server_relay_report(struct TransferInfo *report);
 
 #ifdef __cplusplus
 } /* end extern "C" */

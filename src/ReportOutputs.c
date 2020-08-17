@@ -349,7 +349,7 @@ void udp_output_write_enhanced (struct TransferInfo *stats) {
 	   stats->sock_callstats.write.WriteErr,
 	   (stats->cntIPG ? (stats->cntIPG / stats->IPGsum) : 0.0));
 }
-void udp_output_enhanced_isoch_write (struct TransferInfo *stats) {
+void udp_output_write_enhanced_isoch (struct TransferInfo *stats) {
     // UDP Client reporting
     if(!stats->header_printed) {
 	printf("%s", report_bw_pps_enhanced_isoch_header);
@@ -390,7 +390,7 @@ void udp_output_sum_write(struct TransferInfo *stats) {
 	   (100.0 * stats->cntError) / stats->cntDatagrams);
     printf(report_sum_datagrams, stats->cntDatagrams);
 }
-void udp_output_sum_enhanced_read(struct TransferInfo *stats) {
+void udp_output_sum_read_enhanced(struct TransferInfo *stats) {
     _print_stats_common(stats);
     printf( report_sum_bw_pps_enhanced_format,
 	    stats->ts.iStart, stats->ts.iEnd,
@@ -398,7 +398,7 @@ void udp_output_sum_enhanced_read(struct TransferInfo *stats) {
 	    stats->cntError, stats->cntDatagrams,
 	    (stats->cntIPG ? (stats->cntIPG / stats->IPGsum) : 0.0));
 }
-void udp_output_sum_enhanced_write(struct TransferInfo *stats) {
+void udp_output_sum_write_enhanced(struct TransferInfo *stats) {
     _print_stats_common(stats);
     printf( report_sum_bw_pps_enhanced_format,
 	    stats->ts.iStart, stats->ts.iEnd,
@@ -420,7 +420,7 @@ void tcp_output_sum_write(struct TransferInfo *stats) {
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext);
 }
-void tcp_output_sum_enhanced_read(struct TransferInfo *stats) {
+void tcp_output_sum_read_enhanced(struct TransferInfo *stats) {
     _print_stats_common(stats);
     printf(report_sum_bw_read_enhanced_format,
 	   stats->ts.iStart, stats->ts.iEnd,
@@ -435,7 +435,7 @@ void tcp_output_sum_enhanced_read(struct TransferInfo *stats) {
 	   stats->sock_callstats.read.bins[6],
 	   stats->sock_callstats.read.bins[7]);
 }
-void tcp_output_sum_enhanced_write(struct TransferInfo *stats) {
+void tcp_output_sum_write_enhanced(struct TransferInfo *stats) {
     _print_stats_common(stats);
     printf(report_sum_bw_write_enhanced_format,
 	   stats->ts.iStart, stats->ts.iEnd,
@@ -542,4 +542,53 @@ void reporter_output_settings (struct ReportHeader *reporthdr) {
     }
     printf( "\n%s", separator_line );
 #endif
+}
+
+void reporter_connect_printf_tcp_final (struct ReportHeader *reporthdr) {
+#if 0
+    struct TransferInfo *stats = &data->info;
+    if (reporthdr->connect_times.cnt > 1) {
+        double variance = (reporthdr->connect_times.cnt < 2) ? 0 : sqrt(reporthdr->connect_times.m2 / (reporthdr->connect_times.cnt - 1));
+        fprintf(stdout, "[ CT] final connect times (min/avg/max/stdev) = %0.3f/%0.3f/%0.3f/%0.3f ms (tot/err) = %d/%d\n", \
+		reporthdr->connect_times.min,  \
+	        (reporthdr->connect_times.sum / reporthdr->connect_times.cnt), \
+		reporthdr->connect_times.max, variance,  \
+		(reporthdr->connect_times.cnt + reporthdr->connect_times.err), \
+		reporthdr->connect_times.err);
+    }
+#endif
+}
+
+void reporter_peerversion (struct thread_Settings *inSettings, int upper, int lower) {
+#if 0
+    int rel, major, minor, alpha;
+    inSettings->peerversion[0] = '\0';
+
+    rel = (upper & 0xFFFF0000) >> 16;
+    major = (upper & 0x0000FFFF);
+    minor = (lower & 0xFFFF0000) >> 16;
+    alpha = (lower & 0x0000000F);
+    sprintf(inSettings->peerversion," (peer %d.%d.%d)", rel, major, minor);
+    switch(alpha) {
+    case 0:
+	sprintf(inSettings->peerversion + strlen(inSettings->peerversion) - 1,"-alpha)");
+	break;
+    case 1:
+	sprintf(inSettings->peerversion + strlen(inSettings->peerversion) - 1,"-beta)");
+	break;
+    case 2:
+	sprintf(inSettings->peerversion + strlen(inSettings->peerversion) - 1,"-rc)");
+	break;
+    case 3:
+	break;
+    default:
+	sprintf(inSettings->peerversion + strlen(inSettings->peerversion) - 1, "-unk)");
+    }
+#endif
+}
+void reporter_print_connection_report(struct ConnectionInfo *report) {
+}
+void reporter_print_settings_report(struct ReportSettings *report) {
+}
+void reporter_print_server_relay_report(struct TransferInfo *repor) {
 }

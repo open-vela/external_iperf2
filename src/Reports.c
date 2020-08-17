@@ -194,7 +194,7 @@ static void Free_sReport (struct ReportSettings *report) {
 static void Free_srReport (struct TransferInfo *report) {
 }
 
-void Free_Report (struct ReportHeader *reporthdr) {
+void FreeReport (struct ReportHeader *reporthdr) {
     assert(reporthdr != NULL);
 #ifdef HAVE_THREAD_DEBUG
     thread_debug( "Report *FREE* %p", (void *) reporthdr);
