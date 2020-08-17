@@ -787,18 +787,18 @@ void reporter_handle_packet_client(struct ReporterData *data, struct ReportStruc
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 static void gettcpistats (struct ReporterData *data, int final) {
     struct TransferInfo *stats = &data->info;
-    struct TransferInfo *sumstats = (sumdata != NULL) ? &sumdata->info : NULL;
+    struct TransferInfo *sumstats = data->GroupSumReport;
     static int cnt = 0;
     struct tcp_info tcp_internal;
     socklen_t tcp_info_length = sizeof(struct tcp_info);
     int retry = 0;
     // Read the TCP retry stats for a client.  Do this
     // on  a report interval period.
-    int rc = (data->info.socket==INVALID_SOCKET) ? 0 : 1;
+    int rc = (stats->common->socket==INVALID_SOCKET) ? 0 : 1;
     if (rc) {
-        rc = (getsockopt(data->info.socket, IPPROTO_TCP, TCP_INFO, &tcp_internal, &tcp_info_length) < 0) ? 0 : 1;
+        rc = (getsockopt(stats->common->socket, IPPROTO_TCP, TCP_INFO, &tcp_internal, &tcp_info_length) < 0) ? 0 : 1;
 	if (!rc)
-	    data->info.socket = INVALID_SOCKET;
+	    stats->common->socket = INVALID_SOCKET;
 	else
 	    // Mark stale now so next call at report interval will update
 	    stats->sock_callstats.write.up_to_date = 1;
@@ -819,8 +819,8 @@ static void gettcpistats (struct ReporterData *data, int final) {
 	stats->sock_callstats.write.meanrtt = (stats->sock_callstats.write.meanrtt * ((double) (cnt - 1) / (double) cnt)) + ((double) (tcp_internal.tcpi_rtt) / (double) cnt);
 	stats->sock_callstats.write.rtt = tcp_internal.tcpi_rtt;
 	if (sumstats) {
-	    sumstats->info.sock_callstats.write.TCPretry += retry;
-	    sumstats->info.sock_callstats.write.totTCPretry += retry;
+	    sumstats->sock_callstats.write.TCPretry += retry;
+	    sumstats->sock_callstats.write.totTCPretry += retry;
 	}
     }
     if (final) {
@@ -1203,8 +1203,8 @@ void reporter_transfer_protocol_client_tcp(struct ReporterData *data, int final)
     stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
 
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-    if (stats->mEnhanced && (stats->mTCP == kMode_Client))
-	gettcpistats(stats, sumstats, 0);
+    if (isEnhanced(stats->common) && (stats->common->ThreadMode == kMode_Client))
+	gettcpistats(stats, 0);
 #endif
     if (sumstats) {
 	sumstats->total.Bytes.current += stats->cntBytes;
@@ -1240,8 +1240,8 @@ void reporter_transfer_protocol_client_all_final(struct ReporterData *data) {
     assert(stats->output_handler != NULL);
 
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-    if ((stats->mEnhanced && stats->mTCP == kMode_Client) && (!stats->sock_callstats.write.up_to_date))
-        gettcpistats(stats, NULL, 1);
+    if (isEnhanced(stats->common) && (stats->common->ThreadMode == kMode_Client) && (!stats->sock_callstats.write.up_to_date))
+        gettcpistats(stats, 1);
 #endif
         stats->cntOutofOrder = stats->cntOutofOrder;
         // assume most of the time out-of-order packets are not
