@@ -151,7 +151,7 @@ static void reporter_reset_transfer_stats_server_tcp(struct TransferInfo *stats)
 
 void PostReport (struct ReportHeader *reporthdr) {
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug( "Jobq *POST* report %p (0x%X)", reporthdr, reporthdr->report.type);
+    thread_debug( "Jobq *POST* report %p (0x%X)", reporthdr, reporthdr->type);
 #endif
     if (reporthdr) {
 #ifdef HAVE_THREAD
@@ -190,7 +190,7 @@ void ReportPacket(struct ReporterData* agent, struct ReportStruct *packet) {
     assert(agent != NULL);
 #ifdef HAVE_THREAD_DEBUG
     if (packet->packetID < 0) {
-	thread_debug("Reporting last packet for %p  qdepth=%d sock=%d", (void *) agent, packetring_getcount(agent->packetring), agent->report.info.socket);
+	thread_debug("Reporting last packet for %p  qdepth=%d sock=%d", (void *) agent, packetring_getcount(agent->packetring), agent->info.common->socket);
     }
 #endif
     packetring_enqueue(agent->packetring, packet);
