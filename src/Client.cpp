@@ -81,19 +81,19 @@ Client::Client(thread_Settings *inSettings) {
 
     mSettings = inSettings;
     mBuf = NULL;
-
+    mSettings->mSock = -1;
     SockAddr_remoteAddr(mSettings);
 
-    Iperf_push_host(&inSettings->peer, inSettings);
-    myJob = InitIndividualReport(inSettings);;
+    Iperf_push_host(&mSettings->peer, mSettings);
+    myJob = InitIndividualReport(mSettings);;
     myReport = (struct ReporterData *)myJob->this_report;
     reportstruct = &scratchpad;
-    mySocket = isServerReverse(inSettings) ? inSettings->mSock : INVALID_SOCKET;
+    mySocket = isServerReverse(mSettings) ? mSettings->mSock : INVALID_SOCKET;
     connected = isServerReverse(mSettings);
 
-    if (isCompat(inSettings) && isPeerVerDetect(inSettings)) {
+    if (isCompat(mSettings) && isPeerVerDetect(mSettings)) {
 	fprintf(stderr, "%s", warn_compat_and_peer_exchange);
-	unsetPeerVerDetect(inSettings);
+	unsetPeerVerDetect(mSettings);
     }
     mBuf = new char[MBUFALLOCSIZE]; // defined in payloads.h
     FAIL_errno(mBuf == NULL, "No memory for buffer\n", mSettings);
@@ -151,6 +151,7 @@ double Client::my_connect(void) {
     WARN_errno(mySocket == INVALID_SOCKET, "socket");
     // Socket is carried both by the object and the thread
     mSettings->mSock=mySocket;
+    myReport->socket=mySocket;
     SetSocketOptions(mSettings);
     SockAddr_localAddr(mSettings);
     if (mSettings->mLocalhost != NULL) {
