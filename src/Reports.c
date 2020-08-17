@@ -56,6 +56,7 @@
 #include "Settings.hpp"
 #include "Reporter.h"
 #include "Locale.h"
+#include "List.h"
 
 static inline void my_str_copy(char **dst, char *src) {
     if (src) {
