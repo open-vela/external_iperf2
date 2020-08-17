@@ -164,7 +164,7 @@ static void Free_iReport (struct ReporterData *ireport) {
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Free report hdr=%p reporter thread suspend count=%d packetring=%p histo=%p frame histo=%p", \
 		 (void *)ireport, ireport->reporter_thread_suspends, (void *) ireport->packetring, \
-		 (void *)ireport->report.info.latency_histogram, (void *) ireport->report.info.framelatency_histogram);
+		 (void *)ireport->info.latency_histogram, (void *) ireport->info.framelatency_histogram);
 #endif
     if (ireport->packetring && ireport->info.total.Bytes.current && \
 	!TimeZero(ireport->info.ts.intervalTime) && (ireport->reporter_thread_suspends < 3)) {
@@ -268,7 +268,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	FAIL(1, "Out of Memory!!\n", inSettings);
     }
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Job report %p uses multireport %p and bidirreport is %p", reporthdr, (void *)inSettings->mSumReport, (void *)inSettings->mFullDuplexReport);
+    thread_debug("Job report %p uses multireport %p and bidirreport is %p", reporthdr, (void *)inSettings->mSumReport, (void *)inSettings->mBidirReport);
 #endif
     reporthdr->this_report = (void *) calloc(1, sizeof(struct ReporterData));
     if (reporthdr->this_report == NULL) {
