@@ -81,7 +81,11 @@ Client::Client(thread_Settings *inSettings) {
 
     mSettings = inSettings;
     mBuf = NULL;
-    myJob = NULL;
+
+    SockAddr_remoteAddr(mSettings);
+
+    Iperf_push_host(&inSettings->peer, inSettings);
+    myJob = InitIndividualReport(inSettings);;
     reportstruct = &scratchpad;
     mySocket = isServerReverse(inSettings) ? inSettings->mSock : INVALID_SOCKET;
     connected = isServerReverse(mSettings);
@@ -132,9 +136,6 @@ Client::~Client() {
 double Client::my_connect(void) {
     int rc;
     double connecttime = -1.0;
-
-    SockAddr_remoteAddr(mSettings);
-
     // create an internet socket
     int type = (isUDP(mSettings) ? SOCK_DGRAM : SOCK_STREAM);
     int domain = (SockAddr_isIPv6( &mSettings->peer) ?
@@ -186,7 +187,6 @@ double Client::my_connect(void) {
 	getsockname(mySocket, (sockaddr*) &mSettings->local, &mSettings->size_local);
 	getpeername(mySocket, (sockaddr*) &mSettings->peer, &mSettings->size_peer);
 	SockAddr_Ifrname(mSettings);
-	Iperf_push_host(&mSettings->peer, mSettings);
 	connected = true;
     } else {
 	connecttime = -1;
@@ -408,7 +408,7 @@ void Client::Run(void) {
     // will continuously process as long as there are packets flowing
     // right now the ring is empty
     if (isDataReport(mSettings)) {
-	myJob = InitIndividualReport(mSettings);
+
 	assert(myJob!=NULL);
 	PostReport(myJob);
     }
