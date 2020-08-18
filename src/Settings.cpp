@@ -359,17 +359,17 @@ void Settings_Destroy(struct thread_Settings *mSettings) {
     thread_debug("Free thread settings=%p", mSettings);
 #endif
     Condition_Destroy(&mSettings->awake_me);
-    DELETE_ARRAY( mSettings->mHost      );
-    DELETE_ARRAY( mSettings->mLocalhost );
-    DELETE_ARRAY( mSettings->mFileName  );
-    DELETE_ARRAY( mSettings->mOutputFileName );
-    DELETE_ARRAY( mSettings->mRxHistogramStr );
-    DELETE_ARRAY( mSettings->mSSMMulticastStr);
-    DELETE_ARRAY( mSettings->mCongestion);
-    FREE_ARRAY( mSettings->mIfrname);
-    FREE_ARRAY( mSettings->mIfrnametx);
-    DELETE_ARRAY( mSettings->mIsochronousStr );
-    DELETE_PTR( mSettings );
+    DELETE_ARRAY(mSettings->mHost);
+    DELETE_ARRAY(mSettings->mLocalhost);
+    DELETE_ARRAY(mSettings->mFileName);
+    DELETE_ARRAY(mSettings->mOutputFileName);
+    DELETE_ARRAY(mSettings->mRxHistogramStr);
+    DELETE_ARRAY(mSettings->mSSMMulticastStr);
+    DELETE_ARRAY(mSettings->mCongestion);
+    FREE_ARRAY(mSettings->mIfrname);
+    FREE_ARRAY(mSettings->mIfrnametx);
+    DELETE_ARRAY(mSettings->mIsochronousStr);
+    DELETE_PTR(mSettings);
 } // end ~Settings
 
 /* -------------------------------------------------------------------

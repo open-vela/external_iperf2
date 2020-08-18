@@ -381,7 +381,7 @@ struct ReportHeader *InitSettingsReport(struct thread_Settings *inSettings);
 struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings, struct server_hdr *server);
 void PostReport(struct ReportHeader *reporthdr);
 void ReportPacket(struct ReporterData *reporthdr, struct ReportStruct *packet);
-void CloseReport(struct ReportHeader *reporthdr,  struct ReportStruct *packet);
+void CloseReport(struct ReporterData *reporthdr,  struct ReportStruct *packet);
 void FreeReport(struct ReportHeader *reporthdr);
 void FreeSumReport (struct SumReport *sumreport);
 void ReportServerUDP(struct thread_Settings *inSettings, struct server_hdr *server);
@@ -435,17 +435,27 @@ void reporter_connect_printf_tcp_final(struct ReportHeader *multihdr);
 #endif
 
 // Reporter print routines
+// TCP server
 void tcp_output_read(struct TransferInfo *stats);
 void tcp_output_read_enhanced(struct TransferInfo *stats);
 void tcp_output_read_enhanced_triptime(struct TransferInfo *stats);
+void tcp_output_sum_read(struct TransferInfo *stats);
+// TCP client
 void tcp_output_write(struct TransferInfo *stats);
+void tcp_output_sum_write(struct TransferInfo *stats);
 void tcp_output_write_enhanced (struct TransferInfo *stats);
+void tcp_output_sum_write_enhanced (struct TransferInfo *stats);
+// UDP server
 void udp_output_read(struct TransferInfo *stats);
 void udp_output_read_enhanced(struct TransferInfo *stats);
 void udp_output_read_enhanced_triptime(struct TransferInfo *stats);
+void udp_output_sum_read(struct TransferInfo *stats);
+//UDP client
 void udp_output_write(struct TransferInfo *stats);
+void udp_output_sum_write(struct TransferInfo *stats);
 void udp_output_write_enhanced(struct TransferInfo *stats);
 void udp_output_write_enhanced_isoch(struct TransferInfo *stats);
+void udp_output_sum_write_enhanced (struct TransferInfo *stats);
 
 // Rest of the reporter output routines
 void reporter_connect_printf_tcp_final (struct ReportHeader *reporthdr);

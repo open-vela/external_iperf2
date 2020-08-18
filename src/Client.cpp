@@ -151,7 +151,8 @@ double Client::my_connect(void) {
     WARN_errno(mySocket == INVALID_SOCKET, "socket");
     // Socket is carried both by the object and the thread
     mSettings->mSock=mySocket;
-    myReport->socket=mySocket;
+    myReport->info.common->socket=mySocket;
+    myReport->info.transferID=mySocket;
     SetSocketOptions(mSettings);
     SockAddr_localAddr(mSettings);
     if (mSettings->mLocalhost != NULL) {
@@ -1054,7 +1055,7 @@ void Client::FinishTrafficActions(void) {
 	mySocket = INVALID_SOCKET;
     }
     Iperf_remove_host(&mSettings->peer);
-    CloseReport(mSettings->reporthdr, reportstruct);
+    CloseReport(myReport, reportstruct);
 }
 
 

@@ -165,8 +165,8 @@ void ReportPacket(struct ReporterData* agent, struct ReportStruct *packet) {
  * CloseReport is called by a transfer agent to finalize
  * the report and signal transfer is over. Context is traffic thread
  */
-void CloseReport(struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
-    assert(reporthdr!=NULL);
+void CloseReport(struct ReporterData *report, struct ReportStruct *finalpacket) {
+    assert(report!=NULL);
     assert(finalpacket!=NULL);
     struct ReportStruct packet;
     /*
@@ -179,7 +179,7 @@ void CloseReport(struct ReportHeader *reporthdr, struct ReportStruct *finalpacke
     packet.packetID = -1;
     packet.packetLen = finalpacket->packetLen;
     packet.packetTime = finalpacket->packetTime;
-    ReportPacket((struct ReporterData *)reporthdr->this_report, &packet);
+    ReportPacket(report, &packet);
 }
 
 //  This is used to determine the packet/cpu load into the reporter thread
@@ -790,7 +790,7 @@ void reporter_handle_packet_client(struct ReporterData *data, struct ReportStruc
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 static void gettcpistats (struct ReporterData *data, int final) {
     struct TransferInfo *stats = &data->info;
-    struct TransferInfo *sumstats = data->GroupSumReport;
+    struct TransferInfo *sumstats = &data->GroupSumReport->info;
     static int cnt = 0;
     struct tcp_info tcp_internal;
     socklen_t tcp_info_length = sizeof(struct tcp_info);
@@ -878,11 +878,6 @@ static inline void reporter_transfer_protocol_missed_reports(struct TransferInfo
 	(*stats->output_handler)(&emptystats);
     }
 }
-// If reports were missed, catch up now
-static inline void reporter_transfer_protocol_multireports(struct ReporterData *data, struct ReportStruct *packet) {
-    reporter_transfer_protocol_reports(data, packet);
-}
-
 #if 0
 // Actions required after an interval report has been outputted
 static inline void reporter_reset_transfer_stats(struct ReporterData *data) {
@@ -1207,7 +1202,7 @@ void reporter_transfer_protocol_client_tcp(struct ReporterData *data, int final)
 
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
     if (isEnhanced(stats->common) && (stats->common->ThreadMode == kMode_Client))
-	gettcpistats(stats, 0);
+	gettcpistats(data, 0);
 #endif
     if (sumstats) {
 	sumstats->total.Bytes.current += stats->cntBytes;
