@@ -100,6 +100,7 @@ struct thread_Settings;
 #include "Settings.hpp"
 
 #if HAVE_THREAD_DEBUG
+struct ReportHeader;
 void reporttype_text(struct ReportHeader *reporthdr, char *rs);
 void thread_debug(const char *format, ...);
 extern Mutex thread_debug_mutex;

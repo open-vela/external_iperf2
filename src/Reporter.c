@@ -514,11 +514,11 @@ static inline int reporter_process_report (struct ReportHeader *reporthdr) {
 	}
 	break;
     case CONNECTION_REPORT:
-	reporter_print_connection_report((struct ConnectInfo *)reporthdr->this_report);
+	reporter_print_connection_report((struct ConnectionInfo *)reporthdr->this_report);
 	FreeReport(reporthdr);
 	break;
     case SETTINGS_REPORT:
-	reporter_print_settings_report((struct ReportSetings *)reporthdr->this_report);
+	reporter_print_settings_report((struct ReportSettings *)reporthdr->this_report);
 	FreeReport(reporthdr);
 	break;
     case SERVER_RELAY_REPORT:
@@ -1225,7 +1225,8 @@ void reporter_transfer_protocol_client_tcp(struct ReporterData *data, int final)
 	if (!bidirstats || isEnhanced(stats->common))
 	    (*stats->output_handler)(stats);
     } else {
-	sumstats->total.Bytes.current += stats->cntBytes;
+	if (sumstats)
+	    sumstats->total.Bytes.current += stats->cntBytes;
 	if (!bidirstats || isEnhanced(stats->common))
 	    (*stats->output_handler)(stats);
 	reporter_reset_transfer_stats_client_tcp(stats);

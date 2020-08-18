@@ -57,6 +57,7 @@ static char outbuffer[SNBUFFERSIZE]; // Buffer for printing
 static char outbufferext[SNBUFFEREXTENDSIZE]; // Buffer for printing
 static char llaw_buf[100];
 static const int true = 1;
+static int tcp_client_header_printed = 0;
 
 static inline void _print_stats_common (struct TransferInfo *stats) {
     byte_snprintf(outbuffer, sizeof(outbuffer), (double) stats->cntBytes, toupper((int)stats->common->Format));
@@ -180,8 +181,8 @@ void tcp_output_read_enhanced_triptime (struct TransferInfo *stats) {
 
 //TCP write or client output
 void tcp_output_write (struct TransferInfo *stats) {
-    if (!stats->header_printed) {
-	stats->header_printed = true;
+    if (!tcp_client_header_printed) {
+	tcp_client_header_printed = true;
 	printf(report_bw_header);
     }
     _print_stats_common(stats);

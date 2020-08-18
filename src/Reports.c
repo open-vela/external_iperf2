@@ -276,13 +276,13 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
     if (reporthdr == NULL) {
 	FAIL(1, "Out of Memory!!\n", inSettings);
     }
-#ifdef HAVE_THREAD_DEBUG
-    thread_debug("Job report %p uses multireport %p and bidirreport is %p", reporthdr, (void *)inSettings->mSumReport, (void *)inSettings->mBidirReport);
-#endif
     reporthdr->this_report = (void *) calloc(1, sizeof(struct ReporterData));
     if (reporthdr->this_report == NULL) {
 	FAIL(1, "Out of Memory!!\n", inSettings);
     }
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Job report %p uses multireport %p and bidirreport is %p", (void *)reporthdr->this_report, (void *)inSettings->mSumReport, (void *)inSettings->mBidirReport);
+#endif
     reporthdr->type = DATA_REPORT;
     reporthdr->ReportMode = inSettings->mReportMode;
 

@@ -81,16 +81,14 @@ Client::Client(thread_Settings *inSettings) {
 
     mSettings = inSettings;
     mBuf = NULL;
+    myJob = NULL;
+    myReport = NULL;
     mSettings->mSock = -1;
     SockAddr_remoteAddr(mSettings);
 
-    Iperf_push_host(&mSettings->peer, mSettings);
-    myJob = InitIndividualReport(mSettings);;
-    myReport = (struct ReporterData *)myJob->this_report;
     reportstruct = &scratchpad;
     mySocket = isServerReverse(mSettings) ? mSettings->mSock : INVALID_SOCKET;
     connected = isServerReverse(mSettings);
-
     if (isCompat(mSettings) && isPeerVerDetect(mSettings)) {
 	fprintf(stderr, "%s", warn_compat_and_peer_exchange);
 	unsetPeerVerDetect(mSettings);
@@ -151,6 +149,10 @@ double Client::my_connect(void) {
     WARN_errno(mySocket == INVALID_SOCKET, "socket");
     // Socket is carried both by the object and the thread
     mSettings->mSock=mySocket;
+    if (mSettings->mThreads > 1)
+	Iperf_push_host(&mSettings->peer, mSettings);
+    myJob = InitIndividualReport(mSettings);;
+    myReport = (struct ReporterData *)myJob->this_report;
     myReport->info.common->socket=mySocket;
     myReport->info.transferID=mySocket;
     SetSocketOptions(mSettings);
@@ -221,7 +223,7 @@ void Client::StartSynch (void) {
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Client start sync enterred");
 #endif
-    int barrier_needed = (!isNoConnectSync(mSettings) && !isServerReverse(mSettings));
+    int barrier_needed = ((mSettings->mThreads > 1) && !isNoConnectSync(mSettings) && !isServerReverse(mSettings));
     // Perform delays, usually between connect() and data xfer though before connect
     // Two delays are supported:
     // o First is an absolute start time per unix epoch format
@@ -281,8 +283,10 @@ inline void Client::SetReportStartTime (void) {
     myReport->info.ts.startTime.tv_sec = now.getSecs();
     myReport->info.ts.startTime.tv_usec = now.getUsecs();
     myReport->info.ts.IPGstart = myReport->info.ts.startTime;
-    if (!TimeZero(myReport->info.ts.intervalTime))
+    if (!TimeZero(myReport->info.ts.intervalTime)) {
+	myReport->info.ts.nextTime = myReport->info.ts.startTime;
 	TimeAdd(myReport->info.ts.nextTime, myReport->info.ts.intervalTime);
+    }
 }
 
 void Client::ConnectPeriodic (void) {
@@ -1054,7 +1058,8 @@ void Client::FinishTrafficActions(void) {
 	WARN_errno( rc == SOCKET_ERROR, "client close" );
 	mySocket = INVALID_SOCKET;
     }
-    Iperf_remove_host(&mSettings->peer);
+    if (mSettings->mThreads > 1)
+	Iperf_remove_host(&mSettings->peer);
     CloseReport(myReport, reportstruct);
 }
 

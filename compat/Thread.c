@@ -118,7 +118,7 @@ static void __gettimestamp(char *timestr) {
         strftime(timestr, 200, "%T", t);
         // strftime(buf, len, "%F %T", &t);
 	snprintf(&timestr[strlen(timestr)], strlen(timestr), ".%09ld", t1.tv_nsec);
-        timestr[200]='\0';
+        timestr[199]='\0';
     } else {
         *timestr='\0';
     }
