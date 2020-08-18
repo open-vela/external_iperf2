@@ -341,24 +341,36 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	ireport->packet_handler = reporter_handle_packet_client;
 	if (isUDP(inSettings)) {
 	    ireport->transfer_protocol_handler = reporter_transfer_protocol_client_udp;
-	    if (isIsochronous(inSettings))
-		ireport->info.output_handler = udp_output_write_enhanced_isoch;
-	    else if (isEnhanced(inSettings))
-		ireport->info.output_handler = udp_output_write_enhanced;
-	    else
-		ireport->info.output_handler = udp_output_write;
-	    if (ireport->GroupSumReport)
+	    if (ireport->GroupSumReport) {
 		ireport->GroupSumReport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_udp;
+		ireport->GroupSumReport->info.output_handler = udp_output_sum_write_enhanced;
+	    }
+	    if (isIsochronous(inSettings)) {
+		ireport->info.output_handler = udp_output_write_enhanced_isoch;
+	    } else if (isEnhanced(inSettings)) {
+		ireport->info.output_handler = udp_output_write_enhanced;
+	    } else {
+		ireport->info.output_handler = udp_output_write;
+		if (ireport->GroupSumReport) {
+		    ireport->GroupSumReport->info.output_handler = udp_output_sum_write;
+		}
+	    }
 	    if (ireport->FullDuplexReport)
 		ireport->FullDuplexReport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_udp;
 	} else {
 	    ireport->transfer_protocol_handler = reporter_transfer_protocol_client_tcp;
-	    if (isEnhanced(inSettings))
+	    if (isEnhanced(inSettings)) {
 		ireport->info.output_handler = tcp_output_write_enhanced;
-	    else
+		if (ireport->GroupSumReport) {
+		    ireport->GroupSumReport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_tcp;
+		    ireport->GroupSumReport->info.output_handler = tcp_output_sum_write_enhanced;
+		}
+	    } else {
 		ireport->info.output_handler = tcp_output_write;
-	    if (ireport->GroupSumReport) {
-		ireport->GroupSumReport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_tcp;
+		if (ireport->GroupSumReport) {
+		    ireport->GroupSumReport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_tcp;
+		    ireport->GroupSumReport->info.output_handler = tcp_output_sum_write;
+		}
 	    }
 	    if (ireport->FullDuplexReport)
 		ireport->FullDuplexReport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
