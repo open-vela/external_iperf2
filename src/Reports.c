@@ -280,9 +280,6 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
     if (reporthdr->this_report == NULL) {
 	FAIL(1, "Out of Memory!!\n", inSettings);
     }
-#ifdef HAVE_THREAD_DEBUG
-    thread_debug("Job report %p uses multireport %p and bidirreport is %p", (void *)reporthdr->this_report, (void *)inSettings->mSumReport, (void *)inSettings->mBidirReport);
-#endif
     reporthdr->type = DATA_REPORT;
     reporthdr->ReportMode = inSettings->mReportMode;
 
@@ -292,8 +289,9 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 
     // Copy common settings into the transfer report section
     common_copy(&ireport->info.common, inSettings);
-    ireport->info.header_printed = 0;
-
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Job report %p uses multireport %p and bidirreport is %p (socket=%d)", (void *)reporthdr->this_report, (void *)inSettings->mSumReport, (void *)inSettings->mBidirReport, inSettings->mSock);
+#endif
     // Create a new packet ring which is used to communicate
     // packet stats from the traffic thread to the reporter
     // thread.  The reporter thread does all packet accounting

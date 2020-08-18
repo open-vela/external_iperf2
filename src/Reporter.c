@@ -1163,10 +1163,7 @@ void reporter_transfer_protocol_server_tcp(struct ReporterData *data, int final)
     if (bidirstats) {
 	bidirstats->total.Bytes.current += stats->cntBytes;
     }
-    if (!final && (!bidirstats || isEnhanced(stats->common))) {
-	(*stats->output_handler)(stats);
-	reporter_reset_transfer_stats_server_tcp(stats);
-    } else if (final) {
+    if (final) {
 	if ((stats->cntBytes > 0) && !TimeZero(stats->ts.intervalTime)) {
 	    // print a partial interval report if enable and this a final
 	    reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
@@ -1188,9 +1185,10 @@ void reporter_transfer_protocol_server_tcp(struct ReporterData *data, int final)
 	if (stats->framelatency_histogram) {
 	    stats->framelatency_histogram->final = 1;
 	}
-	if (!bidirstats || isEnhanced(stats->common))
-	    (*stats->output_handler)(stats);
     }
+    (*stats->output_handler)(stats);
+    if (!final)
+	reporter_reset_transfer_stats_server_tcp(stats);
 }
 
 void reporter_transfer_protocol_client_tcp(struct ReporterData *data, int final) {
@@ -1222,15 +1220,10 @@ void reporter_transfer_protocol_client_tcp(struct ReporterData *data, int final)
 	stats->sock_callstats.write.TCPretry = stats->sock_callstats.write.totTCPretry;
 	stats->cntBytes = stats->total.Bytes.current;
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
-	if (!bidirstats || isEnhanced(stats->common))
-	    (*stats->output_handler)(stats);
-    } else {
-	if (sumstats)
-	    sumstats->total.Bytes.current += stats->cntBytes;
-	if (!bidirstats || isEnhanced(stats->common))
-	    (*stats->output_handler)(stats);
-	reporter_reset_transfer_stats_client_tcp(stats);
     }
+    (*stats->output_handler)(stats);
+    if (!final)
+	reporter_reset_transfer_stats_client_tcp(stats);
 }
 
 #if 0
@@ -1369,7 +1362,9 @@ int reporter_condprint_time_interval_report (struct ReporterData *data, struct R
 	stats->ts.packetTime = packet->packetTime;
         // In the (hopefully unlikely event) the reporter fell behind
         // ouput the missed reports to catch up
+#if 0
 	reporter_transfer_protocol_missed_reports(stats, packet);
+#endif
 #ifdef DEBUG_PPS
 	printf("*** packetID TRIGGER = %ld pt=%ld.%ld empty=%d nt=%ld.%ld\n",packet->packetID, packet->packetTime.tv_sec, packet->packetTime.tv_usec, packet->emptyreport, data->nextTime.tv_sec, data->nextTime.tv_usec);
 #endif
