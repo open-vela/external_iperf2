@@ -58,8 +58,10 @@ static char outbufferext[SNBUFFEREXTENDSIZE]; // Buffer for printing
 static char llaw_buf[100];
 static const int true = 1;
 static int tcp_client_header_printed = 0;
+static int tcp_server_header_printed = 0;
 
 static inline void _print_stats_common (struct TransferInfo *stats) {
+    assert(stats!=NULL);
     byte_snprintf(outbuffer, sizeof(outbuffer), (double) stats->cntBytes, toupper((int)stats->common->Format));
     if (stats->ts.iEnd < SMALLEST_INTERVAL_SEC) {
         stats->cntBytes = 0;
@@ -192,8 +194,8 @@ void tcp_output_write (struct TransferInfo *stats) {
 }
 
 void tcp_output_write_enhanced (struct TransferInfo *stats) {
-    if(!stats->header_printed) {
-	stats->header_printed = true;
+    if (!tcp_client_header_printed) {
+	tcp_client_header_printed = true;
 	printf(report_bw_write_enhanced_header);
     }
     _print_stats_common(stats);
