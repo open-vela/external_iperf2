@@ -60,7 +60,7 @@ static const int true = 1;
 
 static inline void _print_stats_common (struct TransferInfo *stats) {
     byte_snprintf(outbuffer, sizeof(outbuffer), (double) stats->cntBytes, toupper((int)stats->common->Format));
-    if ((stats->ts.iEnd < SMALLEST_INTERVAL_SEC) || (stats->ts.iEnd - stats->ts.iStart)) {
+    if (stats->ts.iEnd < SMALLEST_INTERVAL_SEC) {
         stats->cntBytes = 0;
     }
     byte_snprintf(outbufferext, sizeof(outbufferext), (double)stats->cntBytes / (stats->ts.iEnd - stats->ts.iStart), \
@@ -365,7 +365,6 @@ void udp_output_write_enhanced_isoch (struct TransferInfo *stats) {
 	   stats->isochstats.framecnt,
 	   stats->isochstats.framelostcnt, stats->isochstats.slipcnt);
 }
-
 
 // Sum reports
 void udp_output_sum_read(struct TransferInfo *stats) {

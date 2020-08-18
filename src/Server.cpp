@@ -295,7 +295,7 @@ void Server::RunTCP( void ) {
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
     reportstruct->packetLen = 0;
-    CloseReport(myJob, reportstruct);
+    CloseReport(myReport, reportstruct);
 }
 
 void Server::InitKernelTimeStamping (void) {
@@ -687,7 +687,7 @@ void Server::RunUDP( void ) {
 	}
 	ReportPacket(myReport, reportstruct);
     }
-    CloseReport(myJob, reportstruct);
+    CloseReport(myReport, reportstruct);
 
     if (!isMulticast(mSettings) && !isNoUDPfin(mSettings)) {
 	// send a UDP acknowledgement back except when:
