@@ -145,19 +145,27 @@ void PostReport (struct ReportHeader *reporthdr) {
  * be as simple and fast as possible as it gets called for
  * every "packet".
  */
-void ReportPacket(struct ReporterData* agent, struct ReportStruct *packet) {
-    assert(agent != NULL);
+void ReportPacket(struct ReporterData* data, struct ReportStruct *packet) {
+    assert(data != NULL);
 #ifdef HAVE_THREAD_DEBUG
     if (packet->packetID < 0) {
-	thread_debug("Reporting last packet for %p  qdepth=%d sock=%d", (void *) agent, packetring_getcount(agent->packetring), agent->info.common->socket);
+	thread_debug("Reporting last packet for %p  qdepth=%d sock=%d", (void *) data, packetring_getcount(data->packetring), data->info.common->socket);
     }
 #endif
-    packetring_enqueue(agent->packetring, packet);
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+    // tcpi stats are only sampled on the report interval
+    struct TransferInfo *stats = &data->info;
+    if (isEnhanced(stats->common) && (stats->common->ThreadMode == kMode_Client) && \
+	(TimeDifference(stats->ts.nextTime, packet->packetTime) < 0)) {
+	gettcpistats(data, 0);
+    }
+#endif
+    packetring_enqueue(data->packetring, packet);
 #ifndef HAVE_THREAD
     /*
      * Process the report in this thread
      */
-    process_report(agent);
+    process_report(data);
 #endif
 }
 
@@ -176,6 +184,15 @@ void CloseReport(struct ReporterData *report, struct ReportStruct *finalpacket) 
      * by the reporter thread as and end of traffic
      * event
      */
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+    // tcpi stats are sampled on a final packet
+    struct TransferInfo *stats = &report->info;
+    if (isEnhanced(stats->common) && (stats->common->ThreadMode == kMode_Client) && \
+	(TimeDifference(stats->ts.nextTime, finalpacket->packetTime) < 0)) {
+	printf("final tcpistats\n");
+	gettcpistats(report, 0);
+    }
+#endif
     packet.packetID = -1;
     packet.packetLen = finalpacket->packetLen;
     packet.packetTime = finalpacket->packetTime;
@@ -789,8 +806,9 @@ void reporter_handle_packet_client(struct ReporterData *data, struct ReportStruc
 
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 static void gettcpistats (struct ReporterData *data, int final) {
+    assert(data!=NULL);
     struct TransferInfo *stats = &data->info;
-    struct TransferInfo *sumstats = &data->GroupSumReport->info;
+    struct TransferInfo *sumstats = (data->GroupSumReport != NULL) ? &data->GroupSumReport->info : NULL;
     static int cnt = 0;
     struct tcp_info tcp_internal;
     socklen_t tcp_info_length = sizeof(struct tcp_info);
@@ -1197,12 +1215,11 @@ void reporter_transfer_protocol_client_tcp(struct ReporterData *data, int final)
     struct TransferInfo *bidirstats = (data->FullDuplexReport != NULL) ? &data->FullDuplexReport->info : NULL;
     assert(stats->output_handler != NULL);
     stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
-
-#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-    if (isEnhanced(stats->common) && (stats->common->ThreadMode == kMode_Client))
-	gettcpistats(data, 0);
-#endif
     if (sumstats) {
+	if (TimeZero(sumstats->ts.startTime)) {
+	    sumstats->ts.startTime = stats->ts.startTime;
+	    sumstats->ts.nextTime = stats->ts.nextTime;
+	}
 	sumstats->total.Bytes.current += stats->cntBytes;
 	sumstats->sock_callstats.write.WriteErr += stats->sock_callstats.write.WriteErr;
 	sumstats->sock_callstats.write.WriteCnt += stats->sock_callstats.write.WriteCnt;
@@ -1210,6 +1227,7 @@ void reporter_transfer_protocol_client_tcp(struct ReporterData *data, int final)
 	sumstats->sock_callstats.write.totWriteErr += stats->sock_callstats.write.WriteErr;
 	sumstats->sock_callstats.write.totWriteCnt += stats->sock_callstats.write.WriteCnt;
 	sumstats->sock_callstats.write.totTCPretry += stats->sock_callstats.write.TCPretry;
+	reporter_set_timestamps_time(&sumstats->ts, INTERVAL);
     }
     if (bidirstats) {
 	bidirstats->total.Bytes.current += stats->cntBytes;
@@ -1351,10 +1369,10 @@ void reporter_transfer_protocol_bidir_udp(struct TransferInfo *stats, int final)
 // Conditional print based on time
 int reporter_condprint_time_interval_report (struct ReporterData *data, struct ReportStruct *packet) {
     struct TransferInfo *stats = &data->info;
-    int advance_jobq = 0;
+    assert(stats!=NULL);
     struct TransferInfo *sumstats = (data->GroupSumReport ? &data->GroupSumReport->info : NULL);
     struct TransferInfo *bidirstats = (data->FullDuplexReport ? &data->FullDuplexReport->info : NULL);
-
+    int advance_jobq = 0;
     // Print a report if packet time exceeds the next report interval time,
     // Also signal to the caller to move to the next report (or packet ring)
     // if there was output. This will allow for more precise interval sum accounting.
@@ -1389,13 +1407,11 @@ int reporter_condprint_time_interval_report (struct ReporterData *data, struct R
 	(*bidirstats->output_handler)(bidirstats);
     }
     if (data->GroupSumReport) {
-	if (TimeDifference(sumstats->ts.startTime, stats->ts.startTime) > 0)
-	    sumstats->ts.startTime = stats->ts.startTime;
 	if ((data->GroupSumReport->reference.count > (data->FullDuplexReport ? 2 : 1) && \
 	     (data->GroupSumReport->threads == data->GroupSumReport->reference.count)))  {
 	    data->GroupSumReport->threads = 0;
 	    reporter_set_timestamps_time(&sumstats->ts, INTERVAL);
-	    (*sumstats->output_handler)(bidirstats);
+	    (*sumstats->output_handler)(sumstats);
 	}
     }
     return advance_jobq;

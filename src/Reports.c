@@ -138,9 +138,6 @@ struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID) {
     if (inSettings->mThreadMode == kMode_Server) {
 	sumreport->info.sock_callstats.read.binsize = inSettings->mBufLen / 8;
     }
-    gettimeofday(&sumreport->info.ts.startTime, NULL);
-    if (!TimeZero(sumreport->info.ts.intervalTime))
-	TimeAdd(sumreport->info.ts.nextTime, sumreport->info.ts.intervalTime);
 
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Init sum report %p id=%d", (void *)sumreport, inID);
