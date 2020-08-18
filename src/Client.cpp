@@ -259,14 +259,8 @@ void Client::StartSynch (void) {
 	    barrier_needed = 0;
     }
 #endif
-    if (barrier_needed && (BarrierClient(mSettings->connects_done))) {
-	assert(myJob != NULL);
-	struct ReporterData *reporthdr = (struct ReporterData *) myJob->this_report;
-	assert(reporthdr!=NULL);
-	assert(reporthdr->GroupSumReport!=NULL);
-	reporthdr->GroupSumReport->info.ts.startTime.tv_sec = now.getSecs();
-	reporthdr->GroupSumReport->info.ts.startTime.tv_usec = now.getUsecs();
-    }
+    if (barrier_needed && (BarrierClient(mSettings->connects_done))) {};
+
     // Full duplex sockets need to be syncronized
     if (isBidir(mSettings))
 	bidir_start_barrier(&mSettings->bidir_startstop);
