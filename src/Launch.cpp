@@ -281,11 +281,6 @@ void client_init(struct thread_Settings *clients) {
 
     itr = clients;
     setReport(clients);
-    if ((clients->mThreads > 1) && !isConnectOnly(clients)) {
-	// Create a multiple report header to handle reporting the
-	// sum of multiple client threads
-	InitSumReport(clients, groupID);
-    }
     // See if we need to start a listener as well
     Settings_GenerateListenerSettings(clients, &next);
 
