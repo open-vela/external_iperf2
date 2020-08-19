@@ -176,10 +176,6 @@ void Iperf_remove_host (iperf_sockaddr *del) {
     }
     if (*tmp) {
 	if (--(*tmp)->thread_count == 0) {
-	    if ((*tmp)->socket > 0) {
-		int rc = close((*tmp)->socket);
-		WARN_errno(rc == SOCKET_ERROR, "close socket" );
-	    }
 	    Iperf_ListEntry *remove = (*tmp);
 	    active_table.count--;
 #if HAVE_THREAD_DEBUG
