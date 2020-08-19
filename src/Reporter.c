@@ -426,6 +426,9 @@ void process_report (struct ReportHeader *report) {
 
 static int reporter_process_transfer_report (struct ReporterData *this_ireport) {
     assert(this_ireport != NULL);
+    assert(this_ireport->packet_handler != NULL);
+    struct TransferInfo *sumstats = (this_ireport->GroupSumReport ? &this_ireport->GroupSumReport->info : NULL);
+    struct TransferInfo *bidirstats = (this_ireport->FullDuplexReport ? &this_ireport->FullDuplexReport->info : NULL);
     int need_free = 0;
     // The consumption detector applies delay to the reporter
     // thread when its consumption rate is too low.   This allows
@@ -459,54 +462,49 @@ static int reporter_process_transfer_report (struct ReporterData *this_ireport) 
 		advance_jobq = (*this_ireport->transfer_interval_handler)(this_ireport, packet);
 	    }
 	    // Do the packet accounting per the handler type
-	    if (this_ireport->packet_handler) {
-		(*this_ireport->packet_handler)(this_ireport, packet);
-		// Sum reports update the report header's last
-		// packet time after the handler. This means
-		// the report header's packet time will be
-		// the previous time before the interval
-		if (this_ireport->GroupSumReport)
-		    this_ireport->GroupSumReport->info.ts.packetTime = packet->packetTime;
-		if (this_ireport->FullDuplexReport)
-		    this_ireport->FullDuplexReport->info.ts.packetTime = packet->packetTime;
-	    }
+	    (*this_ireport->packet_handler)(this_ireport, packet);
+	    // Sum reports update the report header's last
+	    // packet time after the handler. This means
+	    // the report header's packet time will be
+	    // the previous time before the interval
+	    if (sumstats)
+		sumstats->ts.packetTime = packet->packetTime;
+	    if (bidirstats)
+		bidirstats->ts.packetTime = packet->packetTime;
 	} else {
 	    need_free = 1;
 	    advance_jobq = 1;
 	    // A last packet event was detected
 	    // printf("last packet event detected\n"); fflush(stdout);
 	    this_ireport->reporter_thread_suspends = consumption_detector.reporter_thread_suspends;
-	    if (this_ireport->packet_handler) {
-		(*this_ireport->packet_handler)(this_ireport, packet);
-		this_ireport->info.ts.packetTime = packet->packetTime;
-		(*this_ireport->transfer_protocol_handler)(this_ireport, 1);
-		// This is a final report so set the sum report header's packet time
-		// Note, the thread with the max value will set this
-		if (this_ireport->FullDuplexReport) {
-		    if (TimeDifference(this_ireport->FullDuplexReport->info.ts.packetTime, packet->packetTime) > 0) {
-			this_ireport->FullDuplexReport->info.ts.packetTime = packet->packetTime;
-		    }
-		    if (DecrSumReportRefCounter(this_ireport->FullDuplexReport) == 0) {
-			if (this_ireport->FullDuplexReport->transfer_protocol_sum_handler) {
-			    (*this_ireport->FullDuplexReport->transfer_protocol_sum_handler)(&this_ireport->FullDuplexReport->info, 1);
-			}
-			FreeSumReport(this_ireport->FullDuplexReport);
-		    }
+	    (*this_ireport->packet_handler)(this_ireport, packet);
+	    this_ireport->info.ts.packetTime = packet->packetTime;
+	    assert(this_ireport->transfer_protocol_handler != NULL);
+	    (*this_ireport->transfer_protocol_handler)(this_ireport, 0);
+	    // This is a final report so set the sum report header's packet time
+	    // Note, the thread with the max value will set this
+	    if (bidirstats) {
+		// The largest packet timestamp sets the sum report final time
+		if (TimeDifference(bidirstats->ts.packetTime, packet->packetTime) > 0) {
+		    bidirstats->ts.packetTime = packet->packetTime;
 		}
-		if (this_ireport->GroupSumReport) {
-		    if (TimeDifference(this_ireport->GroupSumReport->info.ts.packetTime, packet->packetTime) > 0) {
-			this_ireport->GroupSumReport->info.ts.packetTime = packet->packetTime;
+		if (DecrSumReportRefCounter(this_ireport->FullDuplexReport) == 0) {
+		    if (this_ireport->FullDuplexReport->transfer_protocol_sum_handler) {
+			(*this_ireport->FullDuplexReport->transfer_protocol_sum_handler)(bidirstats, 1);
 		    }
-		    if (TimeDifference(this_ireport->GroupSumReport->info.ts.startTime, this_ireport->info.ts.startTime) > 0) {
-			this_ireport->GroupSumReport->info.ts.startTime = this_ireport->info.ts.startTime;
+		    FreeSumReport(this_ireport->FullDuplexReport);
+		}
+	    }
+	    if (sumstats) {
+		if (TimeDifference(sumstats->ts.packetTime, packet->packetTime) > 0) {
+		    sumstats->ts.packetTime = packet->packetTime;
+		}
+		if (DecrSumReportRefCounter(this_ireport->GroupSumReport) == 0) {
+		    if ((this_ireport->GroupSumReport->transfer_protocol_sum_handler) && \
+			(this_ireport->GroupSumReport->reference.maxcount > 1)) {
+			(*this_ireport->GroupSumReport->transfer_protocol_sum_handler)(&this_ireport->GroupSumReport->info, 1);
 		    }
-		    (*this_ireport->GroupSumReport->transfer_protocol_sum_handler)(&this_ireport->GroupSumReport->info, 1);
-		    if (DecrSumReportRefCounter(this_ireport->GroupSumReport) == 0) {
-			if ((this_ireport->GroupSumReport->transfer_protocol_sum_handler) && \
-			    (this_ireport->GroupSumReport->reference.maxcount > 1)) {
-			}
-			FreeSumReport(this_ireport->GroupSumReport);
-		    }
+		    FreeSumReport(this_ireport->GroupSumReport);
 		}
 	    }
 	}
