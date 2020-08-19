@@ -1216,10 +1216,6 @@ void reporter_transfer_protocol_client_tcp(struct ReporterData *data, int final)
     assert(stats->output_handler != NULL);
     stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
     if (sumstats) {
-	if (TimeZero(sumstats->ts.startTime)) {
-	    sumstats->ts.startTime = stats->ts.startTime;
-	    sumstats->ts.nextTime = stats->ts.nextTime;
-	}
 	sumstats->total.Bytes.current += stats->cntBytes;
 	sumstats->sock_callstats.write.WriteErr += stats->sock_callstats.write.WriteErr;
 	sumstats->sock_callstats.write.WriteCnt += stats->sock_callstats.write.WriteCnt;
@@ -1227,7 +1223,6 @@ void reporter_transfer_protocol_client_tcp(struct ReporterData *data, int final)
 	sumstats->sock_callstats.write.totWriteErr += stats->sock_callstats.write.WriteErr;
 	sumstats->sock_callstats.write.totWriteCnt += stats->sock_callstats.write.WriteCnt;
 	sumstats->sock_callstats.write.totTCPretry += stats->sock_callstats.write.TCPretry;
-	reporter_set_timestamps_time(&sumstats->ts, INTERVAL);
     }
     if (bidirstats) {
 	bidirstats->total.Bytes.current += stats->cntBytes;
@@ -1370,13 +1365,15 @@ void reporter_transfer_protocol_bidir_udp(struct TransferInfo *stats, int final)
 int reporter_condprint_time_interval_report (struct ReporterData *data, struct ReportStruct *packet) {
     struct TransferInfo *stats = &data->info;
     assert(stats!=NULL);
-    struct TransferInfo *sumstats = (data->GroupSumReport ? &data->GroupSumReport->info : NULL);
-    struct TransferInfo *bidirstats = (data->FullDuplexReport ? &data->FullDuplexReport->info : NULL);
     int advance_jobq = 0;
     // Print a report if packet time exceeds the next report interval time,
     // Also signal to the caller to move to the next report (or packet ring)
     // if there was output. This will allow for more precise interval sum accounting.
     if (TimeDifference(stats->ts.nextTime, packet->packetTime) < 0) {
+	assert(data->transfer_protocol_handler!=NULL);
+	advance_jobq = 1;
+	struct TransferInfo *sumstats = (data->GroupSumReport ? &data->GroupSumReport->info : NULL);
+	struct TransferInfo *bidirstats = (data->FullDuplexReport ? &data->FullDuplexReport->info : NULL);
 	stats->ts.packetTime = packet->packetTime;
         // In the (hopefully unlikely event) the reporter fell behind
         // ouput the missed reports to catch up
@@ -1386,32 +1383,19 @@ int reporter_condprint_time_interval_report (struct ReporterData *data, struct R
 #ifdef DEBUG_PPS
 	printf("*** packetID TRIGGER = %ld pt=%ld.%ld empty=%d nt=%ld.%ld\n",packet->packetID, packet->packetTime.tv_sec, packet->packetTime.tv_usec, packet->emptyreport, data->nextTime.tv_sec, data->nextTime.tv_usec);
 #endif
+	if (sumstats && TimeZero(sumstats->ts.startTime)) {
+	    sumstats->ts.startTime = stats->ts.startTime;
+	    sumstats->ts.nextTime = stats->ts.nextTime;
+	}
 	reporter_set_timestamps_time(&stats->ts, INTERVAL);
-	if (data->transfer_protocol_handler) {
-	    (*data->transfer_protocol_handler)(data, 0);
-	    advance_jobq = 1;
-	}
-	if (data->GroupSumReport) {
-	    advance_jobq = 1;
-	    data->GroupSumReport->threads++;
-	}
-	if (data->FullDuplexReport) {
-	    advance_jobq = 1;
-	    data->FullDuplexReport->threads++;
-	}
-    }
-    if (data->FullDuplexReport && (data->FullDuplexReport->reference.count > 1) && \
-	(data->FullDuplexReport->threads == data->FullDuplexReport->reference.count)) {
-	data->FullDuplexReport->threads = 0;
-	reporter_set_timestamps_time(&bidirstats->ts, INTERVAL);
-	(*bidirstats->output_handler)(bidirstats);
-    }
-    if (data->GroupSumReport) {
-	if ((data->GroupSumReport->reference.count > (data->FullDuplexReport ? 2 : 1) && \
-	     (data->GroupSumReport->threads == data->GroupSumReport->reference.count)))  {
-	    data->GroupSumReport->threads = 0;
-	    reporter_set_timestamps_time(&sumstats->ts, INTERVAL);
-	    (*sumstats->output_handler)(sumstats);
+	(*data->transfer_protocol_handler)(data, 0);
+	if (sumstats) {
+	    if ((++data->GroupSumReport->threads) == \
+		((bidirstats != NULL) ? (2 * data->GroupSumReport->reference.count) : data->GroupSumReport->reference.count))   {
+		data->GroupSumReport->threads = 0;
+		reporter_set_timestamps_time(&sumstats->ts, INTERVAL);
+		(*data->GroupSumReport->transfer_protocol_sum_handler)(sumstats, 0);
+	    }
 	}
     }
     return advance_jobq;
