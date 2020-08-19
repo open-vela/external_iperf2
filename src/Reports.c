@@ -128,6 +128,7 @@ struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID) {
     common_copy(&sumreport->info.common, inSettings);
     sumreport->info.groupID = inID;
     sumreport->info.transferID = -1;
+    sumreport->info.threadcnt = 0;
     // Only initialize the interval time here
     // The startTime and nextTime for summing reports will be set by
     // the reporter thread in realtime
