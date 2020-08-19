@@ -167,11 +167,12 @@ int main( int argc, char **argv ) {
     // Initialize the interrupt handling thread to 0
     sThread = thread_zeroid();
 
+    // perform any cleanup when quitting Iperf
+    atexit(cleanup);
+
     // Allocate the "global" settings
     ext_gSettings = new thread_Settings;
 
-    // perform any cleanup when quitting Iperf
-    atexit(cleanup);
 
     // Default reporting mode here to avoid unitialized warnings
     // this won't be the actual mode
@@ -340,7 +341,6 @@ void cleanup( void ) {
 #endif
     // shutdown the thread subsystem
     thread_destroy( );
-    DELETE_PTR(ext_gSettings);
 } // end cleanup
 
 #ifdef WIN32
