@@ -422,6 +422,13 @@ void tcp_output_sum_write(struct TransferInfo *stats) {
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext);
 }
+void tcp_output_sumcnt_write(struct TransferInfo *stats) {
+    _print_stats_common(stats);
+    printf(report_sumcnt_bw_format, stats->threadcnt,
+	   stats->ts.iStart, stats->ts.iEnd,
+	   outbuffer, outbufferext);
+}
+
 void tcp_output_sum_read_enhanced(struct TransferInfo *stats) {
     _print_stats_common(stats);
     printf(report_sum_bw_read_enhanced_format,

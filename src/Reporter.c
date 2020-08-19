@@ -1211,7 +1211,6 @@ void reporter_transfer_protocol_client_tcp(struct ReporterData *data, int final)
     struct TransferInfo *stats = &data->info;
     struct TransferInfo *sumstats = (data->GroupSumReport != NULL) ? &data->GroupSumReport->info : NULL;
     struct TransferInfo *bidirstats = (data->FullDuplexReport != NULL) ? &data->FullDuplexReport->info : NULL;
-    assert(stats->output_handler != NULL);
     stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
     if (sumstats) {
 	sumstats->total.Bytes.current += stats->cntBytes;
@@ -1221,6 +1220,7 @@ void reporter_transfer_protocol_client_tcp(struct ReporterData *data, int final)
 	sumstats->sock_callstats.write.totWriteErr += stats->sock_callstats.write.WriteErr;
 	sumstats->sock_callstats.write.totWriteCnt += stats->sock_callstats.write.WriteCnt;
 	sumstats->sock_callstats.write.totTCPretry += stats->sock_callstats.write.TCPretry;
+	sumstats->threadcnt++;
     }
     if (bidirstats) {
 	bidirstats->total.Bytes.current += stats->cntBytes;
@@ -1232,7 +1232,8 @@ void reporter_transfer_protocol_client_tcp(struct ReporterData *data, int final)
 	stats->cntBytes = stats->total.Bytes.current;
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
     }
-    (*stats->output_handler)(stats);
+    if (stats->output_handler)
+	(*stats->output_handler)(stats);
     if (!final)
 	reporter_reset_transfer_stats_client_tcp(stats);
 }
@@ -1321,6 +1322,7 @@ void reporter_transfer_protocol_sum_client_tcp(struct TransferInfo *stats, int f
 	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
 	(*stats->output_handler)(stats);
 	reporter_reset_transfer_stats_client_tcp(stats);
+	stats->threadcnt = 0;
     }
 }
 

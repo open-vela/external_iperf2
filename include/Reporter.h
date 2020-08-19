@@ -304,6 +304,7 @@ struct TransferInfo {
     bool header_printed;
     int transferID;
     int groupID;
+    int threadcnt;
     uintmax_t cntBytes;
     intmax_t cntError;
     intmax_t cntOutofOrder;
@@ -443,6 +444,7 @@ void tcp_output_sum_read(struct TransferInfo *stats);
 // TCP client
 void tcp_output_write(struct TransferInfo *stats);
 void tcp_output_sum_write(struct TransferInfo *stats);
+void tcp_output_sumcnt_write(struct TransferInfo *stats);
 void tcp_output_write_enhanced (struct TransferInfo *stats);
 void tcp_output_sum_write_enhanced (struct TransferInfo *stats);
 // UDP server

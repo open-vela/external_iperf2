@@ -90,6 +90,7 @@ static int burstipg_set = 0;
 static int isochronous = 0;
 static int noudpfin = 0;
 static int numreportstructs = 0;
+static int sumonly = 0;
 
 extern Mutex groupCond;
 
@@ -168,6 +169,7 @@ const struct option long_options[] =
 {"bidir", no_argument, &bidirtest, 1},
 {"ipg", required_argument, &burstipg, 1},
 {"isochronous", optional_argument, &isochronous, 1},
+{"sum-only", no_argument, &sumonly, 1},
 {"NUM_REPORT_STRUCTS", required_argument, &numreportstructs, 1},
 #ifdef WIN32
 {"reverse", no_argument, &reversetest, 1},
@@ -862,6 +864,10 @@ void Settings_Interpret( char option, const char *optarg, struct thread_Settings
 		} else {
 		  mExtSettings->connectonly_count = 1;
 		}
+	    }
+	    if (sumonly) {
+		sumonly = 0;
+		setSumOnly(mExtSettings);
 	    }
 	    if (rxhistogram) {
 		rxhistogram = 0;
