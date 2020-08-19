@@ -367,7 +367,6 @@ void reporter_spawn (struct thread_Settings *thread) {
     }
     if (thread->reporthdr) {
         reporter_connect_printf_tcp_final(thread->reporthdr);
-	free(thread->mSumReport);
 	FreeReport(thread->reporthdr);
     }
 #ifdef HAVE_THREAD_DEBUG
