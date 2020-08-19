@@ -138,7 +138,6 @@ struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID) {
     if (inSettings->mThreadMode == kMode_Server) {
 	sumreport->info.sock_callstats.read.binsize = inSettings->mBufLen / 8;
     }
-
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Init sum report %p id=%d", (void *)sumreport, inID);
 #endif
@@ -361,10 +360,10 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 		    ireport->GroupSumReport->info.output_handler = tcp_output_sum_write_enhanced;
 		}
 	    } else {
-		ireport->info.output_handler = tcp_output_write;
+		ireport->info.output_handler = (isSumOnly(inSettings) ? NULL : tcp_output_write);
 		if (ireport->GroupSumReport) {
 		    ireport->GroupSumReport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_tcp;
-		    ireport->GroupSumReport->info.output_handler = tcp_output_sum_write;
+		    ireport->GroupSumReport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_write : tcp_output_sum_write) ;
 		}
 	    }
 	    if (ireport->FullDuplexReport)
