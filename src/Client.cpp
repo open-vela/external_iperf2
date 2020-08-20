@@ -1129,27 +1129,32 @@ void Client::AwaitServerCloseEvent(void) {
     // force the reporter to get current, the await
     // detection can take awhile so post a non event ahead of it
     PostNullEvent();
-    Timestamp end;
     unsigned int amount_usec = MINAWAITCLOSEUSECS;
     if (isModeTime(mSettings)) {
 	amount_usec = (mSettings->mAmount * 10000);
     }
     if (amount_usec < MINAWAITCLOSEUSECS)
 	amount_usec = MINAWAITCLOSEUSECS;
-    end.add(amount_usec); // add in micro seconds
-    now.setnow();
-    while (!sInterupted && now.before(end)) {
-	now.setnow();
-	char x;
-	int rc = recv(mySocket, &x, 1, MSG_DONTWAIT|MSG_PEEK);
-	if (rc==0 || !NONFATALTCPREADERR(errno)) {
-#ifdef HAVE_THREAD_DEBUG
-	    thread_debug("Client detected server close %d", mySocket);
+
+#ifdef WIN32
+    // Windows SO_RCVTIMEO uses ms
+    DWORD timeout = (double) sorcvtimer / 1e3;
+#else
+    struct timeval timeout;
+    timeout.tv_sec = amount_usec / 1000000;
+    timeout.tv_usec = amount_usec % 1000000;
 #endif
-	    break;
-	}
-	delay_loop(10000);
+    if (setsockopt( mSettings->mSock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0 ) {
+	WARN_errno( mSettings->mSock == SO_RCVTIMEO, "socket" );
     }
+    char x;
+    int rc = recv(mySocket, &x, 1, MSG_PEEK);
+    if (rc < 0)
+	WARN_errno(1, "client await close");
+#ifdef HAVE_THREAD_DEBUG
+    if (rc==0)
+	thread_debug("Client detected server close %d", mySocket);
+#endif
 }
 
 void Client::InitiateServer(void) {
