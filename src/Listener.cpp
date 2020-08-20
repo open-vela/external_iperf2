@@ -1,4 +1,3 @@
-
 /*---------------------------------------------------------------
  * Copyright (c) 1999,2000,2001,2002,2003
  * The Board of Trustees of the University of Illinois
@@ -962,17 +961,7 @@ int Listener::client_test_ack(thread_Settings *server) {
 	} else if (sotimer < HDRXACKMIN) {
 	    sotimer = HDRXACKMIN;
 	}
-#ifdef WIN32
-	// Windows SO_RCVTIMEO uses ms
-	DWORD timeout = (double) sotimer / 1e3;
-#else
-	struct timeval timeout;
-	timeout.tv_sec = sotimer / 1000000;
-	timeout.tv_usec = sotimer % 1000000;
-#endif
-	if ((rc = setsockopt(server->mSock, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout))) < 0 ) {
-	    WARN_errno( rc < 0, "setsockopt SO_SNDTIMEO");
-	}
+	SetSocketOptionsSendTimeout(server, sotimer);
 #ifdef TCP_NODELAY
 	optflag=1;
 	// Disable Nagle to reduce latency of this intial message
