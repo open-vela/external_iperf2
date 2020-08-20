@@ -486,22 +486,49 @@ void tcp_output_sumcnt_write_enhanced (struct TransferInfo *stats) {
 /*
  * Report the client or listener Settings in default style
  */
-void reporter_output_settings (struct ReportHeader *reporthdr) {
+static void reporter_output_listener_settings (struct ReportSettings *report) {
+
+}
+static void output_window_size (struct ReportSettings *report) {
+    int winsize = getsock_tcp_windowsize(report->common->socket, (report->common->ThreadMode != kMode_Client ? 0 : 1));
+    byte_snprintf(outbuffer, sizeof(outbuffer), winsize, toupper(report->common->Format));
+    outbuffer[(sizeof(outbuffer)-1)] = '\0';
+    printf("%s: %s", (isUDP(report->common) ? udp_buffer_size : tcp_window_size), outbuffer);
+    if (report->common->winsize_requested == 0) {
+        printf(" %s", window_default);
+    } else if (winsize != report->common->winsize_requested) {
+        byte_snprintf( outbuffer, sizeof(outbuffer), report->common->winsize_requested,
+                       toupper( (int)report->common->Format));
+	outbuffer[(sizeof(outbuffer)-1)] = '\0';
+	printf(warn_window_requested, outbuffer);
+    }
+}
+
+static void reporter_output_client_settings (struct ReportSettings *report) {
+    if (!report->common->Ifrnametx) {
+	printf(isEnhanced(report->common) ? client_pid_port : client_port, report->common->Host,
+	       (isUDP(report->common) ? "UDP" : "TCP"), report->common->Port, report->pid, \
+	       (!report->common->threads ? 1 : report->common->threads));
+    } else {
+	printf(client_pid_port_dev, report->common->Host,
+	       (isUDP(report->common) ? "UDP" : "TCP"), report->common->Port, report->pid, \
+	       report->common->Ifrnametx, (!report->common->threads ? 1 : report->common->threads));
+    }
+    if (isEnhanced(report->common)) {
+	byte_snprintf(outbuffer, sizeof(outbuffer), report->common->BufLen, toupper( (int)report->common->Format));
+	outbuffer[(sizeof(outbuffer)-1)] = '\0';
+	printf("%s: %s\n", ((report->common->ThreadMode == kMode_Client) ?
+			    client_write_size : server_read_size), outbuffer);
+    }
+    output_window_size(report);
+    printf("\n");
+}
 #if 0
     assert(reporthdr != NULL);
-    struct ReportSettings *data = (struct ReportSettings *) reporthdr->this_report;
-    int pid =  (int)  getpid();
-    printf("%s", separator_line);
     if (data->common->ThreadMode == kMode_Listener) {
         printf(isEnhanced(data->common) ? server_pid_port : server_port,
 	       (isUDP(data->common) ? "UDP" : "TCP"), data->common->Port, pid );
-    } else if (!data->common->Ifrnametx) {
-	printf(isEnhanced(data->common) ? client_pid_port : client_port, data->common->Host,
-	       (isUDP(data->common) ? "UDP" : "TCP"), data->common->Port, pid);
-    } else {
-	printf(client_pid_port_dev, data->common->Host,
-	       (isUDP(data->common) ? "UDP" : "TCP"), data->common->Port, pid, data->common->Ifrnametx);
-    }
+    } else  {
     if (data->common->Localhost != NULL) {
 	if (isEnhanced(data->common) && !SockAddr_isMulticast(&data->local)) {
 	    if (data->common->Ifrname)
@@ -578,9 +605,8 @@ void reporter_output_settings (struct ReportHeader *reporthdr) {
 	    buffer[(sizeof(buffer)-1)] = '\0';
 	printf( warn_window_requested, buffer );
     }
-    printf( "\n%s", separator_line );
-#endif
 }
+#endif
 
 void reporter_connect_printf_tcp_final (struct ReportHeader *reporthdr) {
 #if 0
@@ -627,6 +653,15 @@ void reporter_peerversion (struct thread_Settings *inSettings, int upper, int lo
 void reporter_print_connection_report(struct ConnectionInfo *report) {
 }
 void reporter_print_settings_report(struct ReportSettings *report) {
+    assert(report != NULL);
+    report->pid =  (int)  getpid();
+    printf("%s", separator_line);
+    if (report->common->ThreadMode == kMode_Listener) {
+	reporter_output_listener_settings(report);
+    } else {
+	reporter_output_client_settings(report);
+    }
+    printf("%s", separator_line);
 }
 void reporter_print_server_relay_report(struct TransferInfo *repor) {
 }

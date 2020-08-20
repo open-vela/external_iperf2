@@ -590,7 +590,6 @@ void Settings_Interpret( char option, const char *optarg, struct thread_Settings
 
         case 'w': // TCP window size (socket buffer size)
             mExtSettings->mTCPWin = byte_atoi(optarg);
-
             if ( mExtSettings->mTCPWin < 2048 ) {
                 fprintf( stderr, warn_window_small, mExtSettings->mTCPWin );
             }

@@ -99,6 +99,8 @@ static void common_copy (struct ReportCommon **common, struct thread_Settings *i
     (*common)->UDPRate = inSettings->mUDPRate;
     (*common)->UDPRateUnits = inSettings->mUDPRateUnits;
     (*common)->socket = inSettings->mSock;
+    (*common)->threads = inSettings->mThreads;
+    (*common)->winsize_requested = inSettings->mTCPWin;
 }
 
 static void free_common_copy (struct ReportCommon *common) {
@@ -108,7 +110,7 @@ static void free_common_copy (struct ReportCommon *common) {
     if (common->Localhost)
 	free(common->Localhost);
     if (common->Ifrname)
-	free(common->Ifrnametx);
+	free(common->Ifrname);
     if (common->Ifrnametx)
 	free(common->Ifrnametx);
     if (common->SSMMulticastStr)
@@ -493,7 +495,7 @@ struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, d
 	creport->winsize = getsock_tcp_windowsize(inSettings->mSock,	\
                   (inSettings->mThreadMode != kMode_Client ? 0 : 1) );
     }
-    creport->winsize_requested = inSettings->mTCPWin;
+    creport->common->winsize_requested = inSettings->mTCPWin;
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Init connection report %p", reporthdr);
 #endif
