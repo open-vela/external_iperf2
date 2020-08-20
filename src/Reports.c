@@ -355,16 +355,16 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	} else {
 	    ireport->transfer_protocol_handler = reporter_transfer_protocol_client_tcp;
 	    if (isEnhanced(inSettings)) {
-		ireport->info.output_handler = tcp_output_write_enhanced;
+		ireport->info.output_handler = (isSumOnly(inSettings) ? NULL : tcp_output_write_enhanced);
 		if (ireport->GroupSumReport) {
 		    ireport->GroupSumReport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_tcp;
-		    ireport->GroupSumReport->info.output_handler = tcp_output_sum_write_enhanced;
+		    ireport->GroupSumReport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_write_enhanced : tcp_output_sum_write_enhanced);
 		}
 	    } else {
 		ireport->info.output_handler = (isSumOnly(inSettings) ? NULL : tcp_output_write);
 		if (ireport->GroupSumReport) {
 		    ireport->GroupSumReport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_tcp;
-		    ireport->GroupSumReport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_write : tcp_output_sum_write) ;
+		    ireport->GroupSumReport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_write : tcp_output_sum_write);
 		}
 	    }
 	    if (ireport->FullDuplexReport)

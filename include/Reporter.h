@@ -447,6 +447,7 @@ void tcp_output_sum_write(struct TransferInfo *stats);
 void tcp_output_sumcnt_write(struct TransferInfo *stats);
 void tcp_output_write_enhanced (struct TransferInfo *stats);
 void tcp_output_sum_write_enhanced (struct TransferInfo *stats);
+void tcp_output_sumcnt_write_enhanced (struct TransferInfo *stats);
 // UDP server
 void udp_output_read(struct TransferInfo *stats);
 void udp_output_read_enhanced(struct TransferInfo *stats);
