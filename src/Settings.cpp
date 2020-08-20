@@ -717,7 +717,7 @@ void Settings_Interpret( char option, const char *optarg, struct thread_Settings
 
         case 'P': // number of client threads
 #ifdef HAVE_THREAD
-            mExtSettings->mThreads = atoi( optarg );
+            mExtSettings->mThreads = atoi(optarg);
 #else
             if ( mExtSettings->mThreadMode != kMode_Server ) {
                 fprintf( stderr, warn_invalid_single_threaded, option );
@@ -996,7 +996,10 @@ void Settings_ModalOptions( struct thread_Settings *mExtSettings ) {
     if (!isBWSet(mExtSettings) && isUDP(mExtSettings)) {
 	mExtSettings->mUDPRate = kDefault_UDPRate;
     }
-
+    if ((mExtSettings->mThreadMode == kMode_Client) && !(mExtSettings->mThreads > 1))  {
+	fprintf(stderr, "ERROR: option of --sum-only requires -P greater than 1\n");
+	exit(1);
+    }
     if (mExtSettings->mThreadMode != kMode_Client)  {
         if (isTripTime(mExtSettings)) {
             fprintf(stderr, "WARNING: setting of option --trip-times is recommended on the client and not on the server\n");
@@ -1026,31 +1029,31 @@ void Settings_ModalOptions( struct thread_Settings *mExtSettings ) {
 
     // UDP histogram optional settings
     if (isRxHistogram(mExtSettings) && (mExtSettings->mThreadMode != kMode_Client) && mExtSettings->mRxHistogramStr) {
-      // check for optional arguments to change histogram settings
-      if (((results = strtok(mExtSettings->mRxHistogramStr, ",")) != NULL) && !strcmp(results,mExtSettings->mRxHistogramStr)) {
-	// scan for unit specifier
-	char *tmp = new char [strlen(results) + 1];
-	strcpy(tmp, results);
-	if ((strtok(tmp, "u") != NULL) && strcmp(results,tmp)) {
-	  mExtSettings->mRXunits = 6;  // units is microseconds
-	} else {
-	  strcpy(tmp, results);
-	  if ((strtok(tmp, "m") != NULL) && strcmp(results,tmp)) {
-	    mExtSettings->mRXunits = 3;  // units is milliseconds
-	  }
-	}
-	mExtSettings->mRXbinsize = atoi(tmp);
-	delete [] tmp;
-	if ((results = strtok(results+strlen(results)+1, ",")) != NULL) {
-	  mExtSettings->mRXbins = byte_atoi(results);
-	  if ((results = strtok(NULL, ",")) != NULL) {
-	    mExtSettings->mRXci_lower = atof(results);
-	    if ((results = strtok(NULL, ",")) != NULL) {
-	      mExtSettings->mRXci_upper = atof(results);
+	// check for optional arguments to change histogram settings
+	if (((results = strtok(mExtSettings->mRxHistogramStr, ",")) != NULL) && !strcmp(results,mExtSettings->mRxHistogramStr)) {
+	    // scan for unit specifier
+	    char *tmp = new char [strlen(results) + 1];
+	    strcpy(tmp, results);
+	    if ((strtok(tmp, "u") != NULL) && strcmp(results,tmp)) {
+		mExtSettings->mRXunits = 6;  // units is microseconds
+	    } else {
+		strcpy(tmp, results);
+		if ((strtok(tmp, "m") != NULL) && strcmp(results,tmp)) {
+		    mExtSettings->mRXunits = 3;  // units is milliseconds
+		}
 	    }
-	  }
+	    mExtSettings->mRXbinsize = atoi(tmp);
+	    delete [] tmp;
+	    if ((results = strtok(results+strlen(results)+1, ",")) != NULL) {
+		mExtSettings->mRXbins = byte_atoi(results);
+		if ((results = strtok(NULL, ",")) != NULL) {
+		    mExtSettings->mRXci_lower = atof(results);
+		    if ((results = strtok(NULL, ",")) != NULL) {
+			mExtSettings->mRXci_upper = atof(results);
+		    }
+		}
+	    }
 	}
-      }
     }
     // L2 settings
     if (l2checks && isUDP(mExtSettings)) {
@@ -1061,10 +1064,10 @@ void Settings_ModalOptions( struct thread_Settings *mExtSettings ) {
 	    setL2LengthCheck(mExtSettings);
 	} else {
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
-	  // Request server to do length checks
-	  setL2LengthCheck(mExtSettings);
+	    // Request server to do length checks
+	    setL2LengthCheck(mExtSettings);
 #else
-	  fprintf(stderr, "WARNING: option --l2checks not supported on this platform\n");
+	    fprintf(stderr, "WARNING: option --l2checks not supported on this platform\n");
 #endif
 	}
     }
@@ -1105,7 +1108,7 @@ void Settings_ModalOptions( struct thread_Settings *mExtSettings ) {
     // See if the Write ack size should equal the write size (vs a configured or a burst size)
     if (isWriteAck(mExtSettings) && !mExtSettings->mWriteAckLen && \
 	(mExtSettings->mThreadMode == kMode_Client) && !isIsochronous(mExtSettings))
-      mExtSettings->mWriteAckLen = mExtSettings->mBufLen;
+	mExtSettings->mWriteAckLen = mExtSettings->mBufLen;
 
     // Check for further mLocalhost (-B) and <dev> requests
     // full addresses look like 192.168.1.1:6001%eth0 or [2001:e30:1401:2:d46e:b891:3082:b939]:6001%eth0
@@ -1135,7 +1138,7 @@ void Settings_ModalOptions( struct thread_Settings *mExtSettings ) {
 	}
 	// Check for multicast per the -B
 	SockAddr_setHostname(mExtSettings->mLocalhost, &tmp,
-			      (isIPV6(mExtSettings) ? 1 : 0 ));
+			     (isIPV6(mExtSettings) ? 1 : 0 ));
 	if ((mExtSettings->mThreadMode != kMode_Client) && SockAddr_isMulticast(&tmp)) {
 	    setMulticast(mExtSettings);
 	} else if (SockAddr_isMulticast(&tmp)) {
