@@ -260,9 +260,6 @@ int main( int argc, char **argv ) {
 	into->mThreadMode = ReporterThreadMode;
 	into->mSumReport = NULL;
 	into->mBidirReport = NULL;
-	// Reporter thread maintains its own connection report
-	// used for sums and final reports
-	InitConnectionReport(into, 0);
 	// Have the reporter launch the client or listener
 	into->runNow = ext_gSettings;
 	// Start all the threads that are ready to go

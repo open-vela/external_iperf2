@@ -173,10 +173,12 @@ void ReportPacket(struct ReporterData* data, struct ReportStruct *packet) {
  * CloseReport is called by a transfer agent to finalize
  * the report and signal transfer is over. Context is traffic thread
  */
-void CloseReport(struct ReporterData *report, struct ReportStruct *finalpacket) {
-    assert(report!=NULL);
+void EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
+    assert(reporthdr!=NULL);
     assert(finalpacket!=NULL);
+    struct ReporterData *report = (struct ReporterData *) reporthdr->this_report;
     struct ReportStruct packet;
+    memset(&packet, 0, sizeof(struct ReportStruct));
     /*
      * Using PacketID of -1 ends reporting
      * It pushes a "special packet" through
@@ -192,10 +194,27 @@ void CloseReport(struct ReporterData *report, struct ReportStruct *finalpacket) 
 	gettcpistats(report, 0);
     }
 #endif
+    // clear the reporter done predicate
+    report->packetring->consumerdone = 0;
     packet.packetID = -1;
     packet.packetLen = finalpacket->packetLen;
     packet.packetTime = finalpacket->packetTime;
     ReportPacket(report, &packet);
+    // Await for the reporter to process this otherwise the thread will destroy
+    // it's settings which are being used by the reporter.
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug( "Traffic thread awaiting reporter to be done with %p and cond %p", (void *)report, (void *) report->packetring->awake_producer);
+#endif
+    Condition_Lock((*(report->packetring->awake_producer)));
+    while (!report->packetring->consumerdone) {
+	// This wait time is the lag between the reporter thread
+	// and the traffic thread, a reporter thread with lots of
+	// reports (e.g. fastsampling) can lag per the i/o
+	Condition_TimedWait(report->packetring->awake_producer, 1);
+	// printf("Consumer done may be stuck\n");
+    }
+    Condition_Unlock((*(report->packetring->awake_producer)));
+    FreeReport(reporthdr);
 }
 
 //  This is used to determine the packet/cpu load into the reporter thread
@@ -351,10 +370,14 @@ void reporter_spawn (struct thread_Settings *thread) {
 #endif
 		// Report process report returns true
 		// when a report needs to be removed
-		// from the jobq
+		// from the jobq.  Also, work item might
+		// be removed as part of processing
+		// Store a cached pointer for the linked list maitenance
+		struct ReportHeader *tmp = (*work_item)->next;
 	        if (reporter_process_report(*work_item)) {
-		    *work_item = (*work_item)->next;
-		    if (!(*work_item))
+		    // memory for *work_item is gone by now
+		    *work_item = tmp;
+		    if (!tmp)
 			break;
 		}
 #ifdef HAVE_THREAD_DEBUG
@@ -478,7 +501,7 @@ static int reporter_process_transfer_report (struct ReporterData *this_ireport) 
 	    (*this_ireport->packet_handler)(this_ireport, packet);
 	    this_ireport->info.ts.packetTime = packet->packetTime;
 	    assert(this_ireport->transfer_protocol_handler != NULL);
-	    (*this_ireport->transfer_protocol_handler)(this_ireport, 0);
+	    (*this_ireport->transfer_protocol_handler)(this_ireport, 1);
 	    // This is a final report so set the sum report header's packet time
 	    // Note, the thread with the max value will set this
 	    if (bidirstats) {
@@ -512,6 +535,10 @@ static int reporter_process_transfer_report (struct ReporterData *this_ireport) 
 }
 /*
  * Process reports
+ *
+ * Make notice here, the reporter thread is freeing most reports, traffic threads
+ * can't use them anymore (except for the DATA REPORT);
+ *
  */
 static inline int reporter_process_report (struct ReportHeader *reporthdr) {
     assert(reporthdr != NULL);
@@ -521,27 +548,35 @@ static inline int reporter_process_report (struct ReportHeader *reporthdr) {
     // which are "compound reports"
     switch (reporthdr->type) {
     case DATA_REPORT:
-	if (reporter_process_transfer_report((struct ReporterData *)reporthdr->this_report)) {
-	    FreeReport(reporthdr); // These reports are freed by the traffic thread
-	} else {
-	    done = 0;
+	done = reporter_process_transfer_report((struct ReporterData *)reporthdr->this_report);
+	fflush(stdout);
+	if (done) {
+	    struct ReporterData *tmp = (struct ReporterData *)reporthdr->this_report;
+	    struct PacketRing *pr = tmp->packetring;
+	    pr->consumerdone = 1;
+	    // Data Reports are special because the traffic thread needs to free them, just signal
+	    Condition_Signal(pr->awake_producer);
 	}
 	break;
     case CONNECTION_REPORT:
 	reporter_print_connection_report((struct ConnectionInfo *)reporthdr->this_report);
+	fflush(stdout);
 	FreeReport(reporthdr);
 	break;
     case SETTINGS_REPORT:
 	reporter_print_settings_report((struct ReportSettings *)reporthdr->this_report);
+	fflush(stdout);
 	FreeReport(reporthdr);
 	break;
     case SERVER_RELAY_REPORT:
 	reporter_print_server_relay_report((struct TransferInfo *)reporthdr->this_report);
+	fflush(stdout);
 	FreeReport(reporthdr);
     default:
+	fprintf(stderr,"Invalid report type in process report\n");
+	exit(1);
 	break;
     }
-    fflush(stdout);
 #ifdef HAVE_THREAD_DEBUG
     // thread_debug("Processed report %p type=%d", (void *)reporthdr, reporthdr->report.type);
 #endif
