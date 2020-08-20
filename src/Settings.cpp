@@ -996,7 +996,7 @@ void Settings_ModalOptions( struct thread_Settings *mExtSettings ) {
     if (!isBWSet(mExtSettings) && isUDP(mExtSettings)) {
 	mExtSettings->mUDPRate = kDefault_UDPRate;
     }
-    if ((mExtSettings->mThreadMode == kMode_Client) && !(mExtSettings->mThreads > 1))  {
+    if ((mExtSettings->mThreadMode == kMode_Client) && isSumOnly(mExtSettings) && !(mExtSettings->mThreads > 1))  {
 	fprintf(stderr, "ERROR: option of --sum-only requires -P greater than 1\n");
 	exit(1);
     }
