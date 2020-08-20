@@ -86,6 +86,7 @@ Client::Client(thread_Settings *inSettings) {
     mSettings->mSock = -1;
     SockAddr_remoteAddr(mSettings);
 
+    memset(&scratchpad, 0, sizeof(struct ReportStruct));
     reportstruct = &scratchpad;
     mySocket = isServerReverse(mSettings) ? mSettings->mSock : INVALID_SOCKET;
     connected = isServerReverse(mSettings);
@@ -439,6 +440,9 @@ void Client::RunTCP( void ) {
 	framecounter = new Isochronous::FrameCounter(mSettings->mFPS);
     }
 
+    now.setnow();
+    reportstruct->packetTime.tv_sec = now.getSecs();
+    reportstruct->packetTime.tv_usec = now.getUsecs();
     while (InProgress()) {
         if (isModeAmount(mSettings)) {
 	    reportstruct->packetLen = ((mSettings->mAmount < (unsigned) mSettings->mBufLen) ? mSettings->mAmount : mSettings->mBufLen);
@@ -972,9 +976,8 @@ inline bool Client::InProgress (void) {
 	else
 	    return false;
     }
-
     if (sInterupted ||
-	(isModeTime(mSettings) &&  mEndTime.before(reportstruct->packetTime))  ||
+	(isModeTime(mSettings) && mEndTime.before(reportstruct->packetTime))  ||
 	(isModeAmount(mSettings) && (mSettings->mAmount <= 0)))
 	return false;
     return true;
@@ -1030,7 +1033,7 @@ void Client::FinishTrafficActions(void) {
     }
     if (mSettings->mThreads > 1)
 	Iperf_remove_host(&mSettings->peer);
-    CloseReport(myReport, reportstruct);
+    EndJob(myJob, reportstruct);
 }
 
 

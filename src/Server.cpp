@@ -295,7 +295,7 @@ void Server::RunTCP( void ) {
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
     reportstruct->packetLen = 0;
-    CloseReport(myReport, reportstruct);
+    EndJob(myJob, reportstruct);
 }
 
 void Server::InitKernelTimeStamping (void) {
@@ -687,14 +687,13 @@ void Server::RunUDP( void ) {
 	}
 	ReportPacket(myReport, reportstruct);
     }
-    CloseReport(myReport, reportstruct);
-
     if (!isMulticast(mSettings) && !isNoUDPfin(mSettings)) {
 	// send a UDP acknowledgement back except when:
 	// 1) we're NOT receiving multicast
 	// 2) the user requested no final exchange
 	write_UDP_AckFIN((struct TransferInfo *)&myReport->info);
     }
+    EndJob(myJob, reportstruct);
 }
 // end Recv
 
