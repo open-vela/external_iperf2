@@ -103,7 +103,8 @@ private:
     void FinalUDPHandshake(void);
     void write_UDP_FIN(void);
     bool InProgress(void);
-    void PostNonEvent(void);
+    void PostNullEvent(void);
+    void AwaitServerCloseEvent(void);
     bool connected;
     ReportStruct scratchpad;
     ReportStruct *reportstruct;
