@@ -1139,7 +1139,7 @@ void Client::AwaitServerCloseEvent(void) {
     char x;
     int rc = recv(mySocket, &x, 1, MSG_PEEK);
     if (rc < 0)
-	WARN_errno(1, "client await close");
+	WARN_errno(1, "client await server close");
 #ifdef HAVE_THREAD_DEBUG
     if (rc==0)
 	thread_debug("Client detected server close %d", mySocket);

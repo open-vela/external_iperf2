@@ -259,6 +259,9 @@ const char report_sum_bw_jitter_loss_format[] =
 /* -------------------------------------------------------------------
  * Enhanced reports (per -e)
  * ------------------------------------------------------------------- */
+const char report_bw_sumcnt_header[] =
+"[SUM-cnt] Interval       Transfer     Bandwidth\n";
+
 const char client_report_epoch_start[] =
 "[%3d] Client traffic to start at %s (%ld.%ld in epoch/unix format)\n";
 
@@ -308,6 +311,9 @@ const char report_bw_write_enhanced_nocwnd_format[] =
 const char report_sum_bw_write_enhanced_format[] =
 "[SUM] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d%10d\n";
 
+const char report_sumcnt_bw_write_enhanced_format[] =
+"[SUM-%d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d%10d\n";
+
 #else
 const char report_bw_write_enhanced_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth       Write/Err\n";
@@ -317,7 +323,15 @@ const char report_bw_write_enhanced_format[] =
 
 const char report_sum_bw_write_enhanced_format[] =
 "[SUM] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d\n";
+
+const char report_sumcnt_bw_write_enhanced_format[] =
+"[SUM-%d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d\n";
+
 #endif
+
+const char report_bw_write_sumcnt_enhanced_header[] =
+"[SUM-cnt] Interval" IPERFTimeSpace "Transfer    Bandwidth       Write/Err  Rtry\n";
+
 
 const char report_bw_pps_enhanced_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer     Bandwidth      Write/Err  PPS\n";

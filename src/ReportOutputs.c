@@ -59,6 +59,8 @@ static char llaw_buf[100];
 static const int true = 1;
 static int tcp_client_header_printed = 0;
 static int tcp_server_header_printed = 0;
+static int udp_client_header_printed = 0;
+static int udp_server_header_printed = 0;
 
 static inline void _print_stats_common (struct TransferInfo *stats) {
     assert(stats!=NULL);
@@ -384,6 +386,10 @@ void udp_output_sum_read(struct TransferInfo *stats) {
     }
 }
 void udp_output_sum_write(struct TransferInfo *stats) {
+    if (!udp_client_header_printed) {
+	udp_client_header_printed = true;
+	printf(report_bw_header);
+    }
     _print_stats_common(stats);
     printf(report_sum_bw_jitter_loss_format,
 	   stats->ts.iStart, stats->ts.iEnd,
@@ -401,6 +407,10 @@ void udp_output_sum_read_enhanced(struct TransferInfo *stats) {
 	    (stats->cntIPG ? (stats->cntIPG / stats->IPGsum) : 0.0));
 }
 void udp_output_sum_write_enhanced(struct TransferInfo *stats) {
+    if (!tcp_client_header_printed) {
+	tcp_client_header_printed = true;
+	printf(report_bw_header);
+    }
     _print_stats_common(stats);
     printf( report_sum_bw_pps_enhanced_format,
 	    stats->ts.iStart, stats->ts.iEnd,
@@ -417,18 +427,25 @@ void tcp_output_sum_read(struct TransferInfo *stats) {
 	   outbuffer, outbufferext);
 }
 void tcp_output_sum_write(struct TransferInfo *stats) {
+    if (!tcp_client_header_printed) {
+	tcp_client_header_printed = true;
+	printf(report_bw_header);
+    }
     _print_stats_common(stats);
     printf(report_sum_bw_format,
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext);
 }
 void tcp_output_sumcnt_write(struct TransferInfo *stats) {
+    if (!tcp_client_header_printed) {
+	tcp_client_header_printed = true;
+	printf(report_bw_sumcnt_header);
+    }
     _print_stats_common(stats);
     printf(report_sumcnt_bw_format, stats->threadcnt,
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext);
 }
-
 void tcp_output_sum_read_enhanced(struct TransferInfo *stats) {
     _print_stats_common(stats);
     printf(report_sum_bw_read_enhanced_format,
@@ -453,7 +470,19 @@ void tcp_output_sum_write_enhanced(struct TransferInfo *stats) {
 	   stats->sock_callstats.write.WriteErr,
 	   stats->sock_callstats.write.TCPretry);
 }
-
+void tcp_output_sumcnt_write_enhanced (struct TransferInfo *stats) {
+    if (!tcp_client_header_printed) {
+	tcp_client_header_printed = true;
+	printf(report_bw_write_sumcnt_enhanced_header);
+    }
+    _print_stats_common(stats);
+    printf(report_sumcnt_bw_write_enhanced_format, stats->threadcnt,
+	   stats->ts.iStart, stats->ts.iEnd,
+	   outbuffer, outbufferext,
+	   stats->sock_callstats.write.WriteCnt,
+	   stats->sock_callstats.write.WriteErr,
+	   stats->sock_callstats.write.TCPretry);
+}
 /*
  * Report the client or listener Settings in default style
  */
