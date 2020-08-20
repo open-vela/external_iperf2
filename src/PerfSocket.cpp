@@ -209,21 +209,33 @@ void SetSocketOptions( struct thread_Settings *inSettings ) {
 #endif /* HAVE_SO_MAX_PACING_RATE */
 }
 
-void SetSocketOptionsSendTimeout( struct thread_Settings *mSettings, int timer) {
-    if (timer > 0) {
+void SetSocketOptionsSendTimeout (struct thread_Settings *mSettings, int timer) {
+    assert (timer > 0);
 #ifdef WIN32
-	// Windows SO_SNDTIMEO uses ms
-	DWORD timeout = (double) timer / 1e3;
+    // Windows SO_SNDTIMEO uses ms
+    DWORD timeout = (double) timer / 1e3;
 #else
-	struct timeval timeout;
-	timeout.tv_sec = timer / 1000000;
-	timeout.tv_usec = timer % 1000000;
+    struct timeval timeout;
+    timeout.tv_sec = timer / 1000000;
+    timeout.tv_usec = timer % 1000000;
 #endif
-	if (setsockopt( mSettings->mSock, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0 ) {
-	    WARN_errno( mSettings->mSock == SO_SNDTIMEO, "socket" );
-	}
+    if (setsockopt( mSettings->mSock, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0 ) {
+	WARN_errno( mSettings->mSock == SO_SNDTIMEO, "socket" );
     }
 }
 
-
+void SetSocketOptionsReceiveTimeout( struct thread_Settings *mSettings, int timer) {
+    assert(timer>0);
+#ifdef WIN32
+    // Windows SO_RCVTIMEO uses ms
+    DWORD timeout = (double) timer / 1e3;
+#else
+    struct timeval timeout;
+    timeout.tv_sec = timer / 1000000;
+    timeout.tv_usec = timer % 1000000;
+#endif
+    if (setsockopt( mSettings->mSock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0 ) {
+	WARN_errno( mSettings->mSock == SO_RCVTIMEO, "socket" );
+    }
+}
 // end SetSocketOptions

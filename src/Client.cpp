@@ -1135,18 +1135,7 @@ void Client::AwaitServerCloseEvent(void) {
     }
     if (amount_usec < MINAWAITCLOSEUSECS)
 	amount_usec = MINAWAITCLOSEUSECS;
-
-#ifdef WIN32
-    // Windows SO_RCVTIMEO uses ms
-    DWORD timeout = (double) sorcvtimer / 1e3;
-#else
-    struct timeval timeout;
-    timeout.tv_sec = amount_usec / 1000000;
-    timeout.tv_usec = amount_usec % 1000000;
-#endif
-    if (setsockopt( mSettings->mSock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0 ) {
-	WARN_errno( mSettings->mSock == SO_RCVTIMEO, "socket" );
-    }
+    SetSocketOptionsReceiveTimeout(mSettings, amount_usec);
     char x;
     int rc = recv(mySocket, &x, 1, MSG_PEEK);
     if (rc < 0)
@@ -1197,18 +1186,8 @@ void Client::HdrXchange(int flags) {
 	    } else {
 		int n;
 		client_hdr_ack ack;
-		int sotimer = 2; // 2 seconds
-#ifdef WIN32
-		// Windows SO_RCVTIMEO uses ms
-		DWORD timeout = (double) sotimer * 1e3;
-#else
-		struct timeval timeout;
-		timeout.tv_sec = sotimer;
-		timeout.tv_usec = 0;
-#endif
-		if (setsockopt(mySocket, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
-		    WARN_errno(mySocket == SO_RCVTIMEO, "socket");
-		}
+		int sotimer = 2000000; // 2 seconds
+		SetSocketOptionsReceiveTimeout(mSettings, sotimer);
 		/*
 		 * Hang read and see if this is a header ack message
 		 */

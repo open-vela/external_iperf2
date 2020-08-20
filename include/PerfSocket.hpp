@@ -59,12 +59,11 @@
 #include "Mutex.h"
 #include "Settings.hpp"
 
-    void SetSocketOptions( struct thread_Settings *inSettings );
-
-    void SetSocketOptionsSendTimeout( struct thread_Settings *inSettings, int timer);
-
-    // handle interupts
-    void Sig_Interupt( int inSigno );
+void SetSocketOptions( struct thread_Settings *inSettings );
+void SetSocketOptionsSendTimeout( struct thread_Settings *inSettings, int timer);
+void SetSocketOptionsReceiveTimeout( struct thread_Settings *inSettings, int timer);
+// handle interupts
+void Sig_Interupt( int inSigno );
 
 #ifdef __cplusplus
 extern "C" {
