@@ -348,30 +348,6 @@ void Client::InitTrafficLoop (void) {
     // set the total bytes sent to zero
     totLen = 0;
 
-    /*
-     * Set up common termination variables
-     *
-     * Terminate the thread by setitimer's alarm (if possible)
-     * as the alarm will break a blocked syscall (i.e. the write)
-     * and provide for accurate timing. Otherwise the thread cannot
-     * terminate until the write completes or the socket SO_SNDTIMEO occurs.
-     *
-     * In the case of no setitimer we're just using the gettimeofday (or equivalent)
-     * calls to determine if the loop time exceeds the request time
-     * and the blocking writes will affect timing.  The socket has set
-     * SO_SNDTIMEO to 1/2 the overall time (which should help limit
-     * gross error) or 1/2 the report interval time (better precision)
-     *
-     * Side note: An advantage of not using interval reports w/TCP is that
-     * the code path won't make any clock syscalls in the main loop
-     *
-     * For Dual and TradeOff tests we can't use itimer in the Client
-     * thread because it is executed at both ends, conflicting with
-     * the Server thread's itimer.  The Client process then rejects
-     * the reverse connection, and the Server process exits early.  To
-     * resolve this, only use the itimer mechanism for "Normal" tests.
-     */
-
     if (isModeTime(mSettings)) {
         mEndTime.setnow();
         mEndTime.add( mSettings->mAmount / 100.0 );
@@ -1012,11 +988,27 @@ void Client::FinishTrafficActions(void) {
     int do_close = 1;
     // Shutdown the TCP socket's writes as the event for the server to end its traffic loop
     if (!isUDP(mSettings) && (mySocket != INVALID_SOCKET) && isConnected()) {
+	// force the reporter to get current, the subsequent shutdown and close
+	// detection can take awhile so post a non event ahead of them
+	PostNonEvent();
         int rc = shutdown(mySocket, SHUT_WR);
 #ifdef HAVE_THREAD_DEBUG
         thread_debug("Client calls shutdown() SHUTW_WR on tcp socket %d", mySocket);
 #endif
         WARN_errno( rc == SOCKET_ERROR, "shutdown" );
+	{
+	    char x;
+	    while (!sInterupted) {
+		int rc = recv(mySocket, &x, 1, MSG_DONTWAIT|MSG_PEEK);
+		if (rc==0 || !NONFATALTCPREADERR(errno)) {
+#ifdef HAVE_THREAD_DEBUG
+		    thread_debug("Client detected server close %d", mySocket);
+#endif
+		    break;
+		}
+		delay_loop(10000);
+	    }
+	}
     }
     // stop timing
     now.setnow();
@@ -1133,6 +1125,20 @@ void Client::write_UDP_FIN (void) {
 	fprintf(stderr, warn_no_ack, mySocket, (isModeTime(mSettings) ? 10 : 1));
 }
 // end write_UDP_FIN
+
+void Client::PostNonEvent(void) {
+    assert(myReport!=NULL);
+    // push a nonevent into the packet ring
+    // this will cause the reporter to process
+    // up to this event
+    struct ReportStruct emptypacket;
+    memset(&emptypacket, 0, sizeof(struct ReportStruct));
+    now.setnow();
+    emptypacket.packetTime.tv_sec = now.getSecs();
+    emptypacket.packetTime.tv_usec = now.getUsecs();
+    emptypacket.emptyreport=1;
+    ReportPacket(myReport, &emptypacket);
+}
 
 
 void Client::InitiateServer(void) {

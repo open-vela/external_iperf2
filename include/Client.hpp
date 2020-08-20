@@ -67,6 +67,7 @@
 #else
 #define FATALTCPWRITERR(errno)  (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)
 #define NONFATALTCPWRITERR(errno)  (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+#define NONFATALTCPREADERR(errno)  (errno == EAGAIN || errno == ETIMEDOUT || errno == EINTR)
 #define FATALUDPWRITERR(errno) 	((errno != EAGAIN) && (errno != EWOULDBLOCK) && (errno != EINTR) && (errno != ECONNREFUSED) && (errno != ENOBUFS))
 #endif
 
@@ -102,6 +103,7 @@ private:
     void FinalUDPHandshake(void);
     void write_UDP_FIN(void);
     bool InProgress(void);
+    void PostNonEvent(void);
     bool connected;
     ReportStruct scratchpad;
     ReportStruct *reportstruct;

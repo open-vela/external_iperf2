@@ -501,6 +501,7 @@ static int reporter_process_transfer_report (struct ReporterData *this_ireport) 
 		if (DecrSumReportRefCounter(this_ireport->GroupSumReport) == 0) {
 		    if ((this_ireport->GroupSumReport->transfer_protocol_sum_handler) && \
 			(this_ireport->GroupSumReport->reference.maxcount > 1)) {
+			sumstats->threadcnt = this_ireport->GroupSumReport->reference.maxcount;
 			(*this_ireport->GroupSumReport->transfer_protocol_sum_handler)(&this_ireport->GroupSumReport->info, 1);
 		    }
 		    FreeSumReport(this_ireport->GroupSumReport);
@@ -1310,6 +1311,15 @@ void reporter_transfer_protocol_client_all_final(struct ReporterData *data) {
  */
 void reporter_transfer_protocol_sum_client_tcp(struct TransferInfo *stats, int final) {
     assert(stats->output_handler != NULL);
+    if (!final || (final && (stats->cntBytes > 0) && !TimeZero(stats->ts.intervalTime))) {
+	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
+	if (final)
+	    reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
+	(*stats->output_handler)(stats);
+	if (!final)
+	    stats->threadcnt = 0;
+	reporter_reset_transfer_stats_client_tcp(stats);
+    }
     if (final) {
 	stats->sock_callstats.write.WriteErr = stats->sock_callstats.write.totWriteErr;
 	stats->sock_callstats.write.WriteCnt = stats->sock_callstats.write.totWriteCnt;
@@ -1317,11 +1327,6 @@ void reporter_transfer_protocol_sum_client_tcp(struct TransferInfo *stats, int f
 	stats->cntBytes = stats->total.Bytes.current;
         reporter_set_timestamps_time(&stats->ts, TOTAL);
 	(*stats->output_handler)(stats);
-    } else {
-	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
-	(*stats->output_handler)(stats);
-	reporter_reset_transfer_stats_client_tcp(stats);
-	stats->threadcnt = 0;
     }
 }
 
