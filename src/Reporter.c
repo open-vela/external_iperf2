@@ -189,7 +189,6 @@ void CloseReport(struct ReporterData *report, struct ReportStruct *finalpacket) 
     struct TransferInfo *stats = &report->info;
     if (isEnhanced(stats->common) && (stats->common->ThreadMode == kMode_Client) && \
 	(TimeDifference(stats->ts.nextTime, finalpacket->packetTime) < 0)) {
-	printf("final tcpistats\n");
 	gettcpistats(report, 0);
     }
 #endif
