@@ -208,6 +208,7 @@ struct ReportCommon {
     enum ThreadMode ThreadMode;
     int flags;
     int flags_extend;
+    int threads;
     unsigned short Port;
     unsigned short BindPort;
     unsigned short ListenPort;
@@ -218,6 +219,7 @@ struct ReportCommon {
     int BufLen;
     int MSS;
     int TCPWin;
+    int winsize_requested;
     unsigned int FQPacingRate;
     char* Host;                   // -c
     char* Localhost;              // -B
@@ -241,7 +243,6 @@ struct ConnectionInfo {
     double txholdbacktime;
     struct timeval epochStartTime;
     int winsize;
-    int winsize_requested;
     char peerversion[PEERVERBUFSIZE];
     struct MeanMinMaxStats connect_times;
 };
@@ -254,6 +255,7 @@ struct ReportSettings {
     Socklen_t size_local;
     intmax_t UDPRate;            // -b or -u
     int UDPRateUnits;            // -b is either bw or pps
+    int pid;
     struct IsochStats isochstats;
     void (*output_handler) (struct ReportSettings *settings);
 };
