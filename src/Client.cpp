@@ -284,7 +284,6 @@ inline void Client::SetReportStartTime (void) {
 }
 
 void Client::ConnectPeriodic (void) {
-    Timestamp now;
     Timestamp end;
     unsigned int amount_usec = 1000000;
     if (isModeTime(mSettings)) {
@@ -988,27 +987,12 @@ void Client::FinishTrafficActions(void) {
     int do_close = 1;
     // Shutdown the TCP socket's writes as the event for the server to end its traffic loop
     if (!isUDP(mSettings) && (mySocket != INVALID_SOCKET) && isConnected()) {
-	// force the reporter to get current, the subsequent shutdown and close
-	// detection can take awhile so post a non event ahead of them
-	PostNonEvent();
         int rc = shutdown(mySocket, SHUT_WR);
 #ifdef HAVE_THREAD_DEBUG
         thread_debug("Client calls shutdown() SHUTW_WR on tcp socket %d", mySocket);
 #endif
         WARN_errno( rc == SOCKET_ERROR, "shutdown" );
-	{
-	    char x;
-	    while (!sInterupted) {
-		int rc = recv(mySocket, &x, 1, MSG_DONTWAIT|MSG_PEEK);
-		if (rc==0 || !NONFATALTCPREADERR(errno)) {
-#ifdef HAVE_THREAD_DEBUG
-		    thread_debug("Client detected server close %d", mySocket);
-#endif
-		    break;
-		}
-		delay_loop(10000);
-	    }
-	}
+	AwaitServerCloseEvent();
     }
     // stop timing
     now.setnow();
@@ -1126,7 +1110,7 @@ void Client::write_UDP_FIN (void) {
 }
 // end write_UDP_FIN
 
-void Client::PostNonEvent(void) {
+void Client::PostNullEvent(void) {
     assert(myReport!=NULL);
     // push a nonevent into the packet ring
     // this will cause the reporter to process
@@ -1140,6 +1124,33 @@ void Client::PostNonEvent(void) {
     ReportPacket(myReport, &emptypacket);
 }
 
+#define MINAWAITCLOSEUSECS 2000000
+void Client::AwaitServerCloseEvent(void) {
+    // force the reporter to get current, the await
+    // detection can take awhile so post a non event ahead of it
+    PostNullEvent();
+    Timestamp end;
+    unsigned int amount_usec = MINAWAITCLOSEUSECS;
+    if (isModeTime(mSettings)) {
+	amount_usec = (mSettings->mAmount * 10000);
+    }
+    if (amount_usec < MINAWAITCLOSEUSECS)
+	amount_usec = MINAWAITCLOSEUSECS;
+    end.add(amount_usec); // add in micro seconds
+    now.setnow();
+    while (!sInterupted && now.before(end)) {
+	now.setnow();
+	char x;
+	int rc = recv(mySocket, &x, 1, MSG_DONTWAIT|MSG_PEEK);
+	if (rc==0 || !NONFATALTCPREADERR(errno)) {
+#ifdef HAVE_THREAD_DEBUG
+	    thread_debug("Client detected server close %d", mySocket);
+#endif
+	    break;
+	}
+	delay_loop(10000);
+    }
+}
 
 void Client::InitiateServer(void) {
     if (!isCompat(mSettings) && !isConnectOnly(mSettings)) {
