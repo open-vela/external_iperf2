@@ -326,16 +326,23 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	    ireport->transfer_protocol_handler = reporter_transfer_protocol_server_tcp;
 	    if (isTripTime(inSettings))
 		ireport->info.output_handler = tcp_output_read_enhanced_triptime;
-	    else if (isEnhanced(inSettings))
+	    else if (isEnhanced(inSettings)) {
 		ireport->info.output_handler = tcp_output_read_enhanced;
-	    else
+		if (ireport->GroupSumReport) {
+		    ireport->GroupSumReport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_tcp;
+		    ireport->GroupSumReport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_read_enhanced : tcp_output_sum_read_enhanced);
+		}
+		if (ireport->FullDuplexReport)
+		    ireport->FullDuplexReport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
+	    } else {
 		ireport->info.output_handler = tcp_output_read;
-	    if (ireport->GroupSumReport) {
-		ireport->GroupSumReport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_tcp;
-		ireport->GroupSumReport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_read : tcp_output_sum_read);
+		if (ireport->GroupSumReport) {
+		    ireport->GroupSumReport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_tcp;
+		    ireport->GroupSumReport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_read : tcp_output_sum_read);
+		}
+		if (ireport->FullDuplexReport)
+		    ireport->FullDuplexReport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
 	    }
-	    if (ireport->FullDuplexReport)
-		ireport->FullDuplexReport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
 	}
 	break;
     case kMode_Client :
