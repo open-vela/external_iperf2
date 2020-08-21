@@ -905,7 +905,9 @@ void Listener::apply_client_settings (thread_Settings *server) {
 		setTripTime(server);
 	    }
 	    setSeqNo64b(server);
+#if 0
 	    reporter_peerversion(server, ntohl(hdr->udp.version_u), ntohl(hdr->udp.version_l));
+#endif
 	}
     } else {
 	n = recvn(server->mSock, mBuf, sizeof(uint32_t), MSG_PEEK);
@@ -924,8 +926,10 @@ void Listener::apply_client_settings (thread_Settings *server) {
 	if (peeklen && ((n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK)) != peeklen)) {
 	    FAIL_errno(1, "read tcp test info", server);
 	}
+#if 0
 	if (flags & HEADER_EXTEND)
 	    reporter_peerversion(server, ntohl(hdr->extend.version_u), ntohl(hdr->extend.version_l));
+#endif
     }
     PostReport(connect_report);
     // Handle flags that require an ack back to the client
