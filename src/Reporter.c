@@ -1236,7 +1236,8 @@ void reporter_transfer_protocol_server_tcp(struct ReporterData *data, int final)
 	    stats->framelatency_histogram->final = 1;
 	}
     }
-    (*stats->output_handler)(stats);
+    if (stats->output_handler)
+	(*stats->output_handler)(stats);
     if (!final)
 	reporter_reset_transfer_stats_server_tcp(stats);
 }
@@ -1366,22 +1367,29 @@ void reporter_transfer_protocol_sum_client_tcp(struct TransferInfo *stats, int f
 
 void reporter_transfer_protocol_sum_server_tcp(struct TransferInfo *stats, int final) {
     assert(stats->output_handler != NULL);
-    if (final) {
-	int ix;
-	stats->cntBytes = stats->total.Bytes.current;
-	stats->sock_callstats.read.cntRead = stats->sock_callstats.read.totcntRead;
-	for (ix = 0; ix < TCPREADBINCOUNT; ix++) {
-	    stats->sock_callstats.read.bins[ix] = stats->sock_callstats.read.totbins[ix];
+    if (stats->sumflag) {
+	if (!final || (final && (stats->cntBytes > 0) && !TimeZero(stats->ts.intervalTime))) {
+	    stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
+	    if (final)
+		reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
+	    (*stats->output_handler)(stats);
+	    if (!final)
+		stats->threadcnt = 0;
+	    reporter_reset_transfer_stats_server_tcp(stats);
 	}
-        reporter_set_timestamps_time(&stats->ts, TOTAL);
-	(*stats->output_handler)(stats);
-    } else {
-	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
-	(*stats->output_handler)(stats);
-	reporter_reset_transfer_stats_server_tcp(stats);
+	if (final) {
+	    int ix;
+	    stats->cntBytes = stats->total.Bytes.current;
+	    stats->sock_callstats.read.cntRead = stats->sock_callstats.read.totcntRead;
+	    for (ix = 0; ix < TCPREADBINCOUNT; ix++) {
+		stats->sock_callstats.read.bins[ix] = stats->sock_callstats.read.totbins[ix];
+	    }
+	    stats->cntBytes = stats->total.Bytes.current;
+	    reporter_set_timestamps_time(&stats->ts, TOTAL);
+	    (*stats->output_handler)(stats);
+	}
     }
 }
-
 void reporter_transfer_protocol_bidir_tcp(struct TransferInfo *stats, int final) {
     assert(stats->output_handler != NULL);
     if (final) {
@@ -1431,6 +1439,8 @@ int reporter_condprint_time_interval_report (struct ReporterData *data, struct R
 	    if ((++data->GroupSumReport->threads) == \
 		((bidirstats != NULL) ? (2 * data->GroupSumReport->reference.count) : data->GroupSumReport->reference.count))   {
 		data->GroupSumReport->threads = 0;
+		if (data->GroupSumReport->reference.count > 1)
+		    sumstats->sumflag = 1;
 		reporter_set_timestamps_time(&sumstats->ts, INTERVAL);
 		(*data->GroupSumReport->transfer_protocol_sum_handler)(sumstats, 0);
 	    }

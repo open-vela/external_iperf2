@@ -83,6 +83,7 @@ Server::Server( thread_Settings *inSettings ) {
     mBuf = NULL;
     myJob = NULL;
     reportstruct = &scratchpad;
+    memset(&scratchpad, 0, sizeof(struct ReportStruct));
     mySocket = inSettings->mSock;
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
     myDropSocket = inSettings->mSockDrop;
@@ -192,6 +193,10 @@ void Server::RunTCP( void ) {
     burst_info.send_tt.write_tv_sec = 0;
     burst_info.send_tt.write_tv_usec = 0;
     int alignbytes = AlignPayloads();
+
+    now.setnow();
+    reportstruct->packetTime.tv_sec = now.getSecs();
+    reportstruct->packetTime.tv_usec = now.getUsecs();
 
     while (InProgress() && !err) {
 	reportstruct->emptyreport=0;
@@ -375,8 +380,10 @@ inline void Server::SetReportStartTime (void) {
     }
     myReport->info.ts.IPGstart = myReport->info.ts.startTime;
 
-    if (!TimeZero(myReport->info.ts.intervalTime))
+    if (!TimeZero(myReport->info.ts.intervalTime)) {
+	myReport->info.ts.nextTime = myReport->info.ts.startTime;
 	TimeAdd(myReport->info.ts.nextTime, myReport->info.ts.intervalTime);
+    }
 }
 
 void Server::InitTrafficLoop (void) {
