@@ -389,7 +389,6 @@ void FreeReport(struct ReportHeader *reporthdr);
 void FreeSumReport (struct SumReport *sumreport);
 void ReportServerUDP(struct thread_Settings *inSettings, struct server_hdr *server);
 void ReportConnections(struct thread_Settings *inSettings );
-void reporter_peerversion (struct thread_Settings *inSettings, int upper, int lower);
 void reporter_dump_job_queue(void);
 void IncrSumReportRefCounter(struct SumReport *multihdr);
 int DecrSumReportRefCounter(struct SumReport *multihdr);
@@ -464,10 +463,10 @@ void udp_output_sum_write_enhanced (struct TransferInfo *stats);
 
 // Rest of the reporter output routines
 void reporter_connect_printf_tcp_final (struct ReportHeader *reporthdr);
-void reporter_peerversion (struct thread_Settings *inSettings, int upper, int lower);
 void reporter_print_connection_report(struct ConnectionInfo *report);
 void reporter_print_settings_report(struct ReportSettings *report);
 void reporter_print_server_relay_report(struct TransferInfo *report);
+void reporter_peerversion (struct ConnectionInfo *report, uint32_t upper, uint32_t lower);
 
 #ifdef __cplusplus
 } /* end extern "C" */
