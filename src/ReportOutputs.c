@@ -520,6 +520,11 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
 	printf("%s: %s\n", ((report->common->ThreadMode == kMode_Client) ?
 			    client_write_size : server_read_size), outbuffer);
     }
+    if (isFQPacing(report->common)) {
+	byte_snprintf(outbuffer, sizeof(outbuffer), report->common->FQPacingRate, 'a');
+	outbuffer[(sizeof(outbuffer)-1)] = '\0';
+        printf(client_fq_pacing,outbuffer);
+    }
     output_window_size(report);
     printf("\n");
 }
