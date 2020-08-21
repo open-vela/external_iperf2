@@ -427,6 +427,30 @@ void tcp_output_sum_read(struct TransferInfo *stats) {
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext);
 }
+void tcp_output_sumcnt_read(struct TransferInfo *stats) {
+    if (!tcp_client_header_printed) {
+	tcp_client_header_printed = true;
+	printf(report_bw_sumcnt_header);
+    }
+    _print_stats_common(stats);
+    printf(report_sumcnt_bw_format, stats->threadcnt,
+	   stats->ts.iStart, stats->ts.iEnd,
+	   outbuffer, outbufferext);
+}
+void tcp_output_sumcnt_read_enhanced (struct TransferInfo *stats) {
+    if (!tcp_client_header_printed) {
+	tcp_client_header_printed = true;
+	printf(report_bw_write_sumcnt_enhanced_header);
+    }
+    _print_stats_common(stats);
+    printf(report_sumcnt_bw_write_enhanced_format, stats->threadcnt,
+	   stats->ts.iStart, stats->ts.iEnd,
+	   outbuffer, outbufferext,
+	   stats->sock_callstats.write.WriteCnt,
+	   stats->sock_callstats.write.WriteErr,
+	   stats->sock_callstats.write.TCPretry);
+}
+
 void tcp_output_sum_write(struct TransferInfo *stats) {
     if (!tcp_client_header_printed) {
 	tcp_client_header_printed = true;
@@ -487,9 +511,6 @@ void tcp_output_sumcnt_write_enhanced (struct TransferInfo *stats) {
 /*
  * Report the client or listener Settings in default style
  */
-static void reporter_output_listener_settings (struct ReportSettings *report) {
-
-}
 static void output_window_size (struct ReportSettings *report) {
     int winsize = getsock_tcp_windowsize(report->common->socket, (report->common->ThreadMode != kMode_Client ? 0 : 1));
     byte_snprintf(outbuffer, sizeof(outbuffer), winsize, toupper(report->common->Format));
@@ -504,7 +525,36 @@ static void output_window_size (struct ReportSettings *report) {
 	printf(warn_window_requested, outbuffer);
     }
 }
-
+static void reporter_output_listener_settings (struct ReportSettings *report) {
+    printf(isEnhanced(report->common) ? server_pid_port : server_port,
+	   (isUDP(report->common) ? "UDP" : "TCP"), report->common->Port, report->pid );
+    if (report->common->Localhost != NULL) {
+	if (isEnhanced(report->common) && !SockAddr_isMulticast(&report->local)) {
+	    if (report->common->Ifrname)
+		printf(bind_address_iface, report->common->Localhost, report->common->Ifrname);
+	    else
+		printf(bind_address, report->common->Localhost);
+	}
+	if (SockAddr_isMulticast(&report->local)) {
+	    if(!report->common->SSMMulticastStr)
+		if (!report->common->Ifrname)
+		    printf(join_multicast, report->common->Localhost );
+		else
+		    printf(join_multicast_starg_dev, report->common->Localhost,report->common->Ifrname);
+	    else if(!report->common->Ifrname)
+		printf(join_multicast_sg, report->common->SSMMulticastStr, report->common->Localhost);
+	    else
+		printf(join_multicast_sg_dev, report->common->SSMMulticastStr, report->common->Localhost, report->common->Ifrname);
+        }
+    }
+    if (isEnhanced(report->common)) {
+	byte_snprintf(outbuffer, sizeof(outbuffer), report->common->BufLen, toupper( (int)report->common->Format));
+	outbuffer[(sizeof(outbuffer)-1)] = '\0';
+	printf("%s: %s\n", server_read_size, outbuffer);
+    }
+    output_window_size(report);
+    printf("\n");
+}
 static void reporter_output_client_settings (struct ReportSettings *report) {
     if (!report->common->Ifrnametx) {
 	printf(isEnhanced(report->common) ? client_pid_port : client_port, report->common->Host,
@@ -516,10 +566,9 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
 	       report->common->Ifrnametx, (!report->common->threads ? 1 : report->common->threads));
     }
     if (isEnhanced(report->common)) {
-	byte_snprintf(outbuffer, sizeof(outbuffer), report->common->BufLen, toupper( (int)report->common->Format));
+	byte_snprintf(outbuffer, sizeof(outbuffer), report->common->BufLen, toupper((int)report->common->Format));
 	outbuffer[(sizeof(outbuffer)-1)] = '\0';
-	printf("%s: %s\n", ((report->common->ThreadMode == kMode_Client) ?
-			    client_write_size : server_read_size), outbuffer);
+	printf("%s: %s\n", client_write_size, outbuffer);
     }
     if (isFQPacing(report->common)) {
 	byte_snprintf(outbuffer, sizeof(outbuffer), report->common->FQPacingRate, 'a');
@@ -532,28 +581,7 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
 #if 0
     assert(reporthdr != NULL);
     if (data->common->ThreadMode == kMode_Listener) {
-        printf(isEnhanced(data->common) ? server_pid_port : server_port,
-	       (isUDP(data->common) ? "UDP" : "TCP"), data->common->Port, pid );
     } else  {
-    if (data->common->Localhost != NULL) {
-	if (isEnhanced(data->common) && !SockAddr_isMulticast(&data->local)) {
-	    if (data->common->Ifrname)
-		printf(bind_address_iface, data->common->Localhost, data->common->Ifrname);
-	    else
-		printf(bind_address, data->common->Localhost);
-	}
-	if ((data->common->ThreadMode != kMode_Client) && SockAddr_isMulticast(&data->local)) {
-	    if(!data->common->SSMMulticastStr)
-		if (!data->common->Ifrname)
-		    printf(join_multicast, data->common->Localhost );
-		else
-		    printf(join_multicast_starg_dev, data->common->Localhost,data->common->Ifrname);
-	    else if(!data->common->Ifrname)
-		printf(join_multicast_sg, data->common->SSMMulticastStr, data->common->Localhost);
-	    else
-		printf(join_multicast_sg_dev, data->common->SSMMulticastStr, data->common->Localhost, data->common->Ifrname);
-        }
-    }
     if (isIsochronous(data->common)) {
 	int len;
 	char meanbuf[40];
