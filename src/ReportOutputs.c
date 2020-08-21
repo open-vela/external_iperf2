@@ -427,6 +427,21 @@ void tcp_output_sum_read(struct TransferInfo *stats) {
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext);
 }
+void tcp_output_sum_read_enhanced(struct TransferInfo *stats) {
+    _print_stats_common(stats);
+    printf(report_sum_bw_read_enhanced_format,
+	   stats->ts.iStart, stats->ts.iEnd,
+	   outbuffer, outbufferext,
+	   stats->sock_callstats.read.cntRead,
+	   stats->sock_callstats.read.bins[0],
+	   stats->sock_callstats.read.bins[1],
+	   stats->sock_callstats.read.bins[2],
+	   stats->sock_callstats.read.bins[3],
+	   stats->sock_callstats.read.bins[4],
+	   stats->sock_callstats.read.bins[5],
+	   stats->sock_callstats.read.bins[6],
+	   stats->sock_callstats.read.bins[7]);
+}
 void tcp_output_sumcnt_read(struct TransferInfo *stats) {
     if (!tcp_server_header_printed) {
 	tcp_server_header_printed = true;
@@ -470,21 +485,6 @@ void tcp_output_sumcnt_write(struct TransferInfo *stats) {
     printf(report_sumcnt_bw_format, stats->threadcnt,
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext);
-}
-void tcp_output_sum_read_enhanced(struct TransferInfo *stats) {
-    _print_stats_common(stats);
-    printf(report_sum_bw_read_enhanced_format,
-	   stats->ts.iStart, stats->ts.iEnd,
-	   outbuffer, outbufferext,
-	   stats->sock_callstats.read.cntRead,
-	   stats->sock_callstats.read.bins[0],
-	   stats->sock_callstats.read.bins[1],
-	   stats->sock_callstats.read.bins[2],
-	   stats->sock_callstats.read.bins[3],
-	   stats->sock_callstats.read.bins[4],
-	   stats->sock_callstats.read.bins[5],
-	   stats->sock_callstats.read.bins[6],
-	   stats->sock_callstats.read.bins[7]);
 }
 void tcp_output_sum_write_enhanced(struct TransferInfo *stats) {
     _print_stats_common(stats);

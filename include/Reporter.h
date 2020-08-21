@@ -443,6 +443,7 @@ void tcp_output_read(struct TransferInfo *stats);
 void tcp_output_read_enhanced(struct TransferInfo *stats);
 void tcp_output_read_enhanced_triptime(struct TransferInfo *stats);
 void tcp_output_sum_read(struct TransferInfo *stats);
+void tcp_output_sum_read_enhanced(struct TransferInfo *stats);
 void tcp_output_sumcnt_read(struct TransferInfo *stats);
 void tcp_output_sumcnt_read_enhanced (struct TransferInfo *stats);
 // TCP client
