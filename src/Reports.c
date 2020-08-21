@@ -330,8 +330,10 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 		ireport->info.output_handler = tcp_output_read_enhanced;
 	    else
 		ireport->info.output_handler = tcp_output_read;
-	    if (ireport->GroupSumReport)
+	    if (ireport->GroupSumReport) {
 		ireport->GroupSumReport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_tcp;
+		ireport->GroupSumReport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_read : tcp_output_sum_read);
+	    }
 	    if (ireport->FullDuplexReport)
 		ireport->FullDuplexReport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
 	}
