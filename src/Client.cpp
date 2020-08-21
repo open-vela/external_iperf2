@@ -368,7 +368,6 @@ void Client::InitTrafficLoop (void) {
     }
 }
 
-
 /* -------------------------------------------------------------------
  * Run the appropriate send loop between
  *
@@ -429,8 +428,6 @@ void Client::Run(void) {
 /*
  * TCP send loop
  */
-
-
 void Client::RunTCP( void ) {
     int burst_size = (mSettings->mWriteAckLen > 0) ? mSettings->mWriteAckLen : mSettings->mBufLen;
     int burst_remaining = 0;
@@ -521,7 +518,6 @@ void Client::RunTCP( void ) {
             }
         }
     }
-
     FinishTrafficActions();
 }
 
@@ -624,7 +620,6 @@ void Client::RunRateLimitedTCP ( void ) {
 	    delay_loop(4);
 	}
     }
-
     FinishTrafficActions();
 }
 
@@ -881,7 +876,6 @@ void Client::RunUDPIsochronous (void) {
 		    reportstruct->burstsize=bytecnt;
 		}
 	    }
-
 	    if (isModeAmount(mSettings)) {
 	        /* mAmount may be unsigned, so don't let it underflow! */
 	        if( mSettings->mAmount >= (unsigned long) currLen ) {
@@ -909,8 +903,6 @@ void Client::RunUDPIsochronous (void) {
     DELETE_PTR(framecounter);
 }
 // end RunUDPIsoch
-
-
 
 inline void Client::WritePacketID (intmax_t packetID) {
     struct UDP_datagram * mBuf_UDP = (struct UDP_datagram *) mBuf;
@@ -1036,7 +1028,6 @@ void Client::FinishTrafficActions(void) {
 	Iperf_remove_host(&mSettings->peer);
     EndJob(myJob, reportstruct);
 }
-
 
 /* -------------------------------------------------------------------
  * Send a datagram on the socket. The datagram's contents should signify

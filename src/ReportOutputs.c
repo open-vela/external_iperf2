@@ -101,8 +101,8 @@ static inline void set_llawbuf(double lambda, double meantransit) {
 
 //TCP Output
 void tcp_output_read (struct TransferInfo *stats) {
-    if(!stats->header_printed) {
-	stats->header_printed = true;
+    if (!tcp_server_header_printed) {
+	tcp_server_header_printed = true;
 	printf("%s", report_bw_header);
     }
     _print_stats_common(stats);
@@ -110,8 +110,8 @@ void tcp_output_read (struct TransferInfo *stats) {
 }
 //TCP read or server output
 void tcp_output_read_enhanced (struct TransferInfo *stats) {
-    if(!stats->header_printed) {
-	stats->header_printed = true;
+    if (!tcp_server_header_printed) {
+	tcp_server_header_printed = true;
 	printf(report_bw_read_enhanced_header, (stats->sock_callstats.read.binsize/1024.0));
     }
     _print_stats_common(stats);
@@ -239,9 +239,9 @@ void tcp_output_write_enhanced (struct TransferInfo *stats) {
 
 //UDP output
 void udp_output_read (struct TransferInfo *stats) {
-    if(!stats->header_printed) {
+    if (!udp_server_header_printed) {
+	udp_server_header_printed = true;
 	printf("%s", report_bw_jitter_loss_header);
-	stats->header_printed = true;
     }
     _print_stats_common(stats);
     printf( report_bw_jitter_loss_format, stats->transferID,
@@ -428,8 +428,8 @@ void tcp_output_sum_read(struct TransferInfo *stats) {
 	   outbuffer, outbufferext);
 }
 void tcp_output_sumcnt_read(struct TransferInfo *stats) {
-    if (!tcp_client_header_printed) {
-	tcp_client_header_printed = true;
+    if (!tcp_server_header_printed) {
+	tcp_server_header_printed = true;
 	printf(report_bw_sumcnt_header);
     }
     _print_stats_common(stats);
@@ -438,8 +438,8 @@ void tcp_output_sumcnt_read(struct TransferInfo *stats) {
 	   outbuffer, outbufferext);
 }
 void tcp_output_sumcnt_read_enhanced (struct TransferInfo *stats) {
-    if (!tcp_client_header_printed) {
-	tcp_client_header_printed = true;
+    if (!tcp_server_header_printed) {
+	tcp_server_header_printed = true;
 	printf(report_bw_write_sumcnt_enhanced_header);
     }
     _print_stats_common(stats);

@@ -307,6 +307,7 @@ struct TransferInfo {
     int transferID;
     int groupID;
     int threadcnt;
+    int sumflag;
     uintmax_t cntBytes;
     intmax_t cntError;
     intmax_t cntOutofOrder;
