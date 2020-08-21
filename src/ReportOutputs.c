@@ -203,8 +203,8 @@ void tcp_output_write_enhanced (struct TransferInfo *stats) {
     }
     _print_stats_common(stats);
 #ifndef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-    printf(report_sum_bw_write_enhanced_format,
-	   stats->ts.iStart, stats->ts.iEnd,
+    printf(report_bw_write_enhanced_format,
+	   stats->transferID, stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext,
 	   stats->sock_callstats.write.WriteCnt,
 	   stats->sock_callstats.write.WriteErr,
