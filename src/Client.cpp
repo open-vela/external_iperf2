@@ -133,7 +133,7 @@ Client::~Client() {
  * If inLocalhost is not null, bind to that address, specifying
  * which outgoing interface to use.
  * ------------------------------------------------------------------- */
-double Client::my_connect(void) {
+void Client::my_connect(void) {
     int rc;
     double connecttime = -1.0;
     // create an internet socket
@@ -207,7 +207,8 @@ double Client::my_connect(void) {
 	assert(tmp!=NULL);
 	PostReport(tmp);
     }
-    return connecttime;
+    if (isConnectionReport(mSettings) && !isSumOnly(mSettings))
+	PostReport(InitConnectionReport(mSettings, connecttime));
 } // end Connect
 
 bool Client::isConnected(void) {
@@ -320,7 +321,7 @@ void Client::ConnectPeriodic (void) {
 		WARN_errno( rc == SOCKET_ERROR, "client close" );
 		mySocket = INVALID_SOCKET;
 	    }
-	    PostReport(InitConnectionReport(mSettings, my_connect()));
+	    my_connect();
 	    now.setnow();
 	}
     }
@@ -1196,7 +1197,9 @@ void Client::HdrXchange(int flags) {
 		 */
 		if ((n = recvn(mySocket, (char *)&ack, sizeof(client_hdr_ack), 0)) == sizeof(client_hdr_ack)) {
 		    if (ntohl(ack.typelen.type) == CLIENTHDRACK && ntohl(ack.typelen.length) == sizeof(client_hdr_ack)) {
+#if 0
 			reporter_peerversion (mSettings, ntohl(ack.version_u), ntohl(ack.version_l));
+#endif
 		    } else {
 			//			sprintf(mSettings->peerversion, " (misformed server version)");
 		    }

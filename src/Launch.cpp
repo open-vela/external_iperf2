@@ -161,7 +161,6 @@ void server_spawn(struct thread_Settings *thread) {
 void client_spawn(struct thread_Settings *thread) {
     Client *theClient = NULL;
     struct thread_Settings *reverse_client = NULL;
-    double ct = -1;
 
     // set traffic thread to realtime if needed
 #if HAVE_SCHED_SETSCHEDULER
@@ -182,9 +181,7 @@ void client_spawn(struct thread_Settings *thread) {
     if (isConnectOnly(thread)) {
 	theClient->ConnectPeriodic();
     } else if (!isServerReverse(thread)) {
-	ct = theClient->my_connect();
-	if (isConnectionReport(thread))
-	    PostReport(InitConnectionReport(thread, ct));
+	theClient->my_connect();
     }
     if (!isNoConnectSync(thread))
 	theClient->BarrierClient(thread->connects_done);

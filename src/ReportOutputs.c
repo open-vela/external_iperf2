@@ -55,6 +55,7 @@
 #define SNBUFFEREXTENDSIZE 512
 static char outbuffer[SNBUFFERSIZE]; // Buffer for printing
 static char outbufferext[SNBUFFEREXTENDSIZE]; // Buffer for printing
+static char outbufferext2[SNBUFFEREXTENDSIZE]; // Buffer for printing
 static char llaw_buf[100];
 static const int true = 1;
 static int tcp_client_header_printed = 0;
@@ -628,35 +629,108 @@ void reporter_connect_printf_tcp_final (struct ReportHeader *reporthdr) {
 #endif
 }
 
-void reporter_peerversion (struct thread_Settings *inSettings, int upper, int lower) {
-#if 0
-    int rel, major, minor, alpha;
-    inSettings->peerversion[0] = '\0';
-
-    rel = (upper & 0xFFFF0000) >> 16;
-    major = (upper & 0x0000FFFF);
-    minor = (lower & 0xFFFF0000) >> 16;
-    alpha = (lower & 0x0000000F);
-    sprintf(inSettings->peerversion," (peer %d.%d.%d)", rel, major, minor);
-    switch(alpha) {
-    case 0:
-	sprintf(inSettings->peerversion + strlen(inSettings->peerversion) - 1,"-alpha)");
-	break;
-    case 1:
-	sprintf(inSettings->peerversion + strlen(inSettings->peerversion) - 1,"-beta)");
-	break;
-    case 2:
-	sprintf(inSettings->peerversion + strlen(inSettings->peerversion) - 1,"-rc)");
-	break;
-    case 3:
-	break;
-    default:
-	sprintf(inSettings->peerversion + strlen(inSettings->peerversion) - 1, "-unk)");
+void reporter_print_connection_report(struct ConnectionInfo *report) {
+    // copy the inet_ntop into temp buffers, to avoid overwriting
+    char local_addr[REPORT_ADDRLEN];
+    char remote_addr[REPORT_ADDRLEN];
+    struct sockaddr *local = ((struct sockaddr*)&report->local);
+    struct sockaddr *peer = ((struct sockaddr*)&report->peer);
+    outbuffer[0]='\0';
+    outbufferext[0]='\0';
+    outbufferext2[0]='\0';
+    char *b = &outbuffer[0];
+    if ((report->common->winsize_requested > 0) && (report->winsize != report->common->winsize_requested)) {
+	byte_snprintf(outbufferext, sizeof(outbufferext), report->winsize, 'A');
+	byte_snprintf(outbufferext2, sizeof(outbufferext2), report->common->winsize_requested, 'A');
+	int len = snprintf(NULL, 0, " (WARN: winsize=%s req=%s)", outbufferext, outbufferext2);
+	snprintf(b, len, " (WARN: winsize=%s req=%s)", outbufferext, outbufferext2);
+    }
+    b += strlen(b);
+    if (isIsochronous(report->common)) {
+	snprintf(b, SNBUFFERSIZE-strlen(b), " (isoch)");
+	b += strlen(b);
+    }
+    if (isServerReverse(report->common)) {
+	snprintf(b, SNBUFFERSIZE-strlen(b), " (reverse)");
+	b += strlen(b);
+    }
+    if (isTripTime(report->common)) {
+	snprintf(b, SNBUFFERSIZE-strlen(b), " (trip-times)");
+	b += strlen(b);
+	if (report->common->ThreadMode == kMode_Server) {
+	    snprintf(b, SNBUFFERSIZE-strlen(b), " (%ld.%ld)", \
+		     report->epochStartTime.tv_sec, (long) report->epochStartTime.tv_usec);
+	    b += strlen(b);
+	}
+    }
+    if (isL2LengthCheck(report->common)) {
+	snprintf(b, SNBUFFERSIZE-strlen(b), " (%s)", "l2mode");
+	b += strlen(b);
+    }
+    if (report->peerversion) {
+	snprintf(b, SNBUFFERSIZE-strlen(b), "%s", report->peerversion);
+	b += strlen(b);
+    }
+    if (report->connecttime > 0) {
+	snprintf(b, SNBUFFERSIZE-strlen(b), " (ct=%4.2f ms)", report->connecttime);;
+	b += strlen(b);
+    }
+    if (report->txholdbacktime > 0) {
+	snprintf(b, SNBUFFERSIZE-strlen(b), " (ht=%4.2f s)", report->txholdbacktime);;
+    }
+    if (local->sa_family == AF_INET) {
+	inet_ntop(AF_INET, &((struct sockaddr_in*)local)->sin_addr, local_addr, REPORT_ADDRLEN);
+    }
+#ifdef HAVE_IPV6
+    else {
+	inet_ntop(AF_INET6, &((struct sockaddr_in6*)local)->sin6_addr, local_addr, REPORT_ADDRLEN);
     }
 #endif
+    if (peer->sa_family == AF_INET) {
+	inet_ntop( AF_INET, &((struct sockaddr_in*)peer)->sin_addr, remote_addr, REPORT_ADDRLEN);
+    }
+#ifdef HAVE_IPV6
+    else {
+	inet_ntop(AF_INET6, &((struct sockaddr_in6*)peer)->sin6_addr, remote_addr, REPORT_ADDRLEN);
+    }
+#endif
+#ifdef HAVE_IPV6
+    printf(report_peer, report->common->socket, \
+	   local_addr, (local->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)local)->sin_port) : \
+			ntohs(((struct sockaddr_in6*)local)->sin6_port)), \
+	   remote_addr, (peer->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)peer)->sin_port) : \
+			 ntohs(((struct sockaddr_in6*)peer)->sin6_port)), outbuffer);
+#else
+    printf(report_peer, report->common->socket, \
+	   local_addr, (local->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)local)->sin_port) : 0), \
+	   remote_addr, (peer->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)peer)->sin_port) :  0), \
+	   outbuffer);
+#endif
+    if ((report->epochStartTime.tv_sec) && (report->common->ThreadMode == kMode_Client)) {
+	struct tm ts;
+	char start_timebuf[80];
+#ifdef HAVE_CLOCK_GETTIME
+	// Format time, "ddd yyyy-mm-dd hh:mm:ss zzz"
+	ts = *localtime(&report->epochStartTime.tv_sec);
+	strftime(start_timebuf, sizeof(start_timebuf), "%Y-%m-%d %H:%M:%S", &ts);
+	struct timespec t1;
+	clock_gettime(CLOCK_REALTIME, &t1);
+	ts = *localtime(&t1.tv_sec);
+	char now_timebuf[80];
+	strftime(now_timebuf, sizeof(now_timebuf), "%Y-%m-%d %H:%M:%S (%Z)", &ts);
+	printf(client_report_epoch_start_current, report->common->socket, start_timebuf, report->epochStartTime.tv_sec, report->epochStartTime.tv_usec, now_timebuf);
+#else
+	// Format time, "ddd yyyy-mm-dd hh:mm:ss zzz"
+	ts = *localtime(&report->epochStartTime.tv_sec);
+	strftime(start_timebuf, sizeof(start_timebuf), "%Y-%m-%d %H:%M:%S (%Z)", &ts);
+	printf(client_report_epoch_start, report->common->socket, start_timebuf, report->epochStartTime.tv_sec, report->epochStartTime.tv_usec);
+#endif
+	fflush(stdout);
+    }
 }
-void reporter_print_connection_report(struct ConnectionInfo *report) {
-}
+// end ReportPeer
+
+
 void reporter_print_settings_report(struct ReportSettings *report) {
     assert(report != NULL);
     report->pid =  (int)  getpid();
@@ -668,5 +742,32 @@ void reporter_print_settings_report(struct ReportSettings *report) {
     }
     printf("%s", separator_line);
 }
+
+
+void reporter_peerversion (struct ConnectionInfo *report, uint32_t upper, uint32_t lower) {
+    int rel, major, minor, alpha;
+    report->peerversion[0] = '\0';
+    rel = (upper & 0xFFFF0000) >> 16;
+    major = (upper & 0x0000FFFF);
+    minor = (lower & 0xFFFF0000) >> 16;
+    alpha = (lower & 0x0000000F);
+    sprintf(report->peerversion," (peer %d.%d.%d)", rel, major, minor);
+    switch(alpha) {
+    case 0:
+	sprintf(report->peerversion + strlen(report->peerversion) - 1,"-alpha)");
+	break;
+    case 1:
+	sprintf(report->peerversion + strlen(report->peerversion) - 1,"-beta)");
+	break;
+    case 2:
+	sprintf(report->peerversion + strlen(report->peerversion) - 1,"-rc)");
+	break;
+    case 3:
+	break;
+    default:
+	sprintf(report->peerversion + strlen(report->peerversion) - 1, "-unk)");
+    }
+}
+
 void reporter_print_server_relay_report(struct TransferInfo *repor) {
 }

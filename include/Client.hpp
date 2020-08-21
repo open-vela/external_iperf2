@@ -90,7 +90,7 @@ public:
     void InitiateServer(void);
     void StartSynch(void);
     void ConnectPeriodic(void);
-    double my_connect(void);
+    void my_connect(void);
     bool isConnected(void);
     int BarrierClient(struct BarrierMutex *);
 
