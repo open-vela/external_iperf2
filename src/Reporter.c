@@ -1202,6 +1202,7 @@ void reporter_transfer_protocol_server_tcp(struct ReporterData *data, int final)
     stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
     int ix;
     if (sumstats) {
+	sumstats->threadcnt++;
 	sumstats->total.Bytes.current += stats->cntBytes;
         sumstats->sock_callstats.read.cntRead += stats->sock_callstats.read.cntRead;
         sumstats->sock_callstats.read.totcntRead += stats->sock_callstats.read.cntRead;
@@ -1214,7 +1215,7 @@ void reporter_transfer_protocol_server_tcp(struct ReporterData *data, int final)
 	bidirstats->total.Bytes.current += stats->cntBytes;
     }
     if (final) {
-	if ((stats->cntBytes > 0) && !TimeZero(stats->ts.intervalTime)) {
+	if ((stats->cntBytes > 0) && stats->output_handler && !TimeZero(stats->ts.intervalTime)) {
 	    // print a partial interval report if enable and this a final
 	    reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
 	    (*stats->output_handler)(stats);
@@ -1261,6 +1262,12 @@ void reporter_transfer_protocol_client_tcp(struct ReporterData *data, int final)
 	bidirstats->total.Bytes.current += stats->cntBytes;
     }
     if (final) {
+	if ((stats->cntBytes > 0) && stats->output_handler && !TimeZero(stats->ts.intervalTime)) {
+	    // print a partial interval report if enable and this a final
+	    reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
+	    (*stats->output_handler)(stats);
+	    reporter_reset_transfer_stats_server_tcp(stats);
+        }
 	stats->sock_callstats.write.WriteErr = stats->sock_callstats.write.totWriteErr;
 	stats->sock_callstats.write.WriteCnt = stats->sock_callstats.write.totWriteCnt;
 	stats->sock_callstats.write.TCPretry = stats->sock_callstats.write.totTCPretry;

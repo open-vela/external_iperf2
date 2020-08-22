@@ -101,7 +101,7 @@ Server::Server( thread_Settings *inSettings ) {
     if (mSettings->mBufLen < (int) sizeof(UDP_datagram)) {
 	fprintf(stderr, warn_buffer_too_small, mSettings->mBufLen);
     }
-    SockAddr_Ifrname(mSettings);
+
     // Enable kernel level timestamping if available
     InitKernelTimeStamping();
     int sorcvtimer = 0;
@@ -127,9 +127,6 @@ Server::Server( thread_Settings *inSettings ) {
 	    WARN_errno( mSettings->mSock == SO_RCVTIMEO, "socket" );
 	}
     }
-    myJob = InitIndividualReport(mSettings);
-    myReport = (struct ReporterData *)myJob->this_report;
-    assert(myJob != NULL);
 }
 
 /* -------------------------------------------------------------------
@@ -387,6 +384,9 @@ inline void Server::SetReportStartTime (void) {
 }
 
 void Server::InitTrafficLoop (void) {
+    myJob = InitIndividualReport(mSettings);
+    myReport = (struct ReporterData *)myJob->this_report;
+    assert(myJob != NULL);
     //  copy the thread drop socket to this object such
     //  that the destructor can close it if needed
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
