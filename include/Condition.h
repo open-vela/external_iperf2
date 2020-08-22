@@ -84,6 +84,7 @@ struct BarrierMutex {
     struct Condition await;
     struct timeval release_time;
     int count;
+    int timeout;
 };
 
 struct ReferenceMutex {

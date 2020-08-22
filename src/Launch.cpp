@@ -62,7 +62,7 @@
 #include "PerfSocket.hpp"
 #include "Write_ack.hpp"
 
-
+#define MINBARRIERTIMEOUT 3
 int bidir_start_barrier (struct BarrierMutex *barrier) {
     int rc = 0;
     assert(barrier != NULL);
@@ -72,7 +72,18 @@ int bidir_start_barrier (struct BarrierMutex *barrier) {
 	// last one wake's up everyone else'
 	Condition_Broadcast(&barrier->await);
     } else {
-        Condition_Wait(&barrier->await);
+	int timeout = barrier->timeout;
+	while ((barrier->count != 2) && (timeout > 0)) {
+#ifdef HAVE_THREAD_DEBUG
+	    thread_debug("BiDir start barrier wait  %p (%d)", (void *)&barrier->await, timeout);
+#endif
+	    Condition_TimedWait(&barrier->await, 1);
+	    timeout--;
+	    if ((timeout ==0) && (barrier->count != 2)) {
+		fprintf(stdout, "Failed to start full duplex traffic\n");
+		_exit(0);
+	    }
+	}
     }
     Condition_Unlock(barrier->await);
 #ifdef HAVE_THREAD_DEBUG
@@ -207,6 +218,9 @@ void client_spawn(struct thread_Settings *thread) {
 	    // Note: Settings copy will malloc space for the
 	    // reverse thread settings and the run_wrapper will free it
 	    if (isBidir(thread)) {
+		thread->bidir_startstop.timeout = (isModeTime(thread) ? ((int)(thread->mAmount / 100) + 1) : 2);
+		if (thread->bidir_startstop.timeout < MINBARRIERTIMEOUT)
+		    thread->bidir_startstop.timeout = MINBARRIERTIMEOUT;
 		Condition_Initialize(&thread->bidir_startstop.await);
 		thread->mBidirReport = InitSumReport(thread, thread->mSock);
 		IncrSumReportRefCounter(thread->mBidirReport);

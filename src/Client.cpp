@@ -1136,7 +1136,7 @@ void Client::AwaitServerCloseEvent(void) {
     // the await detection can take awhile so post a non event ahead of it
     PostNullEvent();
     unsigned int amount_usec = \
-	(isModeTime(mSettings) ? amount_usec = (mSettings->mAmount * 10000) : MINAWAITCLOSEUSECS);
+	(isModeTime(mSettings) ? (int) (mSettings->mAmount * 10000) : MINAWAITCLOSEUSECS);
     if (amount_usec < MINAWAITCLOSEUSECS)
 	amount_usec = MINAWAITCLOSEUSECS;
     SetSocketOptionsReceiveTimeout(mSettings, amount_usec);
