@@ -344,6 +344,7 @@ void Listener::Run (void) {
 		delay_loop(SINGLECLIENTDELAY_DURATION);
 	}
     }
+    Settings_Destroy(server);
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Listener exiting port/sig/threads %d/%d/%d", mSettings->mPort, sInterupted, mCount);
 #endif

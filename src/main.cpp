@@ -78,7 +78,7 @@
  * prototypes
  * ------------------------------------------------------------------- */
 // Function called at exit to clean up as much as possible
-void cleanup( void );
+void cleanup(void);
 
 /* -------------------------------------------------------------------
  * global variables
@@ -111,7 +111,7 @@ nthread_t sThread;
 static thread_Settings* ext_gSettings;
 // The main thread uses this function to wait
 // for all other threads to complete
-void waitUntilQuit( void );
+void waitUntilQuit(void);
 
 /* -------------------------------------------------------------------
  * main()
@@ -123,26 +123,26 @@ void waitUntilQuit( void );
  * starts up server or client thread
  * waits for all threads to complete
  * ------------------------------------------------------------------- */
-int main( int argc, char **argv ) {
+int main(int argc, char **argv) {
 
     // Set SIGTERM and SIGINT to call our user interrupt function
-    my_signal( SIGTERM, Sig_Interupt );
-    my_signal( SIGINT,  Sig_Interupt );
+    my_signal(SIGTERM, Sig_Interupt);
+    my_signal(SIGINT,  Sig_Interupt);
 #ifndef WIN32
-    my_signal( SIGALRM,  Sig_Interupt );
+    my_signal(SIGALRM,  Sig_Interupt);
 
     // Ignore broken pipes
     signal(SIGPIPE,SIG_IGN);
 #else
     // Start winsock
     WSADATA wsaData;
-    int rc = WSAStartup( 0x202, &wsaData );
-    WARN_errno( rc == SOCKET_ERROR, "WSAStartup" );
+    int rc = WSAStartup(0x202, &wsaData);
+    WARN_errno(rc == SOCKET_ERROR, "WSAStartup");
     if (rc == SOCKET_ERROR)
 	return 0;
 
     // Tell windows we want to handle our own signals
-    SetConsoleCtrlHandler( sig_dispatcher, true );
+    SetConsoleCtrlHandler(sig_dispatcher, true);
 #endif
 
     // Initialize global mutexes and conditions
@@ -162,7 +162,7 @@ int main( int argc, char **argv ) {
     Condition_Initialize(&transmits_start.await);
 
     // Initialize the thread subsystem
-    thread_init( );
+    thread_init();
 
     // Initialize the interrupt handling thread to 0
     sThread = thread_zeroid();
@@ -201,10 +201,10 @@ int main( int argc, char **argv ) {
 
 	// starting the service by SCM, there is no arguments will be passed in.
 	// the arguments will pass into Service_Main entry.
-        if (!StartServiceCtrlDispatcher(dispatchTable) )
+        if (!StartServiceCtrlDispatcher(dispatchTable))
             // If the service failed to start then print usage
 #endif
-	    fprintf( stderr, usage_short, argv[0], argv[0] );
+	    fprintf(stderr, usage_short, argv[0], argv[0]);
 	return 0;
     }
 
@@ -224,20 +224,20 @@ int main( int argc, char **argv ) {
     case kMode_Listener :
 #ifdef WIN32
 	// Remove the Windows service if requested
-	if ( isRemoveService( ext_gSettings ) ) {
+	if (isRemoveService(ext_gSettings)) {
 	    // remove the service
-	    if ( CmdRemoveService() ) {
+	    if (CmdRemoveService()) {
 		fprintf(stderr, "IPerf Service is removed.\n");
 	    }
 	}
-	if ( isDaemon( ext_gSettings ) ) {
+	if (isDaemon(ext_gSettings)) {
 	    CmdInstallService(argc, argv);
 	} else if (isRemoveService(ext_gSettings)) {
 	    return 0;
 	}
 #else // *nix system
-	if ( isDaemon( ext_gSettings ) ) {
-	    fprintf( stderr, "Running Iperf Server as a daemon\n");
+	if (isDaemon(ext_gSettings)) {
+	    fprintf(stderr, "Running Iperf Server as a daemon\n");
 	    // Start the server as a daemon
 	    fflush(stderr);
 	    // redirect stdin, stdout and sterr to /dev/null (see dameon and no close flag)
@@ -248,7 +248,7 @@ int main( int argc, char **argv ) {
 #endif
 	break;
     default :
-	fprintf( stderr, "unknown mode");
+	fprintf(stderr, "unknown mode");
 	break;
     }
 #ifdef HAVE_THREAD
@@ -269,7 +269,7 @@ int main( int argc, char **argv ) {
     }
 #else
     // No need to make a reporter thread because we don't have threads
-    thread_start( ext_gSettings );
+    thread_start(ext_gSettings);
 #endif
 
     // wait for other (client, server) threads to complete
@@ -284,17 +284,15 @@ int main( int argc, char **argv ) {
  * respond appropriately.. [static]
  * ------------------------------------------------------------------- */
 
-void Sig_Interupt( int inSigno ) {
+void Sig_Interupt(int inSigno) {
 #ifdef HAVE_THREAD
     // We try to not allow a single interrupt handled by multiple threads
     // to completely kill the app so we save off the first thread ID
     // then that is the only thread that can supply the next interrupt
-    if ( (inSigno == SIGINT) && thread_equalid( sThread, thread_zeroid() ) ) {
+    if ((inSigno == SIGINT) && thread_equalid(sThread, thread_zeroid())) {
         sThread = thread_getid();
-	// extern struct ReportHeader *ReportRoot;
-	// printf("ReportRoot=%p user_threads=%d\n", (void *) ReportRoot, thread_numuserthreads());
-    } else if ( thread_equalid( sThread, thread_getid() ) ) {
-        sig_exit( inSigno );
+    } else if (thread_equalid(sThread, thread_getid())) {
+        sig_exit(inSigno);
     }
     // global variable used by threads to see if they were interrupted
     sInterupted = inSigno;
@@ -305,11 +303,11 @@ void Sig_Interupt( int inSigno ) {
 #endif
 	// with threads, stop waiting for non-terminating threads
 	// (ie Listener Thread)
-	thread_release_nonterm( inSigno );
+	thread_release_nonterm(inSigno);
 
 #else
     // without threads, just exit quietly, same as sig_exit()
-    sig_exit( inSigno );
+    sig_exit(inSigno);
 #endif
 }
 
@@ -318,7 +316,7 @@ void Sig_Interupt( int inSigno ) {
  * either by exit() or terminating main().
  * ------------------------------------------------------------------- */
 
-void cleanup( void ) {
+void cleanup(void) {
 #ifdef WIN32
     // Shutdown Winsock
     WSACleanup();
@@ -337,7 +335,7 @@ void cleanup( void ) {
     Mutex_Destroy(&thread_debug_mutex);
 #endif
     // shutdown the thread subsystem
-    thread_destroy( );
+    thread_destroy();
 } // end cleanup
 
 #ifdef WIN32
@@ -353,20 +351,20 @@ VOID ServiceStart (DWORD dwArgc, LPTSTR *lpszArgv) {
 
     // report the status to the service control manager.
     //
-    if ( !ReportStatusToSCMgr(
+    if (!ReportStatusToSCMgr(
                              SERVICE_START_PENDING, // service state
                              NO_ERROR,              // exit code
-                             3000) )                 // wait hint
+                             3000))                 // wait hint
         goto clean;
 
     ext_gSettings = new thread_Settings;
 
     // Initialize settings to defaults
-    Settings_Initialize( ext_gSettings );
+    Settings_Initialize(ext_gSettings);
     // read settings from environment variables
-    Settings_ParseEnvironment( ext_gSettings );
+    Settings_ParseEnvironment(ext_gSettings);
     // read settings from command-line parameters
-    Settings_ParseCommandLine( dwArgc, lpszArgv, ext_gSettings );
+    Settings_ParseCommandLine(dwArgc, lpszArgv, ext_gSettings);
 
     // Arguments will be lost when the service is started by SCM, but
     // we need to be at least a listener
@@ -374,35 +372,35 @@ VOID ServiceStart (DWORD dwArgc, LPTSTR *lpszArgv) {
 
     // report the status to the service control manager.
     //
-    if ( !ReportStatusToSCMgr(
+    if (!ReportStatusToSCMgr(
                              SERVICE_START_PENDING, // service state
                              NO_ERROR,              // exit code
-                             3000) )                 // wait hint
+                             3000))                 // wait hint
         goto clean;
 
     // if needed, redirect the output into a specified file
-    if ( !isSTDOUT( ext_gSettings ) ) {
-        redirect( ext_gSettings->mOutputFileName );
+    if (!isSTDOUT(ext_gSettings)) {
+        redirect(ext_gSettings->mOutputFileName);
     }
 
     // report the status to the service control manager.
     //
-    if ( !ReportStatusToSCMgr(
+    if (!ReportStatusToSCMgr(
                              SERVICE_START_PENDING, // service state
                              NO_ERROR,              // exit code
-                             3000) )                 // wait hint
+                             3000))                 // wait hint
         goto clean;
 
     // initialize client(s)
-    if ( ext_gSettings->mThreadMode == kMode_Client ) {
-        client_init( ext_gSettings );
+    if (ext_gSettings->mThreadMode == kMode_Client) {
+        client_init(ext_gSettings);
     }
 
     // start up the reporter and client(s) or listener
     {
         thread_Settings *into = NULL;
 #ifdef HAVE_THREAD
-        Settings_Copy( ext_gSettings, &into );
+        Settings_Copy(ext_gSettings, &into);
         into->mThreadMode = kMode_Reporter;
         into->runNow = ext_gSettings;
 #else
@@ -413,10 +411,10 @@ VOID ServiceStart (DWORD dwArgc, LPTSTR *lpszArgv) {
 
     // report the status to the service control manager.
     //
-    if ( !ReportStatusToSCMgr(
+    if (!ReportStatusToSCMgr(
                              SERVICE_RUNNING,       // service state
                              NO_ERROR,              // exit code
-                             0) )                    // wait hint
+                             0))                    // wait hint
         goto clean;
 
     clean:
@@ -446,7 +444,7 @@ VOID ServiceStart (DWORD dwArgc, LPTSTR *lpszArgv) {
 //
 VOID ServiceStop() {
 #ifdef HAVE_THREAD
-    Sig_Interupt( 1 );
+    Sig_Interupt(1);
 #else
     sig_exit(1);
 #endif
