@@ -109,11 +109,11 @@ void listener_spawn(struct thread_Settings *thread) {
     // the Listener need to trigger a settings report
     setReport(thread);
     // start up a listener
-    theListener = new Listener( thread );
+    theListener = new Listener(thread);
 
     // Start listening
     theListener->Run();
-    DELETE_PTR( theListener );
+    DELETE_PTR(theListener);
 }
 
 /*
@@ -174,10 +174,7 @@ void client_spawn(struct thread_Settings *thread) {
 	Condition_TimedWait(&reporter_state.await, 1);
     }
     Condition_Unlock(reporter_state.await);
-    // Time for connect
-    //
-    // Note: ServerReverse traffic threads don't need a new connect()
-    // as they use the session created by the client's connect()
+
     if (isConnectOnly(thread)) {
 	theClient->ConnectPeriodic();
     } else if (!isServerReverse(thread)) {
