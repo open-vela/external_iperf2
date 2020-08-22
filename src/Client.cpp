@@ -409,9 +409,7 @@ void Client::Run(void) {
     if (isUDP(mSettings)) {
 	// Preset any UDP fields in the mBuf, a non-zero
 	// return indicates some udptests were set
-#if 0
-	Settings_GenerateClientHdr(mSettings, (client_hdr *) (mBuf + sizeof(struct UDP_datagram)));
-#endif
+	Settings_GenerateClientHdr(mSettings, (client_testhdr *) (mBuf + sizeof(struct UDP_datagram)));
 	if (isFileInput(mSettings)) {
 	    // Due to the UDP timestamps etc, included
 	    // reduce the read size by an amount
@@ -1154,13 +1152,10 @@ void Client::AwaitServerCloseEvent(void) {
 void Client::InitiateServer(void) {
     if (!isCompat(mSettings) && !isConnectOnly(mSettings)) {
 	int flags = 0;
-        struct client_hdr* tmp_hdr = \
-	    (isUDP(mSettings) ? (struct client_hdr *) (((struct UDP_datagram*)mBuf) + 1) \
-	     : (struct client_hdr *) mBuf);
-
-#if 0
+        struct client_testhdr* tmp_hdr = \
+	    (isUDP(mSettings) ? (struct client_testhdr *) (((struct UDP_datagram*)mBuf) + 1) \
+	     : (struct client_testhdr *) mBuf);
 	flags = Settings_GenerateClientHdr(mSettings, tmp_hdr);
-#endif
 	if (!isUDP(mSettings) && (flags & (HEADER_EXTEND | HEADER_VERSION1))) {
 	    //  This test requires the pre-test header messages
 	    //  The extended headers require an exchange
@@ -1178,7 +1173,7 @@ void Client::HdrXchange(int flags) {
 	if (flags & HEADER_EXTEND) {
 	    // Run compatability detection and test info exchange for tests that require it
 	    int optflag;
-	    len = sizeof(client_tcphdr);
+	    len = sizeof(client_testhdr);
 #ifdef TCP_NODELAY
 	    // Disable Nagle to reduce latency of this intial message
 	    optflag=1;

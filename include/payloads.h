@@ -338,7 +338,6 @@ struct client_hdr_udp_tests {
     struct client_hdrext_isoch isoch_ext;
 };
 
-
 struct client_hdr_udp_isoch_tests {
     struct client_hdr_udp_tests udptests;
     struct UDP_isoch_payload isoch;
@@ -353,11 +352,6 @@ struct client_hdr_ack {
     uint32_t reserved2;
 };
 
-struct client_udphdr {
-    struct UDP_datagram udpbase;
-    struct client_hdr_v1 base;
-    struct client_hdr_udp_tests udp;
-};
 
 /*
  * TCP payload structure
@@ -397,7 +391,15 @@ struct client_udphdr {
  *            16  |        tos                        |
  *                +--------+--------+--------+--------+
  */
-struct client_tcphdr {
+struct client_testhdr {
+    struct client_hdr_v1 base;
+    union {
+	struct client_hdrext extend;
+	struct client_hdr_udp_tests udp;
+    };
+};
+struct client_udphdr {
+    struct UDP_datagram seqno_ts;
     struct client_hdr_v1 base;
     struct client_hdrext extend;
 };
@@ -466,7 +468,7 @@ struct server_hdr {
 #define SIZEOF_UDPHDRMSG_V1 (sizeof(struct client_hdrv1) + sizeof(struct UDP_datagram))
 #define SIZEOF_UDPHDRMSG_EXT (sizeof(struct client_udphdr))
 #define SIZEOF_TCPHDRMSG_V1 (sizeof(struct client_hdr_v1))
-#define SIZEOF_TCPHDRMSG_EXT (sizeof(struct client_tcphdr))
+#define SIZEOF_TCPHDRMSG_EXT (sizeof(struct client_testhdr))
 #define MBUFALLOCSIZE (((int) sizeof(struct client_udphdr) > mSettings->mBufLen) ? (int) sizeof(struct client_udphdr) : mSettings->mBufLen)
 #ifdef __cplusplus
 } /* end extern "C" */

@@ -892,7 +892,7 @@ void Listener::apply_client_settings (thread_Settings *server) {
 	struct client_udphdr *hdr = (struct client_udphdr *) mBuf;
 	uint32_t flags = ntohl(hdr->base.flags);
 	if ((flags & HEADER_UDPTESTS) != 0) {
-	    uint16_t testflags = ntohs(hdr->udp.testflags);
+	    uint16_t testflags = ntohs(hdr->extend.flags);
 	    // Handle stateless flags
 	    if ((testflags & HEADER_UDP_ISOCH) != 0) {
 		setIsochronous(server);
@@ -919,11 +919,11 @@ void Listener::apply_client_settings (thread_Settings *server) {
     } else {
 	n = recvn(server->mSock, mBuf, sizeof(uint32_t), MSG_PEEK);
 	FAIL_errno((n != sizeof(uint32_t)), "read tcp flags", server);
-	struct client_tcphdr *hdr = (struct client_tcphdr *) mBuf;
+	struct client_testhdr *hdr = (struct client_testhdr *) mBuf;
 	uint32_t flags = ntohl(hdr->base.flags);
 	peeklen = 0;
 	if (flags & HEADER_EXTEND) {
-	    peeklen = sizeof(struct client_tcphdr);
+	    peeklen = sizeof(struct client_testhdr);
 	} else if (flags & HEADER_VERSION1) {
 	    peeklen = sizeof(struct client_hdr_v1);
 	}

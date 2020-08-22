@@ -1259,7 +1259,7 @@ void Settings_GenerateListenerSettings( struct thread_Settings *client, struct t
  * per things like dual tests.
  *
  */
-void Settings_GenerateClientSettings(struct thread_Settings *server, struct thread_Settings **client, struct client_tcphdr *hdr) {
+void Settings_GenerateClientSettings(struct thread_Settings *server, struct thread_Settings **client, struct client_testhdr *hdr) {
     assert(server != NULL);
     assert(hdr != NULL);
     uint32_t flags = ntohl(hdr->base.flags);
@@ -1384,8 +1384,7 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
  *
  * Returns hdr flags set
  */
-#if 0
-int Settings_GenerateClientHdr(struct thread_Settings *client, client_tcphdr *hdr) {
+int Settings_GenerateClientHdr(struct thread_Settings *client, client_testhdr *hdr) {
     uint32_t flags = 0, extendflags = 0;
     if (isPeerVerDetect(client) || (client->mMode != kTest_Normal && isBWSet(client))) {
 	flags |= HEADER_EXTEND;
@@ -1421,7 +1420,6 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, client_tcphdr *hd
 	 * set the default offset where underlying "inline" subsystems can write into the udp payload
 	 */
 	hdr->udp.tlvoffset = htons((sizeof(client_hdr_udp_tests) + sizeof(client_hdr_v1) + sizeof(UDP_datagram)));
-
 	if (isL2LengthCheck(client) || isIsochronous(client) || isNoUDPfin(client) || isTripTime(client)) {
 	    flags |= HEADER_UDPTESTS;
 	    uint16_t testflags = 0;
@@ -1506,4 +1504,3 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, client_tcphdr *hd
     }
     return (flags);
 }
-#endif

@@ -226,7 +226,7 @@ struct thread_Settings {
     int mRXunits;
     double mRXci_lower;
     double mRXci_upper;
-#if defined( HAVE_WIN32_THREAD )
+#if defined(HAVE_WIN32_THREAD)
     HANDLE mHandle;
 #endif
     double mFPS; //frames per second
@@ -466,19 +466,19 @@ struct thread_Settings {
 #define unsetSumOnly(settings) settings->flags_extend &= ~FLAG_SUMONLY
 
 // set to defaults
-void Settings_Initialize( struct thread_Settings* main );
+void Settings_Initialize(struct thread_Settings* main);
 
 // copy structure
-void Settings_Copy( struct thread_Settings* from, struct thread_Settings** into );
+void Settings_Copy(struct thread_Settings* from, struct thread_Settings** into);
 
 // free associated memory
-void Settings_Destroy( struct thread_Settings *mSettings );
+void Settings_Destroy(struct thread_Settings *mSettings);
 
 // parse settings from user's environment variables
-void Settings_ParseEnvironment( struct thread_Settings *mSettings );
+void Settings_ParseEnvironment(struct thread_Settings *mSettings);
 
 // parse settings from app's command line
-void Settings_ParseCommandLine( int argc, char **argv, struct thread_Settings *mSettings );
+void Settings_ParseCommandLine(int argc, char **argv, struct thread_Settings *mSettings);
 
 // convert to lower case for [KMG]bits/sec
 void Settings_GetLowerCaseArg(const char *,char *);
@@ -487,16 +487,14 @@ void Settings_GetLowerCaseArg(const char *,char *);
 void Settings_GetUpperCaseArg(const char *,char *);
 
 // generate settings for listener instance
-void Settings_GenerateListenerSettings( struct thread_Settings *client, struct thread_Settings **listener);
+void Settings_GenerateListenerSettings(struct thread_Settings *client, struct thread_Settings **listener);
 
 // generate settings for speaker instance
-struct client_hdr; // forward declaration found in payloads.h
-void Settings_GenerateClientSettings( struct thread_Settings *server,
-				      struct thread_Settings **client,
-                                      struct client_hdr *hdr );
+struct client_testhdr; // forward declaration found in payloads.h
+void Settings_GenerateClientSettings(struct thread_Settings *server, struct thread_Settings **client, struct client_testhdr *hdr);
 
 // generate client header for server
-int Settings_GenerateClientHdr( struct thread_Settings *client, struct client_hdr *hdr );
+int Settings_GenerateClientHdr(struct thread_Settings *client, struct client_testhdr *hdr);
 
 #ifdef __cplusplus
 } /* end extern "C" */
