@@ -381,6 +381,18 @@ inline void Server::SetReportStartTime (void) {
 	myReport->info.ts.nextTime = myReport->info.ts.startTime;
 	TimeAdd(myReport->info.ts.nextTime, myReport->info.ts.intervalTime);
     }
+    if (myReport->GroupSumReport) {
+	struct TransferInfo *sumstats = &myReport->GroupSumReport->info;
+	assert(sumstats != NULL);
+	Mutex_Lock(&myReport->GroupSumReport->reference.lock);
+	if (TimeZero(sumstats->ts.startTime)) {
+	    sumstats->ts.startTime = myReport->info.ts.startTime;
+	    if (isModeTime(mSettings)) {
+		sumstats->ts.nextTime = myReport->info.ts.nextTime;
+	    }
+	}
+	Mutex_Unlock(&myReport->GroupSumReport->reference.lock);
+    }
 }
 
 void Server::InitTrafficLoop (void) {
@@ -394,23 +406,16 @@ void Server::InitTrafficLoop (void) {
         myDropSocket = mSettings->mSockDrop;
 #endif
     // full duplex sockets need to be traffic synchronized
-    int barrier_flag=0;
     if (isBidir(mSettings))
-	barrier_flag = bidir_start_barrier(&mSettings->bidir_startstop);
-    SetReportStartTime();
-    if (barrier_flag && (myReport->FullDuplexReport != NULL)) {
-	myReport->FullDuplexReport->info.ts.startTime = myReport->info.ts.startTime;
-	myReport->FullDuplexReport->info.ts.nextTime = myReport->info.ts.nextTime;
-    }
+	bidir_start_barrier(&mSettings->bidir_startstop);
+
     // Initialze the reportstruct scratchpad
     reportstruct = &scratchpad;
     reportstruct->packetID = 0;
     reportstruct->l2len = 0;
     reportstruct->l2errors = 0x0;
 
-    // This will only have the connection report
-    PostReport(myJob);
-
+    SetReportStartTime();
     if (isServerModeTime(mSettings) || (isModeTime(mSettings) && isServerReverse(mSettings))) {
 #ifdef HAVE_SETITIMER
         int err;
@@ -425,6 +430,8 @@ void Server::InitTrafficLoop (void) {
         mEndTime.setnow();
         mEndTime.add( mSettings->mAmount / 100.0 );
     }
+    PostReport(myJob);
+
 }
 
 inline int Server::ReadWithRxTimestamp (int *readerr) {

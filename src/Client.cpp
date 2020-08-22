@@ -288,9 +288,8 @@ inline void Client::SetReportStartTime (void) {
 	assert(sumstats != NULL);
 	Mutex_Lock(&myReport->GroupSumReport->reference.lock);
 	if (TimeZero(sumstats->ts.startTime)) {
-	    printf("setting sum start time \n");
 	    sumstats->ts.startTime = myReport->info.ts.startTime;
-	    if (!TimeZero(myReport->info.ts.intervalTime)) {
+	    if (isModeTime(mSettings)) {
 		sumstats->ts.nextTime = myReport->info.ts.nextTime;
 	    }
 	}
