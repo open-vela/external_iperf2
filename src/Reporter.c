@@ -1436,10 +1436,6 @@ int reporter_condprint_time_interval_report (struct ReporterData *data, struct R
 #ifdef DEBUG_PPS
 	printf("*** packetID TRIGGER = %ld pt=%ld.%ld empty=%d nt=%ld.%ld\n",packet->packetID, packet->packetTime.tv_sec, packet->packetTime.tv_usec, packet->emptyreport, data->nextTime.tv_sec, data->nextTime.tv_usec);
 #endif
-	if (sumstats && TimeZero(sumstats->ts.startTime)) {
-	    sumstats->ts.startTime = stats->ts.startTime;
-	    sumstats->ts.nextTime = stats->ts.nextTime;
-	}
 	reporter_set_timestamps_time(&stats->ts, INTERVAL);
 	(*data->transfer_protocol_handler)(data, 0);
 	if (sumstats) {

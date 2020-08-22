@@ -267,10 +267,10 @@ void Client::StartSynch (void) {
     if (isBidir(mSettings))
 	bidir_start_barrier(&mSettings->bidir_startstop);
 
-    SetReportStartTime();
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Client start sync exited");
 #endif
+
 }
 
 inline void Client::SetReportStartTime (void) {
@@ -282,6 +282,19 @@ inline void Client::SetReportStartTime (void) {
     if (!TimeZero(myReport->info.ts.intervalTime)) {
 	myReport->info.ts.nextTime = myReport->info.ts.startTime;
 	TimeAdd(myReport->info.ts.nextTime, myReport->info.ts.intervalTime);
+    }
+    if (myReport->GroupSumReport) {
+	struct TransferInfo *sumstats = &myReport->GroupSumReport->info;
+	assert(sumstats != NULL);
+	Mutex_Lock(&myReport->GroupSumReport->reference.lock);
+	if (TimeZero(sumstats->ts.startTime)) {
+	    printf("setting sum start time \n");
+	    sumstats->ts.startTime = myReport->info.ts.startTime;
+	    if (!TimeZero(myReport->info.ts.intervalTime)) {
+		sumstats->ts.nextTime = myReport->info.ts.nextTime;
+	    }
+	}
+	Mutex_Unlock(&myReport->GroupSumReport->reference.lock);
     }
 }
 
@@ -348,15 +361,25 @@ void Client::InitTrafficLoop (void) {
 
     // set the total bytes sent to zero
     totLen = 0;
-
     if (isModeTime(mSettings)) {
         mEndTime.setnow();
         mEndTime.add( mSettings->mAmount / 100.0 );
     }
 
-    lastPacketTime.setnow();
     readAt = mBuf;
-
+    SetReportStartTime();
+    lastPacketTime.set(myReport->info.ts.startTime.tv_sec, myReport->info.ts.startTime.tv_usec);
+    reportstruct->errwrite=WriteNoErr;
+    reportstruct->emptyreport=0;
+    reportstruct->packetLen = 0;
+    // Finally, post this thread's "job report" which the reporter thread
+    // will continuously process as long as there are packets flowing
+    // right now the ring is empty
+    if (isDataReport(mSettings)) {
+	assert(myJob!=NULL);
+	assert(myReport!=NULL);
+	PostReport(myJob);
+    }
     // Set up trip time values that don't change
     if (isTripTime(mSettings) || isIsochronous(mSettings)) {
       struct TCP_burst_payload * mBuf_burst = (struct TCP_burst_payload *) mBuf;
@@ -379,17 +402,6 @@ void Client::InitTrafficLoop (void) {
  * ------------------------------------------------------------------- */
 void Client::Run(void) {
     // Initialize the report struct scratch pad
-    reportstruct->errwrite=WriteNoErr;
-    reportstruct->emptyreport=0;
-    reportstruct->packetLen = 0;
-    // Finally, post this thread's "job report" which the reporter thread
-    // will continuously process as long as there are packets flowing
-    // right now the ring is empty
-    if (isDataReport(mSettings)) {
-	assert(myJob!=NULL);
-	assert(myReport!=NULL);
-	PostReport(myJob);
-    }
     // Peform common traffic setup
     InitTrafficLoop();
     /*
@@ -827,8 +839,7 @@ void Client::RunUDPIsochronous (void) {
 	    else
 		adjust = 1000.0 * lastPacketTime.subUsec( reportstruct->packetTime );
 
-	    lastPacketTime.set( reportstruct->packetTime.tv_sec,
-				reportstruct->packetTime.tv_usec );
+	    lastPacketTime.set(reportstruct->packetTime.tv_sec, reportstruct->packetTime.tv_usec);
 	    // Since linux nanosleep/busyloop can exceed delay
 	    // there are two possible equilibriums
 	    //  1)  Try to perserve inter packet gap
