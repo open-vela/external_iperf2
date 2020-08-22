@@ -1127,15 +1127,16 @@ void Client::PostNullEvent(void) {
     ReportPacket(myReport, &emptypacket);
 }
 
+// The client end timer is based upon the final fin, fin-ack w/the server
+// A way to detect this is to hang a recv and wait for the zero byte
+// return indicating the socket is closed for recv per the server
+// closing it's socket
 #define MINAWAITCLOSEUSECS 2000000
 void Client::AwaitServerCloseEvent(void) {
-    // force the reporter to get current, the await
-    // detection can take awhile so post a non event ahead of it
+    // the await detection can take awhile so post a non event ahead of it
     PostNullEvent();
-    unsigned int amount_usec = MINAWAITCLOSEUSECS;
-    if (isModeTime(mSettings)) {
-	amount_usec = (mSettings->mAmount * 10000);
-    }
+    unsigned int amount_usec = \
+	(isModeTime(mSettings) ? amount_usec = (mSettings->mAmount * 10000) : MINAWAITCLOSEUSECS);
     if (amount_usec < MINAWAITCLOSEUSECS)
 	amount_usec = MINAWAITCLOSEUSECS;
     SetSocketOptionsReceiveTimeout(mSettings, amount_usec);
