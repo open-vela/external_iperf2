@@ -834,6 +834,7 @@ int Listener::my_accept (thread_Settings *server) {
 	thread_debug("Listener thread listening for TCP (sock=%d)", ListenSocket);
     }
 #endif
+    SockAddr_zeroAddress(&server->peer);
     server->size_peer = sizeof(iperf_sockaddr);
     server->accept_time.tv_sec = 0;
     server->accept_time.tv_usec = 0;
@@ -843,8 +844,15 @@ int Listener::my_accept (thread_Settings *server) {
     } else {
 	// accept a TCP  connection
 	server->mSock = accept(ListenSocket, (sockaddr*) &server->peer, &server->size_peer);
-	if (server->mSock > 0)
+	if (server->mSock > 0) {
+	    server->size_local = sizeof(iperf_sockaddr);
+	    getsockname(server->mSock, (sockaddr*) &server->local, &server->size_local);
+	    SockAddr_Ifrname(server);
 	    Iperf_push_host(&server->peer, server);
+	    if (isConnectionReport(server) && !isSumOnly(server)) {
+		PostReport(InitConnectionReport(server, 0));
+	    }
+	}
     }
     if (server->mSock > 0) {
 	Timestamp now;
@@ -861,7 +869,6 @@ int Listener::my_accept (thread_Settings *server) {
 void Listener::apply_client_settings (thread_Settings *server) {
     assert(server != NULL);
     assert(mBuf != NULL);
-    struct ReportHeader* connect_report = InitConnectionReport(server, 0.0);
     int n, peeklen;
     // Set the receive timeout for the very first read based upon the -t
     // and not -i.
@@ -931,7 +938,6 @@ void Listener::apply_client_settings (thread_Settings *server) {
 	    reporter_peerversion(server, ntohl(hdr->extend.version_u), ntohl(hdr->extend.version_l));
 #endif
     }
-    PostReport(connect_report);
     // Handle flags that require an ack back to the client
     if (!isMulticast(mSettings)) {
 	client_test_ack(server);
