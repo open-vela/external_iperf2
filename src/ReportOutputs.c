@@ -771,29 +771,32 @@ void reporter_print_settings_report(struct ReportSettings *report) {
     printf("%s", separator_line);
 }
 
-
 void reporter_peerversion (struct ConnectionInfo *report, uint32_t upper, uint32_t lower) {
-    int rel, major, minor, alpha;
-    report->peerversion[0] = '\0';
-    rel = (upper & 0xFFFF0000) >> 16;
-    major = (upper & 0x0000FFFF);
-    minor = (lower & 0xFFFF0000) >> 16;
-    alpha = (lower & 0x0000000F);
-    sprintf(report->peerversion," (peer %d.%d.%d)", rel, major, minor);
-    switch(alpha) {
-    case 0:
-	sprintf(report->peerversion + strlen(report->peerversion) - 1,"-alpha)");
-	break;
-    case 1:
-	sprintf(report->peerversion + strlen(report->peerversion) - 1,"-beta)");
-	break;
-    case 2:
-	sprintf(report->peerversion + strlen(report->peerversion) - 1,"-rc)");
-	break;
-    case 3:
-	break;
-    default:
-	sprintf(report->peerversion + strlen(report->peerversion) - 1, "-unk)");
+    if (!upper || !lower) {
+	report->peerversion[0]='\0';
+    } else {
+	int rel, major, minor, alpha;
+	rel = (upper & 0xFFFF0000) >> 16;
+	major = (upper & 0x0000FFFF);
+	minor = (lower & 0xFFFF0000) >> 16;
+	alpha = (lower & 0x0000000F);
+	snprintf(report->peerversion, (PEERVERBUFSIZE-10), " (peer %d.%d.%d)", rel, major, minor);
+	switch(alpha) {
+	case 0:
+	    sprintf(report->peerversion + strlen(report->peerversion) - 1,"-alpha)");
+	    break;
+	case 1:
+	    sprintf(report->peerversion + strlen(report->peerversion) - 1,"-beta)");
+	    break;
+	case 2:
+	    sprintf(report->peerversion + strlen(report->peerversion) - 1,"-rc)");
+	    break;
+	case 3:
+	    break;
+	default:
+	    sprintf(report->peerversion + strlen(report->peerversion) - 1, "-unk)");
+	}
+	report->peerversion[PEERVERBUFSIZE-1]='\0';
     }
 }
 

@@ -476,6 +476,7 @@ struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, d
     struct ConnectionInfo * creport = (struct ConnectionInfo *)(reporthdr->this_report);
     common_copy(&creport->common, inSettings);
     // Fill out known fields for the connection report
+    reporter_peerversion(creport, inSettings->peer_version_u, inSettings->peer_version_u);
     creport->peer = inSettings->peer;
     creport->size_peer = inSettings->size_peer;
     creport->local = inSettings->local;

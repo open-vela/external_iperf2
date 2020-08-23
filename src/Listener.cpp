@@ -273,6 +273,9 @@ void Listener::Run (void) {
 		    continue;
 		}
 	    }
+	    if (isConnectionReport(server) && !isSumOnly(server)) {
+		PostReport(InitConnectionReport(server, 0));
+	    }
 	    // Read any more test settings and test values (not just the flags) and instantiate
 	    // any settings objects for client threads (e.g. bidir or full duplex)
 	    // This will set the listener_client_settings to NULL if
@@ -283,11 +286,9 @@ void Listener::Run (void) {
 	    // has to skip over the UDP seq no, etc.
 	    //
 	    thread_Settings *listener_client_settings = NULL;
-#if 0
 	    Settings_GenerateClientSettings(server, &listener_client_settings, \
-					    (UDP ? (struct client_hdr *) (((struct UDP_datagram*)mBuf) + 1) \
-					     : (struct client_hdr *) mBuf));
-#endif
+					    (isUDP(server) ? (struct client_testhdr *) (((struct UDP_datagram*)mBuf) + 1) \
+					     : (struct client_testhdr *) mBuf));
 	    // This is the case when --write-ack was used on the client requesting
 	    // application level acknowledgements. Useful for end/end or app/app latency testing
 	    if (isWriteAck(server)) {
@@ -305,13 +306,12 @@ void Listener::Run (void) {
 	    // this is slightly different than the legacy iperf2's -d and -r.
 	    if (listener_client_settings && isBidir(listener_client_settings)) {
 		setBidir(server);
-		if (isDataReport(server)) {
-		    listener_client_settings->mBidirReport = InitSumReport(server, groupID);
-		    server->mBidirReport = listener_client_settings->mBidirReport;
+		Iperf_push_host(&listener_client_settings->local, listener_client_settings);
+		listener_client_settings->mBidirReport = InitSumReport(server, groupID);
+		server->mBidirReport = listener_client_settings->mBidirReport;
 #if HAVE_THREAD_DEBUG
 		    thread_debug("BiDir report client=%p/%p server=%p/%p", (void *) listener_client_settings, (void *) listener_client_settings->mBidirReport, (void *) server, (void *) server->mBidirReport);
 #endif
-		}
 		listener_client_settings->mThreadMode=kMode_Client;
 		thread_start(listener_client_settings);
 	    } else if (isServerReverse(server)) {
@@ -849,9 +849,6 @@ int Listener::my_accept (thread_Settings *server) {
 	    getsockname(server->mSock, (sockaddr*) &server->local, &server->size_local);
 	    SockAddr_Ifrname(server);
 	    Iperf_push_host(&server->peer, server);
-	    if (isConnectionReport(server) && !isSumOnly(server)) {
-		PostReport(InitConnectionReport(server, 0));
-	    }
 	}
     }
     if (server->mSock > 0) {
@@ -885,11 +882,13 @@ void Listener::apply_client_settings (thread_Settings *server) {
 	    WARN_errno( server->mSock == SO_RCVTIMEO, "socket" );
 	}
     }
+    server->peer_version_u = 0;
+    server->peer_version_l = 0;
     if (isUDP(server)) {
 	peeklen = sizeof(struct client_udphdr);
 	n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK);
 	FAIL_errno((n < peeklen), "read flags", server);
-	struct client_udphdr *hdr = (struct client_udphdr *) mBuf;
+	struct client_testhdr *hdr = (struct client_testhdr *) (((struct UDP_datagram*)mBuf) + 1);
 	uint32_t flags = ntohl(hdr->base.flags);
 	if ((flags & HEADER_UDPTESTS) != 0) {
 	    uint16_t testflags = ntohs(hdr->extend.flags);
@@ -912,9 +911,8 @@ void Listener::apply_client_settings (thread_Settings *server) {
 		setTripTime(server);
 	    }
 	    setSeqNo64b(server);
-#if 0
-	    reporter_peerversion(server, ntohl(hdr->udp.version_u), ntohl(hdr->udp.version_l));
-#endif
+	    server->peer_version_u = ntohl(hdr->udp.version_u);
+	    server->peer_version_l = ntohl(hdr->udp.version_l);
 	}
     } else {
 	n = recvn(server->mSock, mBuf, sizeof(uint32_t), MSG_PEEK);
@@ -933,10 +931,10 @@ void Listener::apply_client_settings (thread_Settings *server) {
 	if (peeklen && ((n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK)) != peeklen)) {
 	    FAIL_errno(1, "read tcp test info", server);
 	}
-#if 0
-	if (flags & HEADER_EXTEND)
-	    reporter_peerversion(server, ntohl(hdr->extend.version_u), ntohl(hdr->extend.version_l));
-#endif
+	if (flags & HEADER_EXTEND) {
+	    server->peer_version_u = ntohl(hdr->extend.version_u);
+	    server->peer_version_l = ntohl(hdr->extend.version_l);
+	}
     }
     // Handle flags that require an ack back to the client
     if (!isMulticast(mSettings)) {

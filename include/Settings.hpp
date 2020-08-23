@@ -246,6 +246,8 @@ struct thread_Settings {
     struct BarrierMutex *connects_done;
     struct BarrierMutex bidir_startstop;
     int numreportstructs;
+    int32_t peer_version_u;
+    int32_t peer_version_l;
 };
 
 /*

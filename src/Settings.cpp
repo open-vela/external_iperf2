@@ -1385,11 +1385,10 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
  * Returns hdr flags set
  */
 int Settings_GenerateClientHdr(struct thread_Settings *client, client_testhdr *hdr) {
+    if (isCompat(client))
+	    return 0;
     uint32_t flags = 0, extendflags = 0;
-    if (isPeerVerDetect(client) || (client->mMode != kTest_Normal && isBWSet(client))) {
-	flags |= HEADER_EXTEND;
-    }
-    flags |= HEADER_SEQNO64B;
+    flags = (HEADER_SEQNO64B | HEADER_EXTEND);
     if (isTripTime(client))
 	flags |= HEADER_TRIPTIME;
     if ((client->mMode != kTest_Normal) || isReverse(client)) {

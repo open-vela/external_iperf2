@@ -63,19 +63,21 @@
 #include "Write_ack.hpp"
 
 #define MINBARRIERTIMEOUT 3
-int bidir_start_barrier (struct BarrierMutex *barrier) {
+
+static int bidir_startstop_barrier (struct BarrierMutex *barrier) {
     int rc = 0;
     assert(barrier != NULL);
     Condition_Lock(barrier->await);
     if (++barrier->count == 2) {
 	rc = 1;
+	barrier->count = 0;
 	// last one wake's up everyone else'
 	Condition_Broadcast(&barrier->await);
     } else {
 	int timeout = barrier->timeout;
 	while ((barrier->count != 2) && (timeout > 0)) {
 #ifdef HAVE_THREAD_DEBUG
-	    thread_debug("BiDir start barrier wait  %p (%d)", (void *)&barrier->await, timeout);
+	    thread_debug("BiDir startstop barrier wait  %p %d/2 (%d)", (void *)&barrier->await, barrier->count, timeout);
 #endif
 	    Condition_TimedWait(&barrier->await, 1);
 	    timeout--;
@@ -86,26 +88,19 @@ int bidir_start_barrier (struct BarrierMutex *barrier) {
 	}
     }
     Condition_Unlock(barrier->await);
+    return rc;
+}
+int bidir_start_barrier (struct BarrierMutex *barrier) {
+    int rc=bidir_startstop_barrier(barrier);
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("BiDir start barrier on condition %p last=%d", (void *)&barrier->await, rc);
+    thread_debug("BiDir start barrier done on condition %p ", (void *)&barrier->await, rc);
 #endif
     return rc;
 }
-
 int bidir_stop_barrier (struct BarrierMutex *barrier) {
-    assert(barrier != NULL);
-    int rc = 0;
-    Condition_Lock(barrier->await);
-    if (--barrier->count == 0) {
-	rc = 1;
-	// last one wake's up other and closes the socket
-	Condition_Broadcast(&barrier->await);
-    } else {
-        Condition_Wait(&barrier->await);
-    }
-    Condition_Unlock(barrier->await);
+    int rc =bidir_startstop_barrier(barrier);
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("BiDir sttop barrier on condition %p last=%d", (void *)&barrier->await, rc);
+    thread_debug("BiDir stop barrier done on condition %p ", (void *)&barrier->await, rc);
 #endif
     return rc;
 }
@@ -222,6 +217,7 @@ void client_spawn(struct thread_Settings *thread) {
 		if (thread->bidir_startstop.timeout < MINBARRIERTIMEOUT)
 		    thread->bidir_startstop.timeout = MINBARRIERTIMEOUT;
 		Condition_Initialize(&thread->bidir_startstop.await);
+		thread->bidir_startstop.count = 0;
 		thread->mBidirReport = InitSumReport(thread, thread->mSock);
 		IncrSumReportRefCounter(thread->mBidirReport);
 	    }
