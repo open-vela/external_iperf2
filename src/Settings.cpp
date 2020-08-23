@@ -1270,7 +1270,8 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 	    setWriteAck(server);
 	if (extendflags & TCP_ISOCH)
 	    setIsochronous(server);
-	if (!isBWSet(server)) {
+#if 0
+	if (isBWSet(server)) {
 	    (*client)->mUDPRate = ntohl(hdr->extend.mRate);
 	    if ((extendflags & UNITS_PPS) == UNITS_PPS) {
 		(*client)->mUDPRateUnits = kRate_PPS;
@@ -1278,6 +1279,7 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 		(*client)->mUDPRateUnits = kRate_BW;
 	    }
 	}
+#endif
 	if (((extendflags & BIDIR) == BIDIR) ||	 \
 	    ((extendflags & REVERSE) == REVERSE)) {
 	    if ((extendflags & BIDIR) == BIDIR) {
@@ -1326,7 +1328,7 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 	}
     } else if ((flags & HEADER_VERSION1) != 0) {
         *client = new struct thread_Settings;
-        memcpy(*client, server, sizeof( struct thread_Settings ));
+        memcpy(*client, server, sizeof(struct thread_Settings));
         setCompat( (*client) );
         (*client)->mTID = thread_zeroid();
         (*client)->mPort       = (unsigned short) ntohl(hdr->base.mPort);
