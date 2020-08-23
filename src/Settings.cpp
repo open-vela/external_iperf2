@@ -1388,7 +1388,15 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, client_testhdr *h
     if (isCompat(client))
 	    return 0;
     uint32_t flags = 0, extendflags = 0;
+    memset(hdr, 0, sizeof(client_testhdr));
     flags = (HEADER_SEQNO64B | HEADER_EXTEND);
+    if (isUDP(client)) {
+	hdr->udp.version_u = htonl(IPERF_VERSION_MAJORHEX);
+	hdr->udp.version_l = htonl(IPERF_VERSION_MINORHEX);
+    } else {
+	hdr->extend.version_u = htonl(IPERF_VERSION_MAJORHEX);
+	hdr->extend.version_l = htonl(IPERF_VERSION_MINORHEX);
+    }
     if (isTripTime(client))
 	flags |= HEADER_TRIPTIME;
     if ((client->mMode != kTest_Normal) || isReverse(client)) {
