@@ -938,7 +938,8 @@ void Listener::apply_client_settings (thread_Settings *server) {
     }
     // Handle flags that require an ack back to the client
     if (!isMulticast(mSettings)) {
-	client_test_ack(server);
+	if (server->peer_version_l <= 13)
+	    client_test_ack(server);
     }
 }
 
