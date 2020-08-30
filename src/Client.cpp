@@ -184,6 +184,7 @@ void Client::my_connect(void) {
 		      SockAddr_get_sizeof_sockaddr( &mSettings->peer ));
 	connect_done.setnow();
 	connecttime = 1e3 * connect_done.subSec(connect_start);
+	mSettings->connecttime = connecttime;
     } else {
 	rc = connect( mySocket, (sockaddr*) &mSettings->peer,
 		      SockAddr_get_sizeof_sockaddr( &mSettings->peer ));
@@ -207,7 +208,8 @@ void Client::my_connect(void) {
 	assert(tmp!=NULL);
 	PostReport(tmp);
     }
-    if (isConnectionReport(mSettings) && !isSumOnly(mSettings))
+    // Post the connect report unless peer version exchange is set
+    if (isConnectionReport(mSettings) && !isPeerVerDetect(mSettings) && !isSumOnly(mSettings))
 	PostReport(InitConnectionReport(mSettings, connecttime));
 } // end Connect
 
@@ -368,6 +370,9 @@ void Client::InitTrafficLoop (void) {
     readAt = mBuf;
     SetReportStartTime();
     lastPacketTime.set(myReport->info.ts.startTime.tv_sec, myReport->info.ts.startTime.tv_usec);
+    SendFirstPayload(myReport->info.ts.startTime);
+    if (isConnectionReport(mSettings) && isPeerVerDetect(mSettings) && !isSumOnly(mSettings))
+	PostReport(InitConnectionReport(mSettings, mSettings->connecttime));
     reportstruct->errwrite=WriteNoErr;
     reportstruct->emptyreport=0;
     reportstruct->packetLen = 0;
@@ -379,15 +384,7 @@ void Client::InitTrafficLoop (void) {
 	assert(myReport!=NULL);
 	PostReport(myJob);
     }
-    // Set up trip time values that don't change
-    if (isTripTime(mSettings) || isIsochronous(mSettings)) {
-      struct TCP_burst_payload * mBuf_burst = (struct TCP_burst_payload *) mBuf;
-      mBuf_burst->typelen.type = htonl(CLIENTTCPHDR);
-      mBuf_burst->typelen.length =  htonl(sizeof(struct TCP_burst_payload));
-      mBuf_burst->flags = htonl(HEADER_TRIPTIME | HEADER_SEQNO64B);
-      mBuf_burst->start_tv_sec = htonl(myReport->info.ts.startTime.tv_sec);
-      mBuf_burst->start_tv_usec = htonl(myReport->info.ts.startTime.tv_usec);
-    }
+
 }
 
 /* -------------------------------------------------------------------
@@ -407,9 +404,6 @@ void Client::Run(void) {
      * UDP specific setup
      */
     if (isUDP(mSettings)) {
-	// Preset any UDP fields in the mBuf, a non-zero
-	// return indicates some udptests were set
-	Settings_GenerateClientHdr(mSettings, (client_testhdr *) (mBuf + sizeof(struct UDP_datagram)));
 	if (isFileInput(mSettings)) {
 	    // Due to the UDP timestamps etc, included
 	    // reduce the read size by an amount
@@ -1150,80 +1144,59 @@ void Client::AwaitServerCloseEvent(void) {
 #endif
 }
 
-void Client::InitiateServer(void) {
+void Client::SendFirstPayload (struct timeval startTime) {
     if (!isCompat(mSettings) && !isConnectOnly(mSettings)) {
-	int flags = 0;
+	int currLen = 0;
+	int len = 0;
         struct client_testhdr* tmp_hdr = \
 	    (isUDP(mSettings) ? (struct client_testhdr *) (((struct UDP_datagram*)mBuf) + 1) \
 	     : (struct client_testhdr *) mBuf);
-	flags = Settings_GenerateClientHdr(mSettings, tmp_hdr);
-	if (!isUDP(mSettings) && (flags & (HEADER_EXTEND | HEADER_VERSION1))) {
-	    //  This test requires the pre-test header messages
-	    //  The extended headers require an exchange
-	    //  between the client and server/listener
-	    HdrXchange(flags);
+	len = Settings_GenerateClientHdr(mSettings, tmp_hdr, startTime);
+	if (len > 0) {
+	    if (isPeerVerDetect(mSettings)) {
+		PeerXchange(len);
+	    } else {
+		currLen = send(mySocket, mBuf, len, 0);
+		WARN_errno(currLen < 0, "send_hdr");
+	    }
 	}
     }
 }
 
-
-void Client::HdrXchange(int flags) {
-    int currLen = 0, len;
-
-    if (!isUDP(mSettings)) {
-	if (flags & HEADER_EXTEND) {
-	    // Run compatability detection and test info exchange for tests that require it
-	    int optflag;
-	    len = sizeof(client_testhdr);
+void Client::PeerXchange (int len) {
+    int currLen = 0;
+    // Run compatability detection and test info exchange for tests that require it
+    int optflag;
 #ifdef TCP_NODELAY
-	    // Disable Nagle to reduce latency of this intial message
-	    optflag=1;
-	    if(setsockopt(mySocket, IPPROTO_TCP, TCP_NODELAY, (char *)&optflag, sizeof(int)) < 0)
-		WARN_errno(0, "tcpnodelay");
+    // Disable Nagle to reduce latency of this intial message
+    optflag=1;
+    if(setsockopt(mySocket, IPPROTO_TCP, TCP_NODELAY, (char *)&optflag, sizeof(int)) < 0)
+	WARN_errno(0, "tcpnodelay");
 #endif
-	    currLen = send(mySocket, mBuf, len, 0);
-	    if (currLen < 0) {
-		WARN_errno(currLen < 0, "send_hdr_v2");
-	    } else {
-		int n;
-		client_hdr_ack ack;
-		int sotimer = 2000000; // 2 seconds
-		SetSocketOptionsReceiveTimeout(mSettings, sotimer);
-		/*
-		 * Hang read and see if this is a header ack message
-		 */
-		if ((n = recvn(mySocket, (char *)&ack, sizeof(client_hdr_ack), 0)) == sizeof(client_hdr_ack)) {
-		    if (ntohl(ack.typelen.type) == CLIENTHDRACK && ntohl(ack.typelen.length) == sizeof(client_hdr_ack)) {
-#if 0
-			reporter_peerversion (mSettings, ntohl(ack.version_u), ntohl(ack.version_l));
-#endif
-		    } else {
-			//			sprintf(mSettings->peerversion, " (misformed server version)");
-		    }
-		} else {
-		    WARN_errno(1, "recvack");
-		    // sprintf(mSettings->peerversion, " (server version is old)");
-		}
+    currLen = send(mySocket, mBuf, len, 0);
+    if (currLen < 0) {
+	WARN_errno(currLen < 0, "send_hdr_v2");
+    } else {
+	int n;
+	client_hdr_ack ack;
+	int sotimer = 2000000; // 2 seconds
+	SetSocketOptionsReceiveTimeout(mSettings, sotimer);
+	/*
+	 * Hang read and see if this is a header ack message
+	 */
+	if ((n = recvn(mySocket, (char *)&ack, sizeof(client_hdr_ack), 0)) == sizeof(client_hdr_ack)) {
+	    if (ntohl(ack.typelen.type) == CLIENTHDRACK && ntohl(ack.typelen.length) == sizeof(client_hdr_ack)) {
+		mSettings->peer_version_u = ntohl(ack.version_u);
+		mSettings->peer_version_l = ntohl(ack.version_l);
 	    }
-	    optflag = 0;
-	    // Re-enable Nagle
-	    if (setsockopt(mySocket, IPPROTO_TCP, TCP_NODELAY, (char *)&optflag, sizeof(int)) < 0) {
-		WARN_errno(0, "tcpnodelay");
-	    }
-	} else if (flags & HEADER_VERSION1) {
-	    /*
-	     * Really should not need this warning as TCP is a byte protocol so the mBufLen shouldn't cause
-	     * a problem.  Unfortunately, the ver 2.0.5 server didn't read() TCP properly and will fail
-	     * if the full V1 message does come in a single read.  This was fixed in 2.0.10 but go ahead
-	     * and issue a warning in case the server is version 2.0.5
-	     */
-	    if (((int)sizeof(client_hdr_v1) - mSettings->mBufLen) > 0) {
-		fprintf(stderr, warn_len_too_small_peer_exchange, "Client", mSettings->mBufLen, sizeof(client_hdr_v1));
-	    }
-	    // Send TCP version1 header message now
-	    currLen = send(mySocket, mBuf, sizeof(client_hdr_v1), 0);
-	    WARN_errno(currLen < 0, "send_hdr_v1");
+	} else {
+	    WARN_errno(1, "recvack");
 	}
+    }
+    optflag = 0;
+    // Re-enable Nagle
+    if (setsockopt(mySocket, IPPROTO_TCP, TCP_NODELAY, (char *)&optflag, sizeof(int)) < 0) {
+	WARN_errno(0, "tcpnodelay");
     }
 }
 

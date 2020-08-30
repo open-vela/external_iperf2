@@ -765,7 +765,7 @@ void Settings_Interpret( char option, const char *optarg, struct thread_Settings
             break;
 
         case 'X' :
-            setPeerVerDetect( mExtSettings );
+            setPeerVerDetect(mExtSettings);
             break;
 
         case 'Z':
@@ -1186,13 +1186,12 @@ void Settings_ModalOptions( struct thread_Settings *mExtSettings ) {
     }
 }
 
-
 void Settings_GetUpperCaseArg(const char *inarg, char *outarg) {
     int len = strlen(inarg);
     strcpy(outarg,inarg);
 
-    if ( (len > 0) && (inarg[len-1] >='a')
-         && (inarg[len-1] <= 'z') )
+    if ((len > 0) && (inarg[len-1] >='a')
+         && (inarg[len-1] <= 'z'))
         outarg[len-1]= outarg[len-1]+'A'-'a';
 }
 
@@ -1200,8 +1199,8 @@ void Settings_GetLowerCaseArg(const char *inarg, char *outarg) {
     int len = strlen(inarg);
     strcpy(outarg,inarg);
 
-    if ( (len > 0) && (inarg[len-1] >='A')
-         && (inarg[len-1] <= 'Z') )
+    if ((len > 0) && (inarg[len-1] >='A')
+         && (inarg[len-1] <= 'Z'))
         outarg[len-1]= outarg[len-1]-'A'+'a';
 }
 
@@ -1213,14 +1212,14 @@ void Settings_GetLowerCaseArg(const char *inarg, char *outarg) {
  * the struct thread_settings instance generated from the command line
  * for client side execution
  */
-void Settings_GenerateListenerSettings( struct thread_Settings *client, struct thread_Settings **listener ) {
-    if ( !isCompat( client ) && \
-         (client->mMode == kTest_DualTest || client->mMode == kTest_TradeOff) ) {
+void Settings_GenerateListenerSettings(struct thread_Settings *client, struct thread_Settings **listener) {
+    if (!isCompat(client) && \
+         (client->mMode == kTest_DualTest || client->mMode == kTest_TradeOff)) {
         *listener = new struct thread_Settings;
-        memcpy(*listener, client, sizeof( struct thread_Settings ));
+        memcpy(*listener, client, sizeof(struct thread_Settings));
 	setCompat((*listener));
-        unsetDaemon( (*listener) );
-        if ( client->mListenPort != 0 ) {
+        unsetDaemon((*listener));
+        if (client->mListenPort != 0) {
             (*listener)->mPort   = client->mListenPort;
         } else {
             (*listener)->mPort   = client->mPort;
@@ -1233,13 +1232,13 @@ void Settings_GenerateListenerSettings( struct thread_Settings *client, struct t
         (*listener)->mOutputFileName = NULL;
         (*listener)->mMode       = kTest_Normal;
         (*listener)->mThreadMode = kMode_Listener;
-        if ( client->mHost != NULL ) {
-            (*listener)->mHost = new char[strlen( client->mHost ) + 1];
-            strcpy( (*listener)->mHost, client->mHost );
+        if (client->mHost != NULL) {
+            (*listener)->mHost = new char[strlen(client->mHost) + 1];
+            strcpy((*listener)->mHost, client->mHost);
         }
-        if ( client->mLocalhost != NULL ) {
-            (*listener)->mLocalhost = new char[strlen( client->mLocalhost ) + 1];
-            strcpy( (*listener)->mLocalhost, client->mLocalhost );
+        if (client->mLocalhost != NULL) {
+            (*listener)->mLocalhost = new char[strlen(client->mLocalhost) + 1];
+            strcpy((*listener)->mLocalhost, client->mLocalhost);
         }
 	if (isUDP((*listener))) {
 	    (*listener)->mBufLen = kDefault_UDPBufLen;
@@ -1263,7 +1262,7 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
     assert(server != NULL);
     assert(hdr != NULL);
     uint32_t flags = ntohl(hdr->base.flags);
-    if ((flags & HEADER_EXTEND) != 0 ) {
+    if ((flags & HEADER_EXTEND_NOACK) != 0) {
 	uint32_t extendflags = ntohl(hdr->extend.flags);
 	struct thread_Settings *fullduplex = NULL;
 	if (extendflags & WRITEACK)
@@ -1319,26 +1318,27 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 		    }
 		}
 		if (isIsochronous(server)) {
+#if 0
 		    setIsochronous(fullduplex);
 		    fullduplex->mFPS = ntohl(hdr->extend.isoch_ext.FPSl);
 		    fullduplex->mFPS += ntohl(hdr->extend.isoch_ext.FPSu) / (double)rMillion;
-		    printf("*** full duplex isoch fps=%f\n", fullduplex->mFPS);
+#endif
 		}
 	    }
 	}
     } else if ((flags & HEADER_VERSION1) != 0) {
         *client = new struct thread_Settings;
         memcpy(*client, server, sizeof(struct thread_Settings));
-        setCompat( (*client) );
+        setCompat((*client));
         (*client)->mTID = thread_zeroid();
         (*client)->mPort       = (unsigned short) ntohl(hdr->base.mPort);
         (*client)->mThreads    = 1;
-        if ( hdr->base.bufferlen != 0 ) {
+        if (hdr->base.bufferlen != 0) {
             (*client)->mBufLen = ntohl(hdr->base.bufferlen);
         }
 	(*client)->mAmount     = ntohl(hdr->base.mAmount);
-        if ( ((*client)->mAmount & 0x80000000) > 0 ) {
-            setModeTime( (*client) );
+        if (((*client)->mAmount & 0x80000000) > 0) {
+            setModeTime((*client));
 #ifndef WIN32
             (*client)->mAmount |= 0xFFFFFFFF00000000LL;
 #else
@@ -1346,7 +1346,7 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 #endif
             (*client)->mAmount = -(*client)->mAmount;
         } else {
-	    unsetModeTime( (*client) );
+	    unsetModeTime((*client));
 	}
         (*client)->mFileName   = NULL;
         (*client)->mHost       = NULL;
@@ -1355,18 +1355,18 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
         (*client)->mMode       = ((flags & RUN_NOW) == 0 ?
 				  kTest_TradeOff : kTest_DualTest);
         (*client)->mThreadMode = kMode_Client;
-        if ( server->mLocalhost != NULL ) {
-            (*client)->mLocalhost = new char[strlen( server->mLocalhost ) + 1];
-            strcpy( (*client)->mLocalhost, server->mLocalhost );
+        if (server->mLocalhost != NULL) {
+            (*client)->mLocalhost = new char[strlen(server->mLocalhost) + 1];
+            strcpy((*client)->mLocalhost, server->mLocalhost);
         }
         (*client)->mHost = new char[REPORT_ADDRLEN];
-        if ( ((sockaddr*)&server->peer)->sa_family == AF_INET ) {
-            inet_ntop( AF_INET, &((sockaddr_in*)&server->peer)->sin_addr,
+        if (((sockaddr*)&server->peer)->sa_family == AF_INET) {
+            inet_ntop(AF_INET, &((sockaddr_in*)&server->peer)->sin_addr,
                        (*client)->mHost, REPORT_ADDRLEN);
         }
 #ifdef HAVE_IPV6
 	else {
-            inet_ntop( AF_INET6, &((sockaddr_in6*)&server->peer)->sin6_addr,
+            inet_ntop(AF_INET6, &((sockaddr_in6*)&server->peer)->sin6_addr,
                        (*client)->mHost, REPORT_ADDRLEN);
         }
 #endif
@@ -1386,44 +1386,49 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
  *
  * Returns hdr flags set
  */
-int Settings_GenerateClientHdr(struct thread_Settings *client, client_testhdr *hdr) {
+int Settings_GenerateClientHdr(struct thread_Settings *client, client_testhdr *hdr, struct timeval startTime) {
     if (isCompat(client))
 	    return 0;
     uint32_t flags = 0, extendflags = 0;
+    int len = 0;
     memset(hdr, 0, sizeof(client_testhdr));
-    flags = (HEADER_SEQNO64B | HEADER_EXTEND);
-    if (isUDP(client)) {
-	hdr->udp.version_u = htonl(IPERF_VERSION_MAJORHEX);
-	hdr->udp.version_l = htonl(IPERF_VERSION_MINORHEX);
-    } else {
-	hdr->extend.version_u = htonl(IPERF_VERSION_MAJORHEX);
-	hdr->extend.version_l = htonl(IPERF_VERSION_MINORHEX);
-    }
-    if (isTripTime(client))
-	flags |= HEADER_TRIPTIME;
+    flags = HEADER_SEQNO64B; // use 64 bit by default
+    // Fill in the version 1 header if needed
     if ((client->mMode != kTest_Normal) || isReverse(client)) {
 	flags |= HEADER_VERSION1;
-	if ( isBuflenSet( client ) ) {
+	if (isBuflenSet(client)) {
 	    hdr->base.bufferlen = htonl(client->mBufLen);
 	} else {
 	    hdr->base.bufferlen = 0;
 	}
-	if ( client->mListenPort != 0 ) {
+	if (client->mListenPort != 0) {
 	    hdr->base.mPort  = htonl(client->mListenPort);
 	} else {
 	    hdr->base.mPort  = htonl(client->mPort);
 	}
 	hdr->base.numThreads = htonl(client->mThreads);
-	if ( isModeTime( client ) ) {
+	if (isModeTime(client)) {
 	    hdr->base.mAmount = htonl(-(long)client->mAmount);
 	} else {
 	    hdr->base.mAmount = htonl((long)client->mAmount);
-	    hdr->base.mAmount &= htonl( 0x7FFFFFFF );
+	    hdr->base.mAmount &= htonl(0x7FFFFFFF);
 	}
 	if (client->mMode == kTest_DualTest) {
 	    flags |= RUN_NOW;
 	}
+	len = sizeof(struct client_hdr_v1);
     }
+
+    // flags common to both TCP and UDP
+    if (isReverse(client)) {
+	flags |= HEADER_EXTEND_NOACK;
+        extendflags |= REVERSE;
+    }
+    if (isBidir(client)) {
+	flags |= HEADER_EXTEND_NOACK;
+        extendflags |= BIDIR;
+    }
+    // Now UDP and TCP specific passed settings
     if (isUDP(client)) {
 	/*
 	 * set the default offset where underlying "inline" subsystems can write into the udp payload
@@ -1460,42 +1465,57 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, client_testhdr *h
 	    }
 	    // Write flags to header so the listener can determine the tests requested
 	    hdr->udp.testflags = htons(testflags);
+#if 0
+	    hdr->udp.mTOS = htonl(client->mTOS);
+	    //trip time values that don't change
+	    mBuf_burst->typelen.type = htonl(CLIENTTCPHDR);
+	    mBuf_burst->typelen.length =  htonl(sizeof(struct TCP_burst_payload));
+	    mBuf_burst->flags = htonl(HEADER_TRIPTIME | HEADER_SEQNO64B);
+	    mBuf_burst->start_tv_sec = htonl(myReport->info.ts.startTime.tv_sec);
+	    mBuf_burst->start_tv_usec = htonl(myReport->info.ts.startTime.tv_usec);
+#endif
+	}
+	if (isEnhanced(client)) {
+	    flags |= HEADER_EXTEND_NOACK;
 	    hdr->udp.version_u = htonl(IPERF_VERSION_MAJORHEX);
 	    hdr->udp.version_l = htonl(IPERF_VERSION_MINORHEX);
-	    hdr->udp.mTOS = htonl(client->mTOS);
 	}
-    } else if (isIsochronous(client)) {
-      flags |= HEADER_EXTEND;
-      extendflags |= TCP_ISOCH;
-      if (isBidir(client)) {
-	hdr->extend.isoch_ext.FPSl = htonl(client->mFPS);
-	hdr->extend.isoch_ext.FPSu = htonl(((long)(client->mFPS) - (long)client->mFPS * rMillion));
-	hdr->extend.isoch_ext.Meanl = htonl(client->mMean);
-	hdr->extend.isoch_ext.Meanu = htonl(((long)(client->mMean) - (long)client->mMean * rMillion));
-	hdr->extend.isoch_ext.Variancel = htonl(client->mVariance);
-	hdr->extend.isoch_ext.Varianceu = htonl(((long)(client->mVariance) - (long)client->mVariance * rMillion));
-	hdr->extend.isoch_ext.BurstIPGl = htonl(client->mBurstIPG);
-	hdr->extend.isoch_ext.BurstIPGu = htonl(((long)(client->mBurstIPG) - (long)client->mBurstIPG * rMillion));
-      }
+    } else {
+	if (isEnhanced(client) || isPeerVerDetect(client)) {
+	    flags |= HEADER_EXTEND_NOACK;
+	    hdr->extend.version_u = htonl(IPERF_VERSION_MAJORHEX);
+	    hdr->extend.version_l = htonl(IPERF_VERSION_MINORHEX);
+	}
+	// Set up trip time
+	if (isTripTime(client)) {
+	    flags |= HEADER_EXTEND_NOACK;
+	    extendflags |= TCP_TRIPTIME;
+	    hdr->extend.start_tv_sec = htonl(startTime.tv_sec);
+	    hdr->extend.start_tv_usec = htonl(startTime.tv_usec);
+	}
+#if 0
+	if (isIsochronous(client)) {
+	    flags |= HEADER_EXTEND_NOACK;
+	    extendflags |= TCP_ISOCH;
+	    if (isBidir(client)) {
+		hdr->extend.isoch_ext.FPSl = htonl(client->mFPS);
+		hdr->extend.isoch_ext.FPSu = htonl(((long)(client->mFPS) - (long)client->mFPS * rMillion));
+		hdr->extend.isoch_ext.Meanl = htonl(client->mMean);
+		hdr->extend.isoch_ext.Meanu = htonl(((long)(client->mMean) - (long)client->mMean * rMillion));
+		hdr->extend.isoch_ext.Variancel = htonl(client->mVariance);
+		hdr->extend.isoch_ext.Varianceu = htonl(((long)(client->mVariance) - (long)client->mVariance * rMillion));
+		hdr->extend.isoch_ext.BurstIPGl = htonl(client->mBurstIPG);
+		hdr->extend.isoch_ext.BurstIPGu = htonl(((long)(client->mBurstIPG) - (long)client->mBurstIPG * rMillion));
+	    }
+	}
+#endif
+	if ((flags & HEADER_EXTEND_NOACK) != 0) {
+	    hdr->extend.typelen.type = htonl(CLIENTTCPHDR);
+	    hdr->extend.typelen.length =  htonl(sizeof(struct client_hdrext));
+	}
+	len += sizeof(struct client_hdrext);
     }
-    /*
-     * Done with base flags (to be passed to the remote server)
-     */
-    if (isReverse(client)) {
-	flags |= HEADER_EXTEND;
-        extendflags |= REVERSE;
-    }
-    if (isBidir(client)) {
-	flags |= HEADER_EXTEND;
-        extendflags |= BIDIR;
-    }
-    if (isWriteAck(client)) {
-	flags |= HEADER_EXTEND;
-        extendflags |= WRITEACK;
-    }
-    // Note, flags for header timestamps set in the client's run()
-    hdr->base.flags = htonl(flags);
-    if (flags & HEADER_EXTEND) {
+    if (flags & HEADER_EXTEND_NOACK) {
 	if (isBWSet(client)) {
 	    hdr->extend.mRate = htonl(client->mUDPRate);
 	} else {
@@ -1507,9 +1527,12 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, client_testhdr *h
         hdr->extend.typelen.type  = htonl(CLIENTHDR);
 	hdr->extend.typelen.length = htonl((sizeof(client_hdrext) - sizeof(hdr_typelen)));
 	hdr->extend.reserved = 0;
-	hdr->extend.version_u = htonl(IPERF_VERSION_MAJORHEX);
-	hdr->extend.version_l = htonl(IPERF_VERSION_MINORHEX);
-	hdr->extend.flags  = htonl(extendflags);
+	hdr->extend.flags = htonl(extendflags);
     }
-    return (flags);
+    if (((flags & HEADER_EXTEND_NOACK) != 0) && isPeerVerDetect(client)) {
+	flags &= ~HEADER_EXTEND_NOACK;
+	flags |= HEADER_EXTEND_ACK;
+    }
+    hdr->base.flags = htonl(flags);
+    return (len);
 }

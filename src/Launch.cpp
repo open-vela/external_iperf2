@@ -198,7 +198,6 @@ void client_spawn(struct thread_Settings *thread) {
 	    thread_debug("Client spawn thread normal (sock=%d)", thread->mSock);
 #endif
 	    theClient->StartSynch();
-	    theClient->InitiateServer();
 	    theClient->Run();
 	} else if (isServerReverse(thread)) {
 #ifdef HAVE_THREAD_DEBUG
@@ -240,7 +239,6 @@ void client_spawn(struct thread_Settings *thread) {
 	    thread_debug("Client spawn thread reverse (sock=%d)", thread->mSock);
 #endif
 	    theClient->StartSynch();
-	    theClient->InitiateServer();
 	    // RJM ADD a thread event here so reverse_client is in a known ready state prior to test exchange
 	    // Now exchange client's test information with remote server
 	    setReverse(reverse_client);

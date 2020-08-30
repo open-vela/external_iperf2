@@ -867,6 +867,7 @@ void Listener::apply_client_settings (thread_Settings *server) {
     assert(server != NULL);
     assert(mBuf != NULL);
     int n, peeklen;
+    uint32_t flags = 0;
     // Set the receive timeout for the very first read based upon the -t
     // and not -i.
     if (isModeTime(server)) {
@@ -889,7 +890,10 @@ void Listener::apply_client_settings (thread_Settings *server) {
 	n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK);
 	FAIL_errno((n < peeklen), "read flags", server);
 	struct client_testhdr *hdr = (struct client_testhdr *) (((struct UDP_datagram*)mBuf) + 1);
-	uint32_t flags = ntohl(hdr->base.flags);
+	flags = ntohl(hdr->base.flags);
+	if (flags & HEADER_SEQNO64B) {
+	    setSeqNo64b(server);
+	}
 	if ((flags & HEADER_UDPTESTS) != 0) {
 	    uint16_t testflags = ntohs(hdr->extend.flags);
 	    // Handle stateless flags
@@ -910,7 +914,6 @@ void Listener::apply_client_settings (thread_Settings *server) {
 	    if ((testflags & HEADER_PKTTRIPTIME) != 0) {
 		setTripTime(server);
 	    }
-	    setSeqNo64b(server);
 	    server->peer_version_u = ntohl(hdr->udp.version_u);
 	    server->peer_version_l = ntohl(hdr->udp.version_l);
 	}
@@ -918,28 +921,27 @@ void Listener::apply_client_settings (thread_Settings *server) {
 	n = recvn(server->mSock, mBuf, sizeof(uint32_t), MSG_PEEK);
 	FAIL_errno((n != sizeof(uint32_t)), "read tcp flags", server);
 	struct client_testhdr *hdr = (struct client_testhdr *) mBuf;
-	uint32_t flags = ntohl(hdr->base.flags);
+	flags = ntohl(hdr->base.flags);
 	peeklen = 0;
-	if (flags & HEADER_EXTEND) {
+	if (flags & (HEADER_EXTEND_ACK | HEADER_EXTEND_NOACK)) {
 	    peeklen = sizeof(struct client_testhdr);
 	} else if (flags & HEADER_VERSION1) {
 	    peeklen = sizeof(struct client_hdr_v1);
 	}
-	if ((flags & HEADER_TRIPTIME) != 0 ) {
+	if ((flags & TCP_TRIPTIME) != 0 ) {
 	    setTripTime(server);
 	}
 	if (peeklen && ((n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK)) != peeklen)) {
 	    FAIL_errno(1, "read tcp test info", server);
 	}
-	if (flags & HEADER_EXTEND) {
+	if (flags & (HEADER_EXTEND_ACK | HEADER_EXTEND_NOACK)) {
 	    server->peer_version_u = ntohl(hdr->extend.version_u);
 	    server->peer_version_l = ntohl(hdr->extend.version_l);
 	}
     }
-    // Handle flags that require an ack back to the client
-    if (!isMulticast(mSettings)) {
-	if (server->peer_version_l <= 13)
-	    client_test_ack(server);
+    // Handle case that requires an ack back to the client
+    if ((flags & HEADER_EXTEND_ACK) != 0) {
+	client_test_ack(server);
     }
 }
 

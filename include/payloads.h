@@ -56,11 +56,11 @@ extern "C" {
  *
  * base flags, keep compatible with older versions
  */
-#define HEADER_VERSION1 0x80000000
-#define HEADER_EXTEND   0x40000000
-#define HEADER_UDPTESTS 0x20000000
-#define HEADER_TRIPTIME 0x10000000
-#define HEADER_SEQNO64B 0x08000000
+#define HEADER_VERSION1     0x80000000
+#define HEADER_EXTEND_ACK   0x40000000
+#define HEADER_UDPTESTS     0x20000000
+#define HEADER_EXTEND_NOACK 0x10000000
+#define HEADER_SEQNO64B     0x08000000
 
 // Below flags are used to pass test settings in *every* UDP packet
 // and not just during the header exchange
@@ -80,6 +80,7 @@ extern "C" {
 #define BIDIR                 0x00000010
 #define WRITEACK              0x00000020
 #define TCP_ISOCH             0x00000040
+#define TCP_TRIPTIME          0x00000080
 
 // later features
 #define HDRXACKMAX 2500000 // default 2.5 seconds, units microseconds
@@ -168,8 +169,6 @@ struct client_hdrext_isoch {
     int32_t BurstIPGu;
 };
 
-// This is used for tests that require
-// the initial handshake
 struct client_hdrext {
     struct hdr_typelen typelen;
     int32_t flags;
@@ -180,8 +179,10 @@ struct client_hdrext {
     int32_t mUDPRateUnits;
     int32_t mRealtime;
     int32_t mTOS;
-    struct client_hdrext_isoch isoch_ext;
+    uint32_t start_tv_sec;
+    uint32_t start_tv_usec;
 };
+
 
 /*
  * TCP Isoch/burst payload structure
@@ -244,6 +245,7 @@ struct TCP_oneway_triptime {
     uint32_t read_tv_sec;
     uint32_t read_tv_usec;
 };
+
 struct TCP_burst_payload {
     uint32_t flags;
     struct hdr_typelen typelen;
@@ -354,7 +356,7 @@ struct client_hdr_ack {
 
 
 /*
- * TCP payload structure
+ * TCP first payload structure
  *
  *                 0      7 8     15 16    23 24    31
  *                +--------+--------+--------+--------+
@@ -390,6 +392,10 @@ struct client_hdr_ack {
  *                +--------+--------+--------+--------+
  *            16  |        tos                        |
  *                +--------+--------+--------+--------+
+ *            17  |        tv_sec (start)             |
+ *                +--------+--------+--------+--------+
+ *           18   |        tv_usec (start)            |
+ *                +--------+--------+--------+--------+
  */
 struct client_testhdr {
     struct client_hdr_v1 base;
@@ -398,6 +404,8 @@ struct client_testhdr {
 	struct client_hdr_udp_tests udp;
     };
 };
+
+
 struct client_udphdr {
     struct UDP_datagram seqno_ts;
     struct client_hdr_v1 base;
