@@ -328,7 +328,7 @@ int Server::AlignPayloads (void) {
     if (isTripTime(mSettings) && !isUDP(mSettings) && \
 	((n = recvn(mSettings->mSock, mBuf, 4, MSG_PEEK)) == 4)) {
 	flags = ntohl((uint32_t) * mBuf);
-	if ((flags & HEADER_EXTEND) != 0) {
+	if ((flags & (HEADER_EXTEND_ACK | HEADER_EXTEND_NOACK)) != 0) {
 	    len = SIZEOF_TCPHDRMSG_EXT;
 	} else if ((flags & HEADER_VERSION1) != 0) {
 	    len = SIZEOF_TCPHDRMSG_V1;
@@ -761,7 +761,7 @@ void Server::write_UDP_AckFIN (struct TransferInfo *stats) {
     struct server_hdr *hdr = (struct server_hdr *)(UDP_Hdr+1);
 
     UDP_Hdr = (UDP_datagram*) mBuf;
-    int flags = (!isEnhanced(mSettings) ? HEADER_VERSION1 : (HEADER_VERSION1 | HEADER_EXTEND));
+    int flags = (!isEnhanced(mSettings) ? HEADER_VERSION1 : (HEADER_VERSION1 | HEADER_EXTEND_ACK));
 #ifdef HAVE_INT64_T
     flags |=  HEADER_SEQNO64B;
 #endif
@@ -786,7 +786,7 @@ void Server::write_UDP_AckFIN (struct TransferInfo *stats) {
     }
     hdr->base.jitter1      = htonl((long) stats->jitter);
     hdr->base.jitter2      = htonl((long) ((stats->jitter - (long)stats->jitter) * rMillion));
-    if (flags & HEADER_EXTEND) {
+    if (flags & HEADER_EXTEND_ACK) {
 	hdr->extend.minTransit1  = htonl((long) stats->transit.totminTransit);
 	hdr->extend.minTransit2  = htonl((long) ((stats->transit.totminTransit - (long)stats->transit.totminTransit) * rMillion));
 	hdr->extend.maxTransit1  = htonl((long) stats->transit.totmaxTransit);

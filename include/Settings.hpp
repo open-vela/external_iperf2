@@ -248,6 +248,7 @@ struct thread_Settings {
     int numreportstructs;
     int32_t peer_version_u;
     int32_t peer_version_l;
+    double connecttime;
 };
 
 /*
@@ -496,7 +497,7 @@ struct client_testhdr; // forward declaration found in payloads.h
 void Settings_GenerateClientSettings(struct thread_Settings *server, struct thread_Settings **client, struct client_testhdr *hdr);
 
 // generate client header for server
-int Settings_GenerateClientHdr(struct thread_Settings *client, struct client_testhdr *hdr);
+int Settings_GenerateClientHdr(struct thread_Settings *client, struct client_testhdr *hdr, struct timeval startTime);
 
 #ifdef __cplusplus
 } /* end extern "C" */

@@ -87,7 +87,6 @@ public:
 
     // For things like dual tests a server needs to be started by the client,
     // The code in src/launch.cpp will invoke this
-    void InitiateServer(void);
     void StartSynch(void);
     void ConnectPeriodic(void);
     void my_connect(void);
@@ -104,6 +103,7 @@ private:
     void write_UDP_FIN(void);
     bool InProgress(void);
     void PostNullEvent(void);
+    void SendFirstPayload(struct timeval);
     void AwaitServerCloseEvent(void);
     bool connected;
     ReportStruct scratchpad;
@@ -120,7 +120,7 @@ private:
     // UDP plain
     void RunUDP(void);
     // client connect
-    void HdrXchange(int flags);
+    void PeerXchange(int len);
 
     thread_Settings *mSettings;
 #if WIN32
