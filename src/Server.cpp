@@ -172,7 +172,7 @@ inline bool Server::InProgress (void) {
  * Sends termination flag several times at the end.
  * Does not close the socket.
  * ------------------------------------------------------------------- */
-void Server::RunTCP( void ) {
+void Server::RunTCP (void) {
     long currLen;
     intmax_t totLen = 0;
     bool err  = 0;
@@ -182,7 +182,6 @@ void Server::RunTCP( void ) {
     double tokens=0.000004;
 
     InitTrafficLoop();
-
     int burst_nleft = 0;
     burst_info.burst_id = 0;
     struct timeval prevsend = {.tv_sec = 0, .tv_usec = 0};
@@ -344,32 +343,14 @@ int Server::AlignPayloads (void) {
 // are now, the accept time or the first write time
 //
 inline void Server::SetReportStartTime (void) {
-    if (!isReverse(mSettings) && isTripTime(mSettings)) {
+    if (isTripTime(mSettings)) {
 	// Start times come from the sender's timestamp
-	if (isUDP(mSettings)) {
-	    // Trip times use the first packet's sent time
-	    // RJM add some defense to the below
-	    int n = recvn(mSettings->mSock, mBuf, sizeof(struct UDP_datagram), MSG_PEEK);
-	    if (n == sizeof(struct UDP_datagram)) {
-		struct UDP_datagram* mBuf_UDP  = (struct UDP_datagram *) mBuf;
-		myReport->info.ts.startTime.tv_sec = ntohl(mBuf_UDP->tv_sec);
-		myReport->info.ts.startTime.tv_usec = ntohl(mBuf_UDP->tv_usec);
-	    }
-	} else {
-	    // Set up trip time values that don't change
-	    int n = recvn(mSettings->mSock, mBuf, sizeof(struct TCP_burst_payload), MSG_PEEK);
-	    if (n == sizeof(struct TCP_burst_payload)) {
-		struct TCP_burst_payload * mBuf_burst = (struct TCP_burst_payload *) mBuf;
-		myReport->info.ts.startTime.tv_sec = ntohl(mBuf_burst->start_tv_sec);
-		myReport->info.ts.startTime.tv_usec = ntohl(mBuf_burst->start_tv_usec);
-	    }
-	}
-	if (TimeZero(myReport->info.ts.startTime)) {
-	    // Servers that aren't full duplex use the accept timestamp for start
-	    myReport->info.ts.startTime.tv_sec = mSettings->accept_time.tv_sec;
-	    myReport->info.ts.startTime.tv_usec = mSettings->accept_time.tv_usec;
-	    fprintf(stderr, "--triptime set but failed to read sender's timestamp");
-	}
+	myReport->info.ts.startTime.tv_sec = mSettings->triptime_start.tv_sec;
+	myReport->info.ts.startTime.tv_usec = mSettings->triptime_start.tv_usec;
+    } else if (TimeZero(myReport->info.ts.startTime) && !TimeZero(mSettings->accept_time)) {
+	// Servers that aren't full duplex use the accept timestamp for start
+	myReport->info.ts.startTime.tv_sec = mSettings->accept_time.tv_sec;
+	myReport->info.ts.startTime.tv_usec = mSettings->accept_time.tv_usec;
     } else {
 	now.setnow();
 	myReport->info.ts.startTime.tv_sec = now.getSecs();
@@ -431,7 +412,12 @@ void Server::InitTrafficLoop (void) {
         mEndTime.add( mSettings->mAmount / 100.0 );
     }
     PostReport(myJob);
-
+    // The first payload is different for TCP so read it and report it
+    // before entering the main loop
+    reportstruct->packetLen = SkipFirstPayload();
+    if (reportstruct->packetLen > 0) {
+	ReportPacket(myReport, reportstruct);
+    }
 }
 
 inline int Server::ReadWithRxTimestamp (int *readerr) {
@@ -711,6 +697,15 @@ void Server::RunUDP( void ) {
 }
 // end Recv
 
+// this is needed only for TCP
+int Server::SkipFirstPayload (void) {
+    int n = 0;
+    if (!isUDP(mSettings) && !isCompat(mSettings) && (mSettings->skipbytes > 0)) {
+	n = recvn(mySocket, mBuf, mSettings->skipbytes, 0);
+	FAIL_errno((n != mSettings->skipbytes), "skip read", mSettings);
+    }
+    return n;
+}
 
 // A reverse server thread needs to block on a read being ready
 void Server::FirstReadBarrier() {
