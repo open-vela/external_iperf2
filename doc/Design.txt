@@ -1,0 +1,85 @@
+&xOverview of Iperf 2 design
+By Robert McMahon
+August 2020
+Code at rev 2.0.14
+
+This document helps to describe the iperf 2 design. It's quite complicated. It's hoped this overview will help someone to understand the code. 
+
+Iperf 2 is a designed as a multithreaded program. It's also a hybrid of C and C++ code. It's evolved over time having different developers starting with 1.7 version then stalling at 2.0.5. A new group with a WiFi focus took over the code base starting at 2.0.6 and up to 2.0.14. The only link between the groups been the code itself. 
+
+Threading overview
+
+There are multiple threads being the listener thread, the reporter thread, the listener thread, and the traffic threads. The traffic threads are either a server or a client.
+
+Listener:
+
+The listener thread runs on the server side. When the users issues a -s for server, it actually starts the listener thread. The goals off the listener thread are
+
+o) open the listen socket with is set with -p or defaults to 5001
+o) issue the socket listen() command
+O) optionally bind the listen socket to a multicast, unicast using the -B
+O) optionally bind the listen socket to a device or interface
+O) hang an accept() for TCP
+O) simulate an accept() for UDP
+O) Upon a new connection install the peer's (client's) IP address into an active table which returns a sum report
+O) Instantiate a server thread and set it up settings
+O) Apply client initiated settings to the server thread
+O) Instantiate a server object
+O) Spawn a server thread which will receive traffic from a client
+
+Reporter:
+
+There is one reporter thread for a client and one for a server. The goal of the reporter thread is to decouple user i/o from traffic. This allow the tool to measure traffic performance unrelated to user i/o.  The reporter thread also does traffic accounting. The report thread also outputs settings and connection information. The reporter thread communicates with traffic threads using a circular buffer or packet ring.  The reporter thread also has job queue where treads can post reports which will drive user outputs,
+
+o) Perform traffic accounting for individual traffic threads
+O) Perform traffic sum accounting
+O) Output all reports - Settings, connections, and data
+
+Traffic (Clients and Servers):
+
+The traffic threads perform the reads and writes on a socket. It posts the results, e.g. byte counts, of those reads and writes with timestamps to the reporter thread. These threads are decoupled this way to try to keep the tool as a network i/o - i.e. the primary focus of traffic threads are network i/o which are the performance being reported. There are two types of traffic threads being a client and a server.  There can be multiple or parallel traffic threads using the -P option. There is one packet ring for every traffic thread. The traffic threads post their results into this ring which the reporter will process. The traffic threads are the producer and the reporter thread is the consumer. This ring is designed to minimize mutex and shared memory contention.
+
+The goals of the traffic threads, starting with the client
+
+O) perform socket writes 
+O) shape the traffic if the --isochronous option is set
+O) rate limit the traffic per per the -b setting
+O) post into its packet ring for the reporter
+
+The server will
+
+O) perform socket reads
+o) rate limit the reads if -b is set
+o) post results into its packet ring
+
+Settings (src/Settings.cpp):
+
+The settings structure contains various settings. The settings are read and parsed from the initial command line (using a version of gnu getopt) Each thread gets a settings object which is mostly ready prior to spawning the thread
+
+Timesamps
+
+This section descries the multiple timestamps used by perf 2. 
+
+Reports
+
+Common settings are deep copies from the thread settings object. This help to decouple and encapsulate reporting from threads, e.g. a thread can terminate prior to a report finishing the thread posted. 
+
+Data Report and packet rings
+
+The data report warrant its own section do to it complexity.  The core of the data report is a packet ring and statistics per that traffic thread. The packet ring allows the traffic thread to communicate read or write statistics to the reporter thread using shared memory and very limited syscalls or mutexes. The packer ring has proodcder and consumer pointer. The ring elemeentw are report structs.
+
+Summing
+
+Startup
+
+There are two primary aspects of startup. The code is in main.cpp and Launch.cpp.
+
+Client startup
+
+Server startup
+
+A day in the life of a UDP
+
+Write the packet microsecond timestamp and sequence number into the payload
+
+Debug support using configure --enable-thread-debug
