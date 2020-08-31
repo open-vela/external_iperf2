@@ -914,6 +914,9 @@ void Listener::apply_client_settings (thread_Settings *server) {
 	    }
 	    if ((testflags & HEADER_PKTTRIPTIME) != 0) {
 		setTripTime(server);
+		struct UDP_datagram *udppkt = (struct UDP_datagram*) mBuf;
+		server->triptime_start.tv_sec = ntohl(udppkt->tv_sec);
+		server->triptime_start.tv_usec = ntohl(udppkt->tv_usec);
 	    }
 	    server->peer_version_u = ntohl(hdr->udp.version_u);
 	    server->peer_version_l = ntohl(hdr->udp.version_l);
