@@ -868,6 +868,7 @@ void Listener::apply_client_settings (thread_Settings *server) {
     assert(mBuf != NULL);
     int n, peeklen;
     uint32_t flags = 0;
+    server->skipbytes = 0; // used to capture the length of the listener's read
     // Set the receive timeout for the very first read based upon the -t
     // and not -i.
     if (isModeTime(server)) {
@@ -924,12 +925,14 @@ void Listener::apply_client_settings (thread_Settings *server) {
 	flags = ntohl(hdr->base.flags);
 	peeklen = 0;
 	if (flags & (HEADER_EXTEND_ACK | HEADER_EXTEND_NOACK)) {
-	    peeklen = sizeof(struct client_testhdr);
+	    peeklen = sizeof(struct client_hdrext);
 	} else if (flags & HEADER_VERSION1) {
-	    peeklen = sizeof(struct client_hdr_v1);
+	    peeklen += sizeof(struct client_hdr_v1);
 	}
 	if ((flags & TCP_TRIPTIME) != 0 ) {
 	    setTripTime(server);
+	    server->triptime_start.tv_sec = ntohl(hdr->extend.start_tv_sec);
+	    server->triptime_start.tv_usec = ntohl(hdr->extend.start_tv_usec);
 	}
 	if (peeklen && ((n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK)) != peeklen)) {
 	    FAIL_errno(1, "read tcp test info", server);
@@ -938,6 +941,7 @@ void Listener::apply_client_settings (thread_Settings *server) {
 	    server->peer_version_u = ntohl(hdr->extend.version_u);
 	    server->peer_version_l = ntohl(hdr->extend.version_l);
 	}
+	server->skipbytes = peeklen;
     }
     // Handle case that requires an ack back to the client
     if ((flags & HEADER_EXTEND_ACK) != 0) {

@@ -241,6 +241,7 @@ struct thread_Settings {
     struct timeval txholdback_timer;
     struct timeval txstart_epoch;
     struct timeval accept_time;
+    struct timeval triptime_start;
     struct Condition awake_me;
     struct PacketRing *ackring;
     struct BarrierMutex *connects_done;
@@ -249,6 +250,7 @@ struct thread_Settings {
     int32_t peer_version_u;
     int32_t peer_version_l;
     double connecttime;
+    int skipbytes;
 };
 
 /*
