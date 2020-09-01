@@ -1283,7 +1283,7 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 	    ((extendflags & REVERSE) == REVERSE)) {
 	    if ((extendflags & BIDIR) == BIDIR) {
 		Condition_Initialize(&server->bidir_startstop.await);
-		server->mBidirReport = InitSumReport(server, server->mSock);
+		server->mBidirReport = InitSumReport(server, server->mSock, 1);
 		IncrSumReportRefCounter(server->mBidirReport);
 	        Settings_Copy(server, &fullduplex);
 		if (fullduplex) {

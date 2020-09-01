@@ -378,7 +378,7 @@ typedef void (* report_settings)( struct ReporterData* );
 typedef void (* report_statistics)( struct TransferInfo* );
 typedef void (* report_serverstatistics)( struct ConnectionInfo *, struct TransferInfo* );
 
-struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID);
+struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, int bidir);
 struct ReportHeader* InitIndividualReport(struct thread_Settings *inSettings);
 struct ReportHeader* InitConnectionReport(struct thread_Settings *inSettings, double ct);
 struct ReportHeader *InitSettingsReport(struct thread_Settings *inSettings);

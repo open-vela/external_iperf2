@@ -480,6 +480,7 @@ static int reporter_process_transfer_report (struct ReporterData *this_ireport) 
 		if (!packet->emptyreport)
 		    // Stash this last timestamp away for calculations that need it, e.g. packet interval reporting
 		    this_ireport->info.ts.prevpacketTime = this_ireport->info.ts.IPGstart;
+//		printf("***rep=%p sum2 handler = %p\n", (void *) this_ireport, (void *) this_ireport->GroupSumReport->transfer_protocol_sum_handler);
 		advance_jobq = (*this_ireport->transfer_interval_handler)(this_ireport, packet);
 	    }
 	    // Do the packet accounting per the handler type
@@ -1418,6 +1419,7 @@ void reporter_transfer_protocol_bidir_udp(struct TransferInfo *stats, int final)
 int reporter_condprint_time_interval_report (struct ReporterData *data, struct ReportStruct *packet) {
     struct TransferInfo *stats = &data->info;
     assert(stats!=NULL);
+    //   printf("***sum handler = %p\n", (void *) data->GroupSumReport->transfer_protocol_sum_handler);
     int advance_jobq = 0;
     // Print a report if packet time exceeds the next report interval time,
     // Also signal to the caller to move to the next report (or packet ring)
@@ -1445,6 +1447,7 @@ int reporter_condprint_time_interval_report (struct ReporterData *data, struct R
 		if (data->GroupSumReport->reference.count > 1)
 		    sumstats->sumflag = 1;
 		reporter_set_timestamps_time(&sumstats->ts, INTERVAL);
+		assert(data->GroupSumReport->transfer_protocol_sum_handler != NULL);
 		(*data->GroupSumReport->transfer_protocol_sum_handler)(sumstats, 0);
 	    }
 	}

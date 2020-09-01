@@ -120,7 +120,7 @@ static void active_table_update (iperf_sockaddr *host, struct thread_Settings *a
 	active_table_show_entry("new entry", this_entry, ((SockAddr_are_Equal(&this_entry->host, host) && SockAddr_Hostare_Equal(&this_entry->host, host))));
 #endif
 	if (isDataReport(agent)) {
-	    this_entry->sum_report = InitSumReport(agent, active_table.total_count);
+	    this_entry->sum_report = InitSumReport(agent, active_table.total_count, 0);
 	    agent->mSumReport = this_entry->sum_report;
 	    IncrSumReportRefCounter(this_entry->sum_report);
 	} else {

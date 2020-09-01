@@ -261,7 +261,12 @@ void Listener::Run (void) {
 	    // Note 2: The mBuf read is a peek so the server's traffic thread started later
 	    // will also process the first message from an accounting perspective.
 	    // This is required for accurate traffic statistics
-	    apply_client_settings(server);
+	    if (!apply_client_settings(server)) {
+		Iperf_remove_host(&server->peer);
+		assert(server != mSettings);
+		Settings_Destroy(server);
+		continue;
+	    }
 	    // server settings flags should now be set per the client's first message exchange
 	    // so the server setting's flags per the client can now be checked
 	    if (isUDP(server) && (isL2LengthCheck(mSettings) || isL2LengthCheck(server))) {
@@ -307,7 +312,7 @@ void Listener::Run (void) {
 	    if (listener_client_settings && isBidir(listener_client_settings)) {
 		setBidir(server);
 		Iperf_push_host(&listener_client_settings->local, listener_client_settings);
-		listener_client_settings->mBidirReport = InitSumReport(server, groupID);
+		listener_client_settings->mBidirReport = InitSumReport(server, groupID, 1);
 		server->mBidirReport = listener_client_settings->mBidirReport;
 #if HAVE_THREAD_DEBUG
 		    thread_debug("BiDir report client=%p/%p server=%p/%p", (void *) listener_client_settings, (void *) listener_client_settings->mBidirReport, (void *) server, (void *) server->mBidirReport);
@@ -863,11 +868,12 @@ int Listener::my_accept (thread_Settings *server) {
 // Read the headers but don't pull them from the queue in order to
 // preserve server thread accounting, i.e. these exchanges will
 // be part of traffic accounting
-void Listener::apply_client_settings (thread_Settings *server) {
+int Listener::apply_client_settings (thread_Settings *server) {
     assert(server != NULL);
     assert(mBuf != NULL);
     int n, peeklen;
     uint32_t flags = 0;
+    int rc = 1;
     server->skipbytes = 0; // used to capture the length of the listener's read
     // Set the receive timeout for the very first read based upon the -t
     // and not -i.
@@ -928,10 +934,11 @@ void Listener::apply_client_settings (thread_Settings *server) {
 	flags = ntohl(hdr->base.flags);
 	peeklen = 0;
 	uint32_t extendflags = 0;
+	if (flags & HEADER_VERSION1) {
+	    peeklen = sizeof(struct client_hdr_v1);
+	}
 	if (flags & (HEADER_EXTEND_ACK | HEADER_EXTEND_NOACK)) {
-	    peeklen = sizeof(struct client_hdrext);
-	} else if (flags & HEADER_VERSION1) {
-	    peeklen += sizeof(struct client_hdr_v1);
+	    peeklen += sizeof(struct client_hdrext);
 	}
 	if (peeklen && ((n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK)) != peeklen)) {
 	    FAIL_errno(1, "read tcp test info", server);
@@ -944,6 +951,13 @@ void Listener::apply_client_settings (thread_Settings *server) {
 		setTripTime(server);
 		server->triptime_start.tv_sec = ntohl(hdr->extend.start_tv_sec);
 		server->triptime_start.tv_usec = ntohl(hdr->extend.start_tv_usec);
+		if (TimeZero(server->triptime_start)) {
+		    fprintf(stdout,"ERROR: dropping connection because --trip-times set but client didn't provid valid start time\n");
+		    rc = 0;
+		}
+		assert(server->triptime_start.tv_sec != 0);
+		assert(server->triptime_start.tv_usec != 0);
+
 	    }
 	}
 	server->skipbytes = peeklen;
@@ -952,6 +966,7 @@ void Listener::apply_client_settings (thread_Settings *server) {
     if ((flags & HEADER_EXTEND_ACK) != 0) {
 	client_test_ack(server);
     }
+    return rc;
 }
 
 int Listener::client_test_ack(thread_Settings *server) {

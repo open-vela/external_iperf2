@@ -217,7 +217,7 @@ void client_spawn(struct thread_Settings *thread) {
 		    thread->bidir_startstop.timeout = MINBARRIERTIMEOUT;
 		Condition_Initialize(&thread->bidir_startstop.await);
 		thread->bidir_startstop.count = 0;
-		thread->mBidirReport = InitSumReport(thread, thread->mSock);
+		thread->mBidirReport = InitSumReport(thread, thread->mSock, 1);
 		IncrSumReportRefCounter(thread->mBidirReport);
 	    }
 	    Settings_Copy(thread, &reverse_client);
