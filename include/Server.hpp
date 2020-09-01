@@ -82,11 +82,11 @@ private:
     Timestamp now;
     ReportStruct scratchpad;
     ReportStruct *reportstruct;
+    struct timeval prevsend;
 
     void InitKernelTimeStamping (void);
     void InitTrafficLoop (void);
     inline void SetReportStartTime(void);
-    int AlignPayloads (void);
     int ReadWithRxTimestamp (int *readerr);
     bool ReadPacketID (void);
     void L2_processing (void);
