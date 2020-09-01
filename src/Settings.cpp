@@ -1393,31 +1393,6 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, client_testhdr *h
     int len = 0;
     memset(hdr, 0, sizeof(client_testhdr));
     flags = HEADER_SEQNO64B; // use 64 bit by default
-    // Fill in the version 1 header if needed
-    if ((client->mMode != kTest_Normal) || isReverse(client)) {
-	flags |= HEADER_VERSION1;
-	if (isBuflenSet(client)) {
-	    hdr->base.bufferlen = htonl(client->mBufLen);
-	} else {
-	    hdr->base.bufferlen = 0;
-	}
-	if (client->mListenPort != 0) {
-	    hdr->base.mPort  = htonl(client->mListenPort);
-	} else {
-	    hdr->base.mPort  = htonl(client->mPort);
-	}
-	hdr->base.numThreads = htonl(client->mThreads);
-	if (isModeTime(client)) {
-	    hdr->base.mAmount = htonl(-(long)client->mAmount);
-	} else {
-	    hdr->base.mAmount = htonl((long)client->mAmount);
-	    hdr->base.mAmount &= htonl(0x7FFFFFFF);
-	}
-	if (client->mMode == kTest_DualTest) {
-	    flags |= RUN_NOW;
-	}
-	len = sizeof(struct client_hdr_v1);
-    }
 
     // flags common to both TCP and UDP
     if (isReverse(client)) {
@@ -1488,7 +1463,7 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, client_testhdr *h
 	}
 	// Set up trip time
 	if (isTripTime(client)) {
-	    flags |= HEADER_EXTEND_NOACK;
+	    flags |= (HEADER_EXTEND_NOACK | HEADER_VERSION1);
 	    extendflags |= TCP_TRIPTIME;
 	    hdr->extend.start_tv_sec = htonl(startTime.tv_sec);
 	    hdr->extend.start_tv_usec = htonl(startTime.tv_usec);
@@ -1529,6 +1504,32 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, client_testhdr *h
 	hdr->extend.reserved = 0;
 	hdr->extend.flags = htonl(extendflags);
     }
+    // Fill in the version 1 header if needed
+    if ((flags & HEADER_VERSION1) || (client->mMode != kTest_Normal) || isReverse(client)) {
+	flags |= HEADER_VERSION1;
+	if (isBuflenSet(client)) {
+	    hdr->base.bufferlen = htonl(client->mBufLen);
+	} else {
+	    hdr->base.bufferlen = 0;
+	}
+	if (client->mListenPort != 0) {
+	    hdr->base.mPort  = htonl(client->mListenPort);
+	} else {
+	    hdr->base.mPort  = htonl(client->mPort);
+	}
+	hdr->base.numThreads = htonl(client->mThreads);
+	if (isModeTime(client)) {
+	    hdr->base.mAmount = htonl(-(long)client->mAmount);
+	} else {
+	    hdr->base.mAmount = htonl((long)client->mAmount);
+	    hdr->base.mAmount &= htonl(0x7FFFFFFF);
+	}
+	if (client->mMode == kTest_DualTest) {
+	    flags |= RUN_NOW;
+	}
+	len += sizeof(struct client_hdr_v1);
+    }
+
     if (((flags & HEADER_EXTEND_NOACK) != 0) && isPeerVerDetect(client)) {
 	flags &= ~HEADER_EXTEND_NOACK;
 	flags |= HEADER_EXTEND_ACK;
