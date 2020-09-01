@@ -136,6 +136,7 @@ void tcp_output_read_enhanced_triptime (struct TransferInfo *stats) {
     double meantransit = (stats->transit.sumTransit / stats->transit.cntTransit);
     double lambda = (stats->arrivalSum > 0.0) ? ((double)stats->cntBytes / stats->arrivalSum) : 0.0;
     set_llawbuf(lambda, meantransit);
+    _print_stats_common(stats);
     if (stats->cntBytes) {
     printf(report_bw_read_enhanced_netpwr_format,
 	   stats->transferID, stats->ts.iStart, stats->ts.iEnd,
