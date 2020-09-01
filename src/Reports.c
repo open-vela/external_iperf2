@@ -118,28 +118,7 @@ static void free_common_copy (struct ReportCommon *common) {
     free(common);
 }
 
-struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, int bidir) {
-    struct SumReport *sumreport = (struct SumReport *) calloc(1, sizeof(struct SumReport));
-    if (sumreport == NULL) {
-	FAIL(1, "Out of Memory!!\n", inSettings);
-    }
-    sumreport->reference.count = 0;
-    sumreport->reference.maxcount = 0;
-    Mutex_Initialize(&sumreport->reference.lock);
-    sumreport->threads = 0;
-    common_copy(&sumreport->info.common, inSettings);
-    sumreport->info.groupID = inID;
-    sumreport->info.transferID = -1;
-    sumreport->info.threadcnt = 0;
-    // Only initialize the interval time here
-    // The startTime and nextTime for summing reports will be set by
-    // the reporter thread in realtime
-    if ((inSettings->mInterval) && (inSettings->mIntervalMode == kInterval_Time)) {
-	sumreport->info.ts.intervalTime.tv_sec = (long) (inSettings->mInterval / rMillion);
-	sumreport->info.ts.intervalTime.tv_usec = (long) (inSettings->mInterval % rMillion);
-    }
-    // transfer_protocol_sum_handler: performs summing output when multiple traffic threads
-
+static void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport* sumreport, int bidir) {
     switch (inSettings->mThreadMode) {
     case kMode_Server :
 	if (isUDP(inSettings)) {
@@ -160,7 +139,6 @@ struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, in
 		    sumreport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_read : tcp_output_sum_read);
 		}
 	    }
-//	    printf("***set rep=%p sum2 handler = %p\n", (void *) sumreport, (void *) sumreport->transfer_protocol_sum_handler);
 	}
 	break;
     case kMode_Client :
@@ -186,6 +164,30 @@ struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, in
     default:
 	FAIL(1, "InitSumReport\n", inSettings);
     }
+}
+
+struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, int bidir) {
+    struct SumReport *sumreport = (struct SumReport *) calloc(1, sizeof(struct SumReport));
+    if (sumreport == NULL) {
+	FAIL(1, "Out of Memory!!\n", inSettings);
+    }
+    sumreport->reference.count = 0;
+    sumreport->reference.maxcount = 0;
+    Mutex_Initialize(&sumreport->reference.lock);
+    sumreport->threads = 0;
+    common_copy(&sumreport->info.common, inSettings);
+    sumreport->info.groupID = inID;
+    sumreport->info.transferID = -1;
+    sumreport->info.threadcnt = 0;
+    // Only initialize the interval time here
+    // The startTime and nextTime for summing reports will be set by
+    // the reporter thread in realtime
+    if ((inSettings->mInterval) && (inSettings->mIntervalMode == kInterval_Time)) {
+	sumreport->info.ts.intervalTime.tv_sec = (long) (inSettings->mInterval / rMillion);
+	sumreport->info.ts.intervalTime.tv_usec = (long) (inSettings->mInterval % rMillion);
+    }
+    SetSumHandlers(inSettings, sumreport, bidir);
+    // transfer_protocol_sum_handler: performs summing output when multiple traffic threads
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Init sum report %p id=%d", (void *)sumreport, inID);
 #endif

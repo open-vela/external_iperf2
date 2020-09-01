@@ -480,7 +480,6 @@ static int reporter_process_transfer_report (struct ReporterData *this_ireport) 
 		if (!packet->emptyreport)
 		    // Stash this last timestamp away for calculations that need it, e.g. packet interval reporting
 		    this_ireport->info.ts.prevpacketTime = this_ireport->info.ts.IPGstart;
-//		printf("***rep=%p sum2 handler = %p\n", (void *) this_ireport, (void *) this_ireport->GroupSumReport->transfer_protocol_sum_handler);
 		advance_jobq = (*this_ireport->transfer_interval_handler)(this_ireport, packet);
 	    }
 	    // Do the packet accounting per the handler type
