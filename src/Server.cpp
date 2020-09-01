@@ -83,6 +83,8 @@ Server::Server( thread_Settings *inSettings ) {
     mBuf = NULL;
     myJob = NULL;
     reportstruct = &scratchpad;
+    prevsend.tv_sec = 0;
+    prevsend.tv_usec = 0;
     memset(&scratchpad, 0, sizeof(struct ReportStruct));
     mySocket = inSettings->mSock;
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
@@ -184,11 +186,9 @@ void Server::RunTCP (void) {
     InitTrafficLoop();
     int burst_nleft = 0;
     burst_info.burst_id = 0;
-    struct timeval prevsend = {.tv_sec = 0, .tv_usec = 0};
 
     burst_info.send_tt.write_tv_sec = 0;
     burst_info.send_tt.write_tv_usec = 0;
-    int alignbytes = AlignPayloads();
 
     now.setnow();
     reportstruct->packetTime.tv_sec = now.getSecs();
@@ -263,10 +263,6 @@ void Server::RunTCP (void) {
 		}
 		currLen = 0;
 	    }
-	    if (alignbytes) {
-		currLen += alignbytes;
-		alignbytes = 0;
-	    }
 	    currLen += n;
 	    now.setnow();
 	    reportstruct->packetTime.tv_sec = now.getSecs();
@@ -319,25 +315,6 @@ void Server::InitKernelTimeStamping (void) {
 #endif
 }
 
-int Server::AlignPayloads (void) {
-    int len=0;
-    int n;
-    uint32_t flags;
-    // align the burst header
-    if (isTripTime(mSettings) && !isUDP(mSettings) && \
-	((n = recvn(mSettings->mSock, mBuf, 4, MSG_PEEK)) == 4)) {
-	flags = ntohl((uint32_t) * mBuf);
-	if ((flags & (HEADER_EXTEND_ACK | HEADER_EXTEND_NOACK)) != 0) {
-	    len = SIZEOF_TCPHDRMSG_EXT;
-	} else if ((flags & HEADER_VERSION1) != 0) {
-	    len = SIZEOF_TCPHDRMSG_V1;
-	}
-	if (len && ((n = recvn(mSettings->mSock, mBuf, len, 0)) != len)) {
-	    len = 0;
-	}
-    }
-    return len;
-}
 //
 // Set the report start times and next report times, options
 // are now, the accept time or the first write time
@@ -345,6 +322,8 @@ int Server::AlignPayloads (void) {
 inline void Server::SetReportStartTime (void) {
     if (isTripTime(mSettings)) {
 	// Start times come from the sender's timestamp
+	assert(mSettings->triptime_start.tv_sec != 0);
+	assert(mSettings->triptime_start.tv_usec != 0);
 	myReport->info.ts.startTime.tv_sec = mSettings->triptime_start.tv_sec;
 	myReport->info.ts.startTime.tv_usec = mSettings->triptime_start.tv_usec;
     } else if (TimeZero(myReport->info.ts.startTime) && !TimeZero(mSettings->accept_time)) {
@@ -415,7 +394,15 @@ void Server::InitTrafficLoop (void) {
     // The first payload is different for TCP so read it and report it
     // before entering the main loop
     reportstruct->packetLen = SkipFirstPayload();
+
     if (reportstruct->packetLen > 0) {
+	reportstruct->burstsize = reportstruct->packetLen;
+	// printf("**** burst size = %d id = %d\n", burst_info.burst_size, burst_info.burst_id);
+	reportstruct->frameID = 1;
+	reportstruct->prevSentTime = prevsend;
+	reportstruct->sentTime.tv_sec = myReport->info.ts.startTime.tv_sec;
+	reportstruct->sentTime.tv_usec = myReport->info.ts.startTime.tv_usec;
+	prevsend = reportstruct->sentTime;
 	ReportPacket(myReport, reportstruct);
     }
 }

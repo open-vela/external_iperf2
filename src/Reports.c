@@ -118,7 +118,7 @@ static void free_common_copy (struct ReportCommon *common) {
     free(common);
 }
 
-struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID) {
+struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, int bidir) {
     struct SumReport *sumreport = (struct SumReport *) calloc(1, sizeof(struct SumReport));
     if (sumreport == NULL) {
 	FAIL(1, "Out of Memory!!\n", inSettings);
@@ -138,8 +138,53 @@ struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID) {
 	sumreport->info.ts.intervalTime.tv_sec = (long) (inSettings->mInterval / rMillion);
 	sumreport->info.ts.intervalTime.tv_usec = (long) (inSettings->mInterval % rMillion);
     }
-    if (inSettings->mThreadMode == kMode_Server) {
-	sumreport->info.sock_callstats.read.binsize = inSettings->mBufLen / 8;
+    // transfer_protocol_sum_handler: performs summing output when multiple traffic threads
+
+    switch (inSettings->mThreadMode) {
+    case kMode_Server :
+	if (isUDP(inSettings)) {
+	    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_udp;
+	} else {
+	    if (isEnhanced(inSettings)) {
+		if (bidir) {
+		    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
+		} else {
+		    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_tcp;
+		    sumreport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_read_enhanced : tcp_output_sum_read_enhanced);
+		}
+	    } else {
+		if (bidir) {
+		    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
+		} else {
+		    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_tcp;
+		    sumreport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_read : tcp_output_sum_read);
+		}
+	    }
+//	    printf("***set rep=%p sum2 handler = %p\n", (void *) sumreport, (void *) sumreport->transfer_protocol_sum_handler);
+	}
+	break;
+    case kMode_Client :
+	if (isUDP(inSettings)) {
+	    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_udp;
+	} else {
+	    if (isEnhanced(inSettings)) {
+		if (bidir) {
+		    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
+		} else {
+		    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_tcp;
+		    sumreport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_write_enhanced : tcp_output_sum_write_enhanced);
+		}
+	    } else {
+		if (bidir) {
+		    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
+		} else {
+		    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_tcp;
+		    sumreport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_write : tcp_output_sum_write);
+		}
+	    }
+	}
+    default:
+	FAIL(1, "InitSumReport\n", inSettings);
     }
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Init sum report %p id=%d", (void *)sumreport, inID);
@@ -304,7 +349,6 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
     // Set up the function vectors, there are three
     // 1) packet_handler: does packet accounting per the test and protocol
     // 2) transfer_protocol_handler: performs output, e.g. interval reports, per the test and protocol
-    // 3) transfer_protocol_sum_handler: performs summing output when multiple traffic threads
 
     switch (inSettings->mThreadMode) {
     case kMode_Server :
@@ -317,10 +361,6 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 		ireport->info.output_handler = udp_output_read_enhanced;
 	    else
 		ireport->info.output_handler = udp_output_read;
-	    if (ireport->GroupSumReport)
-		ireport->GroupSumReport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_udp;
-	    if (ireport->FullDuplexReport)
-		ireport->FullDuplexReport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_udp;
 	} else {
 	    ireport->packet_handler = reporter_handle_packet_server_tcp;
 	    ireport->transfer_protocol_handler = reporter_transfer_protocol_server_tcp;
@@ -328,20 +368,8 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 		ireport->info.output_handler = tcp_output_read_enhanced_triptime;
 	    else if (isEnhanced(inSettings)) {
 		ireport->info.output_handler = (isSumOnly(inSettings) ? NULL : tcp_output_read_enhanced);
-		if (ireport->GroupSumReport) {
-		    ireport->GroupSumReport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_tcp;
-		    ireport->GroupSumReport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_read_enhanced : tcp_output_sum_read_enhanced);
-		}
-		if (ireport->FullDuplexReport)
-		    ireport->FullDuplexReport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
 	    } else {
 		ireport->info.output_handler = (isSumOnly(inSettings) ? NULL : tcp_output_read);
-		if (ireport->GroupSumReport) {
-		    ireport->GroupSumReport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_tcp;
-		    ireport->GroupSumReport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_read : tcp_output_sum_read);
-		}
-		if (ireport->FullDuplexReport)
-		    ireport->FullDuplexReport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
 	    }
 	}
 	break;
@@ -349,39 +377,21 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	ireport->packet_handler = reporter_handle_packet_client;
 	if (isUDP(inSettings)) {
 	    ireport->transfer_protocol_handler = reporter_transfer_protocol_client_udp;
-	    if (ireport->GroupSumReport) {
-		ireport->GroupSumReport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_udp;
-		ireport->GroupSumReport->info.output_handler = udp_output_sum_write_enhanced;
-	    }
 	    if (isIsochronous(inSettings)) {
 		ireport->info.output_handler = udp_output_write_enhanced_isoch;
 	    } else if (isEnhanced(inSettings)) {
 		ireport->info.output_handler = udp_output_write_enhanced;
 	    } else {
 		ireport->info.output_handler = udp_output_write;
-		if (ireport->GroupSumReport) {
-		    ireport->GroupSumReport->info.output_handler = udp_output_sum_write;
-		}
 	    }
 	    if (ireport->FullDuplexReport)
 		ireport->FullDuplexReport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_udp;
 	} else {
 	    ireport->transfer_protocol_handler = reporter_transfer_protocol_client_tcp;
 	    if (isEnhanced(inSettings)) {
-		ireport->info.output_handler = (isSumOnly(inSettings) ? NULL : tcp_output_write_enhanced);
-		if (ireport->GroupSumReport) {
-		    ireport->GroupSumReport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_tcp;
-		    ireport->GroupSumReport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_write_enhanced : tcp_output_sum_write_enhanced);
-		}
 	    } else {
 		ireport->info.output_handler = (isSumOnly(inSettings) ? NULL : tcp_output_write);
-		if (ireport->GroupSumReport) {
-		    ireport->GroupSumReport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_tcp;
-		    ireport->GroupSumReport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_write : tcp_output_sum_write);
-		}
 	    }
-	    if (ireport->FullDuplexReport)
-		ireport->FullDuplexReport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
 	}
 	break;
     case kMode_WriteAckClient :
@@ -393,7 +403,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
     case kMode_ReporterClient :
     case kMode_Listener:
     default:
-	ireport->packet_handler = NULL;
+	FAIL(1, "InitIndividualReport\n", inSettings);
     }
 
 #ifdef HAVE_THREAD_DEBUG
