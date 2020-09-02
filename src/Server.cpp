@@ -394,14 +394,15 @@ void Server::InitTrafficLoop (void) {
     // The first payload is different for TCP so read it and report it
     // before entering the main loop
     reportstruct->packetLen = SkipFirstPayload();
-
     if (reportstruct->packetLen > 0) {
 	reportstruct->burstsize = reportstruct->packetLen;
+	reportstruct->remaining = reportstruct->packetLen;
 	// printf("**** burst size = %d id = %d\n", burst_info.burst_size, burst_info.burst_id);
-	reportstruct->frameID = 1;
+	reportstruct->frameID = 0;
 	reportstruct->prevSentTime = prevsend;
 	reportstruct->sentTime.tv_sec = myReport->info.ts.startTime.tv_sec;
 	reportstruct->sentTime.tv_usec = myReport->info.ts.startTime.tv_usec;
+	reportstruct->packetTime = reportstruct->sentTime;
 	prevsend = reportstruct->sentTime;
 	ReportPacket(myReport, reportstruct);
     }

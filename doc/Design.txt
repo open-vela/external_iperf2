@@ -1,39 +1,46 @@
-&xOverview of Iperf 2 design
+Overview of Iperf 2 design
 By Robert McMahon
-August 2020
+September 2020
 Code at rev 2.0.14
 
-This document helps to describe the iperf 2 design. It's quite complicated. It's hoped this overview will help someone to understand the code. 
+This document helps to describe the iperf 2 design. It's quite complicated. It's hoped this overview will help someone to understand the code.
 
-Iperf 2 is a designed as a multithreaded program. It's also a hybrid of C and C++ code. It's evolved over time having different developers starting with 1.7 version then stalling at 2.0.5. A new group with a WiFi focus took over the code base starting at 2.0.6 and up to 2.0.14. The only link between the groups been the code itself. 
+Iperf 2 is a designed as a multithreaded program. It's also a hybrid of C and C++ code. It's evolved over time having different developers starting with 1.7 version then stalling at 2.0.5. A new group with a WiFi focus took over the code base starting at 2.0.6 and up to 2.0.14. The only link between the groups been the code itself.
 
 Threading overview
 
-There are multiple threads being the listener thread, the reporter thread, the listener thread, and the traffic threads. The traffic threads are either a server or a client.
+There are multiple threads being a listener thread, a reporter thread, and one or more traffic threads. The traffic threads are either a server or a client.
 
-Listener:
+Listener (src/Listener.cpp include/Listener.hpp):
 
-The listener thread runs on the server side. When the users issues a -s for server, it actually starts the listener thread. The goals off the listener thread are
+The listener thread runs on the server side when a user issues a -s for server, it actually starts the listener thread and not a server thread. The goals off the listener thread are
 
 o) open the listen socket with is set with -p or defaults to 5001
 o) issue the socket listen() command
-O) optionally bind the listen socket to a multicast, unicast using the -B
-O) optionally bind the listen socket to a device or interface
-O) hang an accept() for TCP
-O) simulate an accept() for UDP
-O) Upon a new connection install the peer's (client's) IP address into an active table which returns a sum report
-O) Instantiate a server thread and set it up settings
-O) Apply client initiated settings to the server thread
-O) Instantiate a server object
-O) Spawn a server thread which will receive traffic from a client
+o) optionally bind the listen socket to a multicast, unicast using the -B
+o) optionally bind the listen socket to a device or interface
+o) hang an accept() for TCP
+o) simulate an accept() for UDP
+o) Upon a new connection install the peer's (client's) IP address into an active table which returns a sum report
+o) Instantiate a server thread and set it up settings
+o) Apply client initiated settings to the server thread
+o) Instantiate a server object
+o) Spawn a server thread which will receive traffic from a client
 
-Reporter:
+Reporter (src/Reporter.c include/Reporter.h):
 
-There is one reporter thread for a client and one for a server. The goal of the reporter thread is to decouple user i/o from traffic. This allow the tool to measure traffic performance unrelated to user i/o.  The reporter thread also does traffic accounting. The report thread also outputs settings and connection information. The reporter thread communicates with traffic threads using a circular buffer or packet ring.  The reporter thread also has job queue where treads can post reports which will drive user outputs,
+There is one reporter thread for a client and one for a server (excluding full duplex traffic where the reporter handles both a client and a server.) The goal of the reporter thread is to decouple user i/o from traffic. This allows the tool to measure traffic performance unrelated to user i/o. The reporter thread also does traffic accounting. The reporter thread outputs the followint types of reports
+
+o) settings report
+o) connection report
+o) data reports (intervals, sums and final)
+o) server relay reports (server report send back to the client for display)
+
+The reporter thread and traffic threads communicate with one another using a circular buffer or packet ring.  The reporter thread also has job queue where threads can post reports to be displayed.
 
 o) Perform traffic accounting for individual traffic threads
-O) Perform traffic sum accounting
-O) Output all reports - Settings, connections, and data
+o) Perform traffic sum accounting
+o) Output all reports - Settings, connections, and data
 
 Traffic (Clients and Servers):
 
@@ -41,14 +48,14 @@ The traffic threads perform the reads and writes on a socket. It posts the resul
 
 The goals of the traffic threads, starting with the client
 
-O) perform socket writes 
-O) shape the traffic if the --isochronous option is set
-O) rate limit the traffic per per the -b setting
-O) post into its packet ring for the reporter
+o) perform socket writes
+o) shape the traffic if the --isochronous option is set
+o) rate limit the traffic per per the -b setting
+o) post into its packet ring for the reporter
 
 The server will
 
-O) perform socket reads
+o) perform socket reads
 o) rate limit the reads if -b is set
 o) post results into its packet ring
 
@@ -56,13 +63,13 @@ Settings (src/Settings.cpp):
 
 The settings structure contains various settings. The settings are read and parsed from the initial command line (using a version of gnu getopt) Each thread gets a settings object which is mostly ready prior to spawning the thread
 
-Timesamps
+Timestamps
 
-This section descries the multiple timestamps used by perf 2. 
+This section descries the multiple timestamps used by perf 2.
 
 Reports
 
-Common settings are deep copies from the thread settings object. This help to decouple and encapsulate reporting from threads, e.g. a thread can terminate prior to a report finishing the thread posted. 
+Common settings are deep copies from the thread settings object. This help to decouple and encapsulate reporting from threads, e.g. a thread can terminate prior to a report finishing the thread posted.
 
 Data Report and packet rings
 
@@ -78,7 +85,7 @@ Client startup
 
 Server startup
 
-A day in the life of a UDP
+A day in the life of a UDP packet
 
 Write the packet microsecond timestamp and sequence number into the payload
 
