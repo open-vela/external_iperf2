@@ -125,6 +125,7 @@ Client::~Client() {
 		 (isServerReverse(mSettings) ? "true" : "false"), (isBidir(mSettings) ? "true" : "false"));
 #endif
     DELETE_ARRAY(mBuf);
+    DELETE_PTR(framecounter);
 } // end ~Client
 
 
