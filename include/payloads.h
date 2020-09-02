@@ -405,6 +405,14 @@ struct client_testhdr {
     };
 };
 
+struct client_testhdr_isoch {
+    struct client_hdr_v1 base;
+    union {
+	struct client_hdrext extend;
+	struct client_hdr_udp_tests udp;
+    };
+    struct client_hdrext_isoch isoch;
+};
 
 struct client_udphdr {
     struct UDP_datagram seqno_ts;

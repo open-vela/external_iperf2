@@ -156,6 +156,8 @@ void Client::my_connect(void) {
     myReport = (struct ReporterData *)myJob->this_report;
     myReport->info.common->socket=mySocket;
     myReport->info.transferID=mySocket;
+    if (isIsochronous(mSettings))
+	myReport->info.matchframeID = 1;
     SetSocketOptions(mSettings);
     SockAddr_localAddr(mSettings);
     if (mSettings->mLocalhost != NULL) {
@@ -450,7 +452,6 @@ void Client::RunTCP( void ) {
 	} else {
 	    reportstruct->packetLen = mSettings->mBufLen;
 	}
-
         int n = 0;
 	if (isTripTime(mSettings) || isWriteAck(mSettings) || isIsochronous(mSettings)) {
 	    if (burst_remaining == 0) {
@@ -476,6 +477,7 @@ void Client::RunTCP( void ) {
 	    if (reportstruct->packetLen > burst_remaining) {
 		reportstruct->packetLen = burst_remaining;
 	    }
+	    reportstruct->remaining = burst_remaining;
 	}
 	// printf("pl=%ld\n",reportstruct->packetLen);
 	// perform write
@@ -958,6 +960,8 @@ inline void Client::WriteTcpTxHdr (struct ReportStruct *reportstruct, int burst_
     mBuf_burst->burst_size  = htonl((uint32_t)burst_size);
     mBuf_burst->burst_period_s  = htonl(0x0);
     mBuf_burst->burst_period_us  = htonl(0x0);
+    reportstruct->frameID=burst_id;
+    reportstruct->burstsize=burst_size;
     return;
 }
 

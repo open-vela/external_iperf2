@@ -571,6 +571,19 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
 	outbuffer[(sizeof(outbuffer)-1)] = '\0';
 	printf("%s: %s\n", client_write_size, outbuffer);
     }
+    if (isIsochronous(report->common)) {
+	char meanbuf[40];
+	char variancebuf[40];
+	byte_snprintf(meanbuf, sizeof(meanbuf), report->isochstats.mMean, 'a');
+	byte_snprintf(variancebuf, sizeof(variancebuf), report->isochstats.mVariance, 'a');
+	meanbuf[39]='\0'; variancebuf[39]='\0';
+	printf(client_isochronous, report->isochstats.mFPS, meanbuf, variancebuf, (report->isochstats.mBurstInterval/1000.0), (report->isochstats.mBurstIPG/1000.0));
+#if 0
+	if ((report->isochstats.mMean / report->isochstats.mFPS) < ((double) (sizeof(struct UDP_reportgram) + sizeof(struct client_hdr_v1) + sizeof(struct client_hdr_udp_isoch_tests)))) {
+	    fprintf(stderr, "Warning: Requested mean too small to carry isoch payload, code will auto adjust payload sizes\n");
+	}
+#endif
+    }
     if (isFQPacing(report->common)) {
 	byte_snprintf(outbuffer, sizeof(outbuffer), report->common->FQPacingRate, 'a');
 	outbuffer[(sizeof(outbuffer)-1)] = '\0';
@@ -695,6 +708,15 @@ void reporter_print_connection_report(struct ConnectionInfo *report) {
     if (isL2LengthCheck(report->common)) {
 	snprintf(b, SNBUFFERSIZE-strlen(b), " (%s)", "l2mode");
 	b += strlen(b);
+    }
+    if (isPrintMSS(report->common) || isEnhanced(report->common))  {
+	int inMSS = getsock_tcp_mss(report->common->socket);
+	if (isPrintMSS(report->common) && (inMSS <= 0)) {
+	    printf(report_mss_unsupported, report->common->socket);
+	} else {
+	    snprintf(b, SNBUFFERSIZE-strlen(b), " (%s%d)", "MSS=", inMSS);
+	    b += strlen(b);
+	}
     }
     if (report->peerversion) {
 	snprintf(b, SNBUFFERSIZE-strlen(b), "%s", report->peerversion);

@@ -958,6 +958,9 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		assert(server->triptime_start.tv_sec != 0);
 		assert(server->triptime_start.tv_usec != 0);
 	    }
+	    if ((extendflags & TCP_ISOCH) != 0 ) {
+		setIsochronous(server);
+	    }
 	}
 	server->skipbytes = peeklen;
     }
