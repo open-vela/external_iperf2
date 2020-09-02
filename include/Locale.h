@@ -118,7 +118,7 @@ extern const char window_default[];
 
 extern const char wait_server_threads[];
 
-extern const char client_udp_isochronous[];
+extern const char client_isochronous[];
 
 extern const char client_fq_pacing[];
 /* -------------------------------------------------------------------

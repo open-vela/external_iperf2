@@ -265,6 +265,7 @@ enum TimeStampType {
     INTERVAL  = 0,
     FINALPARTIAL,
     TOTAL,
+    FRAME
 };
 
 
@@ -290,6 +291,7 @@ struct ReportTimeStamps {
     double iStart;
     double iEnd;
     struct timeval startTime;
+    struct timeval matchTime;
     struct timeval packetTime;
     struct timeval prevpacketTime;
     struct timeval nextTime;
@@ -327,6 +329,9 @@ struct TransferInfo {
     struct histogram *framelatency_histogram;
     struct TransitStats frame;
     struct L2Stats l2counts;
+    // Packet and frame state info
+    uint32_t matchframeID;
+    uint32_t frameID;
 };
 
 struct SumReport {
@@ -348,10 +353,6 @@ struct ReporterData {
     // group sum and full duplext reports
     struct SumReport *GroupSumReport;
     struct SumReport *FullDuplexReport;
-
-    // Packet and frame state info
-    uint32_t matchframeID;
-    uint32_t frameID;
 
     struct TransferInfo info;
 };
@@ -410,6 +411,7 @@ void reporter_handle_packet_server_udp(struct ReporterData *report, struct Repor
 void reporter_handle_packet_server_tcp(struct ReporterData *report, struct ReportStruct *packet);
 void reporter_handle_packet_client(struct ReporterData *report, struct ReportStruct *packet);
 void reporter_handle_packet_pps(struct ReporterData *data, struct ReportStruct *packet);
+void reporter_handle_packet_isochronous(struct ReporterData *data, struct ReportStruct *packet);
 
 // Reporter's conditional prints, right now have time and frame based sampling, possibly add packet based
 int reporter_condprint_time_interval_report(struct ReporterData *reporthdr, struct ReportStruct *packet);
@@ -465,13 +467,13 @@ void udp_output_write_enhanced(struct TransferInfo *stats);
 void udp_output_write_enhanced_isoch(struct TransferInfo *stats);
 void udp_output_sum_write_enhanced (struct TransferInfo *stats);
 
-
 // Rest of the reporter output routines
 void reporter_connect_printf_tcp_final (struct ReportHeader *reporthdr);
 void reporter_print_connection_report(struct ConnectionInfo *report);
 void reporter_print_settings_report(struct ReportSettings *report);
 void reporter_print_server_relay_report(struct TransferInfo *report);
 void reporter_peerversion (struct ConnectionInfo *report, uint32_t upper, uint32_t lower);
+void PrintMSS(struct ReporterData *data);
 
 #ifdef __cplusplus
 } /* end extern "C" */

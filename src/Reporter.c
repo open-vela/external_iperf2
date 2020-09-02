@@ -93,7 +93,6 @@ struct ReportHeader *ReportPendingTail = NULL;
 static int reporter_process_report (struct ReportHeader *report);
 void process_report (struct ReportHeader *report);
 int reporter_print(struct ReporterData *data, int type, int end);
-void PrintMSS(struct ReporterData *data);
 
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 static void gettcpistats(struct ReporterData *data, int final);
@@ -683,7 +682,7 @@ static inline double reporter_handle_packet_oneway_transit(struct ReporterData *
     return (transit);
 }
 
-static inline void reporter_handle_burst_tcp_transit(struct ReporterData *data, struct ReportStruct *packet) {
+static inline void reporter_handle_burst_tcp_transit (struct ReporterData *data, struct ReportStruct *packet) {
     struct TransferInfo *stats = &data->info;
     if (packet->frameID && packet->transit_ready) {
         double transit = reporter_handle_packet_oneway_transit(data, packet);
@@ -699,7 +698,7 @@ static inline void reporter_handle_burst_tcp_transit(struct ReporterData *data, 
     }
 }
 
-static inline void reporter_handle_packet_isochronous(struct ReporterData *data, struct ReportStruct *packet) {
+inline void reporter_handle_packet_isochronous (struct ReporterData *data, struct ReportStruct *packet) {
     struct TransferInfo *stats = &data->info;
     // printf("fid=%lu bs=%lu remain=%lu\n", packet->frameID, packet->burstsize, packet->remaining);
     if (packet->frameID && packet->burstsize && packet->remaining) {
@@ -730,15 +729,15 @@ static inline void reporter_handle_packet_isochronous(struct ReporterData *data,
 	// peform frame latency checks
 	if (stats->framelatency_histogram) {
 	    // first packet of a burst and not a duplicate
-	    if ((packet->burstsize == packet->remaining) && (data->matchframeID!=packet->frameID)) {
-		data->matchframeID=packet->frameID;
+	    if ((packet->burstsize == packet->remaining) && (stats->matchframeID!=packet->frameID)) {
+		stats->matchframeID=packet->frameID;
 	    }
-	    if ((packet->packetLen == packet->remaining) && (packet->frameID == data->matchframeID)) {
+	    if ((packet->packetLen == packet->remaining) && (packet->frameID == stats->matchframeID)) {
 		// last packet of a burst (or first-last in case of a duplicate) and frame id match
 		double frametransit = TimeDifference(packet->packetTime, packet->isochStartTime) \
 		    - ((packet->burstperiod * (packet->frameID - 1)) / 1000000.0);
 		histogram_insert(stats->framelatency_histogram, frametransit, NULL);
-		data->matchframeID = 0;  // reset the matchid so any potential duplicate is ignored
+		stats->matchframeID = 0;  // reset the matchid so any potential duplicate is ignored
 	    }
 	}
 	stats->isochstats.frameID = packet->frameID;
@@ -814,7 +813,7 @@ inline void reporter_handle_packet_server_udp(struct ReporterData *data, struct 
     }
 }
 
-void reporter_handle_packet_client(struct ReporterData *data, struct ReportStruct *packet) {
+void reporter_handle_packet_client (struct ReporterData *data, struct ReportStruct *packet) {
     struct TransferInfo *stats = &data->info;
     stats->total.Bytes.current += packet->packetLen;
     stats->ts.packetTime = packet->packetTime;
@@ -830,6 +829,8 @@ void reporter_handle_packet_client(struct ReporterData *data, struct ReportStruc
 	    if (packet->packetID > 0)
 		stats->PacketID = packet->packetID;
 	    reporter_handle_packet_pps(data, packet);
+	}
+	if (isIsochronous(stats->common)) {
 	    reporter_handle_packet_isochronous(data, packet);
 	}
     }
@@ -905,6 +906,11 @@ static inline void reporter_set_timestamps_time(struct ReportTimeStamps *times, 
 	    break;
 	case FINALPARTIAL:
 	    times->iStart = times->iEnd;
+	    times->iEnd = TimeDifference(times->packetTime, times->startTime);
+	    break;
+	case FRAME:
+	    if ((times->iStart = TimeDifference(times->matchTime, times->startTime)) < 0)
+		times->iStart = 0.0;
 	    times->iEnd = TimeDifference(times->packetTime, times->startTime);
 	    break;
 	default:
@@ -1460,17 +1466,14 @@ int reporter_condprint_frame_interval_report_udp (struct ReporterData *data, str
     struct TransferInfo *stats = &data->info;
     // first packet of a burst and not a duplicate
     assert(packet->burstsize != 0);
-    if ((packet->burstsize == (packet->remaining + packet->packetLen)) && (data->matchframeID != packet->frameID)) {
-	data->matchframeID=packet->frameID;
-	if (isTripTime(stats->common))
-	    stats->ts.nextTime = packet->sentTime;
-	else
-	    stats->ts.nextTime = packet->packetTime;
+    if ((packet->burstsize == (packet->remaining + packet->packetLen)) && (stats->matchframeID != packet->frameID)) {
+	stats->matchframeID=packet->frameID;
+	stats->ts.matchTime = (isTripTime(stats->common) ? packet->sentTime : packet->packetTime);
     }
-    if ((packet->packetLen == packet->remaining) && (packet->frameID == data->matchframeID)) {
+    if ((packet->packetLen == packet->remaining) && (packet->frameID == stats->matchframeID)) {
 	if ((stats->ts.iStart = TimeDifference(stats->ts.nextTime, stats->ts.startTime)) < 0)
 	    stats->ts.iStart = 0.0;
-	data->frameID = packet->frameID;
+	stats->frameID = packet->frameID;
 	stats->ts.iEnd = TimeDifference(packet->packetTime, stats->ts.startTime);
 	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
 	stats->cntOutofOrder = stats->total.OutofOrder.current - stats->total.OutofOrder.prev;
@@ -1491,45 +1494,26 @@ int reporter_condprint_frame_interval_report_tcp (struct ReporterData *data, str
     int advance_jobq = 0;
     struct TransferInfo *stats = &data->info;
     // first packet of a burst and not a duplicate
-    if ((packet->burstsize == (packet->remaining + packet->packetLen)) && (data->matchframeID != packet->frameID)) {
-	data->matchframeID=packet->frameID;
-	if (isTripTime(stats->common))
-	    stats->ts.nextTime = packet->sentTime;
-	else
-	    stats->ts.nextTime = packet->packetTime;
+    // fprintf(stdout,"****bs=%ld, remain=%ld, len=%ld, fid/match=%ld/%d\n",packet->burstsize, packet->remaining, packet->packetLen, packet->frameID, stats->matchframeID);
+    if (packet->burstsize == (packet->remaining + packet->packetLen)) {
+	stats->matchframeID=packet->frameID;
+	stats->ts.matchTime = (isTripTime(stats->common) ? packet->sentTime : packet->packetTime);
+//	printf("packet %ld.%ld sent %ld.%ld match %ld.%ld\n", stats->ts.matchTime.tv_sec, stats->ts.matchTime.tv_usec, packet->packetTime.tv_sec, packet->packetTime.tv_usec, packet->sentTime.tv_sec, packet->sentTime.tv_usec);
     }
-    if ((packet->packetLen == packet->remaining) && (packet->frameID == data->matchframeID)) {
-	if ((stats->ts.iStart = TimeDifference(stats->ts.nextTime, stats->ts.startTime)) < 0)
-	    stats->ts.iStart = 0.0;
-	data->frameID = packet->frameID;
-	stats->ts.iEnd = TimeDifference(packet->packetTime, stats->ts.startTime);
+    if ((packet->packetLen == packet->remaining) && (packet->frameID == stats->matchframeID)) {
+//    fprintf(stdout,"****bs=%ld, remain=%ld, len=%ld, fid/match=%ld/%d matchtime=%ld.%ld\n",packet->burstsize, packet->remaining, packet->packetLen, packet->frameID, stats->matchframeID, stats->ts.matchTime.tv_sec, stats->ts.matchTime.tv_usec);
+	stats->matchframeID++;
+	reporter_set_timestamps_time(&stats->ts, FRAME);
+	stats->frameID = packet->frameID;
 	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
 	// assume most of the  time out-of-order packets are not
 	// duplicate packets, so conditionally subtract them from the lost packets.
 	(*stats->output_handler)(stats);
+	reporter_reset_transfer_stats_client_tcp(stats);
 	advance_jobq = 1;
     }
     return advance_jobq;
 }
-
-/* -------------------------------------------------------------------
- * Report the MSS and MTU, given the MSS (or a guess thereof)
- * ------------------------------------------------------------------- */
-
-// compare the MSS against the (MTU - 40) to (MTU - 80) bytes.
-// 40 byte IP header and somewhat arbitrarily, 40 more bytes of IP options.
-
-#define checkMSS_MTU( inMSS, inMTU ) (inMTU-40) >= inMSS  &&  inMSS >= (inMTU-80)
-
-void PrintMSS(struct ReporterData *data) {
-    int inMSS = getsock_tcp_mss(data->info.common->socket);
-    if (inMSS <= 0) {
-        printf(report_mss_unsupported, data->info.common->socket);
-    } else {
-        printf(report_mss, data->info.common->socket, inMSS);
-    }
-}
-// end ReportMSS
 
 
 #ifdef __cplusplus
