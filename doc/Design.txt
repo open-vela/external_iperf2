@@ -59,9 +59,9 @@ o) perform socket reads
 o) rate limit the reads if -b is set
 o) post results into its packet ring
 
-Settings (src/Settings.cpp):
+Settings (src/Settings.cpp include/Settings.hpp):
 
-The settings structure contains various settings. The settings are read and parsed from the initial command line (using a version of gnu getopt) Each thread gets a settings object which is mostly ready prior to spawning the thread
+The settings structure contains the user requested settings and there is one settings object per thread. The settings are read and parsed from the initial command line (using a version of gnu getopt) Each thread gets a settings object which is mostly ready prior to spawning the thread.
 
 Timestamps
 
@@ -75,9 +75,27 @@ Data Report and packet rings
 
 The data report warrant its own section do to it complexity.  The core of the data report is a packet ring and statistics per that traffic thread. The packet ring allows the traffic thread to communicate read or write statistics to the reporter thread using shared memory and very limited syscalls or mutexes. The packer ring has proodcder and consumer pointer. The ring elemeentw are report structs.
 
-Summing
+Packet rings (src/packetring.c include/packetring.h)
 
-Startup
+A packet ring is a circular buffer between a traffic thread and reporter thread. A traffic thread is a producer and the reporter thread is the consumer. There is one packet ring per each traffic thread. The one reporter thread services all the traffic threads' rings. A traffic thread posts packet, read or write information using a Reportstruct. This is the necessary and sufficient infomation such that the reporter thread can perform the threads performance accounting as well as display interval or final reports.
+
+Summing (src/list.cpp include/list.hpp)
+
+Packet or read or write summing is done on a per client (host ip) basis. All traffic from a specific client will be summed. The active client list is kept in a linked list. A new client will trigger a new sum report.
+
+Function vectors (src/Reports.c src/Reporter.c src/ReportOutputs.c)
+
+The implementation of the reporter uses function vectors to handle the various types of traffic reporting. It's done this way so there aren't any inline tests, i.e. the function pointers are intialized at report creation time.  These consist of
+
+*packet_handler() - this is used to account for tcp or udp write or read called for every read or write
+*transfer_protcol_handler() - used to ready the data before it's output handler is called,
+*transfer_protcol_handler() - used to ready the summation data before it's output handler is called
+*output_handler() - used to format output and print the output
+*transfer_interval_handler() - used to select between time based or write/frame/burst reporting
+
+Mutexes and Condition variables:
+
+Startup (src/main.cpp src/Launch.cpp)
 
 There are two primary aspects of startup. The code is in main.cpp and Launch.cpp.
 
