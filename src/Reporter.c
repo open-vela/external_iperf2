@@ -1494,7 +1494,7 @@ int reporter_condprint_frame_interval_report_tcp (struct ReporterData *data, str
     int advance_jobq = 0;
     struct TransferInfo *stats = &data->info;
     // first packet of a burst and not a duplicate
-    fprintf(stdout,"****bs=%ld, remain=%ld, len=%ld, fid/match=%ld/%d\n",packet->burstsize, packet->remaining, packet->packetLen, packet->frameID, stats->matchframeID);
+//    fprintf(stdout,"****bs=%ld, remain=%ld, len=%ld, fid/match=%ld/%d\n",packet->burstsize, packet->remaining, packet->packetLen, packet->frameID, stats->matchframeID);
     if (packet->burstsize == (packet->remaining + packet->packetLen)) {
 	stats->matchframeID=packet->frameID;
 	stats->ts.matchTime = (isTripTime(stats->common) ? packet->sentTime : packet->packetTime);
