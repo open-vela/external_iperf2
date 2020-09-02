@@ -162,7 +162,7 @@ static void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport
 	    }
 	}
     default:
-	FAIL(1, "InitSumReport\n", inSettings);
+	FAIL(1, "SetSumReport\n", inSettings);
     }
 }
 
@@ -390,7 +390,8 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 		ireport->FullDuplexReport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_udp;
 	} else {
 	    ireport->transfer_protocol_handler = reporter_transfer_protocol_client_tcp;
-	    if (isEnhanced(inSettings)) {
+	    if (isIsochronous(inSettings)) {
+		ireport->info.output_handler = tcp_output_write_enhanced;
 	    } else {
 		ireport->info.output_handler = (isSumOnly(inSettings) ? NULL : tcp_output_write);
 	    }
