@@ -284,6 +284,7 @@ inline void Client::SetReportStartTime (void) {
     myReport->info.ts.startTime.tv_sec = now.getSecs();
     myReport->info.ts.startTime.tv_usec = now.getUsecs();
     myReport->info.ts.IPGstart = myReport->info.ts.startTime;
+    myReport->info.ts.prevpacketTime = myReport->info.ts.startTime;
     if (!TimeZero(myReport->info.ts.intervalTime)) {
 	myReport->info.ts.nextTime = myReport->info.ts.startTime;
 	TimeAdd(myReport->info.ts.nextTime, myReport->info.ts.intervalTime);
@@ -438,6 +439,7 @@ void Client::RunTCP( void ) {
     int burst_size = (mSettings->mWriteAckLen > 0) ? mSettings->mWriteAckLen : mSettings->mBufLen;
     int burst_remaining = 0;
     int burst_id = 1;
+    struct timeval prevsend = {.tv_sec = 0, .tv_usec = 0};
 
     // RJM, consider moving this into the constructor
     if (isIsochronous(mSettings)) {
@@ -447,6 +449,8 @@ void Client::RunTCP( void ) {
     now.setnow();
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
+    reportstruct->emptyreport=1;
+    reportstruct->transit_ready = 0;
     while (InProgress()) {
         if (isModeAmount(mSettings)) {
 	    reportstruct->packetLen = ((mSettings->mAmount < (unsigned) mSettings->mBufLen) ? mSettings->mAmount : mSettings->mBufLen);
@@ -455,34 +459,44 @@ void Client::RunTCP( void ) {
 	}
         int n = 0;
 	if (isTripTime(mSettings) || isWriteAck(mSettings) || isIsochronous(mSettings)) {
-	    if (burst_remaining == 0) {
+	    if (!burst_remaining) {
 		if (framecounter) {
 		    burst_size = (int) (lognormal(mSettings->mMean,mSettings->mVariance)) / (mSettings->mFPS * 8);
-		    burst_id =  framecounter->wait_tick();
+		    if (burst_size < (int) sizeof(struct TCP_burst_payload))
+			burst_size = (int) sizeof(struct TCP_burst_payload);
+		    burst_id = framecounter->wait_tick();
+		    // push an empty for frame interval reporting on the client
+		    reportstruct->emptyreport=1;
+		    now.setnow();
+		    reportstruct->packetTime.tv_sec = now.getSecs();
+		    reportstruct->packetTime.tv_usec = now.getUsecs();
+		    reportstruct->sentTime = reportstruct->packetTime;
+		    reportstruct->prevSentTime = prevsend;
+		    ReportPacket(myReport, reportstruct);
 		}
+		reportstruct->emptyreport=0;
+		reportstruct->transit_ready = 0;
 		// RJM fix below, consider using the timer value vs re-reading the clock
 		// the choice depends on the schedulding latency per clock_nanosleep()
 		now.setnow();
 		reportstruct->packetTime.tv_sec = now.getSecs();
 		reportstruct->packetTime.tv_usec = now.getUsecs();
-	        WriteTcpTxHdr(reportstruct, burst_size, burst_id++);
+		WriteTcpTxHdr(reportstruct, burst_size, burst_id++);
 		reportstruct->sentTime = reportstruct->packetTime;
-		burst_remaining = burst_size;
+		prevsend = reportstruct->packetTime;
 		// perform write
 		n = writen(mySocket, mBuf, sizeof(struct TCP_burst_payload));
-		WARN(n != sizeof(struct TCP_burst_payload), "burst hdr write failed");
-		burst_remaining -= n;
-		reportstruct->packetLen -= n;
-		// thread_debug("***write burst header %d id=%d", burst_size, (burst_id - 1));
+		assert(n == sizeof(struct TCP_burst_payload));
+		burst_remaining = burst_size - n;
 	    }
+	    // thread_debug("***write burst header %d id=%d", burst_size, (burst_id - 1));
 	    if (reportstruct->packetLen > burst_remaining) {
 		reportstruct->packetLen = burst_remaining;
 	    }
-	    reportstruct->remaining = burst_remaining;
 	}
 	// printf("pl=%ld\n",reportstruct->packetLen);
 	// perform write
-	WARN(reportstruct->packetLen <= 0, "invalid write req size");
+	assert(reportstruct->packetLen > 0);
 	int len = write(mySocket, mBuf, reportstruct->packetLen);
         if (len < 0) {
 	    if (NONFATALTCPWRITERR(errno)) {
@@ -496,25 +510,27 @@ void Client::RunTCP( void ) {
 	    }
 	    len = 0;
 	} else {
-	    totLen += len + n;
+	    totLen += (len + n);
 	    reportstruct->errwrite=WriteNoErr;
-#ifdef HAVE_THREAD_DEBUG
+#ifdef HAVE_THREAD_DEBUG<
 	    {
 		if (len != reportstruct->packetLen)
 		    thread_debug("write size mismatch req=%ld, actual=%d", reportstruct->packetLen, len);
 	    }
 #endif
 	}
-	if (isTripTime(mSettings) || isWriteAck(mSettings) || isIsochronous(mSettings))
+	if (isTripTime(mSettings) || isWriteAck(mSettings) || isIsochronous(mSettings)) {
 	    burst_remaining -= len;
+	}
 	reportstruct->packetLen = len + n;
 	now.setnow();
 	reportstruct->packetTime.tv_sec = now.getSecs();
 	reportstruct->packetTime.tv_usec = now.getUsecs();
 	reportstruct->sentTime = reportstruct->packetTime;
-	if ((mSettings->mIntervalMode == kInterval_Time) || isEnhanced(mSettings)) {
-            ReportPacket(myReport, reportstruct);
-        }
+        ReportPacket(myReport, reportstruct);
+	if (framecounter && (burst_remaining == 0)) {
+	    reportstruct->transit_ready = 1;
+	}
         if (isModeAmount(mSettings)) {
             /* mAmount may be unsigned, so don't let it underflow! */
 	    if( mSettings->mAmount >= (unsigned long) (reportstruct->packetLen) ) {
@@ -719,7 +735,6 @@ void Client::RunUDP( void ) {
 
 	reportstruct->errwrite = WriteNoErr;
 	reportstruct->emptyreport = 0;
-
 	// perform write
 	if (isModeAmount(mSettings)) {
 	    currLen = write( mySocket, mBuf, (mSettings->mAmount < (unsigned) mSettings->mBufLen) ? mSettings->mAmount : mSettings->mBufLen);

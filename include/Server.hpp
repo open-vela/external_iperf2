@@ -59,6 +59,11 @@
 #include "util.h"
 #include "Timestamp.hpp"
 
+#ifdef WIN32
+#define NONFATALTCPREADERR(errno) (WSAGetLastError() != WSAEWOULDBLOCK)
+#else
+#define NONFATALTCPREADERR(errno) (errno != EAGAIN && errno != EWOULDBLOCK)
+#endif
 
 
 /* ------------------------------------------------------------------- */
@@ -82,7 +87,6 @@ private:
     Timestamp now;
     ReportStruct scratchpad;
     ReportStruct *reportstruct;
-    struct timeval prevsend;
 
     void InitKernelTimeStamping (void);
     void InitTrafficLoop (void);

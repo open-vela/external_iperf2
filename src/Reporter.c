@@ -476,9 +476,6 @@ static int reporter_process_transfer_report (struct ReporterData *this_ireport) 
 	    // Check to output any interval reports, do this prior
 	    // to packet handling to preserve interval accounting
 	    if (this_ireport->transfer_interval_handler) {
-		if (!packet->emptyreport)
-		    // Stash this last timestamp away for calculations that need it, e.g. packet interval reporting
-		    this_ireport->info.ts.prevpacketTime = this_ireport->info.ts.IPGstart;
 		advance_jobq = (*this_ireport->transfer_interval_handler)(this_ireport, packet);
 	    }
 	    // Do the packet accounting per the handler type
@@ -909,7 +906,7 @@ static inline void reporter_set_timestamps_time(struct ReportTimeStamps *times, 
 	    times->iEnd = TimeDifference(times->packetTime, times->startTime);
 	    break;
 	case FRAME:
-	    if ((times->iStart = TimeDifference(times->matchTime, times->startTime)) < 0)
+	    if ((times->iStart = TimeDifference(times->prevpacketTime, times->startTime)) < 0)
 		times->iStart = 0.0;
 	    times->iEnd = TimeDifference(times->packetTime, times->startTime);
 	    break;
@@ -1468,7 +1465,6 @@ int reporter_condprint_frame_interval_report_udp (struct ReporterData *data, str
     assert(packet->burstsize != 0);
     if ((packet->burstsize == (packet->remaining + packet->packetLen)) && (stats->matchframeID != packet->frameID)) {
 	stats->matchframeID=packet->frameID;
-	stats->ts.matchTime = (isTripTime(stats->common) ? packet->sentTime : packet->packetTime);
     }
     if ((packet->packetLen == packet->remaining) && (packet->frameID == stats->matchframeID)) {
 	if ((stats->ts.iStart = TimeDifference(stats->ts.nextTime, stats->ts.startTime)) < 0)
@@ -1491,23 +1487,20 @@ int reporter_condprint_frame_interval_report_udp (struct ReporterData *data, str
 
 int reporter_condprint_frame_interval_report_tcp (struct ReporterData *data, struct ReportStruct *packet) {
     assert(packet->burstsize != 0);
-    int advance_jobq = 0;
     struct TransferInfo *stats = &data->info;
-    // first packet of a burst and not a duplicate
-//    fprintf(stdout,"****bs=%ld, remain=%ld, len=%ld, fid/match=%ld/%d\n",packet->burstsize, packet->remaining, packet->packetLen, packet->frameID, stats->matchframeID);
-    if (packet->burstsize == (packet->remaining + packet->packetLen)) {
-	stats->matchframeID=packet->frameID;
-	stats->ts.matchTime = (isTripTime(stats->common) ? packet->sentTime : packet->packetTime);
-//	printf("packet %ld.%ld sent %ld.%ld match %ld.%ld\n", stats->ts.matchTime.tv_sec, stats->ts.matchTime.tv_usec, packet->packetTime.tv_sec, packet->packetTime.tv_usec, packet->sentTime.tv_sec, packet->sentTime.tv_usec);
+    int advance_jobq = 0;
+    if (!packet->frameID) {
+	stats->matchframeID = 1;
+	return 1;
     }
-    if ((packet->packetLen == packet->remaining) && (packet->frameID == stats->matchframeID)) {
-//    fprintf(stdout,"****bs=%ld, remain=%ld, len=%ld, fid/match=%ld/%d matchtime=%ld.%ld\n",packet->burstsize, packet->remaining, packet->packetLen, packet->frameID, stats->matchframeID, stats->ts.matchTime.tv_sec, stats->ts.matchTime.tv_usec);
+    // first packet of a burst and not a duplicate
+    if (packet->transit_ready) {
 	stats->matchframeID++;
+//	printf("****sndpkt=%ld.%ld rxpkt=%ld.%ld\n", packet->sentTime.tv_sec, packet->sentTime.tv_usec, packet->packetTime.tv_sec,packet->packetTime.tv_usec);
+	stats->ts.prevpacketTime = packet->prevSentTime;
+	stats->ts.packetTime = packet->packetTime;
 	reporter_set_timestamps_time(&stats->ts, FRAME);
-	stats->frameID = packet->frameID;
 	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
-	// assume most of the  time out-of-order packets are not
-	// duplicate packets, so conditionally subtract them from the lost packets.
 	(*stats->output_handler)(stats);
 	reporter_reset_transfer_stats_client_tcp(stats);
 	advance_jobq = 1;
