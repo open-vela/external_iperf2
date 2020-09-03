@@ -83,8 +83,6 @@ Server::Server( thread_Settings *inSettings ) {
     mBuf = NULL;
     myJob = NULL;
     reportstruct = &scratchpad;
-    prevsend.tv_sec = 0;
-    prevsend.tv_usec = 0;
     memset(&scratchpad, 0, sizeof(struct ReportStruct));
     mySocket = inSettings->mSock;
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
@@ -126,7 +124,7 @@ Server::Server( thread_Settings *inSettings ) {
 	timeout.tv_usec = sorcvtimer % 1000000;
 #endif
 	if (setsockopt( mSettings->mSock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0 ) {
-	    WARN_errno( mSettings->mSock == SO_RCVTIMEO, "socket" );
+	    WARN_errno(mSettings->mSock == SO_RCVTIMEO, "socket");
 	}
     }
 }
@@ -177,13 +175,14 @@ inline bool Server::InProgress (void) {
 void Server::RunTCP (void) {
     long currLen;
     intmax_t totLen = 0;
-    bool err  = 0;
+    bool peerclose  = false;
     struct TCP_burst_payload burst_info;
-
     Timestamp time1, time2;
     double tokens=0.000004;
 
     InitTrafficLoop();
+    struct timeval prevsend = {.tv_sec = 0, .tv_usec = 0};
+
     int burst_nleft = 0;
     burst_info.burst_id = 0;
 
@@ -194,74 +193,77 @@ void Server::RunTCP (void) {
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
 
-    while (InProgress() && !err) {
+    while (InProgress() && !peerclose) {
 	reportstruct->emptyreport=0;
+	currLen = 0;
 	// perform read
 	if (isBWSet(mSettings)) {
 	    time2.setnow();
 	    tokens += time2.subSec(time1) * (mSettings->mUDPRate / 8.0);
 	    time1 = time2;
 	}
+	reportstruct->transit_ready = 0;
 	if (tokens >= 0.0) {
 	    int n = 0;
-	    if (isIsochronous(mSettings) || isTripTime(mSettings)) {
-		reportstruct->transit_ready = 0;
-		if (burst_nleft == 0) {
-		    if ((n = recvn(mSettings->mSock, (char *)&burst_info, sizeof(struct TCP_burst_payload), 0)) == sizeof(struct TCP_burst_payload)) {
-			burst_info.typelen.type = ntohl(burst_info.typelen.type);
-			burst_info.typelen.length = ntohl(burst_info.typelen.length);
-			burst_info.flags = ntohl(burst_info.flags);
-			burst_info.burst_size = ntohl(burst_info.burst_size);
-			assert(burst_info.burst_size > 0);
-			reportstruct->burstsize = burst_info.burst_size;
-			burst_info.burst_id = ntohl(burst_info.burst_id);
-			// printf("**** burst size = %d id = %d\n", burst_info.burst_size, burst_info.burst_id);
-			reportstruct->frameID = burst_info.burst_id;
-		        reportstruct->prevSentTime = prevsend;
-		        reportstruct->sentTime.tv_sec = ntohl(burst_info.send_tt.write_tv_sec);
-		        reportstruct->sentTime.tv_usec = ntohl(burst_info.send_tt.write_tv_usec);
-			prevsend = reportstruct->sentTime;
-			burst_nleft = burst_info.burst_size - n;
-			// thread_debug("***read burst header size %d id=%d", burst_info.burst_size, burst_info.burst_id);
+	    int readLen = mSettings->mBufLen;
+	    reportstruct->emptyreport=1;
+	    if ((isIsochronous(mSettings) || isTripTime(mSettings)) && (burst_nleft == 0)) {
+		if ((n = recvn(mSettings->mSock, (char *)&burst_info, sizeof(struct TCP_burst_payload), 0)) == sizeof(struct TCP_burst_payload)) {
+		    // burst_info.typelen.type = ntohl(burst_info.typelen.type);
+		    // burst_info.typelen.length = ntohl(burst_info.typelen.length);
+		    burst_info.flags = ntohl(burst_info.flags);
+		    burst_info.burst_size = ntohl(burst_info.burst_size);
+		    assert(burst_info.burst_size > 0);
+		    reportstruct->burstsize = burst_info.burst_size;
+		    burst_info.burst_id = ntohl(burst_info.burst_id);
+		    // printf("**** burst size = %d id = %d\n", burst_info.burst_size, burst_info.burst_id);
+		    reportstruct->frameID = burst_info.burst_id;
+		    if (isTripTime(mSettings)) {
+			reportstruct->sentTime.tv_sec = ntohl(burst_info.send_tt.write_tv_sec);
+			reportstruct->sentTime.tv_usec = ntohl(burst_info.send_tt.write_tv_usec);
 		    } else {
-#ifdef HAVE_THREAD_DEBUG
-		        thread_debug("TCP burst partial read of %d wanted %d", n, sizeof(struct TCP_burst_payload));
-#endif
-		        goto end;
+			now.setnow();
+			reportstruct->sentTime.tv_sec = now.getSecs();
+			reportstruct->sentTime.tv_usec = now.getUsecs();
 		    }
+		    prevsend = reportstruct->sentTime;
+		    burst_nleft = burst_info.burst_size - n;
+		    currLen += n;
+		    readLen = (mSettings->mBufLen < burst_nleft) ? mSettings->mBufLen : burst_nleft;
+		    WARN(burst_nleft <= 0, "invalid burst read req size");
+		    // thread_debug("***read burst header size %d id=%d", burst_info.burst_size, burst_info.burst_id);
+		} else {
+#ifdef HAVE_THREAD_DEBUG
+		    thread_debug("TCP burst partial read of %d wanted %d", n, sizeof(struct TCP_burst_payload));
+#endif
+		    goto end;
 		}
-		WARN(burst_nleft <= 0, "invalid burst read req size");
-		currLen = recv(mSettings->mSock, mBuf, ((mSettings->mBufLen < burst_nleft) ? mSettings->mBufLen : burst_nleft), 0);
-		if (currLen > 0) {
-		    burst_nleft -= currLen;
-		    if ((burst_nleft == 0) && burst_info.burst_id) {
+	    }
+	    n = recv(mSettings->mSock, mBuf, readLen, 0);
+	    if (n > 0) {
+		reportstruct->emptyreport=0;
+		if (isIsochronous(mSettings) || isTripTime(mSettings)) {
+		    burst_nleft -= n;
+		    if (burst_nleft == 0) {
+#ifdef WRITEACKDONE
 		        if (isWriteAck(mSettings)) {
 			    enqueue_ackring(mSettings->ackring, reportstruct);
 			}
+#endif
+			reportstruct->prevSentTime = prevsend;
 			reportstruct->transit_ready = 1;
+		    } else {
+//			printf("****currlen = %ld, n=%d, burst_nleft=%d id=%d\n", currLen, n, burst_nleft, burst_info.burst_id);
 		    }
 		}
-		// printf("currlen = %d, n=%d, burst_nleft=%d\n", currLen, n, burst_nleft);
-	    } else {
-	        currLen = recv(mSettings->mSock, mBuf, mSettings->mBufLen, 0);
-	    }
-	    if (currLen <= 0) {
-		reportstruct->emptyreport=1;
-		// End loop on 0 read or socket error
-		// except for socket read timeout
-		if (currLen == 0 ||
-  #ifdef WIN32
-		    (WSAGetLastError() != WSAEWOULDBLOCK)
-  #else
-		    (errno != EAGAIN && errno != EWOULDBLOCK)
-  #endif // WIN32
-		    ) {
-		    err = 1;
-  #ifdef HAVE_THREAD_DEBUG
-		    thread_debug("Server thread detected EOF on socket %d", mSettings->mSock);
-  #endif
-		}
-		currLen = 0;
+	    } else if (n == 0) {
+		peerclose = true;
+#ifdef HAVE_THREAD_DEBUG
+		thread_debug("Server thread detected EOF on socket %d", mSettings->mSock);
+#endif
+	    } else if ((n < 0) && (!NONFATALTCPREADERR(errno))) {
+		WARN_errno(1, "recv");
+		n = 0;
 	    }
 	    currLen += n;
 	    now.setnow();
@@ -395,15 +397,11 @@ void Server::InitTrafficLoop (void) {
     // before entering the main loop
     reportstruct->packetLen = SkipFirstPayload();
     if (reportstruct->packetLen > 0) {
-	reportstruct->burstsize = reportstruct->packetLen;
-	reportstruct->remaining = reportstruct->packetLen;
 	// printf("**** burst size = %d id = %d\n", burst_info.burst_size, burst_info.burst_id);
 	reportstruct->frameID = 0;
-	reportstruct->prevSentTime = prevsend;
 	reportstruct->sentTime.tv_sec = myReport->info.ts.startTime.tv_sec;
 	reportstruct->sentTime.tv_usec = myReport->info.ts.startTime.tv_usec;
 	reportstruct->packetTime = reportstruct->sentTime;
-	prevsend = reportstruct->sentTime;
 	ReportPacket(myReport, reportstruct);
     }
 }
