@@ -1488,6 +1488,7 @@ int reporter_condprint_frame_interval_report_udp (struct ReporterData *data, str
 int reporter_condprint_frame_interval_report_tcp (struct ReporterData *data, struct ReportStruct *packet) {
     assert(packet->burstsize != 0);
     struct TransferInfo *stats = &data->info;
+
     int advance_jobq = 0;
     if (!packet->frameID) {
 	stats->matchframeID = 1;
@@ -1507,7 +1508,6 @@ int reporter_condprint_frame_interval_report_tcp (struct ReporterData *data, str
     }
     return advance_jobq;
 }
-
 
 #ifdef __cplusplus
 } /* end extern "C" */

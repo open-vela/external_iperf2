@@ -1484,10 +1484,6 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, struct client_tes
 		len += sizeof(struct client_hdrext_isoch);
 	    }
 	}
-	if ((flags & HEADER_EXTEND_NOACK) != 0) {
-	    hdr->extend.typelen.type = htonl(CLIENTTCPHDR);
-	    hdr->extend.typelen.length =  htonl(sizeof(struct client_hdrext));
-	}
 	len += sizeof(struct client_hdrext);
     }
     if (flags & HEADER_EXTEND_NOACK) {
@@ -1500,7 +1496,7 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, struct client_tes
 	    extendflags |= UNITS_PPS;
 	}
         hdr->extend.typelen.type  = htonl(CLIENTHDR);
-	hdr->extend.typelen.length = htonl((sizeof(client_hdrext) - sizeof(hdr_typelen)));
+	hdr->extend.typelen.length = htonl(len - sizeof(hdr_typelen));
 	hdr->extend.reserved = 0;
 	hdr->extend.flags = htonl(extendflags);
     }
@@ -1529,7 +1525,6 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, struct client_tes
 	}
 	len += sizeof(struct client_hdr_v1);
     }
-
     if (((flags & HEADER_EXTEND_NOACK) != 0) && isPeerVerDetect(client)) {
 	flags &= ~HEADER_EXTEND_NOACK;
 	flags |= HEADER_EXTEND_ACK;
