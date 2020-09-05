@@ -212,7 +212,7 @@ void Client::my_connect(void) {
 	PostReport(tmp);
     }
     // Post the connect report unless peer version exchange is set
-    if (isConnectionReport(mSettings) && !isPeerVerDetect(mSettings) && !isSumOnly(mSettings))
+    if (connected && isConnectionReport(mSettings) && !isPeerVerDetect(mSettings) && !isSumOnly(mSettings))
 	PostReport(InitConnectionReport(mSettings, connecttime));
 } // end Connect
 
