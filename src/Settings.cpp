@@ -336,6 +336,11 @@ void Settings_Copy(struct thread_Settings *from, struct thread_Settings **into) 
 	(*into)->mIsochronousStr = new char[ strlen(from->mIsochronousStr) + 1];
         strcpy((*into)->mIsochronousStr, from->mIsochronousStr);
     }
+    if (from->mCongestion != NULL) {
+	(*into)->mCongestion = new char[ strlen(from->mCongestion) + 1];
+        strcpy((*into)->mCongestion, from->mCongestion);
+    }
+
     (*into)->txstart_epoch = from->txstart_epoch;
     (*into)->mSumReport = from->mSumReport;
     (*into)->mBidirReport = from->mBidirReport;
