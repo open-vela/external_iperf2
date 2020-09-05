@@ -683,11 +683,12 @@ static inline void reporter_handle_burst_tcp_transit (struct ReporterData *data,
     struct TransferInfo *stats = &data->info;
     if (packet->frameID && packet->transit_ready) {
         double transit = reporter_handle_packet_oneway_transit(data, packet);
-	if (!TimeZero(packet->prevSentTime)) {
-	    double delta = TimeDifference(packet->sentTime, packet->prevSentTime);
+	if (!TimeZero(stats->ts.prevpacketTime)) {
+	    double delta = TimeDifference(packet->sentTime, stats->ts.prevpacketTime);
 	    stats->arrivalSum += delta;
 	    stats->totarrivalSum += delta;
 	}
+	stats->ts.prevpacketTime = packet->sentTime;
 	if (stats->framelatency_histogram) {
 	    histogram_insert(stats->framelatency_histogram, transit, isTripTime(stats->common) ? &packet->sentTime : NULL);
 	}
