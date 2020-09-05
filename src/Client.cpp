@@ -458,6 +458,7 @@ void Client::RunTCP( void ) {
 	    reportstruct->packetLen = mSettings->mBufLen;
 	}
         int n = 0;
+		reportstruct->emptyreport=0;
 	if (isTripTime(mSettings) || isWriteAck(mSettings) || isIsochronous(mSettings)) {
 	    if (!burst_remaining) {
 		if (framecounter) {
@@ -474,7 +475,6 @@ void Client::RunTCP( void ) {
 		    reportstruct->prevSentTime = prevsend;
 		    ReportPacket(myReport, reportstruct);
 		}
-		reportstruct->emptyreport=0;
 		reportstruct->transit_ready = 0;
 		// RJM fix below, consider using the timer value vs re-reading the clock
 		// the choice depends on the schedulding latency per clock_nanosleep()
