@@ -244,6 +244,8 @@ void Listener::Run (void) {
 	    // Not allowed, reset things and restart the loop
 	    // Don't forget to delete the UDP entry (inserted in my_accept)
 	    Iperf_remove_host(&server->peer);
+	    if (!isUDP(server))
+	        close(server->mSock);
 	    assert(server != mSettings);
 	    Settings_Destroy(server);
 	    continue;
@@ -262,7 +264,12 @@ void Listener::Run (void) {
 	    // will also process the first message from an accounting perspective.
 	    // This is required for accurate traffic statistics
 	    if (!apply_client_settings(server)) {
+	       if (isConnectionReport(server) && !isSumOnly(server)) {
+		   PostReport(InitConnectionReport(server, 0));
+	        }
 		Iperf_remove_host(&server->peer);
+		if (!isUDP(server))
+		    close(server->mSock);
 		assert(server != mSettings);
 		Settings_Destroy(server);
 		continue;
@@ -951,8 +958,10 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		setTripTime(server);
 		server->triptime_start.tv_sec = ntohl(hdr->extend.start_tv_sec);
 		server->triptime_start.tv_usec = ntohl(hdr->extend.start_tv_usec);
-		if (TimeZero(server->triptime_start)) {
-		    fprintf(stdout,"ERROR: dropping connection because --trip-times set but client didn't provid valid start time\n");
+		Timestamp now;
+		#define MAXDIFFTIMESTAMPSECS 60
+		if (TimeZero(server->triptime_start) || (abs(now.getSecs() - server->triptime_start.tv_sec) > MAXDIFFTIMESTAMPSECS)) {
+		    fprintf(stdout,"ERROR: dropping connection because --trip-times set but client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
 		    rc = 0;
 		}
 		assert(server->triptime_start.tv_sec != 0);
