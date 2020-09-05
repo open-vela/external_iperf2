@@ -709,7 +709,7 @@ void reporter_print_connection_report(struct ConnectionInfo *report) {
 	snprintf(b, SNBUFFERSIZE-strlen(b), " (%s)", "l2mode");
 	b += strlen(b);
     }
-    if (isPrintMSS(report->common) || isEnhanced(report->common))  {
+    if ((report->common->socket > 0) && (isPrintMSS(report->common) || isEnhanced(report->common)))  {
 	int inMSS = getsock_tcp_mss(report->common->socket);
 	if (isPrintMSS(report->common) && (inMSS <= 0)) {
 	    printf(report_mss_unsupported, report->common->socket);
