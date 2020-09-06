@@ -98,7 +98,7 @@ int bidir_start_barrier (struct BarrierMutex *barrier) {
     return rc;
 }
 int bidir_stop_barrier (struct BarrierMutex *barrier) {
-    int rc =bidir_startstop_barrier(barrier);
+    int rc = bidir_startstop_barrier(barrier);
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("BiDir stop barrier done on condition %p ", (void *)&barrier->await, rc);
 #endif
