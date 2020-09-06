@@ -429,7 +429,10 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	if (isUDP(inSettings)) {
 	    ireport->transfer_interval_handler = reporter_condprint_frame_interval_report_udp;
 	} else {
-	    ireport->transfer_interval_handler = reporter_condprint_frame_interval_report_tcp;
+	  if (isTripTime(inSettings) || isIsochronous(inSettings))
+	      ireport->transfer_interval_handler = reporter_condprint_frame_interval_report_tcp;
+	  else
+	      ireport->transfer_interval_handler = NULL;
 	}
 	break;
     default :
