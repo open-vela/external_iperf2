@@ -90,6 +90,7 @@ public:
     void ConnectPeriodic(void);
     void my_connect(void);
     bool isConnected(void);
+    void SendFirstPayload(void);
     int BarrierClient(struct BarrierMutex *);
 
 private:
@@ -102,7 +103,6 @@ private:
     void write_UDP_FIN(void);
     bool InProgress(void);
     void PostNullEvent(void);
-    void SendFirstPayload(struct timeval);
     void AwaitServerCloseEvent(void);
     bool connected;
     ReportStruct scratchpad;

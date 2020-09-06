@@ -60,7 +60,6 @@
 #include "Listener.hpp"
 #include "Server.hpp"
 #include "PerfSocket.hpp"
-#include "Write_ack.hpp"
 
 #define MINBARRIERTIMEOUT 3
 
@@ -148,6 +147,107 @@ void server_spawn(struct thread_Settings *thread) {
     DELETE_PTR(theServer);
 }
 
+static void clientside_client_basic (struct thread_Settings *thread, Client *theClient) {
+    theClient->my_connect();
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Client spawn thread basic (sock=%d)", thread->mSock);
+#endif
+    if ((thread->mThreads > 1) && !isNoConnectSync(thread))
+	// When -P > 1 then all threads finish connect before starting traffic
+	theClient->BarrierClient(thread->connects_done);
+    if (theClient->isConnected()) {
+	theClient->StartSynch();
+	theClient->SendFirstPayload();
+	theClient->Run();
+    }
+}
+
+#define SLOPSECS 2
+
+static void clientside_client_reverse (struct thread_Settings *thread, Client *theClient) {
+    theClient->my_connect();
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Client spawn thread reverse (sock=%d)", thread->mSock);
+#endif
+    if ((thread->mThreads > 1) && !isNoConnectSync(thread))
+	// When -P > 1 then all threads finish connect before starting traffic
+	theClient->BarrierClient(thread->connects_done);
+    if (theClient->isConnected()) {
+	struct thread_Settings *reverse_client = NULL;
+	Settings_Copy(thread, &reverse_client);
+	theClient->StartSynch();
+	theClient->SendFirstPayload();
+	FAIL((!reverse_client || !(thread->mSock > 0)), "Reverse test failed to start per thread settings or socket problem",  thread);
+	reverse_client->mSock = thread->mSock; // use the same socket for both directions
+	reverse_client->mThreadMode = kMode_Server;
+	setServerReverse(reverse_client); // cause the connection report to show reverse
+	if (isModeTime(reverse_client)) {
+	    reverse_client->mAmount += (SLOPSECS * 100);  // add 2 sec for slop on reverse, units are 10 ms
+	}
+	thread_start(reverse_client);
+	// Reverse only, client thread waits on reverse_server and never runs any traffic
+	if (!thread_equalid(reverse_client->mTID, thread_zeroid())) {
+#ifdef HAVE_THREAD_DEBUG
+	    thread_debug("Reverse pthread join sock=%d", reverse_client->mSock);
+#endif
+	    if (pthread_join(reverse_client->mTID, NULL) != 0) {
+		WARN( 1, "pthread_join reverse failed" );
+	    } else {
+#ifdef HAVE_THREAD_DEBUG
+		thread_debug("Client reverse thread finished sock=%d", reverse_client->mSock);
+#endif
+	    }
+	}
+    }
+}
+
+static void clientside_client_bidir (struct thread_Settings *thread, Client *theClient) {
+    struct thread_Settings *reverse_client = NULL;
+    thread->bidir_startstop.timeout = (isModeTime(thread) ? ((int)(thread->mAmount / 100) + 1) : 2);
+    if (thread->bidir_startstop.timeout < MINBARRIERTIMEOUT)
+	thread->bidir_startstop.timeout = MINBARRIERTIMEOUT;
+    Condition_Initialize(&thread->bidir_startstop.await);
+    thread->bidir_startstop.count = 0;
+    thread->mBidirReport = InitSumReport(thread, thread->mSock, 1);
+    IncrSumReportRefCounter(thread->mBidirReport);
+    Settings_Copy(thread, &reverse_client);
+    IncrSumReportRefCounter(thread->mBidirReport);
+    theClient->my_connect();
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Client spawn thread bidir (sock=%d)", thread->mSock);
+#endif
+    if ((thread->mThreads > 1) && !isNoConnectSync(thread))
+	// When -P > 1 then all threads finish connect before starting traffic
+	theClient->BarrierClient(thread->connects_done);
+    if (theClient->isConnected()) {
+	theClient->StartSynch();
+	theClient->SendFirstPayload();
+	FAIL((!reverse_client || !(thread->mSock > 0)), "Reverse test failed to start per thread settings or socket problem",  thread);
+	reverse_client->mSock = thread->mSock; // use the same socket for both directions
+	reverse_client->mThreadMode = kMode_Server;
+	setServerReverse(reverse_client); // cause the connection report to show reverse
+	if (isModeTime(reverse_client)) {
+	    reverse_client->mAmount += (SLOPSECS * 100);  // add 2 sec for slop on reverse, units are 10 ms
+	}
+	thread_start(reverse_client);
+	theClient->Run();
+    }
+}
+
+static void serverside_client_reverse (struct thread_Settings *thread, Client *theClient) {
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Server spawn client reverse thread reverse (sock=%d)", thread->mSock);
+#endif
+}
+
+static void serverside_client_bidir(struct thread_Settings *thread, Client *theClient) {
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Server spawn client bidir thread reverse (sock=%d)", thread->mSock);
+#endif
+}
+
+
+
 /*
  * client_spawn is responsible for creating a Client class
  * and launching the client. It is provided as a means for
@@ -164,9 +264,8 @@ void server_spawn(struct thread_Settings *thread) {
  *
  * Note: This runs in client thread context
  */
-void client_spawn(struct thread_Settings *thread) {
+void client_spawn (struct thread_Settings *thread) {
     Client *theClient = NULL;
-    struct thread_Settings *reverse_client = NULL;
 
     // set traffic thread to realtime if needed
 #if HAVE_SCHED_SETSCHEDULER
@@ -184,84 +283,26 @@ void client_spawn(struct thread_Settings *thread) {
     if (isConnectOnly(thread)) {
 	theClient->ConnectPeriodic();
     } else if (!isServerReverse(thread)) {
-	theClient->my_connect();
-    }
-    if (!isNoConnectSync(thread))
-	theClient->BarrierClient(thread->connects_done);
-
-    if (theClient->isConnected()) {
-	if (!isReverse(thread) && !isServerReverse(thread) && !isWriteAck(thread)) {
-	    // Code for the normal case
-	    // Perform any intial startup delays between the connect() and the data xfer phase
-	    // this will also initiliaze the report header timestamps needed by the reporter thread
-#ifdef HAVE_THREAD_DEBUG
-	    thread_debug("Client spawn thread normal (sock=%d)", thread->mSock);
-#endif
-	    theClient->StartSynch();
-	    theClient->Run();
-	} else if (isServerReverse(thread)) {
-#ifdef HAVE_THREAD_DEBUG
-	    thread_debug("Client spawn thread server-reverse (sock=%d)", thread->mSock);
-#endif
-	    // This is the case of the listener launching a client, no test exchange nor connect
-	    theClient->Run();
-	} else if (isReverse(thread) || isWriteAck(thread)) {
-	    // This is a client side initiated reverse test,
-	    // Could be bidir or reverse only
-	    // Create thread setting for the reverse_client (i.e. client as server)
-	    // Note: Settings copy will malloc space for the
-	    // reverse thread settings and the run_wrapper will free it
-	    if (isBidir(thread)) {
-		thread->bidir_startstop.timeout = (isModeTime(thread) ? ((int)(thread->mAmount / 100) + 1) : 2);
-		if (thread->bidir_startstop.timeout < MINBARRIERTIMEOUT)
-		    thread->bidir_startstop.timeout = MINBARRIERTIMEOUT;
-		Condition_Initialize(&thread->bidir_startstop.await);
-		thread->bidir_startstop.count = 0;
-		thread->mBidirReport = InitSumReport(thread, thread->mSock, 1);
-		IncrSumReportRefCounter(thread->mBidirReport);
-	    }
-	    Settings_Copy(thread, &reverse_client);
-	    FAIL((!reverse_client || !(thread->mSock > 0)), "Reverse test failed to start per thread settings or socket problem",  thread);
-	    reverse_client->mSock = thread->mSock; // use the same socket for both directions
-	    if (isWriteAck(thread))
-		reverse_client->mThreadMode = kMode_WriteAckClient;
-	    else
-		reverse_client->mThreadMode = kMode_Server;
-	    setServerReverse(reverse_client); // cause the connection report to show reverse
-	    if (isModeTime(reverse_client)) {
-		reverse_client->mAmount += (SLOPSECS * 100);  // add 2 sec for slop on reverse, units are 10 ms
-		if (isTxHoldback(thread)) {
-		    reverse_client->mAmount += (thread->txholdback_timer.tv_sec * 100);
-		    reverse_client->mAmount += (thread->txholdback_timer.tv_usec / 1000000 * 100);
-		}
-	    }
-#ifdef HAVE_THREAD_DEBUG
-	    thread_debug("Client spawn thread reverse (sock=%d)", thread->mSock);
-#endif
-	    theClient->StartSynch();
-	    // RJM ADD a thread event here so reverse_client is in a known ready state prior to test exchange
-	    // Now exchange client's test information with remote server
-	    setReverse(reverse_client);
-	    thread_start(reverse_client);
-	    // Now handle bidir vs reverse-only for client side invocation
-	    if (!isBidir(thread) && !isWriteAck(thread)) {
-		// Reverse only, client thread waits on reverse_server and never runs any traffic
-		if (!thread_equalid(reverse_client->mTID, thread_zeroid())) {
-#ifdef HAVE_THREAD_DEBUG
-		    thread_debug("Reverse pthread join sock=%d", reverse_client->mSock);
-#endif
-		    if (pthread_join(reverse_client->mTID, NULL) != 0) {
-			WARN( 1, "pthread_join reverse failed" );
-		    } else {
-#ifdef HAVE_THREAD_DEBUG
-			thread_debug("Client reverse thread finished sock=%d", reverse_client->mSock);
-#endif
-		    }
-		}
-	    } else {
-		// bidir case or Write ack case, start the client traffic
-		theClient->Run();
-	    }
+	// These are the client side spawning of clients
+	if (!isReverse(thread) && !isBidir(thread)) {
+	    clientside_client_basic(thread, theClient);
+	} else if (isReverse(thread) && !isBidir(thread)) {
+	    clientside_client_reverse(thread, theClient);
+	} else if (isBidir(thread)) {
+	    clientside_client_bidir(thread, theClient);
+	} else {
+	    fprintf(stdout, "Program error in client side client_spawn");
+	    _exit(0);
+	}
+    } else {
+	// These are the server or listener side spawning of clients
+	if (isReverse(thread) && !isBidir(thread)) {
+	    serverside_client_reverse(thread, theClient);
+	} else if (isBidir(thread)) {
+	    serverside_client_bidir(thread, theClient);
+	} else {
+	    fprintf(stdout, "Program error in server side client_spawn");
+	    _exit(0);
 	}
     }
     // Call the client's destructor
@@ -314,6 +355,7 @@ void client_init(struct thread_Settings *clients) {
 #endif
 }
 
+#ifdef WRITEACK_DONE
 /*
  * writeack_server_spawn
  */
@@ -358,3 +400,5 @@ void writeack_client_spawn(struct thread_Settings *thread) {
     }
     DELETE_PTR( theServer);
 }
+
+#endif

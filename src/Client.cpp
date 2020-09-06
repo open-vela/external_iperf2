@@ -76,7 +76,7 @@ const int    kBytes_to_Bits = 8;
 
 Client::Client(thread_Settings *inSettings) {
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Client thread started in constructor (%x/%x)", inSettings->flags, inSettings->flags_extend);
+    thread_debug("Client in constructor (%x/%x)", inSettings->flags, inSettings->flags_extend);
 #endif
 
     mSettings = inSettings;
@@ -153,12 +153,14 @@ void Client::my_connect(void) {
     mSettings->mSock=mySocket;
     if (mSettings->mThreads > 1)
 	Iperf_push_host(&mSettings->peer, mSettings);
-    myJob = InitIndividualReport(mSettings);;
-    myReport = (struct ReporterData *)myJob->this_report;
-    myReport->info.common->socket=mySocket;
-    myReport->info.transferID=mySocket;
-    if (isIsochronous(mSettings))
-	myReport->info.matchframeID = 1;
+    if (!(isReverse(mSettings) && !isBidir(mSettings))) {
+	myJob = InitIndividualReport(mSettings);;
+	myReport = (struct ReporterData *)myJob->this_report;
+	myReport->info.common->socket=mySocket;
+	myReport->info.transferID=mySocket;
+	if (isIsochronous(mSettings))
+	    myReport->info.matchframeID = 1;
+    }
     SetSocketOptions(mSettings);
     SockAddr_localAddr(mSettings);
     if (mSettings->mLocalhost != NULL) {
@@ -230,7 +232,6 @@ void Client::StartSynch (void) {
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Client start sync enterred");
 #endif
-    int barrier_needed = ((mSettings->mThreads > 1) && !isNoConnectSync(mSettings) && !isServerReverse(mSettings));
     // Perform delays, usually between connect() and data xfer though before connect
     // Two delays are supported:
     // o First is an absolute start time per unix epoch format
@@ -250,8 +251,6 @@ void Client::StartSynch (void) {
 	    if (rc) {
 		fprintf(stderr, "txstart failed clock_nanosleep()=%d\n", rc);
 		fflush(stderr);
-	    } else {
-		barrier_needed = 0;
 	    }
 	}
     } else if (isTxHoldback(mSettings) && !isConnectOnly(mSettings)) {
@@ -262,11 +261,11 @@ void Client::StartSynch (void) {
 	int rc = clock_nanosleep(CLOCK_MONOTONIC, 0, &tmp, NULL);
 	if (rc) {
 	    fprintf(stderr, "txholdback failed clock_nanosleep()=%d\n", rc);
-	} else
-	    barrier_needed = 0;
+	}
     }
+    if (!(isReverse(mSettings) && !isBidir(mSettings)))
+	SetReportStartTime();
 #endif
-    if (barrier_needed && (BarrierClient(mSettings->connects_done))) {};
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Client start sync exited");
 #endif
@@ -367,9 +366,13 @@ void Client::InitTrafficLoop (void) {
     }
 
     readAt = mBuf;
-    SetReportStartTime();
+    if (isServerReverse(mSettings)) {
+	if (!myJob) {
+	    myJob = InitIndividualReport(mSettings);
+	    myReport = (struct ReporterData *)myJob->this_report;
+	}
+    }
     lastPacketTime.set(myReport->info.ts.startTime.tv_sec, myReport->info.ts.startTime.tv_usec);
-    SendFirstPayload(myReport->info.ts.startTime);
     // Full duplex sockets need to be syncronized
     if (isBidir(mSettings))
 	bidir_start_barrier(&mSettings->bidir_startstop);
@@ -435,7 +438,7 @@ void Client::Run(void) {
  * TCP send loop
  */
 void Client::RunTCP( void ) {
-    int burst_size = (mSettings->mWriteAckLen > 0) ? mSettings->mWriteAckLen : mSettings->mBufLen;
+    int burst_size =  mSettings->mBufLen;
     int burst_remaining = 0;
     int burst_id = 1;
     struct timeval prevsend = {.tv_sec = 0, .tv_usec = 0};
@@ -458,7 +461,7 @@ void Client::RunTCP( void ) {
 	}
         int n = 0;
 		reportstruct->emptyreport=0;
-	if (isTripTime(mSettings) || isWriteAck(mSettings) || isIsochronous(mSettings)) {
+	if (isTripTime(mSettings) || isIsochronous(mSettings)) {
 	    if (!burst_remaining) {
 		if (framecounter) {
 		    burst_size = (int) (lognormal(mSettings->mMean,mSettings->mVariance)) / (mSettings->mFPS * 8);
@@ -518,7 +521,7 @@ void Client::RunTCP( void ) {
 	    }
 #endif
 	}
-	if (isTripTime(mSettings) || isWriteAck(mSettings) || isIsochronous(mSettings)) {
+	if (isTripTime(mSettings) || isIsochronous(mSettings)) {
 	    burst_remaining -= len;
 	}
 	reportstruct->packetLen = len + n;
@@ -548,7 +551,7 @@ void Client::RunTCP( void ) {
 void Client::RunRateLimitedTCP ( void ) {
     double tokens = 0;
     Timestamp time1, time2;
-    int burst_size = (mSettings->mWriteAckLen > 0) ? mSettings->mWriteAckLen : mSettings->mBufLen;
+    int burst_size = mSettings->mBufLen;
     int burst_remaining = 0;
     int burst_id = 1;
 
@@ -578,7 +581,7 @@ void Client::RunRateLimitedTCP ( void ) {
 	    }
 	    // perform write
 	    int n = 0;
-	    if (isTripTime(mSettings) || isWriteAck(mSettings)) {
+	    if (isTripTime(mSettings)) {
 		if (burst_remaining == 0) {
 		    now.setnow();
 		    reportstruct->packetTime.tv_sec = now.getSecs();
@@ -615,7 +618,7 @@ void Client::RunRateLimitedTCP ( void ) {
 	        totLen += (len + n);;
 		reportstruct->errwrite=WriteNoErr;
 	    }
-	    if (isTripTime(mSettings) || isWriteAck(mSettings))
+	    if (isTripTime(mSettings))
 		burst_remaining -= len;
 
 	    time2.setnow();
@@ -1163,10 +1166,18 @@ void Client::AwaitServerCloseEvent(void) {
 #endif
 }
 
-void Client::SendFirstPayload (struct timeval startTime) {
+void Client::SendFirstPayload (void) {
     if (!isCompat(mSettings) && !isConnectOnly(mSettings)) {
 	int currLen = 0;
 	int len = 0;
+	struct timeval startTime;
+	if (myReport && !TimeZero(myReport->info.ts.startTime)) {
+	    startTime = myReport->info.ts.startTime;
+	} else {
+	    now.setnow();
+	    startTime.tv_sec = now.getSecs();
+	    startTime.tv_usec = now.getUsecs();
+	}
         struct client_testhdr* tmp_hdr = \
 	    (isUDP(mSettings) ? (struct client_testhdr *) (((struct UDP_datagram*)mBuf) + 1) \
 	     : (struct client_testhdr *) mBuf);
