@@ -1468,7 +1468,7 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, struct client_tes
 	}
 	// Set up trip time
 	if (isTripTime(client)) {
-	    flags |= (HEADER_EXTEND_NOACK | HEADER_VERSION1);
+	    flags |= HEADER_EXTEND_NOACK;
 	    extendflags |= TCP_TRIPTIME;
 	    hdr->extend.start_tv_sec = htonl(startTime.tv_sec);
 	    hdr->extend.start_tv_usec = htonl(startTime.tv_usec);
@@ -1506,7 +1506,7 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, struct client_tes
 	hdr->extend.flags = htonl(extendflags);
     }
     // Fill in the version 1 header if needed
-    if ((flags & HEADER_VERSION1) || (client->mMode != kTest_Normal) || isReverse(client)) {
+    if ((flags & HEADER_EXTEND_NOACK) || (client->mMode != kTest_Normal)) {
 	flags |= HEADER_VERSION1;
 	if (isBuflenSet(client)) {
 	    hdr->base.bufferlen = htonl(client->mBufLen);
