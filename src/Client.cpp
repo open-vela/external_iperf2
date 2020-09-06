@@ -267,11 +267,6 @@ void Client::StartSynch (void) {
     }
 #endif
     if (barrier_needed && (BarrierClient(mSettings->connects_done))) {};
-
-    // Full duplex sockets need to be syncronized
-    if (isBidir(mSettings))
-	bidir_start_barrier(&mSettings->bidir_startstop);
-
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Client start sync exited");
 #endif
@@ -375,6 +370,10 @@ void Client::InitTrafficLoop (void) {
     SetReportStartTime();
     lastPacketTime.set(myReport->info.ts.startTime.tv_sec, myReport->info.ts.startTime.tv_usec);
     SendFirstPayload(myReport->info.ts.startTime);
+    // Full duplex sockets need to be syncronized
+    if (isBidir(mSettings))
+	bidir_start_barrier(&mSettings->bidir_startstop);
+
     if (isConnectionReport(mSettings) && isPeerVerDetect(mSettings) && !isSumOnly(mSettings))
 	PostReport(InitConnectionReport(mSettings, mSettings->connecttime));
     reportstruct->errwrite=WriteNoErr;
