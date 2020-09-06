@@ -161,8 +161,9 @@ static void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport
 		}
 	    }
 	}
+	break;
     default:
-	FAIL(1, "SetSumReport\n", inSettings);
+	FAIL(1, "SetSumReport", inSettings);
     }
 }
 
