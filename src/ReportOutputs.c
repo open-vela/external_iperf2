@@ -692,7 +692,10 @@ void reporter_print_connection_report(struct ConnectionInfo *report) {
 	snprintf(b, SNBUFFERSIZE-strlen(b), " (isoch)");
 	b += strlen(b);
     }
-    if (isServerReverse(report->common) || isReverse(report->common)) {
+    if (isBidir(report->common)) {
+	snprintf(b, SNBUFFERSIZE-strlen(b), " (bidir)");
+	b += strlen(b);
+    } else if (isServerReverse(report->common) || isReverse(report->common)) {
 	snprintf(b, SNBUFFERSIZE-strlen(b), " (reverse)");
 	b += strlen(b);
     }
