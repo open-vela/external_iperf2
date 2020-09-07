@@ -297,13 +297,14 @@ void Listener::Run (void) {
 	    // offsets per TCP or UDP. Basically, TCP starts at byte 0 but UDP
 	    // has to skip over the UDP seq no, etc.
 	    //
-	    thread_Settings *listener_client_settings = NULL;
-	    Settings_GenerateClientSettings(server, &listener_client_settings, \
-					    (isUDP(server) ? (struct client_testhdr *) (((struct UDP_datagram*)mBuf) + 1) \
-					     : (struct client_testhdr *) mBuf));
-            // --bidir is following iperf3 naming, it's basically a full duplex test using the same socket
-	    // this is slightly different than the legacy iperf2's -d and -r.
-	    if (listener_client_settings) {
+            if (isBidir(server) || (server->mMode != kTest_Normal)) {
+		thread_Settings *listener_client_settings = NULL;
+		Settings_GenerateClientSettings(server, &listener_client_settings, \
+						(isUDP(server) ? (struct client_testhdr *) (((struct UDP_datagram*)mBuf) + 1) \
+						 : (struct client_testhdr *) mBuf));
+		// --bidir is following iperf3 naming, it's basically a full duplex test using the same socket
+		// this is slightly different than the legacy iperf2's -d and -r.
+		assert(listener_client_settings!=NULL);
 		if (isBidir(listener_client_settings)) {
 		    Condition_Initialize(&server->bidir_startstop.await);
 		    server->mBidirReport = InitSumReport(server, server->mSock, 1);
@@ -317,30 +318,20 @@ void Listener::Run (void) {
 #endif
 		    listener_client_settings->mThreadMode=kMode_Client;
 		    thread_start(listener_client_settings);
-		} else if (isServerReverse(server)) {
-		    // --reverse is used to get through firewalls.  The client initiates the connect
-		    // but the server and client change roles with respect to traffic, i.e. the server sends
-		    // and the client receives
-		    server->mThreadMode=kMode_Client;
-		    thread_start(server);
-		}
-	    }
-#if 0
-	    // set up starting information for clients
-	    if (listener_client_settings  && !isBidir(listener_client_settings)) {
-		// client init will also handle -P instantiations if needed
-		client_init(listener_client_settings);
-		if (listener_client_settings->mMode == kTest_DualTest) {
-#ifdef HAVE_THREAD
-		    server->runNow =  listener_client_settings;
-#else
-		    server->runNext = listener_client_settings;
-#endif
 		} else {
-		    server->runNext =  listener_client_settings;
+		    // client init will also handle -P instantiations if needed
+		    client_init(listener_client_settings);
+		    if (listener_client_settings->mMode == kTest_DualTest) {
+#ifdef HAVE_THREAD
+			server->runNow =  listener_client_settings;
+#else
+			server->runNext = listener_client_settings;
+#endif
+		    } else {
+			server->runNext =  listener_client_settings;
+		    }
 		}
 	    }
-#endif
 	}
 	// Now start the server side traffic threads
 	if (isUDP(mSettings) && isSingleUDP(mSettings)) {
@@ -946,6 +937,9 @@ int Listener::apply_client_settings (thread_Settings *server) {
 	if (flags & (HEADER_EXTEND_ACK | HEADER_EXTEND_NOACK)) {
 	    peeklen += sizeof(struct client_hdrext);
 	}
+	if (((flags & HEADER_VERSION1) != 0) && ((flags & HEADER_EXTEND_NOACK) == 0) && ((flags & HEADER_EXTEND_ACK) == 0)) {
+            server->mMode = kTest_TradeOff;
+	}
 	if (peeklen && ((n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK)) != peeklen)) {
 	    FAIL_errno(1, "read tcp test info", server);
 	}
@@ -973,6 +967,7 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		setBidir(server);
 	    }
 	    if ((extendflags & REVERSE) != 0) {
+		server->mThreadMode=kMode_Client;
 		setServerReverse(server);
 	    }
 	    server->mAmount = ntohl(hdr->base.mAmount);
