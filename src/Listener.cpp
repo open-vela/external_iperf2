@@ -978,6 +978,18 @@ int Listener::apply_client_settings (thread_Settings *server) {
 	    if ((extendflags & REVERSE) != 0) {
 		setServerReverse(server);
 	    }
+	    server->mAmount = ntohl(hdr->base.mAmount);
+	    if ((server->mAmount & 0x80000000) > 0) {
+		setModeTime(server);
+#ifndef WIN32
+		server->mAmount |= 0xFFFFFFFF00000000LL;
+#else
+		server->mAmount |= 0xFFFFFFFF00000000;
+#endif
+		server->mAmount = -server->mAmount;
+	    } else {
+		unsetModeTime(server);
+	    }
 	}
 	server->skipbytes = peeklen;
     }
