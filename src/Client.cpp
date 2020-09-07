@@ -365,7 +365,7 @@ void Client::InitTrafficLoop (void) {
     totLen = 0;
     if (isModeTime(mSettings)) {
         mEndTime.setnow();
-        mEndTime.add( mSettings->mAmount / 100.0 );
+        mEndTime.add(mSettings->mAmount / 100.0);
     }
 
     readAt = mBuf;
