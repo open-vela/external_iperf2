@@ -150,15 +150,15 @@ static void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport
 		    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
 		} else {
 		    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_tcp;
-		    sumreport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_write_enhanced : tcp_output_sum_write_enhanced);
 		}
+		sumreport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_write_enhanced : tcp_output_sum_write_enhanced);		
 	    } else {
 		if (bidir) {
 		    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
 		} else {
 		    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_tcp;
-		    sumreport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_write : tcp_output_sum_write);
 		}
+		sumreport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_write : tcp_output_sum_write);		
 	    }
 	}
 	break;
