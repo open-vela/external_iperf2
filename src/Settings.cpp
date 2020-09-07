@@ -1274,7 +1274,6 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 	Settings_Copy(server, client);
         (*client)->mThreadMode = kMode_Client;
 	if ((flags & HEADER_VERSION1) != 0) {
-	    Settings_Copy(server, client);
 	    setCompat((*client));
 	    (*client)->mTID = thread_zeroid();
 	    (*client)->mPort = (unsigned short) ntohl(hdr->base.mPort);
