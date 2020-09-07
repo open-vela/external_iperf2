@@ -174,9 +174,9 @@ static void clientside_client_reverse (struct thread_Settings *thread, Client *t
     if (theClient->isConnected()) {
 	struct thread_Settings *reverse_client = NULL;
 	Settings_Copy(thread, &reverse_client);
+	FAIL((!reverse_client || !(thread->mSock > 0)), "Reverse test failed to start per thread settings or socket problem",  thread);
 	theClient->StartSynch();
 	theClient->SendFirstPayload();
-	FAIL((!reverse_client || !(thread->mSock > 0)), "Reverse test failed to start per thread settings or socket problem",  thread);
 	reverse_client->mSock = thread->mSock; // use the same socket for both directions
 	reverse_client->mThreadMode = kMode_Server;
 	setServerReverse(reverse_client); // cause the connection report to show reverse
@@ -216,9 +216,9 @@ static void clientside_client_bidir (struct thread_Settings *thread, Client *the
 	// When -P > 1 then all threads finish connect before starting traffic
 	theClient->BarrierClient(thread->connects_done);
     if (theClient->isConnected()) {
+	FAIL((!reverse_client || !(thread->mSock > 0)), "Reverse test failed to start per thread settings or socket problem",  thread);
 	theClient->StartSynch();
 	theClient->SendFirstPayload();
-	FAIL((!reverse_client || !(thread->mSock > 0)), "Reverse test failed to start per thread settings or socket problem",  thread);
 	reverse_client->mSock = thread->mSock; // use the same socket for both directions
 	reverse_client->mThreadMode = kMode_Server;
 	setServerReverse(reverse_client); // cause the connection report to show reverse
