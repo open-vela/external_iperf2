@@ -352,9 +352,9 @@ void Client::InitTrafficLoop (void) {
     int sosndtimer = 0;
     // sosndtimer units microseconds
     if ((mSettings->mIntervalMode == kInterval_Time) && mSettings->mInterval) {
-      sosndtimer = mSettings->mInterval / 2;
+	sosndtimer = mSettings->mInterval / 2;
     } else if (isModeTime(mSettings)) {
-      sosndtimer = (mSettings->mAmount * 10000) / 2;
+	sosndtimer = (mSettings->mAmount * 10000) / 2;
     }
     SetSocketOptionsSendTimeout(mSettings, sosndtimer);
     // set the lower bounds delay based of the socket timeout timer
@@ -387,7 +387,6 @@ void Client::InitTrafficLoop (void) {
 	assert(myReport!=NULL);
 	PostReport(myJob);
     }
-
 }
 
 /* -------------------------------------------------------------------
@@ -457,7 +456,7 @@ void Client::RunTCP( void ) {
 	    reportstruct->packetLen = mSettings->mBufLen;
 	}
         int n = 0;
-		reportstruct->emptyreport=0;
+	reportstruct->emptyreport=0;
 	if (isTripTime(mSettings) || isIsochronous(mSettings)) {
 	    if (!burst_remaining) {
 		if (framecounter) {
