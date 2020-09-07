@@ -381,6 +381,8 @@ void Server::InitTrafficLoop (void) {
 
     SetReportStartTime();
     if (isServerModeTime(mSettings) || (isModeTime(mSettings) && isServerReverse(mSettings))) {
+	if (isServerReverse(mSettings))
+	   mSettings->mAmount += (SLOPSECS * 100);  // add 2 sec for slop on reverse, units are 10 ms
 #ifdef HAVE_SETITIMER
         int err;
         struct itimerval it;
@@ -392,7 +394,7 @@ void Server::InitTrafficLoop (void) {
 	FAIL_errno( err != 0, "setitimer", mSettings );
 #endif
         mEndTime.setnow();
-        mEndTime.add( mSettings->mAmount / 100.0 );
+        mEndTime.add(mSettings->mAmount / 100.0);
     }
     PostReport(myJob);
     // The first payload is different for TCP so read it and report it

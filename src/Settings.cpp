@@ -1260,123 +1260,87 @@ void Settings_GenerateListenerSettings(struct thread_Settings *client, struct th
  * Settings_GenerateClientSettings
  *
  * Called by the Listener to generate the settings to be used by clients
- * per things like dual tests.
+ * per things like dual tests. Set client pointer to null if a client isn't needed
  *
  */
 void Settings_GenerateClientSettings(struct thread_Settings *server, struct thread_Settings **client, struct client_testhdr *hdr) {
     assert(server != NULL);
     assert(hdr != NULL);
     uint32_t flags = ntohl(hdr->base.flags);
-    if ((flags & HEADER_EXTEND_NOACK) != 0) {
-	uint32_t extendflags = ntohl(hdr->extend.flags);
-	struct thread_Settings *fullduplex = NULL;
-	if (extendflags & WRITEACK)
-	    setWriteAck(server);
-	if (extendflags & TCP_ISOCH)
-	    setIsochronous(server);
-#if 0
-	if (isBWSet(server)) {
-	    (*client)->mUDPRate = ntohl(hdr->extend.mRate);
-	    if ((extendflags & UNITS_PPS) == UNITS_PPS) {
-		(*client)->mUDPRateUnits = kRate_PPS;
-	    } else {
-		(*client)->mUDPRateUnits = kRate_BW;
+    bool v1test = (((flags & HEADER_VERSION1) != 0) && ((flags & HEADER_EXTEND_NOACK) == 0) && ((flags & HEADER_EXTEND_ACK) == 0));
+    if (!(isBidir(server) || isServerReverse(server) || v1test)) {
+	*client = NULL;
+    } else {
+	Settings_Copy(server, client);
+        (*client)->mThreadMode = kMode_Client;
+	if ((flags & HEADER_VERSION1) != 0) {
+	    Settings_Copy(server, client);
+	    setCompat((*client));
+	    (*client)->mTID = thread_zeroid();
+	    (*client)->mPort = (unsigned short) ntohl(hdr->base.mPort);
+	    (*client)->mThreads = 1;
+	    if (hdr->base.bufferlen != 0) {
+		(*client)->mBufLen = ntohl(hdr->base.bufferlen);
 	    }
-	}
+	    (*client)->mAmount = ntohl(hdr->base.mAmount);
+	    if (((*client)->mAmount & 0x80000000) > 0) {
+		setModeTime((*client));
+#ifndef WIN32
+		(*client)->mAmount |= 0xFFFFFFFF00000000LL;
+#else
+		(*client)->mAmount |= 0xFFFFFFFF00000000;
 #endif
-	if (((extendflags & BIDIR) == BIDIR) ||	 \
-	    ((extendflags & REVERSE) == REVERSE)) {
-	    if ((extendflags & BIDIR) == BIDIR) {
-		Condition_Initialize(&server->bidir_startstop.await);
-		server->mBidirReport = InitSumReport(server, server->mSock, 1);
-		IncrSumReportRefCounter(server->mBidirReport);
-	        Settings_Copy(server, &fullduplex);
-		if (fullduplex) {
-		    *client = fullduplex;
-		    setBidir(fullduplex);
-		}
-	    } else if ((extendflags & REVERSE) == REVERSE) {
-	        *client = NULL;
-	        fullduplex = server;
+		(*client)->mAmount = -(*client)->mAmount;
+	    } else {
+		unsetModeTime((*client));
 	    }
-	    if (fullduplex) {
+	    (*client)->mFileName  = NULL;
+	    (*client)->mHost = NULL;
+	    (*client)->mLocalhost = NULL;
+	    (*client)->mOutputFileName = NULL;
+	    if (v1test)
+		(*client)->mMode = ((flags & RUN_NOW) == 0 ? kTest_TradeOff : kTest_DualTest);
+	    else
+		(*client)->mMode = kTest_Normal;
+#if 0
+	    if (((sockaddr*)&server->peer)->sa_family == AF_INET) {
+		inet_ntop(AF_INET, &((sockaddr_in*)&server->peer)->sin_addr,
+			  (*client)->mHost, REPORT_ADDRLEN);
+	    }
+#ifdef HAVE_IPV6
+	    else {
+		inet_ntop(AF_INET6, &((sockaddr_in6*)&server->peer)->sin6_addr,
+			  (*client)->mHost, REPORT_ADDRLEN);
+	    }
+#endif
+#endif
+	}
+	if ((flags & (HEADER_EXTEND_NOACK | HEADER_EXTEND_ACK)) != 0) {
+	    uint32_t extendflags = ntohl(hdr->extend.flags);
+	    struct thread_Settings *fullduplex;
+	    if (isServerReverse(server)) {
+		fullduplex = server;
 		setServerReverse(fullduplex);
 		unsetReport(fullduplex);
-		fullduplex->mAmount = ntohl(hdr->base.mAmount);
-		if ((fullduplex->mAmount & 0x80000000) > 0) {
-		    setModeTime(fullduplex);
-#ifndef WIN32
-		    fullduplex->mAmount |= 0xFFFFFFFF00000000LL;
-#else
-		    fullduplex->mAmount |= 0xFFFFFFFF00000000;
-#endif
-		    fullduplex->mAmount = -fullduplex->mAmount;
-		} else {
-		    unsetModeTime(fullduplex);
-		}
-		if (!isBWSet(fullduplex)) {
-		    fullduplex->mUDPRate = ntohl(hdr->extend.mRate);
-		    if ((extendflags & UNITS_PPS) == UNITS_PPS) {
-			fullduplex->mUDPRateUnits = kRate_PPS;
-		    } else {
-			fullduplex->mUDPRateUnits = kRate_BW;
-		    }
-		}
-		if (isIsochronous(server)) {
+
+	    } else if (isBidir(server)) {
+		fullduplex = *client;
+		setBidir(fullduplex);
+	    }
 #if 0
-		    setIsochronous(fullduplex);
-		    fullduplex->mFPS = ntohl(hdr->extend.isoch_ext.FPSl);
-		    fullduplex->mFPS += ntohl(hdr->extend.isoch_ext.FPSu) / (double)rMillion;
+	    if (isIsochronous(server)) {
+		setIsochronous(fullduplex);
+		fullduplex->mFPS = ntohl(hdr->extend.isoch.FPSl);
+		fullduplex->mFPS += ntohl(hdr->extend.isoch.FPSu) / (double)rMillion;
+	    }
 #endif
-		}
+	    fullduplex->mUDPRate = ntohl(hdr->extend.mRate);
+	    if ((extendflags & UNITS_PPS) == UNITS_PPS) {
+		fullduplex->mUDPRateUnits = kRate_PPS;
+	    } else {
+		fullduplex->mUDPRateUnits = kRate_BW;
 	    }
 	}
-    } else if ((flags & HEADER_VERSION1) != 0) {
-        *client = new struct thread_Settings;
-        memcpy(*client, server, sizeof(struct thread_Settings));
-        setCompat((*client));
-        (*client)->mTID = thread_zeroid();
-        (*client)->mPort       = (unsigned short) ntohl(hdr->base.mPort);
-        (*client)->mThreads    = 1;
-        if (hdr->base.bufferlen != 0) {
-            (*client)->mBufLen = ntohl(hdr->base.bufferlen);
-        }
-	(*client)->mAmount     = ntohl(hdr->base.mAmount);
-        if (((*client)->mAmount & 0x80000000) > 0) {
-            setModeTime((*client));
-#ifndef WIN32
-            (*client)->mAmount |= 0xFFFFFFFF00000000LL;
-#else
-            (*client)->mAmount |= 0xFFFFFFFF00000000;
-#endif
-            (*client)->mAmount = -(*client)->mAmount;
-        } else {
-	    unsetModeTime((*client));
-	}
-        (*client)->mFileName   = NULL;
-        (*client)->mHost       = NULL;
-        (*client)->mLocalhost  = NULL;
-        (*client)->mOutputFileName = NULL;
-        (*client)->mMode       = ((flags & RUN_NOW) == 0 ?
-				  kTest_TradeOff : kTest_DualTest);
-        (*client)->mThreadMode = kMode_Client;
-        if (server->mLocalhost != NULL) {
-            (*client)->mLocalhost = new char[strlen(server->mLocalhost) + 1];
-            strcpy((*client)->mLocalhost, server->mLocalhost);
-        }
-        (*client)->mHost = new char[REPORT_ADDRLEN];
-        if (((sockaddr*)&server->peer)->sa_family == AF_INET) {
-            inet_ntop(AF_INET, &((sockaddr_in*)&server->peer)->sin_addr,
-                       (*client)->mHost, REPORT_ADDRLEN);
-        }
-#ifdef HAVE_IPV6
-	else {
-            inet_ntop(AF_INET6, &((sockaddr_in6*)&server->peer)->sin6_addr,
-                       (*client)->mHost, REPORT_ADDRLEN);
-        }
-#endif
-    } else {
-        *client = NULL;
     }
 }
 
