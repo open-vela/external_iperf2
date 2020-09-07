@@ -83,7 +83,6 @@ Client::Client(thread_Settings *inSettings) {
     mBuf = NULL;
     myJob = NULL;
     myReport = NULL;
-    mSettings->mSock = -1;
     SockAddr_remoteAddr(mSettings);
 
     memset(&scratchpad, 0, sizeof(struct ReportStruct));
@@ -273,6 +272,10 @@ void Client::StartSynch (void) {
 }
 
 inline void Client::SetReportStartTime (void) {
+    if (isServerReverse(mSettings) && !myJob) {
+	myJob = InitIndividualReport(mSettings);
+	myReport = (struct ReporterData *)myJob->this_report;
+    }
     assert(myReport!=NULL);
     now.setnow();
     myReport->info.ts.startTime.tv_sec = now.getSecs();
@@ -366,12 +369,6 @@ void Client::InitTrafficLoop (void) {
     }
 
     readAt = mBuf;
-    if (isServerReverse(mSettings)) {
-	if (!myJob) {
-	    myJob = InitIndividualReport(mSettings);
-	    myReport = (struct ReporterData *)myJob->this_report;
-	}
-    }
     lastPacketTime.set(myReport->info.ts.startTime.tv_sec, myReport->info.ts.startTime.tv_usec);
     // Full duplex sockets need to be syncronized
     if (isBidir(mSettings))
