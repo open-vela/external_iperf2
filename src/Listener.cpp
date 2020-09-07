@@ -310,10 +310,7 @@ void Listener::Run (void) {
 		    IncrSumReportRefCounter(server->mBidirReport);
 		    listener_client_settings->mBidirReport = server->mBidirReport;
 		    IncrSumReportRefCounter(server->mBidirReport);
-
 		    setBidir(server);
-		    Iperf_push_host(&listener_client_settings->local, listener_client_settings);
-		    listener_client_settings->mBidirReport = InitSumReport(server, groupID, 1);
 		    server->mBidirReport = listener_client_settings->mBidirReport;
 #if HAVE_THREAD_DEBUG
 		    thread_debug("BiDir report client=%p/%p server=%p/%p", (void *) listener_client_settings, (void *) listener_client_settings->mBidirReport, (void *) server, (void *) server->mBidirReport);
