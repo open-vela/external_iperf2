@@ -118,7 +118,7 @@ Listener::~Listener () {
 #endif
     if (ListenSocket != INVALID_SOCKET) {
         int rc = close(ListenSocket);
-        WARN_errno( rc == SOCKET_ERROR, "listener close" );
+        WARN_errno(rc == SOCKET_ERROR, "listener close");
     }
     DELETE_ARRAY(mBuf);
 } // end ~Listener
@@ -301,37 +301,34 @@ void Listener::Run (void) {
 	    Settings_GenerateClientSettings(server, &listener_client_settings, \
 					    (isUDP(server) ? (struct client_testhdr *) (((struct UDP_datagram*)mBuf) + 1) \
 					     : (struct client_testhdr *) mBuf));
-	    // This is the case when --write-ack was used on the client requesting
-	    // application level acknowledgements. Useful for end/end or app/app latency testing
-	    if (isWriteAck(server)) {
-		thread_Settings *writeackthread;
-		Settings_Copy(server, &writeackthread);
-		server->ackring = packetring_init(ACKRING_DEFAULTSIZE, &server->awake_me, &writeackthread->awake_me);
-		writeackthread->ackring = server->ackring;
-		writeackthread->mThreadMode = kMode_WriteAckServer;
-#if HAVE_THREAD_DEBUGg
-		thread_debug("Write acknowledgements enabled for read bytecount=%d (%p)", server->mWriteAckLen, (void *) writeackthread);
-#endif
-		thread_start(writeackthread);
-	    }
             // --bidir is following iperf3 naming, it's basically a full duplex test using the same socket
 	    // this is slightly different than the legacy iperf2's -d and -r.
-	    if (listener_client_settings && isBidir(listener_client_settings)) {
-		setBidir(server);
-		Iperf_push_host(&listener_client_settings->local, listener_client_settings);
-		listener_client_settings->mBidirReport = InitSumReport(server, groupID, 1);
-		server->mBidirReport = listener_client_settings->mBidirReport;
+	    if (listener_client_settings) {
+		if (isBidir(listener_client_settings)) {
+		    Condition_Initialize(&server->bidir_startstop.await);
+		    server->mBidirReport = InitSumReport(server, server->mSock, 1);
+		    IncrSumReportRefCounter(server->mBidirReport);
+		    listener_client_settings->mBidirReport = server->mBidirReport;
+		    IncrSumReportRefCounter(server->mBidirReport);
+
+		    setBidir(server);
+		    Iperf_push_host(&listener_client_settings->local, listener_client_settings);
+		    listener_client_settings->mBidirReport = InitSumReport(server, groupID, 1);
+		    server->mBidirReport = listener_client_settings->mBidirReport;
 #if HAVE_THREAD_DEBUG
 		    thread_debug("BiDir report client=%p/%p server=%p/%p", (void *) listener_client_settings, (void *) listener_client_settings->mBidirReport, (void *) server, (void *) server->mBidirReport);
 #endif
-		listener_client_settings->mThreadMode=kMode_Client;
-		thread_start(listener_client_settings);
-	    } else if (isServerReverse(server)) {
-		// --reverse is used to get through firewalls.  The client initiates the connect
-		// but the server and client change roles with respect to traffic, i.e. the server sends
-		// and the client receives
-		server->mThreadMode=kMode_Client;
+		    listener_client_settings->mThreadMode=kMode_Client;
+		    thread_start(listener_client_settings);
+		} else if (isServerReverse(server)) {
+		    // --reverse is used to get through firewalls.  The client initiates the connect
+		    // but the server and client change roles with respect to traffic, i.e. the server sends
+		    // and the client receives
+		    server->mThreadMode=kMode_Client;
+		    thread_start(server);
+		}
 	    }
+#if 0
 	    // set up starting information for clients
 	    if (listener_client_settings  && !isBidir(listener_client_settings)) {
 		// client init will also handle -P instantiations if needed
@@ -346,6 +343,7 @@ void Listener::Run (void) {
 		    server->runNext =  listener_client_settings;
 		}
 	    }
+#endif
 	}
 	// Now start the server side traffic threads
 	if (isUDP(mSettings) && isSingleUDP(mSettings)) {
@@ -377,7 +375,7 @@ void Listener::my_listen (void) {
     // create an AF_INET socket for the accepts
     // for the case of L2 testing and UDP, a new AF_PACKET
     // will be created to supercede this one
-    int type = (isUDP( mSettings )  ?  SOCK_DGRAM  :  SOCK_STREAM);
+    int type = (isUDP(mSettings)  ?  SOCK_DGRAM  :  SOCK_STREAM);
     int domain = (SockAddr_isIPv6(&mSettings->local) ?
 #ifdef HAVE_IPV6
 		  AF_INET6
@@ -389,13 +387,13 @@ void Listener::my_listen (void) {
 #ifdef WIN32
     if (SockAddr_isMulticast(&mSettings->local)) {
 	// Multicast on Win32 requires special handling
-	ListenSocket = WSASocket( domain, type, 0, 0, 0, WSA_FLAG_MULTIPOINT_C_LEAF | WSA_FLAG_MULTIPOINT_D_LEAF );
-	WARN_errno( ListenSocket == INVALID_SOCKET, "socket" );
+	ListenSocket = WSASocket(domain, type, 0, 0, 0, WSA_FLAG_MULTIPOINT_C_LEAF | WSA_FLAG_MULTIPOINT_D_LEAF);
+	WARN_errno(ListenSocket == INVALID_SOCKET, "socket");
 
     } else
 #endif
 	{
-	    ListenSocket = socket(domain, type, 0 );
+	    ListenSocket = socket(domain, type, 0);
 	    WARN_errno(ListenSocket == INVALID_SOCKET, "socket");
 	}
     mSettings->mSock = ListenSocket;
@@ -410,8 +408,8 @@ void Listener::my_listen (void) {
 #ifdef WIN32
     if (SockAddr_isMulticast(&mSettings->local)) {
 	// Multicast on Win32 requires special handling
-	rc = WSAJoinLeaf( ListenSocket, (sockaddr*) &mSettings->local, mSettings->size_local,0,0,0,0,JL_BOTH);
-	WARN_errno( rc == SOCKET_ERROR, "WSAJoinLeaf (aka bind)" );
+	rc = WSAJoinLeaf(ListenSocket, (sockaddr*) &mSettings->local, mSettings->size_local,0,0,0,0,JL_BOTH);
+	WARN_errno(rc == SOCKET_ERROR, "WSAJoinLeaf (aka bind)");
     } else
 #endif
 	{
@@ -432,7 +430,7 @@ void Listener::my_listen (void) {
     // use large (INT_MAX) backlog allowing multiple simultaneous connections
     if (!isUDP(mSettings)) {
 	rc = listen(ListenSocket, INT_MAX);
-	WARN_errno( rc == SOCKET_ERROR, "listen" );
+	WARN_errno(rc == SOCKET_ERROR, "listen");
     } else {
 #ifndef WIN32
 	// if UDP and multicast, join the group
@@ -489,21 +487,21 @@ void Listener::my_multicast_join(void) {
     if (!isSSMMulticast(mSettings) && !mSettings->mIfrname) {
 	if (!SockAddr_isIPv6(&mSettings->local)) {
 	    struct ip_mreq mreq;
-	    memcpy( &mreq.imr_multiaddr, SockAddr_get_in_addr( &mSettings->local ), \
+	    memcpy(&mreq.imr_multiaddr, SockAddr_get_in_addr(&mSettings->local), \
 		    sizeof(mreq.imr_multiaddr));
-	    mreq.imr_interface.s_addr = htonl( INADDR_ANY );
-	    int rc = setsockopt( ListenSocket, IPPROTO_IP, IP_ADD_MEMBERSHIP,
+	    mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+	    int rc = setsockopt(ListenSocket, IPPROTO_IP, IP_ADD_MEMBERSHIP,
 				 (char*) &mreq, sizeof(mreq));
-	    WARN_errno( rc == SOCKET_ERROR, "multicast join" );
+	    WARN_errno(rc == SOCKET_ERROR, "multicast join");
 	} else {
 #ifdef HAVE_IPV6_MULTICAST
 	    struct ipv6_mreq mreq;
-	    memcpy( &mreq.ipv6mr_multiaddr, SockAddr_get_in6_addr( &mSettings->local ), \
+	    memcpy(&mreq.ipv6mr_multiaddr, SockAddr_get_in6_addr(&mSettings->local), \
 		    sizeof(mreq.ipv6mr_multiaddr));
 	    mreq.ipv6mr_interface = 0;
-	    int rc = setsockopt( ListenSocket, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, \
+	    int rc = setsockopt(ListenSocket, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, \
 				 (char*) &mreq, sizeof(mreq));
-	    WARN_errno( rc == SOCKET_ERROR, "multicast v6 join" );
+	    WARN_errno(rc == SOCKET_ERROR, "multicast v6 join");
 #else
 	    fprintf(stderr, "Unfortunately, IPv6 multicast is not supported on this platform\n");
 #endif
@@ -542,12 +540,12 @@ void Listener::my_multicast_join(void) {
 		group->sin6_family = AF_INET6;
 		/* Set the group */
 		rc=getsockname(ListenSocket,(struct sockaddr *)group, &socklen);
-		FAIL_errno( rc == SOCKET_ERROR, "mcast join source group getsockname",mSettings );
+		FAIL_errno(rc == SOCKET_ERROR, "mcast join source group getsockname",mSettings);
 		group->sin6_port = 0;    /* Ignored */
 
 		/* Set the source, apply the S,G */
 		rc=inet_pton(AF_INET6, mSettings->mSSMMulticastStr,&source->sin6_addr);
-		FAIL_errno( rc != 1, "mcast v6 join source group pton",mSettings );
+		FAIL_errno(rc != 1, "mcast v6 join source group pton",mSettings);
 		source->sin6_port = 0;    /* Ignored */
 #ifdef HAVE_STRUCT_SOCKADDR_IN6_SIN6_LEN
 		source->sin6_len = group->sin6_len;
@@ -557,7 +555,7 @@ void Listener::my_multicast_join(void) {
 		rc = setsockopt(ListenSocket,IPPROTO_IPV6,MCAST_JOIN_SOURCE_GROUP, &group_source_req,
 			    sizeof(group_source_req));
 #endif
-		FAIL_errno( rc == SOCKET_ERROR, "mcast v6 join source group",mSettings);
+		FAIL_errno(rc == SOCKET_ERROR, "mcast v6 join source group",mSettings);
 	    } else {
 		struct group_req group_req;
 		struct sockaddr_in6 *group;
@@ -569,14 +567,14 @@ void Listener::my_multicast_join(void) {
 		group->sin6_family = AF_INET6;
 		/* Set the group */
 		rc=getsockname(ListenSocket,(struct sockaddr *)group, &socklen);
-		FAIL_errno( rc == SOCKET_ERROR, "mcast v6 join group getsockname",mSettings );
+		FAIL_errno(rc == SOCKET_ERROR, "mcast v6 join group getsockname",mSettings);
 		group->sin6_port = 0;    /* Ignored */
 		rc = -1;
 #if HAVE_DECL_MCAST_JOIN_GROUP
 		rc = setsockopt(ListenSocket,IPPROTO_IPV6,MCAST_JOIN_GROUP, &group_req,
 				sizeof(group_source_req));
 #endif
-		FAIL_errno( rc == SOCKET_ERROR, "mcast v6 join group",mSettings);
+		FAIL_errno(rc == SOCKET_ERROR, "mcast v6 join group",mSettings);
 	    }
 #else
 	    fprintf(stderr, "Unfortunately, IPv6 multicast is not supported on this platform\n");
@@ -608,12 +606,12 @@ void Listener::my_multicast_join(void) {
 		group->sin_family = AF_INET;
 		/* Set the group */
 		rc=getsockname(ListenSocket,(struct sockaddr *)group, &socklen);
-		FAIL_errno( rc == SOCKET_ERROR, "mcast join source group getsockname",mSettings );
+		FAIL_errno(rc == SOCKET_ERROR, "mcast join source group getsockname",mSettings);
 		group->sin_port = 0;    /* Ignored */
 
 		/* Set the source, apply the S,G */
 		rc=inet_pton(AF_INET,mSettings->mSSMMulticastStr,&source->sin_addr);
-		FAIL_errno(rc != 1, "mcast join source pton",mSettings );
+		FAIL_errno(rc != 1, "mcast join source pton",mSettings);
 #ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
 		source->sin_len = group->sin_len;
 #endif
@@ -642,7 +640,7 @@ void Listener::my_multicast_join(void) {
 		}
 #endif
 #endif
-		FAIL_errno( rc == SOCKET_ERROR, "mcast join source group",mSettings);
+		FAIL_errno(rc == SOCKET_ERROR, "mcast join source group",mSettings);
 	    } else {
 		struct group_req group_req;
 		struct sockaddr_in *group;
@@ -654,14 +652,14 @@ void Listener::my_multicast_join(void) {
 		group->sin_family = AF_INET;
 		/* Set the group */
 		rc=getsockname(ListenSocket,(struct sockaddr *)group, &socklen);
-		FAIL_errno( rc == SOCKET_ERROR, "mcast join group getsockname",mSettings );
+		FAIL_errno(rc == SOCKET_ERROR, "mcast join group getsockname",mSettings);
 		group->sin_port = 0;    /* Ignored */
 		rc = -1;
 #if HAVE_DECL_MCAST_JOIN_GROUP
 		rc = setsockopt(ListenSocket,IPPROTO_IP,MCAST_JOIN_GROUP, &group_req,
 				sizeof(group_source_req));
 #endif
-		FAIL_errno( rc == SOCKET_ERROR, "mcast join group",mSettings);
+		FAIL_errno(rc == SOCKET_ERROR, "mcast join group",mSettings);
 	    }
 	}
 #else
@@ -751,7 +749,7 @@ bool Listener::L2_setup (thread_Settings *server, int sockfd) {
     //
     server->mSockDrop = sockfd;
     rc = SockAddr_Drop_All_BPF(sockfd);
-    WARN_errno( rc == SOCKET_ERROR, "l2 all drop bpf");
+    WARN_errno(rc == SOCKET_ERROR, "l2 all drop bpf");
 
     // Now optimize packet flow up the raw socket
     // Establish the flow BPF to forward up only "connected" packets to this raw socket
@@ -761,11 +759,11 @@ bool Listener::L2_setup (thread_Settings *server, int sockfd) {
 	struct in6_addr *v6local = SockAddr_get_in6_addr(&server->local);
 	if (isIPV6(server)) {
 	    rc = SockAddr_v6_Connect_BPF(server->mSock, v6local, v6peer, ((struct sockaddr_in6 *)(l))->sin6_port, ((struct sockaddr_in6 *)(p))->sin6_port);
-	    WARN_errno( rc == SOCKET_ERROR, "l2 connect ipv6 bpf");
+	    WARN_errno(rc == SOCKET_ERROR, "l2 connect ipv6 bpf");
 	} else {
 	    // This is an ipv4 address in a v6 family (structure), just pull the lower 32 bits for the v4 addr
 	    rc = SockAddr_v4_Connect_BPF(server->mSock, (uint32_t) v6local->s6_addr32[3], (uint32_t) v6peer->s6_addr32[3], ((struct sockaddr_in6 *)(l))->sin6_port, ((struct sockaddr_in6 *)(p))->sin6_port);
-	    WARN_errno( rc == SOCKET_ERROR, "l2 v4in6 connect ip bpf");
+	    WARN_errno(rc == SOCKET_ERROR, "l2 v4in6 connect ip bpf");
 	}
 #else
 	fprintf(stderr, "Unfortunately, IPv6 is not supported on this platform\n");
@@ -773,7 +771,7 @@ bool Listener::L2_setup (thread_Settings *server, int sockfd) {
 #endif /* HAVE_IPV6 */
     } else {
 	rc = SockAddr_v4_Connect_BPF(server->mSock, ((struct sockaddr_in *)(l))->sin_addr.s_addr, ((struct sockaddr_in *)(p))->sin_addr.s_addr, ((struct sockaddr_in *)(l))->sin_port, ((struct sockaddr_in *)(p))->sin_port);
-	WARN_errno( rc == SOCKET_ERROR, "l2 connect ip bpf");
+	WARN_errno(rc == SOCKET_ERROR, "l2 connect ip bpf");
     }
     if (rc < 0)
 	return false;
@@ -884,18 +882,22 @@ int Listener::apply_client_settings (thread_Settings *server) {
     server->skipbytes = 0; // used to capture the length of the listener's read
     // Set the receive timeout for the very first read based upon the -t
     // and not -i.
-    if (isModeTime(server)) {
+
 #ifdef WIN32
+    int sorcvtimer = 2000;
+    if (isModeTime(server)) {
 	// Windows SO_RCVTIMEO uses ms
 	DWORD timeout = (double) sorcvtimer / 1e3;
+    }
 #else
-	struct timeval timeout;
-	timeout.tv_sec = mSettings->mAmount / 100;
-	timeout.tv_usec = (mSettings->mAmount % 100) * 10000;
+    struct timeval timeout = {.tv_sec = 2, .tv_usec = 0};
+    if (isModeTime(server)) {
+	timeout.tv_sec = server->mAmount / 100;
+	timeout.tv_usec = (server->mAmount % 100) * 10000;
+    }
 #endif // WIN32
-	if (setsockopt( server->mSock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0 ) {
-	    WARN_errno( server->mSock == SO_RCVTIMEO, "socket" );
-	}
+    if (setsockopt(server->mSock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+	WARN_errno(server->mSock == SO_RCVTIMEO, "socket");
     }
     server->peer_version_u = 0;
     server->peer_version_l = 0;
@@ -954,7 +956,7 @@ int Listener::apply_client_settings (thread_Settings *server) {
 	    server->peer_version_u = ntohl(hdr->extend.version_u);
 	    server->peer_version_l = ntohl(hdr->extend.version_l);
 	    extendflags = ntohl(hdr->extend.flags);
-	    if ((extendflags & TCP_TRIPTIME) != 0 ) {
+	    if ((extendflags & TCP_TRIPTIME) != 0) {
 		setTripTime(server);
 		server->triptime_start.tv_sec = ntohl(hdr->extend.start_tv_sec);
 		server->triptime_start.tv_usec = ntohl(hdr->extend.start_tv_usec);
@@ -967,8 +969,14 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		assert(server->triptime_start.tv_sec != 0);
 		assert(server->triptime_start.tv_usec != 0);
 	    }
-	    if ((extendflags & TCP_ISOCH) != 0 ) {
+	    if ((extendflags & TCP_ISOCH) != 0) {
 		setIsochronous(server);
+	    }
+	    if ((extendflags & BIDIR) != 0) {
+		setBidir(server);
+	    }
+	    if ((extendflags & REVERSE) != 0) {
+		setServerReverse(server);
 	    }
 	}
 	server->skipbytes = peeklen;
@@ -1011,19 +1019,19 @@ int Listener::client_test_ack(thread_Settings *server) {
 #ifdef TCP_NODELAY
 	optflag=1;
 	// Disable Nagle to reduce latency of this intial message
-	if ((rc = setsockopt(server->mSock, IPPROTO_TCP, TCP_NODELAY, (char *)&optflag, sizeof(int))) < 0 ) {
-	    WARN_errno(rc < 0, "tcpnodelay" );
+	if ((rc = setsockopt(server->mSock, IPPROTO_TCP, TCP_NODELAY, (char *)&optflag, sizeof(int))) < 0) {
+	    WARN_errno(rc < 0, "tcpnodelay");
 	}
 #endif
     }
     if ((rc = send(server->mSock, (const char*)&ack, sizeof(client_hdr_ack),0)) < 0) {
-	WARN_errno( rc <= 0, "send_ack" );
+	WARN_errno(rc <= 0, "send_ack");
 	rc = 0;
     }
     // Re-nable Nagle
     optflag=0;
-    if (!isUDP( server ) && (rc = setsockopt( server->mSock, IPPROTO_TCP, TCP_NODELAY, (char *)&optflag, sizeof(int))) < 0 ) {
-	WARN_errno(rc < 0, "tcpnodelay" );
+    if (!isUDP(server) && (rc = setsockopt(server->mSock, IPPROTO_TCP, TCP_NODELAY, (char *)&optflag, sizeof(int))) < 0) {
+	WARN_errno(rc < 0, "tcpnodelay");
     }
     return rc;
 }

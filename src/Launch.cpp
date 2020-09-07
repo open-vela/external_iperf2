@@ -129,7 +129,7 @@ void listener_spawn(struct thread_Settings *thread) {
 void server_spawn(struct thread_Settings *thread) {
     Server *theServer = NULL;
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Server spawn settings=%p GroupSumReport=%p sock=%d", \
+    thread_debug("Listener spawn settings=%p GroupSumReport=%p sock=%d", \
 		 (void *) thread, (void *)thread->mSumReport, thread->mSock);
 #endif
     // set traffic thread to realtime if needed
@@ -162,7 +162,6 @@ static void clientside_client_basic (struct thread_Settings *thread, Client *the
     }
 }
 
-#define SLOPSECS 2
 
 static void clientside_client_reverse (struct thread_Settings *thread, Client *theClient) {
     theClient->my_connect();
@@ -181,9 +180,6 @@ static void clientside_client_reverse (struct thread_Settings *thread, Client *t
 	reverse_client->mSock = thread->mSock; // use the same socket for both directions
 	reverse_client->mThreadMode = kMode_Server;
 	setServerReverse(reverse_client); // cause the connection report to show reverse
-	if (isModeTime(reverse_client)) {
-	    reverse_client->mAmount += (SLOPSECS * 100);  // add 2 sec for slop on reverse, units are 10 ms
-	}
 	thread_start(reverse_client);
 	// Reverse only, client thread waits on reverse_server and never runs any traffic
 	if (!thread_equalid(reverse_client->mTID, thread_zeroid())) {
@@ -236,13 +232,15 @@ static void clientside_client_bidir (struct thread_Settings *thread, Client *the
 
 static void serverside_client_reverse (struct thread_Settings *thread, Client *theClient) {
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Server spawn client reverse thread reverse (sock=%d)", thread->mSock);
+    thread_debug("Listener spawn client reverse thread (sock=%d)", thread->mSock);
 #endif
+    theClient->StartSynch();
+    theClient->Run();
 }
 
 static void serverside_client_bidir(struct thread_Settings *thread, Client *theClient) {
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Server spawn client bidir thread reverse (sock=%d)", thread->mSock);
+    thread_debug("Listener spawn client bidir thread reverse (sock=%d)", thread->mSock);
 #endif
 }
 
@@ -296,7 +294,7 @@ void client_spawn (struct thread_Settings *thread) {
 	}
     } else {
 	// These are the server or listener side spawning of clients
-	if (isReverse(thread) && !isBidir(thread)) {
+	if (!isBidir(thread)) {
 	    serverside_client_reverse(thread, theClient);
 	} else if (isBidir(thread)) {
 	    serverside_client_bidir(thread, theClient);
