@@ -85,7 +85,7 @@ static void active_table_show_compare(const char *action, Iperf_ListEntry *entry
     unsigned short findport = SockAddr_getPort(host);
     SockAddr_getHostAddress(&(entry->host), lookupaddr, len);
     SockAddr_getHostAddress(host, findaddr, len);
-    thread_debug("active table: compare %s %s/%d against %s/%d (%s)", type, lookupaddr, port, findaddr, findport, action);
+    thread_debug("active table: compare table entry %s %s/%d against host %s/%d (%s)", type, lookupaddr, port, findaddr, findport, action);
 }
 
 #endif
@@ -172,6 +172,9 @@ void Iperf_remove_host (iperf_sockaddr *del) {
     Mutex_Lock(&active_table.my_mutex);
     Iperf_ListEntry **tmp = &active_table.root;
     while ((*tmp) && !(SockAddr_Hostare_Equal(&(*tmp)->host, del))) {
+#if HAVE_THREAD_DEBUG
+        active_table_show_compare("miss", *tmp, del, "client ip");
+#endif
 	tmp = &(*tmp)->next;
     }
     if (*tmp) {

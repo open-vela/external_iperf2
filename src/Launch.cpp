@@ -244,8 +244,6 @@ static void serverside_client_bidir(struct thread_Settings *thread, Client *theC
 #endif
 }
 
-
-
 /*
  * client_spawn is responsible for creating a Client class
  * and launching the client. It is provided as a means for

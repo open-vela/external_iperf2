@@ -83,12 +83,13 @@ Client::Client(thread_Settings *inSettings) {
     mBuf = NULL;
     myJob = NULL;
     myReport = NULL;
-    SockAddr_remoteAddr(mSettings);
 
     memset(&scratchpad, 0, sizeof(struct ReportStruct));
     reportstruct = &scratchpad;
     mySocket = isServerReverse(mSettings) ? mSettings->mSock : INVALID_SOCKET;
     connected = isServerReverse(mSettings);
+    if (!isServerReverse(mSettings))
+	SockAddr_remoteAddr(mSettings);
     if (isCompat(mSettings) && isPeerVerDetect(mSettings)) {
 	fprintf(stderr, "%s", warn_compat_and_peer_exchange);
 	unsetPeerVerDetect(mSettings);
@@ -1044,8 +1045,7 @@ void Client::FinishTrafficActions(void) {
 	WARN_errno( rc == SOCKET_ERROR, "client close" );
 	mySocket = INVALID_SOCKET;
     }
-    if (mSettings->mThreads > 1)
-	Iperf_remove_host(&mSettings->peer);
+    Iperf_remove_host(&mSettings->peer);
     EndJob(myJob, reportstruct);
 }
 
