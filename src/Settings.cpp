@@ -561,7 +561,6 @@ void Settings_Interpret(char option, const char *optarg, struct thread_Settings 
             if (isCompat(mExtSettings)) {
                 fprintf(stderr, warn_invalid_compatibility_option, option);
             }
-
             mExtSettings->mMode = kTest_TradeOff;
             break;
 
@@ -1321,7 +1320,6 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 		fullduplex = server;
 		setServerReverse(fullduplex);
 		unsetReport(fullduplex);
-
 	    } else if (isBidir(server)) {
 		fullduplex = *client;
 		setBidir(fullduplex);

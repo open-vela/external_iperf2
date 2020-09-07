@@ -242,6 +242,7 @@ static void serverside_client_bidir(struct thread_Settings *thread, Client *theC
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Listener spawn client bidir thread reverse (sock=%d)", thread->mSock);
 #endif
+    theClient->Run();
 }
 
 /*
