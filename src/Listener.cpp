@@ -305,19 +305,19 @@ void Listener::Run (void) {
 		// --bidir is following iperf3 naming, it's basically a full duplex test using the same socket
 		// this is slightly different than the legacy iperf2's -d and -r.
 		assert(listener_client_settings!=NULL);
-		if (isBidir(listener_client_settings)) {
+		listener_client_settings->skipbytes = 0;
+		if (isBidir(server)) {
 		    Condition_Initialize(&server->bidir_startstop.await);
 		    server->mBidirReport = InitSumReport(server, server->mSock, 1);
 		    IncrSumReportRefCounter(server->mBidirReport);
 		    listener_client_settings->mBidirReport = server->mBidirReport;
 		    IncrSumReportRefCounter(server->mBidirReport);
-		    setBidir(server);
-		    server->mBidirReport = listener_client_settings->mBidirReport;
+		    setBidir(listener_client_settings);
 #if HAVE_THREAD_DEBUG
 		    thread_debug("BiDir report client=%p/%p server=%p/%p", (void *) listener_client_settings, (void *) listener_client_settings->mBidirReport, (void *) server, (void *) server->mBidirReport);
 #endif
 		    listener_client_settings->mThreadMode=kMode_Client;
-		    thread_start(listener_client_settings);
+		    server->runNow =  listener_client_settings;
 		} else {
 		    // client init will also handle -P instantiations if needed
 		    client_init(listener_client_settings);

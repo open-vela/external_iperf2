@@ -370,11 +370,12 @@ void Client::InitTrafficLoop (void) {
     }
 
     readAt = mBuf;
-    lastPacketTime.set(myReport->info.ts.startTime.tv_sec, myReport->info.ts.startTime.tv_usec);
     // Full duplex sockets need to be syncronized
-    if (isBidir(mSettings))
+    if (isBidir(mSettings)) {
 	bidir_start_barrier(&mSettings->bidir_startstop);
-
+	SetReportStartTime();
+    }
+    lastPacketTime.set(myReport->info.ts.startTime.tv_sec, myReport->info.ts.startTime.tv_usec);
     if (isConnectionReport(mSettings) && isPeerVerDetect(mSettings) && !isSumOnly(mSettings))
 	PostReport(InitConnectionReport(mSettings, mSettings->connecttime));
     reportstruct->errwrite=WriteNoErr;

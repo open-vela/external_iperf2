@@ -173,7 +173,6 @@ int main(int argc, char **argv) {
     // Allocate the "global" settings
     ext_gSettings = new thread_Settings;
 
-
     // Default reporting mode here to avoid unitialized warnings
     // this won't be the actual mode
     ThreadMode ReporterThreadMode = kMode_Reporter;
