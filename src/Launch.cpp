@@ -85,9 +85,8 @@ static int bidir_startstop_barrier (struct BarrierMutex *barrier) {
 #endif
 	    Condition_TimedWait(&barrier->await, 1);
 	    timeout--;
-	    if ((timeout ==0) && (barrier->count != 2)) {
-		fprintf(stdout, "Failed to start full duplex traffic\n");
-		_exit(0);
+	    if ((timeout == 0) && (barrier->count != 2)) {
+		fprintf(stdout, "Barrier timeout per full duplex traffic\n");
 	    }
 	}
     }
