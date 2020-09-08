@@ -71,11 +71,11 @@ static int bidir_startstop_barrier (struct BarrierMutex *barrier) {
 #endif
     if (barrier->count == 2) {
 	rc = 1;
-	barrier->count = 0;
 	// last one wake's up everyone else'
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug("BiDir startstop broadcast on condition %p ", (void *)&barrier->await, rc);
 #endif
+	barrier_count--;
 	Condition_Broadcast(&barrier->await);
     } else {
 	int timeout = barrier->timeout;
@@ -89,6 +89,7 @@ static int bidir_startstop_barrier (struct BarrierMutex *barrier) {
 		fprintf(stdout, "Barrier timeout per full duplex traffic\n");
 	    }
 	}
+	barrier_count--;
     }
     Condition_Unlock(barrier->await);
     return rc;
