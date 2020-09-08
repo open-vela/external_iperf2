@@ -1016,6 +1016,7 @@ inline bool Client::InProgress (void) {
  * Common things to do to finish a traffic thread
  */
 void Client::FinishTrafficActions(void) {
+    disarm_itimer();
     // Shutdown the TCP socket's writes as the event for the server to end its traffic loop
     if (!isUDP(mSettings) && (mySocket != INVALID_SOCKET) && isConnected()) {
         int rc = shutdown(mySocket, SHUT_WR);
