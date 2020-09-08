@@ -67,6 +67,7 @@ struct server_hdr;
 #define PEERVERBUFSIZE 256
 #define NETPOWERCONSTANT 1e-6
 #define REPORTTXTMAX 80
+#define MINBARRIERTIMEOUT 3
 
 // If the minimum latency exceeds the boundaries below
 // assume the clocks are not synched and suppress the
@@ -339,6 +340,7 @@ struct SumReport {
     int threads;
     struct TransferInfo info;
     void (*transfer_protocol_sum_handler) (struct TransferInfo *stats, int final);
+    struct BarrierMutex bidir_barrier;
 };
 
 struct ReporterData {

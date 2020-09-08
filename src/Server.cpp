@@ -134,15 +134,10 @@ Server::Server( thread_Settings *inSettings ) {
  * ------------------------------------------------------------------- */
 
 Server::~Server (void) {
-    int do_close = 1;
 #if HAVE_THREAD_DEBUG
     thread_debug("Server destructor sock=%d bidir=%s", mySocket, (isBidir(mSettings) ? "true" : "false"));
 #endif
-    if (isBidir(mSettings) && (do_close = bidir_stop_barrier(&mSettings->bidir_startstop))) {
-	struct Condition *tmp = &mSettings->bidir_startstop.await;
-	Condition_Destroy(tmp);
-    }
-    if ((mySocket != INVALID_SOCKET) && do_close) {
+    if ((mySocket != INVALID_SOCKET) && !(isBidir(mSettings))) {
 #if HAVE_THREAD_DEBUG
 	thread_debug("Socket close sock=%d (server destructor)", mySocket);
 #endif
@@ -370,8 +365,11 @@ void Server::InitTrafficLoop (void) {
         myDropSocket = mSettings->mSockDrop;
 #endif
     // full duplex sockets need to be traffic synchronized
-    if (isBidir(mSettings))
-	bidir_start_barrier(&mSettings->bidir_startstop);
+    if (isBidir(mSettings)) {
+	assert(mSettings->mBidirReport != NULL);
+	bidir_start_barrier(&mSettings->mBidirReport->bidir_barrier);
+	SetReportStartTime();
+    }
 
     // Initialze the reportstruct scratchpad
     reportstruct = &scratchpad;
@@ -380,8 +378,8 @@ void Server::InitTrafficLoop (void) {
     reportstruct->l2errors = 0x0;
 
     SetReportStartTime();
-    if (isServerModeTime(mSettings) || (isModeTime(mSettings) && isServerReverse(mSettings))) {
-	if (isServerReverse(mSettings))
+    if (isServerModeTime(mSettings) || (isModeTime(mSettings) && (isServerReverse(mSettings) || isBidir(mSettings)))) {
+	if (isServerReverse(mSettings) || isBidir(mSettings))
 	   mSettings->mAmount += (SLOPSECS * 100);  // add 2 sec for slop on reverse, units are 10 ms
 #ifdef HAVE_SETITIMER
         int err;

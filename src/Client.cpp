@@ -372,7 +372,8 @@ void Client::InitTrafficLoop (void) {
     readAt = mBuf;
     // Full duplex sockets need to be syncronized
     if (isBidir(mSettings)) {
-	bidir_start_barrier(&mSettings->bidir_startstop);
+	assert(mSettings->mBidirReport != NULL);
+	bidir_start_barrier(&mSettings->mBidirReport->bidir_barrier);
 	SetReportStartTime();
     }
     lastPacketTime.set(myReport->info.ts.startTime.tv_sec, myReport->info.ts.startTime.tv_usec);
@@ -1032,11 +1033,6 @@ void Client::FinishTrafficActions(void) {
 	 *  do that now (unless requested no to)
 	 */
 	FinalUDPHandshake();
-    }
-
-    if (isBidir(mSettings) && (do_close = bidir_stop_barrier(&mSettings->bidir_startstop))) {
-	struct Condition *tmp = &mSettings->bidir_startstop.await;
-	Condition_Destroy(tmp);
     }
     if ((mySocket != INVALID_SOCKET) && do_close) {
 #if HAVE_THREAD_DEBUG

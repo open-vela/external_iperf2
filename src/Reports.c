@@ -151,14 +151,14 @@ static void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport
 		} else {
 		    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_tcp;
 		}
-		sumreport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_write_enhanced : tcp_output_sum_write_enhanced);		
+		sumreport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_write_enhanced : tcp_output_sum_write_enhanced);
 	    } else {
 		if (bidir) {
 		    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
 		} else {
 		    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_tcp;
 		}
-		sumreport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_write : tcp_output_sum_write);		
+		sumreport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_write : tcp_output_sum_write);
 	    }
 	}
 	break;
@@ -188,6 +188,13 @@ struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, in
 	sumreport->info.ts.intervalTime.tv_usec = (long) (inSettings->mInterval % rMillion);
     }
     SetSumHandlers(inSettings, sumreport, bidir);
+    if (bidir) {
+	sumreport->bidir_barrier.count = 0;
+	Condition_Initialize(&sumreport->bidir_barrier.await);
+	sumreport->bidir_barrier.timeout = (isModeTime(inSettings) ? ((int)(inSettings->mAmount / 100) + 1) : 2);
+	if (sumreport->bidir_barrier.timeout < MINBARRIERTIMEOUT)
+	    sumreport->bidir_barrier.timeout = MINBARRIERTIMEOUT;
+    }
     // transfer_protocol_sum_handler: performs summing output when multiple traffic threads
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Init sum report %p id=%d", (void *)sumreport, inID);
