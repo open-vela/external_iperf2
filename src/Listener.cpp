@@ -312,6 +312,7 @@ void Listener::Run (void) {
 		    listener_client_settings->mBidirReport = server->mBidirReport;
 		    IncrSumReportRefCounter(server->mBidirReport);
 		    setBidir(listener_client_settings);
+		    setServerReverse(listener_client_settings);
 #if HAVE_THREAD_DEBUG
 		    thread_debug("BiDir report client=%p/%p server=%p/%p", (void *) listener_client_settings, (void *) listener_client_settings->mBidirReport, (void *) server, (void *) server->mBidirReport);
 #endif
