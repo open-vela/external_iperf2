@@ -894,7 +894,6 @@ void Settings_Interpret(char option, const char *optarg, struct thread_Settings 
 	    if (bidirtest) {
 		bidirtest = 0;
 		setBidir(mExtSettings);
-		setReverse(mExtSettings);
 	    }
 	    if (fqrate) {
 #if defined(HAVE_DECL_SO_MAX_PACING_RATE)
