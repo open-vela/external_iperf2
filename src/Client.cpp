@@ -264,7 +264,7 @@ void Client::StartSynch (void) {
 	}
     }
     if (!(isReverse(mSettings) && !isBidir(mSettings)))
-	SetReportStartTime();
+	SetReportStartTime(0);
 #endif
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Client start sync exited");
@@ -272,7 +272,7 @@ void Client::StartSynch (void) {
 
 }
 
-inline void Client::SetReportStartTime (void) {
+inline void Client::SetReportStartTime (int bidirflag) {
     if (isServerReverse(mSettings) && !myJob) {
 	myJob = InitIndividualReport(mSettings);
 	myReport = (struct ReporterData *)myJob->this_report;
@@ -298,6 +298,16 @@ inline void Client::SetReportStartTime (void) {
 	    }
 	}
 	Mutex_Unlock(&myReport->GroupSumReport->reference.lock);
+    }
+    if (bidirflag && myReport->FullDuplexReport) {
+	struct TransferInfo *bidirstats = &myReport->FullDuplexReport->info;
+	assert(bidirstats != NULL);
+	if (TimeZero(bidirstats->ts.startTime)) {
+	    bidirstats->ts.startTime = myReport->info.ts.startTime;
+	    if (isModeTime(mSettings)) {
+		bidirstats->ts.nextTime = myReport->info.ts.nextTime;
+	    }
+	}
     }
 }
 
@@ -373,8 +383,7 @@ void Client::InitTrafficLoop (void) {
     // Full duplex sockets need to be syncronized
     if (isBidir(mSettings)) {
 	assert(mSettings->mBidirReport != NULL);
-	bidir_start_barrier(&mSettings->mBidirReport->bidir_barrier);
-	SetReportStartTime();
+	SetReportStartTime(bidir_start_barrier(&mSettings->mBidirReport->bidir_barrier));
     }
     lastPacketTime.set(myReport->info.ts.startTime.tv_sec, myReport->info.ts.startTime.tv_usec);
     if (isConnectionReport(mSettings) && isPeerVerDetect(mSettings) && !isSumOnly(mSettings))

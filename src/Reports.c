@@ -119,51 +119,43 @@ static void free_common_copy (struct ReportCommon *common) {
 }
 
 static void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport* sumreport, int bidir) {
-    switch (inSettings->mThreadMode) {
-    case kMode_Server :
+    if (bidir) {
 	if (isUDP(inSettings)) {
-	    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_udp;
 	} else {
-	    if (isEnhanced(inSettings)) {
-		if (bidir) {
-		    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
-		} else {
+	    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
+	    sumreport->info.output_handler = isEnhanced(inSettings) ? tcp_output_bidir_sum_enhanced :tcp_output_bidir_sum;
+	}
+    } else {
+	switch (inSettings->mThreadMode) {
+	case kMode_Server :
+	    if (isUDP(inSettings)) {
+		sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_udp;
+	    } else {
+		if (isEnhanced(inSettings)) {
 		    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_tcp;
 		    sumreport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_read_enhanced : tcp_output_sum_read_enhanced);
-		}
-	    } else {
-		if (bidir) {
-		    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
 		} else {
 		    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_tcp;
 		    sumreport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_read : tcp_output_sum_read);
 		}
 	    }
-	}
-	break;
-    case kMode_Client :
-	if (isUDP(inSettings)) {
-	    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_udp;
-	} else {
-	    if (isEnhanced(inSettings)) {
-		if (bidir) {
-		    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
-		} else {
-		    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_tcp;
-		}
-		sumreport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_write_enhanced : tcp_output_sum_write_enhanced);
+	    break;
+	case kMode_Client :
+	    if (isUDP(inSettings)) {
+		sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_udp;
 	    } else {
-		if (bidir) {
-		    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
+		if (isEnhanced(inSettings)) {
+		    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_tcp;
+		    sumreport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_write_enhanced : tcp_output_sum_write_enhanced);
 		} else {
 		    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_tcp;
+		    sumreport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_write : tcp_output_sum_write);
 		}
-		sumreport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_write : tcp_output_sum_write);
 	    }
+	    break;
+	default:
+	    FAIL(1, "SetSumReport", inSettings);
 	}
-	break;
-    default:
-	FAIL(1, "SetSumReport", inSettings);
     }
 }
 
@@ -178,7 +170,7 @@ struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, in
     sumreport->threads = 0;
     common_copy(&sumreport->info.common, inSettings);
     sumreport->info.groupID = inID;
-    sumreport->info.transferID = -1;
+    sumreport->info.transferID = inSettings->mSock;
     sumreport->info.threadcnt = 0;
     // Only initialize the interval time here
     // The startTime and nextTime for summing reports will be set by
@@ -238,7 +230,6 @@ static void Free_iReport (struct ReporterData *ireport) {
     free_common_copy(ireport->info.common);
     free(ireport);
 }
-
 
 static void Free_cReport (struct ConnectionInfo *report) {
     free_common_copy(report->common);
@@ -365,12 +356,15 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	if (isUDP(inSettings)) {
 	    ireport->packet_handler = reporter_handle_packet_server_udp;
 	    ireport->transfer_protocol_handler = reporter_transfer_protocol_server_udp;
-	    if (isIsochronous(inSettings))
+	    if (isIsochronous(inSettings)) {
 		ireport->info.output_handler = udp_output_read_enhanced_triptime;
-	    else if (isEnhanced(inSettings))
+	    } else if (isBidir(inSettings)) {
+		ireport->info.output_handler =  (isEnhanced(inSettings) ? NULL : NULL);
+	    } else if (isEnhanced(inSettings)) {
 		ireport->info.output_handler = udp_output_read_enhanced;
-	    else
+	    } else {
 		ireport->info.output_handler = udp_output_read;
+	    }
 	} else {
 	    ireport->packet_handler = reporter_handle_packet_server_tcp;
 	    ireport->transfer_protocol_handler = reporter_transfer_protocol_server_tcp;
@@ -379,7 +373,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	    else if (isEnhanced(inSettings)) {
 		ireport->info.output_handler = (isSumOnly(inSettings) ? NULL : tcp_output_read_enhanced);
 	    } else {
-		ireport->info.output_handler = (isSumOnly(inSettings) ? NULL : tcp_output_read);
+		ireport->info.output_handler = ((isSumOnly(inSettings) | isBidir(inSettings)) ? NULL : tcp_output_read);
 	    }
 	}
 	break;
@@ -402,6 +396,8 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 		ireport->info.output_handler = NULL;
 	    } else if (isEnhanced(inSettings) || isIsochronous(inSettings)) {
 		ireport->info.output_handler = tcp_output_write_enhanced;
+	    } else if (!isEnhanced(inSettings) || isBidir(inSettings)) {
+		ireport->info.output_handler = NULL;
 	    } else {
 		ireport->info.output_handler = tcp_output_write;
 	    }
@@ -427,20 +423,18 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 
     switch (inSettings->mIntervalMode) {
     case kInterval_Time :
-	{
-	    ireport->info.ts.intervalTime.tv_sec = (long) (inSettings->mInterval / rMillion);
-	    ireport->info.ts.intervalTime.tv_usec = (long) (inSettings->mInterval % rMillion);
-	    ireport->transfer_interval_handler = reporter_condprint_time_interval_report;
-	}
+	ireport->info.ts.intervalTime.tv_sec = (long) (inSettings->mInterval / rMillion);
+	ireport->info.ts.intervalTime.tv_usec = (long) (inSettings->mInterval % rMillion);
+	ireport->transfer_interval_handler = reporter_condprint_time_interval_report;
 	break;
     case kInterval_Frames :
 	if (isUDP(inSettings)) {
 	    ireport->transfer_interval_handler = reporter_condprint_frame_interval_report_udp;
 	} else {
-	  if (isTripTime(inSettings) || isIsochronous(inSettings))
-	      ireport->transfer_interval_handler = reporter_condprint_frame_interval_report_tcp;
-	  else
-	      ireport->transfer_interval_handler = NULL;
+	    if (isTripTime(inSettings) || isIsochronous(inSettings))
+		ireport->transfer_interval_handler = reporter_condprint_frame_interval_report_tcp;
+	    else
+		ireport->transfer_interval_handler = NULL;
 	}
 	break;
     default :
