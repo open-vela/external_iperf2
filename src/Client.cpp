@@ -1023,7 +1023,8 @@ void Client::FinishTrafficActions(void) {
         thread_debug("Client calls shutdown() SHUTW_WR on tcp socket %d", mySocket);
 #endif
         WARN_errno( rc == SOCKET_ERROR, "shutdown" );
-	AwaitServerCloseEvent();
+	if(!isBidir(mSettings))
+	    AwaitServerCloseEvent();
     }
     // stop timing
     now.setnow();
