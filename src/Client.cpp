@@ -151,8 +151,12 @@ void Client::my_connect(void) {
     WARN_errno(mySocket == INVALID_SOCKET, "socket");
     // Socket is carried both by the object and the thread
     mSettings->mSock=mySocket;
-    if (mSettings->mThreads > 1)
+    if (mSettings->mThreads > 1) {
 	Iperf_push_host(&mSettings->peer, mSettings);
+	if (isBidir(mSettings)) {
+	    IncrSumReportRefCounter(mSettings->mSumReport);
+	}
+    };
     if (!(isReverse(mSettings) && !isBidir(mSettings))) {
 	myJob = InitIndividualReport(mSettings);;
 	myReport = (struct ReporterData *)myJob->this_report;
@@ -1012,7 +1016,6 @@ inline bool Client::InProgress (void) {
  * Common things to do to finish a traffic thread
  */
 void Client::FinishTrafficActions(void) {
-    int do_close = 1;
     // Shutdown the TCP socket's writes as the event for the server to end its traffic loop
     if (!isUDP(mSettings) && (mySocket != INVALID_SOCKET) && isConnected()) {
         int rc = shutdown(mySocket, SHUT_WR);
@@ -1042,14 +1045,6 @@ void Client::FinishTrafficActions(void) {
 	 *  do that now (unless requested no to)
 	 */
 	FinalUDPHandshake();
-    }
-    if ((mySocket != INVALID_SOCKET) && do_close) {
-#if HAVE_THREAD_DEBUG
-	thread_debug("Socket close sock=%d (client)", mySocket);
-#endif
-	int rc = close(mySocket);
-	WARN_errno( rc == SOCKET_ERROR, "client close" );
-	mySocket = INVALID_SOCKET;
     }
     Iperf_remove_host(&mSettings->peer);
     EndJob(myJob, reportstruct);

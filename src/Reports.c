@@ -187,7 +187,6 @@ struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, in
 	if (sumreport->bidir_barrier.timeout < MINBARRIERTIMEOUT)
 	    sumreport->bidir_barrier.timeout = MINBARRIERTIMEOUT;
     }
-    // transfer_protocol_sum_handler: performs summing output when multiple traffic threads
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Init sum report %p id=%d", (void *)sumreport, inID);
 #endif
@@ -388,8 +387,6 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	    } else {
 		ireport->info.output_handler = udp_output_write;
 	    }
-	    if (ireport->FullDuplexReport)
-		ireport->FullDuplexReport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_udp;
 	} else {
 	    ireport->transfer_protocol_handler = reporter_transfer_protocol_client_tcp;
 	    if (isSumOnly(inSettings)) {
