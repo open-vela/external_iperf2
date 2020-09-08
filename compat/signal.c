@@ -175,6 +175,16 @@ void sig_exit( int inSigno ) {
     }
 } /* end sig_exit */
 
+void disarm_itimer(void) {
+#ifdef HAVE_SETITIMER
+    int err;
+    struct itimerval it;
+    memset (&it, 0, sizeof (it));
+    err = setitimer(ITIMER_REAL, &it, NULL);
+    FAIL_errno( err != 0, "setitimer", mSettings );
+#endif
+}
+
 #ifdef __cplusplus
 } /* end extern "C" */
 #endif
