@@ -177,6 +177,7 @@ void EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
     assert(finalpacket!=NULL);
     struct ReporterData *report = (struct ReporterData *) reporthdr->this_report;
     struct ReportStruct packet;
+    struct TransferInfo *stats = &report->info;
     memset(&packet, 0, sizeof(struct ReportStruct));
     /*
      * Using PacketID of -1 ends reporting
@@ -187,7 +188,6 @@ void EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
      */
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
     // tcpi stats are sampled on a final packet
-    struct TransferInfo *stats = &report->info;
     if (isEnhanced(stats->common) && (stats->common->ThreadMode == kMode_Client) && \
 	(TimeDifference(stats->ts.nextTime, finalpacket->packetTime) < 0)) {
 	gettcpistats(report, 0);
@@ -219,7 +219,14 @@ void EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
 	    Condition_Destroy(tmp);
 	    int rc = close(report->FullDuplexReport->info.common->socket);
 	    WARN_errno( rc == SOCKET_ERROR, "full duplex close" );
+	    FreeSumReport(report->FullDuplexReport);
 	}
+    } else if (stats->common->socket != INVALID_SOCKET) {
+#if HAVE_THREAD_DEBUG
+	thread_debug("Socket close sock=%d (client)", stats->common->socket);
+#endif
+	int rc = close(stats->common->socket);
+	WARN_errno( rc == SOCKET_ERROR, "client close" );
     }
     FreeReport(reporthdr);
 }
@@ -297,7 +304,7 @@ static inline struct ReportHeader *reporter_jobq_set_root(void) {
 	if (!ReportPendingHead) {
 	    Condition_TimedWait(&ReportCond, 1);
 #ifdef HAVE_THREAD_DEBUG
-	    thread_debug( "Jobq *WAIT* exit  %p/%p", (void *) ReportRoot, (void *) ReportPendingHead);
+	    thread_debug( "Jobq *WAIT* exit  %p/%p cond=%p", (void *) ReportRoot, (void *) ReportPendingHead, (void *) &ReportCond);
 #endif
 	}
     }
@@ -517,7 +524,7 @@ static int reporter_process_transfer_report (struct ReporterData *this_ireport) 
 		    if (this_ireport->FullDuplexReport->transfer_protocol_sum_handler) {
 			(*this_ireport->FullDuplexReport->transfer_protocol_sum_handler)(bidirstats, 1);
 		    }
-		    FreeSumReport(this_ireport->FullDuplexReport);
+		    // FullDuplex report gets freed by a traffic thread (per its barrier)
 		}
 	    }
 	    if (sumstats) {
@@ -526,8 +533,7 @@ static int reporter_process_transfer_report (struct ReporterData *this_ireport) 
 		}
 		if (DecrSumReportRefCounter(this_ireport->GroupSumReport) == 0) {
 		    if ((this_ireport->GroupSumReport->transfer_protocol_sum_handler) && \
-			(this_ireport->GroupSumReport->reference.maxcount > 1)) {
-			sumstats->threadcnt = this_ireport->GroupSumReport->reference.maxcount;
+			(this_ireport->GroupSumReport->reference.maxcount > (bidirstats ? 2 : 1))) {
 			(*this_ireport->GroupSumReport->transfer_protocol_sum_handler)(&this_ireport->GroupSumReport->info, 1);
 		    }
 		    FreeSumReport(this_ireport->GroupSumReport);
@@ -1410,14 +1416,17 @@ void reporter_transfer_protocol_sum_server_tcp(struct TransferInfo *stats, int f
 }
 void reporter_transfer_protocol_bidir_tcp(struct TransferInfo *stats, int final) {
     assert(stats->output_handler != NULL);
+    if (!final || (final && (stats->cntBytes > 0) && !TimeZero(stats->ts.intervalTime))) {
+	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
+	if (final)
+	    reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
+	(*stats->output_handler)(stats);
+	stats->total.Bytes.prev = stats->total.Bytes.current;
+    }
     if (final) {
 	stats->cntBytes = stats->total.Bytes.current;
+	reporter_set_timestamps_time(&stats->ts, TOTAL);
 	(*stats->output_handler)(stats);
-        reporter_set_timestamps_time(&stats->ts, TOTAL);
-    } else {
-	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
-	(*stats->output_handler)(stats);
-	reporter_reset_transfer_stats_bidir(stats);
     }
 }
 
@@ -1450,22 +1459,22 @@ int reporter_condprint_time_interval_report (struct ReporterData *data, struct R
 #endif
 	reporter_set_timestamps_time(&stats->ts, INTERVAL);
 	(*data->transfer_protocol_handler)(data, 0);
-	if (sumstats) {
-	    if ((++data->GroupSumReport->threads) == \
-		((bidirstats != NULL) ? (2 * data->GroupSumReport->reference.count) : data->GroupSumReport->reference.count))   {
-		data->GroupSumReport->threads = 0;
-		if (data->GroupSumReport->reference.count > 1)
-		    sumstats->sumflag = 1;
-		reporter_set_timestamps_time(&sumstats->ts, INTERVAL);
-		assert(data->GroupSumReport->transfer_protocol_sum_handler != NULL);
-		(*data->GroupSumReport->transfer_protocol_sum_handler)(sumstats, 0);
-	    }
-	}
 	if (bidirstats && ((++data->FullDuplexReport->threads) == 2)) {
 	    data->FullDuplexReport->threads = 0;
 	    reporter_set_timestamps_time(&bidirstats->ts, INTERVAL);
 	    assert(data->FullDuplexReport->transfer_protocol_sum_handler != NULL);
 	    (*data->FullDuplexReport->transfer_protocol_sum_handler)(bidirstats, 0);
+	}
+	if (sumstats) {
+	    if ((++data->GroupSumReport->threads) == \
+		((bidirstats != NULL) ? (2 * data->GroupSumReport->reference.count) : data->GroupSumReport->reference.count))   {
+		data->GroupSumReport->threads = 0;
+		if (data->GroupSumReport->reference.count > (bidirstats ? 2 : 1))
+		    sumstats->sumflag = 1;
+		reporter_set_timestamps_time(&sumstats->ts, INTERVAL);
+		assert(data->GroupSumReport->transfer_protocol_sum_handler != NULL);
+		(*data->GroupSumReport->transfer_protocol_sum_handler)(sumstats, 0);
+	    }
 	}
     }
     return advance_jobq;
