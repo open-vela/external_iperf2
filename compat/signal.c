@@ -177,11 +177,9 @@ void sig_exit( int inSigno ) {
 
 void disarm_itimer(void) {
 #ifdef HAVE_SETITIMER
-    int err;
     struct itimerval it;
     memset (&it, 0, sizeof (it));
-    err = setitimer(ITIMER_REAL, &it, NULL);
-    FAIL_errno( err != 0, "setitimer", mSettings );
+    setitimer(ITIMER_REAL, &it, NULL);
 #endif
 }
 

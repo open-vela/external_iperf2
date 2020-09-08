@@ -276,7 +276,7 @@ void Server::RunTCP (void) {
 	    delay_loop(4);
 	}
     }
-    disarm_itmer();
+    disarm_itimer();
   end:
     Iperf_remove_host(&mSettings->peer);
     // stop timing
@@ -678,7 +678,7 @@ void Server::RunUDP( void ) {
 	}
 	ReportPacket(myReport, reportstruct);
     }
-    disarm_itmer();
+    disarm_itimer();
     if (!isMulticast(mSettings) && !isNoUDPfin(mSettings)) {
 	// send a UDP acknowledgement back except when:
 	// 1) we're NOT receiving multicast
