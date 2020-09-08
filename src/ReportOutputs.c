@@ -60,6 +60,7 @@ static char llaw_buf[100];
 static const int true = 1;
 static int tcp_client_header_printed = 0;
 static int tcp_server_header_printed = 0;
+static int tcp_bidir_header_printed = 0;
 static int udp_client_header_printed = 0;
 static int udp_server_header_printed = 0;
 
@@ -100,6 +101,59 @@ static inline void set_llawbuf(double lambda, double meantransit) {
 }
 
 //TCP Output
+void tcp_output_bidir_sum (struct TransferInfo *stats) {
+    if (!tcp_bidir_header_printed) {
+	tcp_bidir_header_printed = true;
+	printf("%s", report_bw_header);
+    }
+    _print_stats_common(stats);
+    printf(report_bw_sum_bidir_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
+}
+
+void tcp_output_bidir_sum_enhanced (struct TransferInfo *stats) {
+    if (!tcp_bidir_header_printed) {
+	tcp_bidir_header_printed = true;
+	printf("%s", report_bw_header);
+    }
+    _print_stats_common(stats);
+    printf(report_bw_sum_bidir_enhanced_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
+}
+
+void tcp_output_bidir_read (struct TransferInfo *stats) {
+    if (!tcp_bidir_header_printed) {
+	tcp_bidir_header_printed = true;
+	printf("%s", report_bw_header);
+    }
+    _print_stats_common(stats);
+    printf(report_bw_sum_bidir_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
+}
+
+void tcp_output_bidir_read_enhanced (struct TransferInfo *stats) {
+    if (!tcp_bidir_header_printed) {
+	tcp_bidir_header_printed = true;
+	printf("%s", report_bw_header);
+    }
+    _print_stats_common(stats);
+    printf(report_bw_sum_bidir_enhanced_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
+}
+void tcp_output_bidir_write (struct TransferInfo *stats) {
+    if (!tcp_bidir_header_printed) {
+	tcp_bidir_header_printed = true;
+	printf("%s", report_bw_header);
+    }
+    _print_stats_common(stats);
+    printf(report_bw_sum_bidir_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
+}
+
+void tcp_output_bidir_write_enhanced (struct TransferInfo *stats) {
+    if (!tcp_bidir_header_printed) {
+	tcp_bidir_header_printed = true;
+	printf("%s", report_bw_header);
+    }
+    _print_stats_common(stats);
+    printf(report_bw_sum_bidir_enhanced_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
+}
+
 void tcp_output_read (struct TransferInfo *stats) {
     if (!tcp_server_header_printed) {
 	tcp_server_header_printed = true;

@@ -1210,7 +1210,6 @@ void reporter_transfer_protocol_server_tcp(struct ReporterData *data, int final)
     struct TransferInfo *stats = &data->info;
     struct TransferInfo *sumstats = (data->GroupSumReport != NULL) ? &data->GroupSumReport->info : NULL;
     struct TransferInfo *bidirstats = (data->FullDuplexReport != NULL) ? &data->FullDuplexReport->info : NULL;
-    assert(stats->output_handler != NULL);
     stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
     int ix;
     if (sumstats) {
@@ -1461,6 +1460,12 @@ int reporter_condprint_time_interval_report (struct ReporterData *data, struct R
 		assert(data->GroupSumReport->transfer_protocol_sum_handler != NULL);
 		(*data->GroupSumReport->transfer_protocol_sum_handler)(sumstats, 0);
 	    }
+	}
+	if (bidirstats && ((++data->FullDuplexReport->threads) == 2)) {
+	    data->FullDuplexReport->threads = 0;
+	    reporter_set_timestamps_time(&bidirstats->ts, INTERVAL);
+	    assert(data->FullDuplexReport->transfer_protocol_sum_handler != NULL);
+	    (*data->FullDuplexReport->transfer_protocol_sum_handler)(bidirstats, 0);
 	}
     }
     return advance_jobq;

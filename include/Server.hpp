@@ -90,7 +90,7 @@ private:
 
     void InitKernelTimeStamping (void);
     void InitTrafficLoop (void);
-    inline void SetReportStartTime(void);
+    inline void SetReportStartTime(int bidirflag);
     int ReadWithRxTimestamp (int *readerr);
     bool ReadPacketID (void);
     void L2_processing (void);

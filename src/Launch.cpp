@@ -202,7 +202,7 @@ static void clientside_client_reverse (struct thread_Settings *thread, Client *t
 
 static void clientside_client_bidir (struct thread_Settings *thread, Client *theClient) {
     struct thread_Settings *reverse_client = NULL;
-    thread->mBidirReport = InitSumReport(thread, thread->mSock, 1);
+    thread->mBidirReport = InitSumReport(thread, -1, 1);
     IncrSumReportRefCounter(thread->mBidirReport);
     Settings_Copy(thread, &reverse_client);
     assert(reverse_client != NULL);
@@ -215,6 +215,8 @@ static void clientside_client_bidir (struct thread_Settings *thread, Client *the
 	// When -P > 1 then all threads finish connect before starting traffic
 	theClient->BarrierClient(thread->connects_done);
     if (theClient->isConnected()) {
+	thread->mBidirReport->info.common->socket = thread->mSock;
+	thread->mBidirReport->info.transferID = thread->mSock;
 	FAIL((!reverse_client || !(thread->mSock > 0)), "Reverse test failed to start per thread settings or socket problem",  thread);
 	theClient->StartSynch();
 	theClient->SendFirstPayload();

@@ -318,7 +318,7 @@ void Server::InitKernelTimeStamping (void) {
 // Set the report start times and next report times, options
 // are now, the accept time or the first write time
 //
-inline void Server::SetReportStartTime (void) {
+inline void Server::SetReportStartTime (int bidirflag) {
     if (isTripTime(mSettings)) {
 	// Start times come from the sender's timestamp
 	assert(mSettings->triptime_start.tv_sec != 0);
@@ -352,6 +352,16 @@ inline void Server::SetReportStartTime (void) {
 	}
 	Mutex_Unlock(&myReport->GroupSumReport->reference.lock);
     }
+    if (bidirflag && myReport->FullDuplexReport) {
+	struct TransferInfo *bidirstats = &myReport->FullDuplexReport->info;
+	assert(bidirstats != NULL);
+	if (TimeZero(bidirstats->ts.startTime)) {
+	    bidirstats->ts.startTime = myReport->info.ts.startTime;
+	    if (isModeTime(mSettings)) {
+		bidirstats->ts.nextTime = myReport->info.ts.nextTime;
+	    }
+	}
+    }
 }
 
 void Server::InitTrafficLoop (void) {
@@ -367,17 +377,17 @@ void Server::InitTrafficLoop (void) {
     // full duplex sockets need to be traffic synchronized
     if (isBidir(mSettings)) {
 	assert(mSettings->mBidirReport != NULL);
-	bidir_start_barrier(&mSettings->mBidirReport->bidir_barrier);
-	SetReportStartTime();
+	SetReportStartTime(bidir_start_barrier(&mSettings->mBidirReport->bidir_barrier));
+    } else {
+	SetReportStartTime(0);
     }
-
     // Initialze the reportstruct scratchpad
     reportstruct = &scratchpad;
     reportstruct->packetID = 0;
     reportstruct->l2len = 0;
     reportstruct->l2errors = 0x0;
 
-    SetReportStartTime();
+
     if (isServerModeTime(mSettings) || (isModeTime(mSettings) && (isServerReverse(mSettings) || isBidir(mSettings)))) {
 	if (isServerReverse(mSettings) || isBidir(mSettings))
 	   mSettings->mAmount += (SLOPSECS * 100);  // add 2 sec for slop on reverse, units are 10 ms
