@@ -213,6 +213,14 @@ void EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
 	// printf("Consumer done may be stuck\n");
     }
     Condition_Unlock((*(report->packetring->awake_producer)));
+    if (report->FullDuplexReport && isBidir(report->FullDuplexReport->info.common)) {
+	if (bidir_stop_barrier(&report->FullDuplexReport->bidir_barrier)) {
+	    struct Condition *tmp = &report->FullDuplexReport->bidir_barrier.await;
+	    Condition_Destroy(tmp);
+	    int rc = close(report->FullDuplexReport->info.common->socket);
+	    WARN_errno( rc == SOCKET_ERROR, "full duplex close" );
+	}
+    }
     FreeReport(reporthdr);
 }
 

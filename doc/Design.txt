@@ -65,7 +65,7 @@ The settings structure contains the user requested settings and there is one set
 
 Timestamps
 
-This section descries the multiple timestamps used by iperf 2.
+This section descries the multiple timestamps used by iperf 2. The --trip-times options allows the user to indicate that the client and server clocks are synchronized.
 
 Reports
 

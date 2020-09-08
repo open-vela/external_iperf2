@@ -61,16 +61,21 @@
 #include "Server.hpp"
 #include "PerfSocket.hpp"
 
-#define MINBARRIERTIMEOUT 3
-
 static int bidir_startstop_barrier (struct BarrierMutex *barrier) {
     int rc = 0;
     assert(barrier != NULL);
     Condition_Lock(barrier->await);
-    if (++barrier->count == 2) {
+    ++barrier->count;
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("BiDir barrier incr to %d %p ", barrier->count, (void *)&barrier->await, rc);
+#endif
+    if (barrier->count == 2) {
 	rc = 1;
 	barrier->count = 0;
 	// last one wake's up everyone else'
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug("BiDir startstop broadcast on condition %p ", (void *)&barrier->await, rc);
+#endif
 	Condition_Broadcast(&barrier->await);
     } else {
 	int timeout = barrier->timeout;
@@ -129,7 +134,7 @@ void listener_spawn(struct thread_Settings *thread) {
 void server_spawn(struct thread_Settings *thread) {
     Server *theServer = NULL;
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Listener spawn settings=%p GroupSumReport=%p sock=%d", \
+    thread_debug("Listener spawn server settings=%p GroupSumReport=%p sock=%d", \
 		 (void *) thread, (void *)thread->mSumReport, thread->mSock);
 #endif
     // set traffic thread to realtime if needed
@@ -161,7 +166,6 @@ static void clientside_client_basic (struct thread_Settings *thread, Client *the
 	theClient->Run();
     }
 }
-
 
 static void clientside_client_reverse (struct thread_Settings *thread, Client *theClient) {
     theClient->my_connect();
@@ -199,14 +203,10 @@ static void clientside_client_reverse (struct thread_Settings *thread, Client *t
 
 static void clientside_client_bidir (struct thread_Settings *thread, Client *theClient) {
     struct thread_Settings *reverse_client = NULL;
-    thread->bidir_startstop.timeout = (isModeTime(thread) ? ((int)(thread->mAmount / 100) + 1) : 2);
-    if (thread->bidir_startstop.timeout < MINBARRIERTIMEOUT)
-	thread->bidir_startstop.timeout = MINBARRIERTIMEOUT;
-    Condition_Initialize(&thread->bidir_startstop.await);
-    thread->bidir_startstop.count = 0;
     thread->mBidirReport = InitSumReport(thread, thread->mSock, 1);
     IncrSumReportRefCounter(thread->mBidirReport);
     Settings_Copy(thread, &reverse_client);
+    assert(reverse_client != NULL);
     IncrSumReportRefCounter(thread->mBidirReport);
     theClient->my_connect();
 #ifdef HAVE_THREAD_DEBUG
@@ -221,7 +221,6 @@ static void clientside_client_bidir (struct thread_Settings *thread, Client *the
 	theClient->SendFirstPayload();
 	reverse_client->mSock = thread->mSock; // use the same socket for both directions
 	reverse_client->mThreadMode = kMode_Server;
-	setServerReverse(reverse_client); // cause the connection report to show reverse
 	if (isModeTime(reverse_client)) {
 	    reverse_client->mAmount += (SLOPSECS * 100);  // add 2 sec for slop on reverse, units are 10 ms
 	}
