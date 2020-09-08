@@ -217,6 +217,9 @@ void EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
 	if (bidir_stop_barrier(&report->FullDuplexReport->bidir_barrier)) {
 	    struct Condition *tmp = &report->FullDuplexReport->bidir_barrier.await;
 	    Condition_Destroy(tmp);
+#if HAVE_THREAD_DEBUG
+	    thread_debug("Socket bidir close sock=%d", stats->common->socket);
+#endif
 	    int rc = close(report->FullDuplexReport->info.common->socket);
 	    WARN_errno( rc == SOCKET_ERROR, "full duplex close" );
 	    FreeSumReport(report->FullDuplexReport);
