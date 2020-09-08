@@ -223,7 +223,7 @@ void EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
 	}
     } else if (stats->common->socket != INVALID_SOCKET) {
 #if HAVE_THREAD_DEBUG
-	thread_debug("Socket close sock=%d (client)", stats->common->socket);
+	thread_debug("Socket close sock=%d", stats->common->socket);
 #endif
 	int rc = close(stats->common->socket);
 	WARN_errno( rc == SOCKET_ERROR, "client close" );

@@ -137,14 +137,6 @@ Server::~Server (void) {
 #if HAVE_THREAD_DEBUG
     thread_debug("Server destructor sock=%d bidir=%s", mySocket, (isBidir(mSettings) ? "true" : "false"));
 #endif
-    if ((mySocket != INVALID_SOCKET) && !(isBidir(mSettings))) {
-#if HAVE_THREAD_DEBUG
-	thread_debug("Socket close sock=%d (server destructor)", mySocket);
-#endif
-	int rc = close(mySocket);
-	WARN_errno( rc == SOCKET_ERROR, "server close" );
-	mySocket = INVALID_SOCKET;
-    }
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
     if (myDropSocket != INVALID_SOCKET) {
 	int rc = close(myDropSocket);
