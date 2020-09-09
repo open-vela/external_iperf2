@@ -92,6 +92,7 @@ public:
     bool isConnected(void);
     void SendFirstPayload(void);
     int BarrierClient(struct BarrierMutex *);
+    struct ReportHeader *myJob;
 
 private:
     inline void WritePacketID(intmax_t);
@@ -129,7 +130,6 @@ private:
 #else
     int mySocket;
 #endif
-    struct ReportHeader *myJob;
     struct ReporterData *myReport;
     char* mBuf;
     Timestamp mEndTime;
