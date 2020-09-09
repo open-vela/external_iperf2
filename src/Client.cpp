@@ -83,6 +83,7 @@ Client::Client(thread_Settings *inSettings) {
     mBuf = NULL;
     myJob = NULL;
     myReport = NULL;
+    one_report = false;
 
     memset(&scratchpad, 0, sizeof(struct ReportStruct));
     reportstruct = &scratchpad;
@@ -1034,8 +1035,8 @@ void Client::FinishTrafficActions(void) {
 #ifdef HAVE_THREAD_DEBUG
         thread_debug("Client calls shutdown() SHUTW_WR on tcp socket %d", mySocket);
 #endif
-        WARN_errno( rc == SOCKET_ERROR, "shutdown" );
-	if(!isBidir(mSettings))
+        WARN_errno(rc == SOCKET_ERROR, "shutdown");
+	if(!rc && !isBidir(mSettings))
 	    AwaitServerCloseEvent();
     }
     // stop timing
