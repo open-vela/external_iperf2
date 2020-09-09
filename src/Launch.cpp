@@ -184,19 +184,9 @@ static void clientside_client_reverse (struct thread_Settings *thread, Client *t
 	reverse_client->mThreadMode = kMode_Server;
 	setServerReverse(reverse_client); // cause the connection report to show reverse
 	thread_start(reverse_client);
-	// Reverse only, client thread waits on reverse_server and never runs any traffic
-	if (!thread_equalid(reverse_client->mTID, thread_zeroid())) {
-#ifdef HAVE_THREAD_DEBUG
-	    thread_debug("Reverse pthread join sock=%d", reverse_client->mSock);
-#endif
-	    if (pthread_join(reverse_client->mTID, NULL) != 0) {
-		WARN( 1, "pthread_join reverse failed" );
-	    } else {
-#ifdef HAVE_THREAD_DEBUG
-		thread_debug("Client reverse thread finished sock=%d", reverse_client->mSock);
-#endif
-	    }
-	}
+	// Nothing was posted to reporter thread so free here
+	if (theClient->myJob)
+	    FreeReport(theClient->myJob);
     }
 }
 
