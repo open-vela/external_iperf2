@@ -307,11 +307,8 @@ void Listener::Run (void) {
 		assert(listener_client_settings!=NULL);
 		listener_client_settings->skipbytes = 0;
 		if (isBidir(server)) {
-		    IncrSumReportRefCounter(server->mSumReport);
 		    server->mBidirReport = InitSumReport(server, server->mSock, 1);
-		    IncrSumReportRefCounter(server->mBidirReport);
 		    listener_client_settings->mBidirReport = server->mBidirReport;
-		    IncrSumReportRefCounter(server->mBidirReport);
 		    setBidir(listener_client_settings);
 		    setServerReverse(listener_client_settings);
 #if HAVE_THREAD_DEBUG

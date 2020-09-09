@@ -153,18 +153,7 @@ void Client::my_connect(void) {
     mSettings->mSock=mySocket;
     if (mSettings->mThreads > 1) {
 	Iperf_push_host(&mSettings->peer, mSettings);
-	if (isBidir(mSettings)) {
-	    IncrSumReportRefCounter(mSettings->mSumReport);
-	}
     };
-    if (!(isReverse(mSettings) && !isBidir(mSettings))) {
-	myJob = InitIndividualReport(mSettings);;
-	myReport = (struct ReporterData *)myJob->this_report;
-	myReport->info.common->socket=mySocket;
-	myReport->info.transferID=mySocket;
-	if (isIsochronous(mSettings))
-	    myReport->info.matchframeID = 1;
-    }
     SetSocketOptions(mSettings);
     SockAddr_localAddr(mSettings);
     if (mSettings->mLocalhost != NULL) {
@@ -236,6 +225,12 @@ void Client::StartSynch (void) {
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Client start sync enterred");
 #endif
+
+    myJob = InitIndividualReport(mSettings);;
+    myReport = (struct ReporterData *)myJob->this_report;
+    myReport->info.common->socket=mySocket;
+    myReport->info.transferID=mySocket;
+
     // Perform delays, usually between connect() and data xfer though before connect
     // Two delays are supported:
     // o First is an absolute start time per unix epoch format
@@ -267,20 +262,38 @@ void Client::StartSynch (void) {
 	    fprintf(stderr, "txholdback failed clock_nanosleep()=%d\n", rc);
 	}
     }
-    if (!(isReverse(mSettings) && !isBidir(mSettings)))
-	SetReportStartTime(0);
+    int setbidirflag = 0;
+    if (isBidir(mSettings)) {
+	assert(mSettings->mBidirReport != NULL);
+	setbidirflag = bidir_start_barrier(&mSettings->mBidirReport->bidir_barrier);
+    }
+    SetReportStartTime();
+    if (setbidirflag)
+	SetBidirReportStartTime();
+    // Full duplex sockets need to be syncronized
+
 #endif
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Client start sync exited");
 #endif
-
 }
 
-inline void Client::SetReportStartTime (int bidirflag) {
-    if (isServerReverse(mSettings) && !myJob) {
-	myJob = InitIndividualReport(mSettings);
-	myReport = (struct ReporterData *)myJob->this_report;
+inline void Client::SetBidirReportStartTime (void) {
+    assert(myReport->FullDuplexReport != NULL);
+    struct TransferInfo *bidirstats = &myReport->FullDuplexReport->info;
+    assert(bidirstats != NULL);
+    if (TimeZero(bidirstats->ts.startTime)) {
+	bidirstats->ts.startTime = myReport->info.ts.startTime;
+	if (isModeTime(mSettings)) {
+	    bidirstats->ts.nextTime = myReport->info.ts.nextTime;
+	}
     }
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Client bidir report start=%ld.%ld next=%ld.%ld", bidirstats->ts.startTime.tv_sec, bidirstats->ts.startTime.tv_usec, bidirstats->ts.nextTime.tv_sec, bidirstats->ts.nextTime.tv_usec);
+#endif
+}
+
+inline void Client::SetReportStartTime (void) {
     assert(myReport!=NULL);
     now.setnow();
     myReport->info.ts.startTime.tv_sec = now.getSecs();
@@ -300,19 +313,15 @@ inline void Client::SetReportStartTime (int bidirflag) {
 	    if (isModeTime(mSettings)) {
 		sumstats->ts.nextTime = myReport->info.ts.nextTime;
 	    }
+#ifdef HAVE_THREAD_DEBUG
+	    thread_debug("Client bidir report start=%ld.%ld next=%ld.%ld", sumstats->ts.startTime.tv_sec, sumstats->ts.startTime.tv_usec, sumstats->ts.nextTime.tv_sec, sumstats->ts.nextTime.tv_usec);
+#endif
 	}
 	Mutex_Unlock(&myReport->GroupSumReport->reference.lock);
     }
-    if (bidirflag && myReport->FullDuplexReport) {
-	struct TransferInfo *bidirstats = &myReport->FullDuplexReport->info;
-	assert(bidirstats != NULL);
-	if (TimeZero(bidirstats->ts.startTime)) {
-	    bidirstats->ts.startTime = myReport->info.ts.startTime;
-	    if (isModeTime(mSettings)) {
-		bidirstats->ts.nextTime = myReport->info.ts.nextTime;
-	    }
-	}
-    }
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Client(%d) report start=%ld.%ld next=%ld.%ld", mSettings->mSock, myReport->info.ts.startTime.tv_sec, myReport->info.ts.startTime.tv_usec, myReport->info.ts.nextTime.tv_sec, myReport->info.ts.nextTime.tv_usec);
+#endif
 }
 
 void Client::ConnectPeriodic (void) {
@@ -376,6 +385,9 @@ void Client::InitTrafficLoop (void) {
     // units needs to be in nanoseconds
     delay_lower_bounds = (double) sosndtimer * -1e3;
 
+    if (isIsochronous(mSettings))
+	myReport->info.matchframeID = 1;
+
     // set the total bytes sent to zero
     totLen = 0;
     if (isModeTime(mSettings)) {
@@ -384,11 +396,6 @@ void Client::InitTrafficLoop (void) {
     }
 
     readAt = mBuf;
-    // Full duplex sockets need to be syncronized
-    if (isBidir(mSettings)) {
-	assert(mSettings->mBidirReport != NULL);
-	SetReportStartTime(bidir_start_barrier(&mSettings->mBidirReport->bidir_barrier));
-    }
     lastPacketTime.set(myReport->info.ts.startTime.tv_sec, myReport->info.ts.startTime.tv_usec);
     if (isConnectionReport(mSettings) && isPeerVerDetect(mSettings) && !isSumOnly(mSettings))
 	PostReport(InitConnectionReport(mSettings, mSettings->connecttime));
