@@ -239,8 +239,9 @@ static void serverside_client_reverse (struct thread_Settings *thread, Client *t
 
 static void serverside_client_bidir(struct thread_Settings *thread, Client *theClient) {
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Listener spawn client bidir thread reverse (sock=%d)", thread->mSock);
+    thread_debug("Listener spawn client bidir thread (sock=%d)", thread->mSock);
 #endif
+    theClient->StartSynch();
     theClient->Run();
 }
 
