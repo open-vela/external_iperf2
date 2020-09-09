@@ -203,10 +203,8 @@ static void clientside_client_reverse (struct thread_Settings *thread, Client *t
 static void clientside_client_bidir (struct thread_Settings *thread, Client *theClient) {
     struct thread_Settings *reverse_client = NULL;
     thread->mBidirReport = InitSumReport(thread, -1, 1);
-    IncrSumReportRefCounter(thread->mBidirReport);
     Settings_Copy(thread, &reverse_client);
     assert(reverse_client != NULL);
-    IncrSumReportRefCounter(thread->mBidirReport);
     theClient->my_connect();
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Client spawn thread bidir (sock=%d)", thread->mSock);
@@ -218,14 +216,15 @@ static void clientside_client_bidir (struct thread_Settings *thread, Client *the
 	thread->mBidirReport->info.common->socket = thread->mSock;
 	thread->mBidirReport->info.transferID = thread->mSock;
 	FAIL((!reverse_client || !(thread->mSock > 0)), "Reverse test failed to start per thread settings or socket problem",  thread);
-	theClient->StartSynch();
-	theClient->SendFirstPayload();
+	reverse_client->mSumReport = thread->mSumReport;
 	reverse_client->mSock = thread->mSock; // use the same socket for both directions
 	reverse_client->mThreadMode = kMode_Server;
 	if (isModeTime(reverse_client)) {
 	    reverse_client->mAmount += (SLOPSECS * 100);  // add 2 sec for slop on reverse, units are 10 ms
 	}
 	thread_start(reverse_client);
+	theClient->StartSynch();
+	theClient->SendFirstPayload();
 	theClient->Run();
     }
 }

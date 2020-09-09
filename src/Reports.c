@@ -330,9 +330,15 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
     reporthdr->ReportMode = inSettings->mReportMode;
 
     struct ReporterData *ireport = (struct ReporterData *)(reporthdr->this_report);
-    ireport->GroupSumReport = inSettings->mSumReport;
-    ireport->FullDuplexReport = inSettings->mBidirReport;
-
+    if (inSettings->mSumReport) {
+	IncrSumReportRefCounter(inSettings->mSumReport);
+	ireport->GroupSumReport = inSettings->mSumReport;
+    }
+    if (isBidir(inSettings)) {
+	assert(inSettings->mBidirReport != NULL);
+	IncrSumReportRefCounter(inSettings->mBidirReport);
+	ireport->FullDuplexReport = inSettings->mBidirReport;
+    }
     // Copy common settings into the transfer report section
     common_copy(&ireport->info.common, inSettings);
 #ifdef HAVE_THREAD_DEBUG
@@ -393,7 +399,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 		ireport->info.output_handler = NULL;
 	    } else if (isEnhanced(inSettings) || isIsochronous(inSettings)) {
 		ireport->info.output_handler = tcp_output_write_enhanced;
-	    } else if (!isEnhanced(inSettings) || isBidir(inSettings)) {
+	    } else if (!isEnhanced(inSettings) && isBidir(inSettings)) {
 		ireport->info.output_handler = NULL;
 	    } else {
 		ireport->info.output_handler = tcp_output_write;

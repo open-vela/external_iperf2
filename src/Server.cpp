@@ -311,7 +311,21 @@ void Server::InitKernelTimeStamping (void) {
 // Set the report start times and next report times, options
 // are now, the accept time or the first write time
 //
-inline void Server::SetReportStartTime (int bidirflag) {
+inline void Server::SetBidirReportStartTime (void) {
+    assert(myReport->FullDuplexReport != NULL);
+    struct TransferInfo *bidirstats = &myReport->FullDuplexReport->info;
+    assert(bidirstats != NULL);
+    if (TimeZero(bidirstats->ts.startTime)) {
+	bidirstats->ts.startTime = myReport->info.ts.startTime;
+	if (isModeTime(mSettings)) {
+	    bidirstats->ts.nextTime = myReport->info.ts.nextTime;
+	}
+    }
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Server bidir report start=%ld.%ld next=%ld.%ld", bidirstats->ts.startTime.tv_sec, bidirstats->ts.startTime.tv_usec, bidirstats->ts.nextTime.tv_sec, bidirstats->ts.nextTime.tv_usec);
+#endif
+}
+inline void Server::SetReportStartTime (void) {
     if (isTripTime(mSettings)) {
 	// Start times come from the sender's timestamp
 	assert(mSettings->triptime_start.tv_sec != 0);
@@ -345,19 +359,13 @@ inline void Server::SetReportStartTime (int bidirflag) {
 	}
 	Mutex_Unlock(&myReport->GroupSumReport->reference.lock);
     }
-    if (bidirflag && myReport->FullDuplexReport) {
-	struct TransferInfo *bidirstats = &myReport->FullDuplexReport->info;
-	assert(bidirstats != NULL);
-	if (TimeZero(bidirstats->ts.startTime)) {
-	    bidirstats->ts.startTime = myReport->info.ts.startTime;
-	    if (isModeTime(mSettings)) {
-		bidirstats->ts.nextTime = myReport->info.ts.nextTime;
-	    }
-	}
-    }
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Server(%d) report start=%ld.%ld next=%ld.%ld", mSettings->mSock, myReport->info.ts.startTime.tv_sec, myReport->info.ts.startTime.tv_usec, myReport->info.ts.nextTime.tv_sec, myReport->info.ts.nextTime.tv_usec);
+#endif
 }
 
 void Server::InitTrafficLoop (void) {
+
     myJob = InitIndividualReport(mSettings);
     myReport = (struct ReporterData *)myJob->this_report;
     assert(myJob != NULL);
@@ -367,19 +375,20 @@ void Server::InitTrafficLoop (void) {
     if (mSettings->mSockDrop > 0)
         myDropSocket = mSettings->mSockDrop;
 #endif
-    // full duplex sockets need to be traffic synchronized
+    int setbidirflag = 0;
     if (isBidir(mSettings)) {
 	assert(mSettings->mBidirReport != NULL);
-	SetReportStartTime(bidir_start_barrier(&mSettings->mBidirReport->bidir_barrier));
-    } else {
-	SetReportStartTime(0);
+	setbidirflag = bidir_start_barrier(&mSettings->mBidirReport->bidir_barrier);
     }
+    SetReportStartTime();
+    if (setbidirflag)
+	SetBidirReportStartTime();
+
     // Initialze the reportstruct scratchpad
     reportstruct = &scratchpad;
     reportstruct->packetID = 0;
     reportstruct->l2len = 0;
     reportstruct->l2errors = 0x0;
-
 
     if (isServerModeTime(mSettings) || (isModeTime(mSettings) && (isServerReverse(mSettings) || isBidir(mSettings)))) {
 	if (isServerReverse(mSettings) || isBidir(mSettings))
