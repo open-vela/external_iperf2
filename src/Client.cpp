@@ -403,6 +403,8 @@ void Client::InitTrafficLoop (void) {
 	assert(myReport!=NULL);
 	PostReport(myJob);
     }
+    one_report = ((!isUDP(mSettings) && !isEnhanced(mSettings) && (mSettings->mIntervalMode != kInterval_Time) \
+		   && !isIsochronous(mSettings)  && !isTripTime(mSettings)) ? true : false);
 }
 
 /* -------------------------------------------------------------------
@@ -541,7 +543,9 @@ void Client::RunTCP( void ) {
 	reportstruct->packetTime.tv_sec = now.getSecs();
 	reportstruct->packetTime.tv_usec = now.getUsecs();
 	reportstruct->sentTime = reportstruct->packetTime;
-        ReportPacket(myReport, reportstruct);
+	if (!one_report) {
+	    ReportPacket(myReport, reportstruct);
+	}
 	if (framecounter && (burst_remaining == 0)) {
 	    reportstruct->transit_ready = 1;
 	}
@@ -1037,7 +1041,7 @@ void Client::FinishTrafficActions(void) {
      *  then report the entire transfer as one big packet
      *
      */
-    if(!isUDP(mSettings) && !isEnhanced(mSettings) && (mSettings->mIntervalMode != kInterval_Time)) {
+    if (one_report) {
 	reportstruct->packetLen = totLen;
 	ReportPacket(myReport, reportstruct);
 	reportstruct->packetLen = 0;
