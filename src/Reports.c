@@ -123,7 +123,7 @@ static void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport
 	if (isUDP(inSettings)) {
 	} else {
 	    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
-	    sumreport->info.output_handler = isEnhanced(inSettings) ? tcp_output_bidir_sum_enhanced :tcp_output_bidir_sum;
+	    sumreport->info.output_handler = isEnhanced(inSettings) ? tcp_output_bidir_sum_enhanced : tcp_output_bidir_sum;
 	}
     } else {
 	switch (inSettings->mThreadMode) {

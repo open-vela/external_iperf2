@@ -1469,8 +1469,7 @@ int reporter_condprint_time_interval_report (struct ReporterData *data, struct R
 	    (*data->FullDuplexReport->transfer_protocol_sum_handler)(bidirstats, 0);
 	}
 	if (sumstats) {
-	    if ((++data->GroupSumReport->threads) == \
-		((bidirstats != NULL) ? (2 * data->GroupSumReport->reference.count) : data->GroupSumReport->reference.count))   {
+	    if ((++data->GroupSumReport->threads) == data->GroupSumReport->reference.count)   {
 		data->GroupSumReport->threads = 0;
 		if (data->GroupSumReport->reference.count > (bidirstats ? 2 : 1))
 		    sumstats->sumflag = 1;
