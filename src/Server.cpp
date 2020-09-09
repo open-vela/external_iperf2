@@ -332,6 +332,7 @@ inline void Server::SetReportStartTime (void) {
 	assert(mSettings->triptime_start.tv_usec != 0);
 	myReport->info.ts.startTime.tv_sec = mSettings->triptime_start.tv_sec;
 	myReport->info.ts.startTime.tv_usec = mSettings->triptime_start.tv_usec;
+	myReport->info.ts.prevpacketTime = myReport->info.ts.startTime;
     } else if (TimeZero(myReport->info.ts.startTime) && !TimeZero(mSettings->accept_time)) {
 	// Servers that aren't full duplex use the accept timestamp for start
 	myReport->info.ts.startTime.tv_sec = mSettings->accept_time.tv_sec;
@@ -365,7 +366,6 @@ inline void Server::SetReportStartTime (void) {
 }
 
 void Server::InitTrafficLoop (void) {
-
     myJob = InitIndividualReport(mSettings);
     myReport = (struct ReporterData *)myJob->this_report;
     assert(myJob != NULL);
@@ -379,6 +379,22 @@ void Server::InitTrafficLoop (void) {
     if (isBidir(mSettings)) {
 	assert(mSettings->mBidirReport != NULL);
 	setbidirflag = bidir_start_barrier(&mSettings->mBidirReport->bidir_barrier);
+    }
+    // Case of reverse and --trip-times
+    if (isReverse(mSettings) && isTripTime(mSettings)) {
+	int n = -1;
+	struct TCP_burst_payload burst_info;
+	if ((n = recvn(mSettings->mSock, (char *)&burst_info, sizeof(struct TCP_burst_payload), MSG_PEEK)) == sizeof(struct TCP_burst_payload)) {
+	    mSettings->triptime_start.tv_sec = ntohl(burst_info.send_tt.write_tv_sec);
+	    mSettings->triptime_start.tv_usec = ntohl(burst_info.send_tt.write_tv_usec);
+	    Timestamp now;
+#define MAXDIFFTIMESTAMPSECS 60
+	    if (TimeZero(mSettings->triptime_start) || (abs(now.getSecs() - mSettings->triptime_start.tv_sec) > MAXDIFFTIMESTAMPSECS)) {
+		fprintf(stdout,"ERROR: dropping connection because --trip-times set but client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
+		close(mSettings->mSock);
+		exit(-1);
+	    }
+	}
     }
     SetReportStartTime();
     if (setbidirflag)
