@@ -121,18 +121,12 @@ static void active_table_update (iperf_sockaddr *host, struct thread_Settings *a
 #endif
 	this_entry->sum_report = InitSumReport(agent, active_table.total_count, 0);
 	agent->mSumReport = this_entry->sum_report;
-	IncrSumReportRefCounter(this_entry->sum_report);
     } else {
 	this_entry->thread_count++;
 	agent->mSumReport = this_entry->sum_report;
 #if HAVE_THREAD_DEBUG
 	active_table_show_entry("incr entry", this_entry, 1);
 #endif
-	if (isDataReport(agent)) {
-	    IncrSumReportRefCounter(this_entry->sum_report);
-	} else {
-	    agent->mSumReport = NULL;
-	}
     }
 }
 
