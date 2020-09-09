@@ -276,8 +276,8 @@ void Server::RunTCP (void) {
 	    delay_loop(4);
 	}
     }
-    disarm_itimer();
   end:
+    disarm_itimer();
     Iperf_remove_host(&mSettings->peer);
     // stop timing
     now.setnow();
