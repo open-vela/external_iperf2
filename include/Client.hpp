@@ -109,6 +109,7 @@ private:
     ReportStruct *reportstruct;
     double delay_lower_bounds;
     intmax_t totLen;
+    bool one_report;
 
     // TCP plain
     void RunTCP(void);
