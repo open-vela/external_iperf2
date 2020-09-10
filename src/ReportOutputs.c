@@ -63,6 +63,7 @@ static int tcp_server_header_printed = 0;
 static int tcp_bidir_header_printed = 0;
 static int udp_client_header_printed = 0;
 static int udp_server_header_printed = 0;
+static int report_bw_read_enhanced_netpwr_header_printed = 0;
 
 static inline void _print_stats_common (struct TransferInfo *stats) {
     assert(stats!=NULL);
@@ -183,8 +184,8 @@ void tcp_output_read_enhanced (struct TransferInfo *stats) {
 	   stats->sock_callstats.read.bins[7]);
 }
 void tcp_output_read_enhanced_triptime (struct TransferInfo *stats) {
-    if(!stats->header_printed) {
-	stats->header_printed = true;
+    if(!report_bw_read_enhanced_netpwr_header_printed) {
+	report_bw_read_enhanced_netpwr_header_printed = true;
 	printf(report_bw_read_enhanced_netpwr_header, (stats->sock_callstats.read.binsize/1024.0));
     }
     double meantransit = (stats->transit.sumTransit / stats->transit.cntTransit);
