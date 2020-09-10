@@ -11,10 +11,16 @@ iperf \- perform network throughput tests
 .BI "iperf -u -c "  server " [" options ]
 
 .SH DESCRIPTION
-iperf is a tool for performing network throughput measurements.  It can test
-either TCP or UDP throughput.  To perform an iperf test the user must
-establish both a server (to discard traffic) and a client (to generate
-traffic).
+.LP
+iperf 2 is a tool for performing network throughput and latency measurements.  It can test
+useing either TCP or UDP protocols. It supports both unidirectional and bidirectional
+traffic. Multiple simultaneous traffic streams are also supported. Metrics are displayed to
+help isolate the causes which impact performance. Setting the enhanced (-e) option provides all
+availble metrics.
+.LP
+The user must establish both a both a server (to discard traffic)
+and a client (to generate traffic) for a test to occur. The client and server
+typically are on different hosts or computers but need not be.
 .SH "GENERAL OPTIONS"
 .TP
 .BR -b ", " --bandwidth " "
@@ -53,6 +59,9 @@ output the report or error message to this specified file
 .BR -p ", " --port " \fIn\fR"
 set server port to listen on/connect to to \fIn\fR (default 5001)
 .TP
+.BR "    --sum-only "
+set the output to sum reports only. Useful for -P at large values
+.TP
 .BR -u ", " --udp " "
 use UDP rather than TCP
 .TP
@@ -87,8 +96,14 @@ if set to C or c report results as CSV (comma separated values)
 Set the default congestion-control algorithm to be used for new connections. Platforms must support setsockopt's TCP_CONGESTION. (Notes: See sysctl and tcp_allowed_congestion_control for available options. May require root privileges.)
 .SH "SERVER SPECIFIC OPTIONS"
 .TP
+.BR -1 ", " --singleclient " "
+set the server to process only one client at a time
+.TP
 .BR -b ", " --bandwidth " \fIn\fR[kmgKMG]"
 set target read rate to \fIn\fR bits/sec. TCP only for the server.
+.TP
+.BR "    --bidir"
+run a full duplex test, i.e. traffic in both transmit and receive directions using the same socket
 .TP
 .BR -s ", " --server " "
 run in server mode
@@ -130,7 +145,7 @@ run in client mode, connecting to \fIhost\fR  where the optional %dev will SO_BI
 only perform a TCP connect without any data transfer - useful to measure TCP connect() times
 .TP
 .BR -d ", " --dualtest " "
-Do a bidirectional test simultaneously.
+Do a bidirectional test simultaneously using legacy techniques. Suggest to use --bidir instead
 .TP
 .BR "    --fq-rate n[kmgKMG]"
 Set a rate to be used with fair-queueing based socket-level pacing, in bytes or bits per second. Only available on platforms supporting the SO_MAX_PACING_RATE socket option. (Note: Here the suffixes indicate bytes/sec or bits/sec per use of uppercase or lowercase, respectively)
@@ -161,7 +176,7 @@ a reversed test, server-to-client
 time in seconds to listen for new traffic connections, receive traffic or transmit traffic (Defaults: transmit is 10 secs while listen and receive are indefinite)
 .TP
 .BR "    --trip-times "
-enable measurements end to end write to read latencies (client/server clocks must be synchronized)
+enable the measurement of end to end write to read latencies (client and server clocks must be synchronized)
 .TP
 .BR "    --txdelay-time "
 time in seconds to hold back or delay after the TCP connect and prior to the socket writes.  For UDP it's the delay between the traffic thread starting and the first write.
@@ -196,7 +211,7 @@ time-to-live, for multicast (default 1)
 Set the domain to IPv6 (send packets over IPv6)
 .TP
 .BR -X ", " --peerdetect " "
-run server version detection prior to traffic.
+run peer version detection prior to traffic.
 .TP
 .BR -Z ", " --linux-congestion " \fIalgo\fR"
 set TCP congestion control algorithm (Linux only)
@@ -654,8 +669,14 @@ interval with TCP to get this as that's what sets the RTT sampling
 rate.  The metric is scaled to assist with human readability.  (Note:
 if this metric goes beyond the experimental state we'll consider a
 supporting and RTT sampling rate independent of the -i interval.)
+.P
+Use
+.B ./configure --enable-fastsampling
+and then compile from source to enable four digit (e.g. 1.0000) precision in reports' timestamps. Useful for sub-millisecond sampling.
 .SH DIAGNOSTICS
-This section needs to be filled in.
+Use
+.B ./configure --enable-thread-debug
+and then compile from source to enable both asserts and advanced debugging of the tool itself.
 .SH BUGS
 See https://sourceforge.net/p/iperf2/tickets/
 .SH AUTHORS
@@ -670,4 +691,9 @@ Stephen Hemminger <shemminger at linux-foundation.org>,
 Tim Auckland <tim.auckland at gmail.com>,
 Robert J. McMahon <rjmcmahon at rjmcmahon.com>
 .SH "SEE ALSO"
-http://sourceforge.net/projects/iperf2/
+.BR accept (2),  bind (2),  close (2), connect (2),  fcntl (2),  getpeername (2),  getsockname (2),  getsockopt (2),  listen (2),  read (2),  recv (2),  select (2),  send (2),  setsockopt (2),  shutdown (2),  write (2),  ip (7),  socket (7),  tcp (7),  udp (7)
+.LP
+Source code at http://sourceforge.net/projects/iperf2/
+.LP
+"Unix Network Programming, Volume 1: The Sockets Networking API (3rd Edition) 3rd Edition"
+by W. Richard Stevens (Author), Bill Fenner (Author), Andrew M. Rudoff (Author)
