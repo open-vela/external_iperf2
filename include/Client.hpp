@@ -101,8 +101,7 @@ private:
     inline void SetReportStartTime(void);
     inline void SetBidirReportStartTime(void);
     void FinishTrafficActions(void);
-    void FinalUDPHandshake(void);
-    void write_UDP_FIN(void);
+    void AwaitServerFinPacket(void);
     bool InProgress(void);
     void PostNullEvent(void);
     void AwaitServerCloseEvent(void);
