@@ -99,7 +99,6 @@ private:
     void Isoch_processing (int);
     bool InProgress(void);
     void FirstReadBarrier(void);
-    void write_UDP_AckFIN(struct TransferInfo *stats);
     int SkipFirstPayload(void);
     Timestamp connect_done;
 #if WIN32

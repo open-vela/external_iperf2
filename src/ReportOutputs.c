@@ -442,6 +442,19 @@ void udp_output_sum_read(struct TransferInfo *stats) {
 	       stats->ts.iEnd, stats->cntOutofOrder);
     }
 }
+void udp_output_sumcnt_read(struct TransferInfo *stats) {
+    _print_stats_common(stats);
+    printf(report_sum_bw_jitter_loss_format,
+	   stats->ts.iStart, stats->ts.iEnd,
+	   outbuffer, outbufferext,
+	   stats->jitter*1000.0, stats->cntError, stats->cntDatagrams,
+	   (100.0 * stats->cntError) / stats->cntDatagrams);
+    if (stats->cntOutofOrder > 0) {
+	printf(report_sum_outoforder,
+	       stats->ts.iStart,
+	       stats->ts.iEnd, stats->cntOutofOrder);
+    }
+}
 void udp_output_sum_write(struct TransferInfo *stats) {
     if (!udp_client_header_printed) {
 	udp_client_header_printed = true;

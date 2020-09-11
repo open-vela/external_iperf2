@@ -231,6 +231,9 @@ struct ReportCommon {
     SOCKET socket;
 #else
     int socket;
+#if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
+    int socketdrop;
+#endif
 #endif
 };
 
@@ -470,6 +473,9 @@ void udp_output_read(struct TransferInfo *stats);
 void udp_output_read_enhanced(struct TransferInfo *stats);
 void udp_output_read_enhanced_triptime(struct TransferInfo *stats);
 void udp_output_sum_read(struct TransferInfo *stats);
+void udp_output_sumcnt_read(struct TransferInfo *stats);
+void udp_output_sumcnt_read_enhanced (struct TransferInfo *stats);
+
 //UDP client
 void udp_output_write(struct TransferInfo *stats);
 void udp_output_sum_write(struct TransferInfo *stats);
@@ -484,6 +490,8 @@ void reporter_print_settings_report(struct ReportSettings *report);
 void reporter_print_server_relay_report(struct TransferInfo *report);
 void reporter_peerversion (struct ConnectionInfo *report, uint32_t upper, uint32_t lower);
 void PrintMSS(struct ReporterData *data);
+
+void write_UDP_AckFIN(struct TransferInfo *stats);
 
 #ifdef __cplusplus
 } /* end extern "C" */

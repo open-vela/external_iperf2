@@ -87,9 +87,7 @@ static void active_table_show_compare(const char *action, Iperf_ListEntry *entry
     SockAddr_getHostAddress(host, findaddr, len);
     thread_debug("active table: compare table entry %s %s/%d against host %s/%d (%s)", type, lookupaddr, port, findaddr, findport, action);
 }
-
 #endif
-
 
 void Iperf_initialize_active_table (void) {
     Mutex_Initialize(&active_table.my_mutex);
@@ -159,6 +157,7 @@ void Iperf_remove_host (iperf_sockaddr *del) {
     //	       indirect = &(*indirect)->next;
     //     }
     //     *indirect = entry->next
+    printf("*****remove host\n");
     Mutex_Lock(&active_table.my_mutex);
     Iperf_ListEntry **tmp = &active_table.root;
     while ((*tmp) && !(SockAddr_Hostare_Equal(&(*tmp)->host, del))) {
