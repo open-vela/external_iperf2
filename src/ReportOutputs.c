@@ -894,5 +894,6 @@ void reporter_peerversion (struct ConnectionInfo *report, uint32_t upper, uint32
     }
 }
 
-void reporter_print_server_relay_report(struct TransferInfo *repor) {
+void reporter_print_server_relay_report (struct TransferInfo *report) {
+
 }

@@ -370,7 +370,6 @@ struct ServerRelay {
     Socklen_t size_local;
 };
 
-
 struct ReportHeader {
     enum ReportType type;
     enum ReportMode ReportMode;

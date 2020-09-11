@@ -598,7 +598,7 @@ static inline int reporter_process_report (struct ReportHeader *reporthdr) {
 	FreeReport(reporthdr);
 	break;
     case SERVER_RELAY_REPORT:
-	reporter_print_server_relay_report((struct TransferInfo *)reporthdr->this_report);
+	reporter_print_server_relay_report((struct ServerRelay *)reporthdr->this_report);
 	fflush(stdout);
 	FreeReport(reporthdr);
     default:
