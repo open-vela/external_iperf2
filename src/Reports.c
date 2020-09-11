@@ -661,7 +661,7 @@ struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings
 /* -------------------------------------------------------------------
  * Send an AckFIN (a datagram acknowledging a FIN) on the socket,
  * then select on the socket for some time to check for silence.
- * If additional datagram come in (not silent), probably our AckFIN
+ * If additional datagrams come in (not silent), probably our AckFIN
  * was lost so the client has re-transmitted
  * termination datagrams, so re-transmit our AckFIN.
  * Sent by server to client
@@ -728,7 +728,7 @@ void write_UDP_AckFIN (struct TransferInfo *stats) {
 	    // If in l2mode, use the AF_INET socket to write this packet
 	    //
 #ifdef HAVE_THREAD_DEBUG
-	    thread_debug("UDP server write()");
+	    thread_debug("UDP server send done-ack w/server-stats to client (sock=%d)", stats->common->socket);
 #endif
 	    write(((stats->common->socketdrop > 0) ? stats->common->socketdrop : stats->common->socket), mBuf, ackpacket_length);
 #else
