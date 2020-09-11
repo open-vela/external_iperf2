@@ -1095,29 +1095,27 @@ void Client::write_UDP_FIN (void) {
     int ack_success = 0;
     int count = 10 ;
     while (--count >= 0) {
+	// decrement the packet count
+	//
+	// Note: a negative packet id is used to tell the server
+	// this UDP stream is terminating.  The server will remove
+	// the sign.  So a decrement will be seen as increments by
+	// the server (e.g, -1000, -1001, -1002 as 1000, 1001, 1002)
+	// If the retries weren't decrement here the server can get out
+	// of order packets per these retries actually being received
+	// by the server (e.g. -1000, -1000, -1000)
+	WritePacketID(-(++reportstruct->packetID));
+	// write data
+	write(mySocket, mBuf, mSettings->mBufLen);
         // wait until the socket is readable, or our timeout expires
         FD_ZERO(&readSet);
         FD_SET(mySocket, &readSet);
         timeout.tv_sec  = 0;
-        timeout.tv_usec = (count > 5) ? 5000 : 250000; // 5 millisecond or 0.25 second
-
+        timeout.tv_usec = (count > 5) ? 50000 : 250000; // 5 millisecond or 0.25 second
         rc = select(mySocket+1, &readSet, NULL, NULL, &timeout);
         FAIL_errno(rc == SOCKET_ERROR, "select", mSettings);
-
         // rc= zero means select's read timed out
 	if (rc == 0) {
-	    // decrement the packet count
-	    //
-	    // Note: a negative packet id is used to tell the server
-	    // this UDP stream is terminating.  The server will remove
-	    // the sign.  So a decrement will be seen as increments by
-	    // the server (e.g, -1000, -1001, -1002 as 1000, 1001, 1002)
-	    // If the retries weren't decrement here the server can get out
-	    // of order packets per these retries actually being received
-	    // by the server (e.g. -1000, -1000, -1000)
-	    WritePacketID(-(++reportstruct->packetID));
-	    // write data
-	    write(mySocket, mBuf, mSettings->mBufLen);
             continue;
         } else {
             // socket ready to read, this packet size
@@ -1125,9 +1123,7 @@ void Client::write_UDP_FIN (void) {
 	    // to contain the final server packet
             rc = read(mySocket, mBuf, MAXUDPBUF);
 	    WARN_errno(rc < 0, "read");
-	    if (rc==0)
-		continue;
-	    else if (rc < 0)
+	    if (rc <= 0)
                 break;
             else if (rc >= (int) (sizeof(UDP_datagram) + sizeof(server_hdr))) {
                 PostReport(InitServerRelayUDPReport(mSettings, (server_hdr*) ((UDP_datagram*)mBuf + 1)));
