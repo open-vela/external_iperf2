@@ -663,6 +663,7 @@ struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings
  * then select on the socket for some time. If additional datagrams
  * come in, probably our AckFIN was lost and they are re-transmitted
  * termination datagrams, so re-transmit our AckFIN.
+ * Sent by server to client
  * ------------------------------------------------------------------- */
 void write_UDP_AckFIN (struct TransferInfo *stats) {
     assert(stats!= NULL);
@@ -674,7 +675,7 @@ void write_UDP_AckFIN (struct TransferInfo *stats) {
 	struct server_hdr *hdr = (struct server_hdr *)(UDP_Hdr+1);
 
 	UDP_Hdr = (struct UDP_datagram*) mBuf;
-	int flags = (HEADER_VERSION1 | HEADER_EXTEND_ACK);
+	int flags = (HEADER_VERSION1 | HEADER_EXTEND_NOACK);
 #ifdef HAVE_INT64_T
 	flags |=  HEADER_SEQNO64B;
 #endif
@@ -685,10 +686,8 @@ void write_UDP_AckFIN (struct TransferInfo *stats) {
 	hdr->base.total_len1   = htonl(0x0);
 #endif
 	hdr->base.total_len2   = htonl((long) (stats->cntBytes & 0xFFFFFFFF));
-#if 0
-	hdr->base.stop_sec     = htonl((long) stats->ts.endTime.tv_sec);
-	hdr->base.stop_usec    = htonl((long)((stats->endTime - (long)stats->endTime) * rMillion));
-#endif
+	hdr->base.stop_sec     = htonl((long) stats->ts.packetTime.tv_sec);
+	hdr->base.stop_usec    = htonl((long) stats->ts.packetTime.tv_usec);
 	hdr->base.error_cnt    = htonl((long) (stats->cntError & 0xFFFFFFFF));
 	hdr->base.outorder_cnt = htonl((long) (stats->cntOutofOrder  & 0xFFFFFFFF));
 	hdr->base.datagrams    = htonl((long) (stats->cntDatagrams & 0xFFFFFFFF));
@@ -752,7 +751,7 @@ void write_UDP_AckFIN (struct TransferInfo *stats) {
 	    WARN_errno(rc < 0, "read");
 	    if (rc > 0) {
 #ifdef HAVE_THREAD_DEBUG
-		thread_debug("UDP server read ack");
+		thread_debug("UDP server read ack (%d bytes)", rc);
 #endif
 		success = 1;
 		break;
