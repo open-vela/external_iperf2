@@ -363,7 +363,6 @@ struct ReporterData {
 };
 
 struct ServerRelay {
-    struct ReportCommon *common;
     struct TransferInfo info;
     iperf_sockaddr peer;
     Socklen_t size_peer;
