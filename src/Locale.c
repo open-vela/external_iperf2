@@ -460,7 +460,7 @@ const char warn_no_ack[]=
 "[%3d] WARNING: did not receive ack of last datagram after %d tries.\n";
 
 const char warn_ack_failed[]=
-"[%3d] WARNING: ack of last datagram failed after %d tries.\n";
+"[%3d] WARNING: ack of last datagram failed.\n";
 
 const char warn_fileopen_failed[]=
 "WARNING: Unable to open file stream for transfer\n\
