@@ -213,29 +213,39 @@ void EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
 	// printf("Consumer done may be stuck\n");
     }
     Condition_Unlock((*(report->packetring->awake_producer)));
-    if (isUDP(stats->common) && (stats->common->ThreadMode == kMode_Server) && !isMulticast(stats->common) && !isNoUDPfin(stats->common)) {
-	// send a UDP acknowledgement back except when:
-	// 1) we're NOT receiving multicast
-	// 2) the user requested no final exchange
-	write_UDP_AckFIN(stats);
-    }
-    if (report->FullDuplexReport && isBidir(report->FullDuplexReport->info.common)) {
-	if (bidir_stop_barrier(&report->FullDuplexReport->bidir_barrier)) {
-	    struct Condition *tmp = &report->FullDuplexReport->bidir_barrier.await;
-	    Condition_Destroy(tmp);
-#if HAVE_THREAD_DEBUG
-	    thread_debug("Socket bidir close sock=%d", stats->common->socket);
-#endif
-	    int rc = close(report->FullDuplexReport->info.common->socket);
-	    WARN_errno( rc == SOCKET_ERROR, "full duplex close" );
-	    FreeSumReport(report->FullDuplexReport);
+    if (isUDP(stats->common)) {
+	if ((stats->common->ThreadMode == kMode_Server) && !isMulticast(stats->common) && !isNoUDPfin(stats->common)) {
+	    // send a UDP acknowledgement back except when:
+	    // 1) we're NOT receiving multicast
+	    // 2) the user requested no final exchange
+	    write_UDP_AckFIN(stats);
 	}
-    } else if (stats->common->socket != INVALID_SOCKET) {
+	if ((stats->common->ThreadMode == kMode_Server) && (stats->common->socket != INVALID_SOCKET)) {
 #if HAVE_THREAD_DEBUG
-	thread_debug("Socket close sock=%d", stats->common->socket);
+	    thread_debug("UDP server close sock=%d", stats->common->socket);
 #endif
-	int rc = close(stats->common->socket);
-	WARN_errno( rc == SOCKET_ERROR, "client close" );
+	    int rc = close(stats->common->socket);
+	    WARN_errno(rc == SOCKET_ERROR, "end report close");
+	}
+    } else {
+	if (report->FullDuplexReport && isBidir(report->FullDuplexReport->info.common)) {
+	    if (bidir_stop_barrier(&report->FullDuplexReport->bidir_barrier)) {
+		struct Condition *tmp = &report->FullDuplexReport->bidir_barrier.await;
+		Condition_Destroy(tmp);
+#if HAVE_THREAD_DEBUG
+		thread_debug("Socket bidir close sock=%d", stats->common->socket);
+#endif
+		int rc = close(report->FullDuplexReport->info.common->socket);
+		WARN_errno( rc == SOCKET_ERROR, "full duplex close" );
+		FreeSumReport(report->FullDuplexReport);
+	    }
+	} else {
+#if HAVE_THREAD_DEBUG
+	    thread_debug("TCP close sock=%d", stats->common->socket);
+#endif
+	    int rc = close(stats->common->socket);
+	    WARN_errno(rc == SOCKET_ERROR, "end report close");
+	}
     }
     FreeReport(reporthdr);
 }

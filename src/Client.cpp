@@ -1084,12 +1084,19 @@ void Client::FinishTrafficActions (void) {
 	reportstruct->packetLen = 0;
     }
     EndJob(myJob, reportstruct);
-    if (isUDP(mSettings) && !(isMulticast(mSettings) || isNoUDPfin(mSettings))) {
-	/*
-	 *  For UDP, there is a final handshake between the client and the server,
-	 *  do that now (unless requested no to)
-	 */
-	AwaitServerFinPacket();
+    if (isUDP(mSettings)) {
+	if (!(isMulticast(mSettings) || isNoUDPfin(mSettings))) {
+	    /*
+	     *  For UDP, there is a final handshake between the client and the server,
+	     *  do that now (unless requested no to)
+	     */
+	    AwaitServerFinPacket();
+	}
+#if HAVE_THREAD_DEBUG
+	thread_debug("UDP client close sock=%d", mySocket);
+#endif
+	int rc = close(mySocket);
+	WARN_errno(rc == SOCKET_ERROR, "end report close");
     }
     Iperf_remove_host(&mSettings->peer);
 }
@@ -1104,13 +1111,13 @@ void Client::AwaitServerFinPacket (void) {
     fd_set readSet;
     struct timeval timeout;
     int ack_success = 0;
-    int count = 10 ;
+    int count = 20 ;
     while (--count >= 0) {
         // wait until the socket is readable, or our timeout expires
         FD_ZERO(&readSet);
         FD_SET(mySocket, &readSet);
         timeout.tv_sec  = 0;
-        timeout.tv_usec = (count > 5) ? 50000 : 250000; // 50 milliseconds or 0.25 second
+        timeout.tv_usec = 100000; // 100 milliseconds
         rc = select(mySocket+1, &readSet, NULL, NULL, &timeout);
         FAIL_errno(rc == SOCKET_ERROR, "select", mSettings);
         // rc= zero means select's read timed out
