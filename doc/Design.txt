@@ -97,11 +97,17 @@ Mutexes and Condition variables:
 
 Startup (src/main.cpp src/Launch.cpp)
 
-There are two primary aspects of startup. The code is in main.cpp and Launch.cpp.
+Thread creation:
 
-Client startup
+There are three primary aspects of startup. The code is in main.cpp, Launch.cpp and Listener.cpp. The primary purpose of this code is to determine settings and instaniate thread ojbects with those settings.  The thread objects are then strated by the running operating system thead create callls per thread_start() found in compat/Thread.c  Thee main function there is thread_run_wrapper which spawns a thread type.
 
-Server startup
+The run main.cpp is to read user settings, instantiate a setttings thread objec, and, for a client, initiate their threads, while for a server, initiate the listener thread. On the server side, the listener thread will instantiate server and client threads.
+
+Thread interactions:
+
+Client startups
+
+Server startups
 
 A day in the life of a UDP packet
 

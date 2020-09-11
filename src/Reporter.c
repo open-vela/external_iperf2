@@ -213,6 +213,12 @@ void EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
 	// printf("Consumer done may be stuck\n");
     }
     Condition_Unlock((*(report->packetring->awake_producer)));
+    if (isUDP(stats->common) && (stats->common->ThreadMode == kMode_Server) && !isMulticast(stats->common) && !isNoUDPfin(stats->common)) {
+	// send a UDP acknowledgement back except when:
+	// 1) we're NOT receiving multicast
+	// 2) the user requested no final exchange
+	write_UDP_AckFIN(stats);
+    }
     if (report->FullDuplexReport && isBidir(report->FullDuplexReport->info.common)) {
 	if (bidir_stop_barrier(&report->FullDuplexReport->bidir_barrier)) {
 	    struct Condition *tmp = &report->FullDuplexReport->bidir_barrier.await;
@@ -1085,6 +1091,12 @@ void reporter_transfer_protocol_server_udp(struct ReporterData *data, int final)
     struct TransferInfo *bidirstats = (data->FullDuplexReport != NULL) ? &data->FullDuplexReport->info : NULL;
     // print a interval report and possibly a partial interval report if this a final
     stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
+    stats->cntOutofOrder = stats->total.OutofOrder.current - stats->total.OutofOrder.prev;
+    // assume most of the  time out-of-order packets are
+    // duplicate packets, so conditionally subtract them from the lost packets.
+    stats->cntError = stats->total.Lost.current - stats->total.Lost.prev - stats->cntOutofOrder;
+    stats->cntDatagrams = stats->PacketID - stats->total.Datagrams.prev;
+    stats->cntIPG = stats->total.IPG.current - stats->total.IPG.prev;
     if (sumstats) {
 	sumstats->total.OutofOrder.current += stats->total.OutofOrder.current - stats->total.OutofOrder.prev;
 	// assume most of the  time out-of-order packets are not
@@ -1099,18 +1111,18 @@ void reporter_transfer_protocol_server_udp(struct ReporterData *data, int final)
     if (bidirstats) {
 	bidirstats->total.Bytes.current += stats->cntBytes;
     }
-    if (!final || (final && (stats->cntBytes > 0) && !TimeZero(stats->ts.intervalTime))) {
-	stats->cntOutofOrder = stats->total.OutofOrder.current - stats->total.OutofOrder.prev;
-	// assume most of the  time out-of-order packets are not
-	// duplicate packets, so conditionally subtract them from the lost packets.
-	stats->cntError = stats->total.Lost.current - stats->total.Lost.prev;
-	stats->cntError -= stats->cntOutofOrder;
-	stats->cntDatagrams = stats->PacketID - stats->total.Datagrams.prev;
-	if (final)
-	    reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
-	(*stats->output_handler)(stats);
-    }
     if (final) {
+	if ((stats->cntBytes > 0) && !TimeZero(stats->ts.intervalTime)) {
+	    stats->cntOutofOrder = stats->total.OutofOrder.current - stats->total.OutofOrder.prev;
+	    // assume most of the  time out-of-order packets are not
+	    // duplicate packets, so conditionally subtract them from the lost packets.
+	    stats->cntError = stats->total.Lost.current - stats->total.Lost.prev;
+	    stats->cntError -= stats->cntOutofOrder;
+	    stats->cntDatagrams = stats->PacketID - stats->total.Datagrams.prev;
+	    if (final)
+		reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
+	    (*stats->output_handler)(stats);
+	}
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
 	stats->cntOutofOrder = stats->total.OutofOrder.current;
 	// assume most of the  time out-of-order packets are not
@@ -1136,35 +1148,37 @@ void reporter_transfer_protocol_server_udp(struct ReporterData *data, int final)
 	    stats->latency_histogram->final = 1;
 	}
     }
-    (*stats->output_handler)(stats);
+    if (stats->output_handler)
+	(*stats->output_handler)(stats);
     if (!final)
 	reporter_reset_transfer_stats_server_udp(stats);
-
 }
+
 void reporter_transfer_protocol_sum_server_udp(struct TransferInfo *stats, int final) {
     assert(stats->output_handler != NULL);
-    if (final) {
-	reporter_set_timestamps_time(&stats->ts, TOTAL);
-	stats->cntOutofOrder = stats->total.OutofOrder.current;
-	// assume most of the  time out-of-order packets are not
-	// duplicate packets, so conditionally subtract them from the lost packets.
-	stats->cntError = stats->total.Lost.current;
-	stats->cntError -= stats->cntOutofOrder;
-	stats->cntDatagrams = stats->total.Datagrams.current;
-	stats->cntBytes = stats->total.Bytes.current;
-    } else {
-	stats->cntOutofOrder = stats->total.OutofOrder.current - stats->total.OutofOrder.prev;
-	// assume most of the  time out-of-order packets are not
-	// duplicate packets, so conditionally subtract them from the lost packets.
-	stats->cntError = stats->total.Lost.current - stats->total.Lost.prev;
-	stats->cntError -= stats->cntOutofOrder;
-	stats->cntDatagrams = stats->total.Datagrams.current - stats->total.Datagrams.prev;
-	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
+    if (stats->sumflag) {
+	if (final) {
+	    reporter_set_timestamps_time(&stats->ts, TOTAL);
+	    stats->cntOutofOrder = stats->total.OutofOrder.current;
+	    // assume most of the  time out-of-order packets are not
+	    // duplicate packets, so conditionally subtract them from the lost packets.
+	    stats->cntError = stats->total.Lost.current;
+	    stats->cntError -= stats->cntOutofOrder;
+	    stats->cntDatagrams = stats->total.Datagrams.current;
+	    stats->cntBytes = stats->total.Bytes.current;
+	} else {
+	    stats->cntOutofOrder = stats->total.OutofOrder.current - stats->total.OutofOrder.prev;
+	    // assume most of the  time out-of-order packets are not
+	    // duplicate packets, so conditionally subtract them from the lost packets.
+	    stats->cntError = stats->total.Lost.current - stats->total.Lost.prev;
+	    stats->cntError -= stats->cntOutofOrder;
+	    stats->cntDatagrams = stats->total.Datagrams.current - stats->total.Datagrams.prev;
+	    stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
+	}
+	(*stats->output_handler)(stats);
+	if (!final)
+	    reporter_reset_transfer_stats_server_udp(stats);
     }
-    (*stats->output_handler)(stats);
-    if (!final)
-	reporter_reset_transfer_stats_server_udp(stats);
-
 }
 void reporter_transfer_protocol_sum_client_udp(struct TransferInfo *stats, int final) {
     assert(stats->output_handler != NULL);

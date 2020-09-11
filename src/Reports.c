@@ -57,6 +57,7 @@
 #include "Reporter.h"
 #include "Locale.h"
 #include "List.h"
+#include "payloads.h"
 
 static inline void my_str_copy(char **dst, char *src) {
     if (src) {
@@ -77,6 +78,9 @@ static inline void my_str_copy(char **dst, char *src) {
 static void common_copy (struct ReportCommon **common, struct thread_Settings *inSettings) {
     // Do deep copies from settings
     *common = (struct ReportCommon *) calloc(1,sizeof(struct ReportCommon));
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Alloc common=%p", (void *)(*common));
+#endif
     my_str_copy(&(*common)->Host, inSettings->mHost);
     my_str_copy(&(*common)->Localhost, inSettings->mLocalhost);
     my_str_copy(&(*common)->Ifrname, inSettings->mIfrname);
@@ -101,9 +105,15 @@ static void common_copy (struct ReportCommon **common, struct thread_Settings *i
     (*common)->socket = inSettings->mSock;
     (*common)->threads = inSettings->mThreads;
     (*common)->winsize_requested = inSettings->mTCPWin;
+#if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
+    (*common)->socketdrop = inSettings->mSockDrop;
+#endif
 }
 
 static void free_common_copy (struct ReportCommon *common) {
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Free common=%p", (void *)common);
+#endif
     // Free deep copies
     if (common->Host)
 	free(common->Host);
@@ -130,6 +140,7 @@ static void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport
 	case kMode_Server :
 	    if (isUDP(inSettings)) {
 		sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_udp;
+		sumreport->info.output_handler =  (isSumOnly(inSettings) ? udp_output_sumcnt_read : udp_output_sum_read);
 	    } else {
 		if (isEnhanced(inSettings)) {
 		    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_tcp;
@@ -196,7 +207,7 @@ struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, in
 void FreeSumReport (struct SumReport *sumreport) {
     assert(sumreport);
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Free multi report hdr=%p", (void *)sumreport);
+    thread_debug("Free sum report hdr=%p", (void *)sumreport);
 #endif
     Condition_Destroy_Reference(&sumreport->reference);
     free_common_copy(sumreport->info.common);
@@ -645,3 +656,102 @@ struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings
     sr_report->size_local = inSettings->size_peer;
     return reporthdr;
 }
+
+/* -------------------------------------------------------------------
+ * Send an AckFIN (a datagram acknowledging a FIN) on the socket,
+ * then select on the socket for some time. If additional datagrams
+ * come in, probably our AckFIN was lost and they are re-transmitted
+ * termination datagrams, so re-transmit our AckFIN.
+ * ------------------------------------------------------------------- */
+void write_UDP_AckFIN (struct TransferInfo *stats) {
+    assert(stats!= NULL);
+    int ackpacket_length = (int) (sizeof(struct UDP_datagram) + sizeof(struct server_hdr));
+    char *mBuf = (char *) calloc(1, ackpacket_length);
+    assert(mBuf);
+    if (mBuf) {
+	struct UDP_datagram *UDP_Hdr = (struct UDP_datagram *)mBuf;
+	struct server_hdr *hdr = (struct server_hdr *)(UDP_Hdr+1);
+
+	UDP_Hdr = (struct UDP_datagram*) mBuf;
+	int flags = (HEADER_VERSION1 | HEADER_EXTEND_ACK);
+#ifdef HAVE_INT64_T
+	flags |=  HEADER_SEQNO64B;
+#endif
+	hdr->base.flags        = htonl((long) flags);
+#ifdef HAVE_INT64_T
+	hdr->base.total_len1   = htonl((long) (stats->cntBytes >> 32));
+#else
+	hdr->base.total_len1   = htonl(0x0);
+#endif
+	hdr->base.total_len2   = htonl((long) (stats->cntBytes & 0xFFFFFFFF));
+#if 0
+	hdr->base.stop_sec     = htonl((long) stats->ts.endTime.tv_sec);
+	hdr->base.stop_usec    = htonl((long)((stats->endTime - (long)stats->endTime) * rMillion));
+#endif
+	hdr->base.error_cnt    = htonl((long) (stats->cntError & 0xFFFFFFFF));
+	hdr->base.outorder_cnt = htonl((long) (stats->cntOutofOrder  & 0xFFFFFFFF));
+	hdr->base.datagrams    = htonl((long) (stats->cntDatagrams & 0xFFFFFFFF));
+	if (flags & HEADER_SEQNO64B) {
+	    hdr->extend2.error_cnt2    = htonl((long) (stats->cntError >> 32));
+	    hdr->extend2.outorder_cnt2 = htonl((long) (stats->cntOutofOrder >> 32) );
+	    hdr->extend2.datagrams2    = htonl((long) (stats->cntDatagrams >> 32));
+	}
+	hdr->base.jitter1      = htonl((long) stats->jitter);
+	hdr->base.jitter2      = htonl((long) ((stats->jitter - (long)stats->jitter) * rMillion));
+	if (flags & HEADER_EXTEND_ACK) {
+	    hdr->extend.minTransit1  = htonl((long) stats->transit.totminTransit);
+	    hdr->extend.minTransit2  = htonl((long) ((stats->transit.totminTransit - (long)stats->transit.totminTransit) * rMillion));
+	    hdr->extend.maxTransit1  = htonl((long) stats->transit.totmaxTransit);
+	    hdr->extend.maxTransit2  = htonl((long) ((stats->transit.totmaxTransit - (long)stats->transit.totmaxTransit) * rMillion));
+	    hdr->extend.sumTransit1  = htonl((long) stats->transit.totsumTransit);
+	    hdr->extend.sumTransit2  = htonl((long) ((stats->transit.totsumTransit - (long)stats->transit.totsumTransit) * rMillion));
+	    hdr->extend.meanTransit1  = htonl((long) stats->transit.totmeanTransit);
+	    hdr->extend.meanTransit2  = htonl((long) ((stats->transit.totmeanTransit - (long)stats->transit.totmeanTransit) * rMillion));
+	    hdr->extend.m2Transit1  = htonl((long) stats->transit.totm2Transit);
+	    hdr->extend.m2Transit2  = htonl((long) ((stats->transit.totm2Transit - (long)stats->transit.totm2Transit) * rMillion));
+	    hdr->extend.vdTransit1  = htonl((long) stats->transit.totvdTransit);
+	    hdr->extend.vdTransit2  = htonl((long) ((stats->transit.totvdTransit - (long)stats->transit.totvdTransit) * rMillion));
+	    hdr->extend.cntTransit   = htonl(stats->transit.totcntTransit);
+	    hdr->extend.cntIPG = htonl((long) (stats->cntDatagrams / (stats->ts.iEnd - stats->ts.iStart)));
+	    hdr->extend.IPGsum = htonl(1);
+	}
+
+	fd_set readSet;
+	FD_ZERO(&readSet);
+
+#define TRYCOUNT 40
+	int count = TRYCOUNT;
+	int success = 0;
+	while (--count) {
+	    int rc;
+	    struct timeval timeout;
+	    // write data
+#if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
+	    // If in l2mode, use the AF_INET socket to write this packet
+	    //
+	    write(((stats->common->socketdrop > 0) ? stats->common->socketdrop : stats->common->socket), mBuf, ackpacket_length);
+#else
+	    write(stats->common->socket, mBuf, ackpacket_length);
+#endif
+	    // wait until the socket is readable, or our timeout expires
+	    FD_SET(stats->common->socket, &readSet);
+	    timeout.tv_sec  = 0;
+	    timeout.tv_usec = 250000;
+	    rc = select(stats->common->socket+1, &readSet, NULL, NULL, &timeout);
+	    if (rc == 0) {
+		continue; //select timeout
+	    }
+	    rc = read(stats->common->socket, mBuf, ackpacket_length);
+	    WARN_errno(rc < 0, "read");
+	    if (rc > 0) {
+		success = 1;
+		break;
+	    }
+	}
+	if (!success)
+	    fprintf(stderr, warn_ack_failed, stats->common->socket, TRYCOUNT);
+    } else {
+	fprintf(stderr, warn_ack_failed, stats->common->socket, -1);
+    }
+}
+// end write_UDP_AckFIN
