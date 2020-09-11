@@ -98,7 +98,6 @@ private:
     int L2_quintuple_filter (void);
     void Isoch_processing (int);
     bool InProgress(void);
-    void FirstReadBarrier(void);
     int SkipFirstPayload(void);
     Timestamp connect_done;
 #if WIN32
