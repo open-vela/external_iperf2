@@ -1123,12 +1123,11 @@ void Client::write_UDP_FIN (void) {
 	    // to contain the final server packet
             rc = read(mySocket, mBuf, MAXUDPBUF);
 	    WARN_errno(rc < 0, "read");
-	    if (rc <= 0)
-                break;
-            else if (rc >= (int) (sizeof(UDP_datagram) + sizeof(server_hdr))) {
+	    if (rc > 0 {)
                 PostReport(InitServerRelayUDPReport(mSettings, (server_hdr*) ((UDP_datagram*)mBuf + 1)));
 		ack_success = 1;
             }
+	    break;
 	}
     }
     if (!ack_success)
