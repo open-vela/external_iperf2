@@ -111,6 +111,7 @@ static void common_copy (struct ReportCommon **common, struct thread_Settings *i
 }
 
 static void free_common_copy (struct ReportCommon *common) {
+    assert(common != NULL);
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Free common=%p", (void *)common);
 #endif
@@ -729,6 +730,9 @@ void write_UDP_AckFIN (struct TransferInfo *stats) {
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
 	    // If in l2mode, use the AF_INET socket to write this packet
 	    //
+#ifdef HAVE_THREAD_DEBUG
+	    thread_debug("UDP server write()");
+#endif
 	    write(((stats->common->socketdrop > 0) ? stats->common->socketdrop : stats->common->socket), mBuf, ackpacket_length);
 #else
 	    write(stats->common->socket, mBuf, ackpacket_length);
@@ -739,11 +743,17 @@ void write_UDP_AckFIN (struct TransferInfo *stats) {
 	    timeout.tv_usec = 250000;
 	    rc = select(stats->common->socket+1, &readSet, NULL, NULL, &timeout);
 	    if (rc == 0) {
+#ifdef HAVE_THREAD_DEBUG
+		thread_debug("UDP server read select timeout");
+#endif
 		continue; //select timeout
 	    }
 	    rc = read(stats->common->socket, mBuf, ackpacket_length);
 	    WARN_errno(rc < 0, "read");
 	    if (rc > 0) {
+#ifdef HAVE_THREAD_DEBUG
+		thread_debug("UDP server read ack");
+#endif
 		success = 1;
 		break;
 	    }
