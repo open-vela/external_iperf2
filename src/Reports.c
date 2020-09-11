@@ -600,11 +600,11 @@ struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings
 	FAIL(1, "Out of Memory!!\n", inSettings);
     }
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Init server relay report %p size %ld", (void *)reporthdr, sizeof(struct ReportHeader));
+    thread_debug("Init server relay report %p size %ld", (void *)reporthdr, sizeof(struct ReportHeader) + sizeof(struct ServerRelay));
 #endif
     reporthdr->type = SERVER_RELAY_REPORT;
     reporthdr->ReportMode = inSettings->mReportMode;
-    struct ServerRelay *sr_report = (struct ServerRelay *)&reporthdr->this_report;
+    struct ServerRelay *sr_report = (struct ServerRelay *)reporthdr->this_report;
     common_copy(&sr_report->info.common, inSettings);
     struct TransferInfo *stats = (struct TransferInfo *)&sr_report->info;
     stats->transferID = inSettings->mSock;
