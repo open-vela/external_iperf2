@@ -392,7 +392,7 @@ void Server::InitTrafficLoop (void) {
 	    if (TimeZero(mSettings->triptime_start) || (abs(now.getSecs() - mSettings->triptime_start.tv_sec) > MAXDIFFTIMESTAMPSECS)) {
 		fprintf(stdout,"ERROR: dropping connection because --trip-times set but client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
 		close(mSettings->mSock);
-		exit(-1);
+		assert(0);
 	    }
 	}
     }

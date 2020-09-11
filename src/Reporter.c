@@ -603,7 +603,7 @@ static inline int reporter_process_report (struct ReportHeader *reporthdr) {
 	FreeReport(reporthdr);
     default:
 	fprintf(stderr,"Invalid report type in process report\n");
-	exit(1);
+	assert(0);
 	break;
     }
 #ifdef HAVE_THREAD_DEBUG
