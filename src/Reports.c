@@ -279,7 +279,7 @@ void FreeReport (struct ReportHeader *reporthdr) {
 	break;
     default:
 	fprintf(stderr, "Invalid report type in free\n");
-	exit(1);
+	assert(0);
 	break;
     }
     free(reporthdr);
