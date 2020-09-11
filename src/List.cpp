@@ -157,7 +157,6 @@ void Iperf_remove_host (iperf_sockaddr *del) {
     //	       indirect = &(*indirect)->next;
     //     }
     //     *indirect = entry->next
-    printf("*****remove host\n");
     Mutex_Lock(&active_table.my_mutex);
     Iperf_ListEntry **tmp = &active_table.root;
     while ((*tmp) && !(SockAddr_Hostare_Equal(&(*tmp)->host, del))) {
