@@ -660,8 +660,9 @@ struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings
 
 /* -------------------------------------------------------------------
  * Send an AckFIN (a datagram acknowledging a FIN) on the socket,
- * then select on the socket for some time. If additional datagrams
- * come in, probably our AckFIN was lost and they are re-transmitted
+ * then select on the socket for some time to check for silence.
+ * If additional datagram come in (not silent), probably our AckFIN
+ * was lost so the client has re-transmitted
  * termination datagrams, so re-transmit our AckFIN.
  * Sent by server to client
  * ------------------------------------------------------------------- */
@@ -669,6 +670,7 @@ void write_UDP_AckFIN (struct TransferInfo *stats) {
     assert(stats!= NULL);
     int ackpacket_length = (int) (sizeof(struct UDP_datagram) + sizeof(struct server_hdr));
     char *mBuf = (char *) calloc(1, ackpacket_length);
+    int success = 0;
     assert(mBuf);
     if (mBuf) {
 	struct UDP_datagram *UDP_Hdr = (struct UDP_datagram *)mBuf;
@@ -716,12 +718,8 @@ void write_UDP_AckFIN (struct TransferInfo *stats) {
 	    hdr->extend.IPGsum = htonl(1);
 	}
 
-	fd_set readSet;
-	FD_ZERO(&readSet);
-
-#define TRYCOUNT 40
+#define TRYCOUNT 10
 	int count = TRYCOUNT;
-	int success = 0;
 	while (--count) {
 	    int rc;
 	    struct timeval timeout;
@@ -736,31 +734,30 @@ void write_UDP_AckFIN (struct TransferInfo *stats) {
 #else
 	    write(stats->common->socket, mBuf, ackpacket_length);
 #endif
-	    // wait until the socket is readable, or our timeout expires
+	    // wait here is for silence, no more packets from the client
+	    fd_set readSet;
+	    FD_ZERO(&readSet);
 	    FD_SET(stats->common->socket, &readSet);
-	    timeout.tv_sec  = 0;
-	    timeout.tv_usec = 250000;
+	    timeout.tv_sec  = 1;
+	    timeout.tv_usec = 0;
 	    rc = select(stats->common->socket+1, &readSet, NULL, NULL, &timeout);
 	    if (rc == 0) {
 #ifdef HAVE_THREAD_DEBUG
-		thread_debug("UDP server read select timeout");
+		thread_debug("UDP server detected silence - server stats assumed received by client");
 #endif
-		continue; //select timeout
+		success = 1;
+		break;
 	    }
 	    rc = read(stats->common->socket, mBuf, ackpacket_length);
 	    WARN_errno(rc < 0, "read");
 	    if (rc > 0) {
 #ifdef HAVE_THREAD_DEBUG
-		thread_debug("UDP server read ack (%d bytes)", rc);
+		thread_debug("UDP server thinks server stats packet lost, will retransmit and try again", rc);
 #endif
-		success = 1;
-		break;
 	    }
 	}
-	if (!success)
-	    fprintf(stderr, warn_ack_failed, stats->common->socket, TRYCOUNT);
-    } else {
-	fprintf(stderr, warn_ack_failed, stats->common->socket, -1);
     }
+    if (!success)
+	fprintf(stderr, warn_ack_failed, stats->common->socket);
 }
 // end write_UDP_AckFIN
