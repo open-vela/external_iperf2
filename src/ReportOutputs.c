@@ -152,7 +152,7 @@ void tcp_output_bidir_write_enhanced (struct TransferInfo *stats) {
 	printf("%s", report_bw_header);
     }
     _print_stats_common(stats);
-    printf("%s", report_bw_sum_bidir_enhanced_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
+    printf(report_bw_sum_bidir_enhanced_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
 }
 
 void tcp_output_read (struct TransferInfo *stats) {
@@ -444,7 +444,7 @@ void udp_output_sum_read(struct TransferInfo *stats) {
 }
 void udp_output_sumcnt_read(struct TransferInfo *stats) {
     _print_stats_common(stats);
-    printf(report_sum_bw_jitter_loss_format,
+    printf(report_sumcnt_bw_jitter_loss_format, stats->threadcnt,
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext,
 	   stats->jitter*1000.0, stats->cntError, stats->cntDatagrams,
@@ -462,6 +462,19 @@ void udp_output_sum_write(struct TransferInfo *stats) {
     }
     _print_stats_common(stats);
     printf(report_sum_bw_jitter_loss_format,
+	   stats->ts.iStart, stats->ts.iEnd,
+	   outbuffer, outbufferext,
+	   stats->jitter*1000.0, stats->cntError, stats->cntDatagrams,
+	   (100.0 * stats->cntError) / stats->cntDatagrams);
+    printf(report_sum_datagrams, stats->cntDatagrams);
+}
+void udp_output_sumcnt_write(struct TransferInfo *stats) {
+    if (!udp_client_header_printed) {
+	udp_client_header_printed = true;
+	printf(report_bw_header);
+    }
+    _print_stats_common(stats);
+    printf(report_sumcnt_bw_jitter_loss_format, stats->threadcnt,
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext,
 	   stats->jitter*1000.0, stats->cntError, stats->cntDatagrams,
