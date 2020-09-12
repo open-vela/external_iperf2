@@ -256,6 +256,9 @@ const char report_bw_jitter_loss_format[] =
 const char report_sum_bw_jitter_loss_format[] =
 "[SUM] %4.1f-%4.1f sec  %ss  %ss/sec  %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%)\n";
 
+const char report_sumcnt_bw_jitter_loss_format[] =
+"[SUM-%d] %4.1f-%4.1f sec  %ss  %ss/sec  %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%)\n";
+
 /* -------------------------------------------------------------------
  * Enhanced reports (per -e)
  * ------------------------------------------------------------------- */
@@ -365,6 +368,9 @@ const char report_bw_jitter_loss_enhanced_isoch_format[] =
 const char report_sum_bw_jitter_loss_enhanced_format[] =
 "[SUM] " IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%)  %4.0f pps\n";
 
+const char report_sumcnt_bw_jitter_loss_enhanced_format[] =
+"[SUM-%d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%)  %4.0f pps\n";
+
 const char report_bw_jitter_loss_suppress_enhanced_format[] =
 "[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%) -/-/-/- ms %4.0f pps\n";
 
@@ -394,7 +400,7 @@ const char report_bw_sum_bidir_format[] =
 "[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec\n";
 
 const char report_bw_sum_bidir_enhanced_format[] =
-"[FD%d] " IPERFTimeFrmt " sec  %ss  %ss/sec\n";
+"[FD%d] " IPERFTimeFrmt " sec  %ss  %ss/sec %s %s\n";
 
 /* -------------------------------------------------------------------
  * Misc reports

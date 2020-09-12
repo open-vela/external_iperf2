@@ -480,6 +480,8 @@ void udp_output_sum_write(struct TransferInfo *stats);
 void udp_output_write_enhanced(struct TransferInfo *stats);
 void udp_output_write_enhanced_isoch(struct TransferInfo *stats);
 void udp_output_sum_write_enhanced (struct TransferInfo *stats);
+void udp_output_sumcnt_write(struct TransferInfo *stats);
+void udp_output_sumcnt_write_enhanced (struct TransferInfo *stats);
 
 // Rest of the reporter output routines
 void reporter_connect_printf_tcp_final (struct ReportHeader *reporthdr);
