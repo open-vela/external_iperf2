@@ -169,8 +169,9 @@ void ReportPacket(struct ReporterData* data, struct ReportStruct *packet) {
 }
 
 /*
- * CloseReport is called by a transfer agent to finalize
- * the report and signal transfer is over. Context is traffic thread
+ * EndJob is called by a traffic thread to inform the reporter
+ * thread to print a final report and to remove the data report from its jobq. 
+ * It also handles the freeing reports and other closing actions
  */
 void EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
     assert(reporthdr!=NULL);
@@ -195,12 +196,11 @@ void EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
 #endif
     // clear the reporter done predicate
     report->packetring->consumerdone = 0;
+    // the negative packetID is used to inform the report thread this traffic thread is done
     packet.packetID = -1;
     packet.packetLen = finalpacket->packetLen;
     packet.packetTime = finalpacket->packetTime;
     ReportPacket(report, &packet);
-    // Await for the reporter to process this otherwise the thread will destroy
-    // it's settings which are being used by the reporter.
 #ifdef HAVE_THREAD_DEBUG
     thread_debug( "Traffic thread awaiting reporter to be done with %p and cond %p", (void *)report, (void *) report->packetring->awake_producer);
 #endif
