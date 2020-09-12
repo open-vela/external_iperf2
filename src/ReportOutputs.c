@@ -777,7 +777,11 @@ void reporter_print_connection_report(struct ConnectionInfo *report) {
 	}
     }
     if (isL2LengthCheck(report->common)) {
-	snprintf(b, SNBUFFERSIZE-strlen(b), " (%s)", "l2mode");
+	snprintf(b, SNBUFFERSIZE-strlen(b), " (l2mode)");
+	b += strlen(b);
+    }
+    if (isUDP(report->common) && isNoUDPfin(report->common)) {
+	snprintf(b, SNBUFFERSIZE-strlen(b), " (no-udp-fin)");
 	b += strlen(b);
     }
     if (!isUDP(report->common) && (report->common->socket > 0) && (isPrintMSS(report->common) || isEnhanced(report->common)))  {

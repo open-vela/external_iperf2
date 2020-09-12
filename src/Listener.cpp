@@ -897,7 +897,7 @@ int Listener::apply_client_settings (thread_Settings *server) {
 	    setSeqNo64b(server);
 	}
 	if ((flags & HEADER_UDPTESTS) != 0) {
-	    uint16_t testflags = ntohs(hdr->extend.flags);
+	    uint16_t testflags = htons(hdr->udp.testflags);
 	    // Handle stateless flags
 	    if ((testflags & HEADER_UDP_ISOCH) != 0) {
 		setIsochronous(server);
