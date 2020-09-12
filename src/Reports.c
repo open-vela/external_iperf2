@@ -608,6 +608,9 @@ struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings
     common_copy(&sr_report->info.common, inSettings);
     struct TransferInfo *stats = (struct TransferInfo *)&sr_report->info;
     stats->transferID = inSettings->mSock;
+    if (!isEnhanced(inSettings))
+	stats->header_printed = 1; //don't print a header for a server relay report when in legacy mode
+
     stats->jitter = ntohl(server->base.jitter1);
     stats->jitter += ntohl(server->base.jitter2) / (double)rMillion;
 #ifdef HAVE_INT64_T

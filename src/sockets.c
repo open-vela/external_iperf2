@@ -69,29 +69,29 @@ Setting the MSS may not be implemented on this OS.\n";
 const char warn_mss_notset[] =
 "WARNING: attempt to set TCP maximum segment size to %d, but got %d\n";
 
-void setsock_tcp_mss( int inSock, int inMSS ) {
+void setsock_tcp_mss (int inSock, int inMSS) {
 #ifdef TCP_MAXSEG
     int rc;
     int newMSS;
     Socklen_t len;
 
-    assert( inSock != INVALID_SOCKET );
+    assert(inSock != INVALID_SOCKET);
 
-    if ( inMSS > 0 ) {
+    if (inMSS > 0) {
         /* set */
         newMSS = inMSS;
-        len = sizeof( newMSS );
-        rc = setsockopt( inSock, IPPROTO_TCP, TCP_MAXSEG, (char*) &newMSS,  len );
-        if ( rc == SOCKET_ERROR ) {
-            fprintf( stderr, warn_mss_fail, newMSS );
+        len = sizeof(newMSS);
+        rc = setsockopt(inSock, IPPROTO_TCP, TCP_MAXSEG, (char*) &newMSS,  len);
+        if (rc == SOCKET_ERROR) {
+            fprintf(stderr, warn_mss_fail, newMSS);
             return;
         }
 
         /* verify results */
-        rc = getsockopt( inSock, IPPROTO_TCP, TCP_MAXSEG, (char*) &newMSS, &len );
-        WARN_errno( rc == SOCKET_ERROR, "getsockopt TCP_MAXSEG" );
-        if ( newMSS != inMSS ) {
-            fprintf( stderr, warn_mss_notset, inMSS, newMSS );
+        rc = getsockopt(inSock, IPPROTO_TCP, TCP_MAXSEG, (char*) &newMSS, &len);
+        WARN_errno(rc == SOCKET_ERROR, "getsockopt TCP_MAXSEG");
+        if (newMSS != inMSS) {
+            fprintf(stderr, warn_mss_notset, inMSS, newMSS);
         }
     }
 #endif
@@ -101,8 +101,8 @@ void setsock_tcp_mss( int inSock, int inMSS ) {
  * returns the TCP maximum segment size
  * ------------------------------------------------------------------- */
 
-int getsock_tcp_mss(int inSock) {
-    int theMSS = 0;
+int getsock_tcp_mss (int inSock) {
+    int theMSS = -1;
 
 #ifdef TCP_MAXSEG
     int rc;
@@ -126,26 +126,26 @@ int getsock_tcp_mss(int inSock) {
  * from Stevens, 1998, section 3.9
  * ------------------------------------------------------------------- */
 
-ssize_t readn( int inSock, void *outBuf, size_t inLen ) {
+ssize_t readn (int inSock, void *outBuf, size_t inLen) {
     size_t  nleft;
     ssize_t nread;
     char *ptr;
 
-    assert( inSock >= 0 );
-    assert( outBuf != NULL );
-    assert( inLen > 0 );
+    assert(inSock >= 0);
+    assert(outBuf != NULL);
+    assert(inLen > 0);
 
     ptr   = (char*) outBuf;
     nleft = inLen;
 
-    while ( nleft > 0 ) {
-        nread = read( inSock, ptr, nleft );
-        if ( nread < 0 ) {
-            if ( errno == EINTR )
+    while (nleft > 0) {
+        nread = read(inSock, ptr, nleft);
+        if (nread < 0) {
+            if (errno == EINTR)
                 nread = 0;  /* interupted, call read again */
             else
                 return -1;  /* error */
-        } else if ( nread == 0 )
+        } else if (nread == 0)
             break;        /* EOF */
 
         nleft -= nread;
@@ -161,30 +161,30 @@ ssize_t readn( int inSock, void *outBuf, size_t inLen ) {
  * If number read < inLen then we reached EOF.
  * from Stevens, 1998, section 3.9
  * ------------------------------------------------------------------- */
-int recvn( int inSock, char *outBuf, int inLen, int flags ) {
+int recvn (int inSock, char *outBuf, int inLen, int flags) {
     int  nleft;
     int nread;
     char *ptr;
 
-    assert( inSock >= 0 );
-    assert( outBuf != NULL );
-    assert( inLen > 0 );
+    assert(inSock >= 0);
+    assert(outBuf != NULL);
+    assert(inLen > 0);
 
     ptr   = outBuf;
     nleft = inLen;
 
-    while ( nleft > 0 ) {
-        nread = recv( inSock, ptr, nleft, flags );
-        if ( nread < 0 ) {
-            if ( errno == EAGAIN ) {
+    while (nleft > 0) {
+        nread = recv(inSock, ptr, nleft, flags);
+        if (nread < 0) {
+            if (errno == EAGAIN) {
                 nread = 0;  /* Socket read timeout */
 		break;
             } else {
-		WARN_errno( 1, "recvn" );
+		WARN_errno(1, "recvn");
                 return -1;  /* error */
 	    }
-	} else if ( nread == 0 ) {
-	  // WARN_errno( 1, "recvn abort" );
+	} else if (nread == 0) {
+	  // WARN_errno(1, "recvn abort");
             break;        /* EOF */
 	}
         nleft -= nread;
@@ -201,22 +201,22 @@ int recvn( int inSock, char *outBuf, int inLen, int flags ) {
  * from Stevens, 1998, section 3.9
  * ------------------------------------------------------------------- */
 
-int writen( int inSock, const void *inBuf, int inLen ) {
+int writen (int inSock, const void *inBuf, int inLen) {
     int nleft;
     int nwritten;
     const char *ptr;
 
-    assert( inSock >= 0 );
-    assert( inBuf != NULL );
-    assert( inLen > 0 );
+    assert(inSock >= 0);
+    assert(inBuf != NULL);
+    assert(inLen > 0);
 
     ptr   = (char*) inBuf;
     nleft = inLen;
 
-    while ( nleft > 0 ) {
-        nwritten = write( inSock, ptr, nleft );
-        if ( nwritten <= 0 ) {
-            if ( errno == EINTR )
+    while (nleft > 0) {
+        nwritten = write(inSock, ptr, nleft);
+        if (nwritten <= 0) {
+            if (errno == EINTR)
                 nwritten = 0; /* interupted, call write again */
             else
                 return -1;    /* error */

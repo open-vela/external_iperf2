@@ -601,7 +601,7 @@ static inline int reporter_process_report (struct ReportHeader *reporthdr) {
 	reporter_print_server_relay_report((struct ServerRelay *)reporthdr->this_report);
 	fflush(stdout);
 	FreeReport(reporthdr);
-	break;	
+	break;
     default:
 	fprintf(stderr,"Invalid report type in process report %p\n", (void *) reporthdr->this_report);
 	assert(0);
@@ -1237,7 +1237,10 @@ void reporter_transfer_protocol_client_udp(struct ReporterData *data, int final)
 	stats->cntDatagrams = stats->PacketID;
     }
     (*stats->output_handler)(stats);
-    reporter_reset_transfer_stats_client_udp(stats);
+    if (final)
+	printf(report_datagrams, stats->transferID, stats->cntDatagrams);
+    else
+	reporter_reset_transfer_stats_client_udp(stats);
 }
 
 void reporter_transfer_protocol_server_tcp(struct ReporterData *data, int final) {
