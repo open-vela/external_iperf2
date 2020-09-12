@@ -485,7 +485,7 @@ void udp_output_sum_write_enhanced (struct TransferInfo *stats);
 void reporter_connect_printf_tcp_final (struct ReportHeader *reporthdr);
 void reporter_print_connection_report(struct ConnectionInfo *report);
 void reporter_print_settings_report(struct ReportSettings *report);
-void reporter_print_server_relay_report(struct TransferInfo *report);
+void reporter_print_server_relay_report(struct ServerRelay *report);
 void reporter_peerversion (struct ConnectionInfo *report, uint32_t upper, uint32_t lower);
 void PrintMSS(struct ReporterData *data);
 
