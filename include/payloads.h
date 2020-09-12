@@ -61,6 +61,7 @@ extern "C" {
 #define HEADER_UDPTESTS     0x20000000
 #define HEADER_EXTEND_NOACK 0x10000000
 #define HEADER_SEQNO64B     0x08000000
+#define SERVER_HEADER_EXTEND 0x40000000
 
 // Below flags are used to pass test settings in *every* UDP packet
 // and not just during the header exchange
