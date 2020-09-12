@@ -601,8 +601,9 @@ static inline int reporter_process_report (struct ReportHeader *reporthdr) {
 	reporter_print_server_relay_report((struct ServerRelay *)reporthdr->this_report);
 	fflush(stdout);
 	FreeReport(reporthdr);
+	break;	
     default:
-	fprintf(stderr,"Invalid report type in process report\n");
+	fprintf(stderr,"Invalid report type in process report %p\n", (void *) reporthdr->this_report);
 	assert(0);
 	break;
     }
