@@ -68,12 +68,9 @@
  *   <netinet/in.h>
  *   <sys/socket.h>
  * ------------------------------------------------------------------- */
-
-
 #define HEADERS()
 
 #include "headers.h"
-
 #include "PerfSocket.hpp"
 #include "SocketAddr.h"
 #include "util.h"
@@ -85,24 +82,24 @@
  * These are optional performance tuning factors.
  * ------------------------------------------------------------------- */
 
-void SetSocketOptions( struct thread_Settings *inSettings ) {
+void SetSocketOptions (struct thread_Settings *inSettings) {
     // set the TCP window size (socket buffer sizes)
     // also the UDP buffer size
     // must occur before call to accept() for large window sizes
-    setsock_tcp_windowsize( inSettings->mSock, inSettings->mTCPWin,
-                            (inSettings->mThreadMode == kMode_Client ? 1 : 0) );
+    setsock_tcp_windowsize(inSettings->mSock, inSettings->mTCPWin,
+                            (inSettings->mThreadMode == kMode_Client ? 1 : 0));
 
-    if ( isCongestionControl( inSettings ) ) {
+    if (isCongestionControl(inSettings)) {
 #ifdef TCP_CONGESTION
-	Socklen_t len = strlen( inSettings->mCongestion ) + 1;
-	int rc = setsockopt( inSettings->mSock, IPPROTO_TCP, TCP_CONGESTION,
+	Socklen_t len = strlen(inSettings->mCongestion) + 1;
+	int rc = setsockopt(inSettings->mSock, IPPROTO_TCP, TCP_CONGESTION,
 			     inSettings->mCongestion, len);
-	if (rc == SOCKET_ERROR ) {
+	if (rc == SOCKET_ERROR) {
 	    fprintf(stderr, "Attempt to set '%s' congestion control failed: %s\n",
 		    inSettings->mCongestion, strerror(errno));
 	}
 #else
-	fprintf( stderr, "The -Z option is not available on this operating system\n");
+	fprintf(stderr, "The -Z option is not available on this operating system\n");
 #endif
     }
 
@@ -117,7 +114,7 @@ void SetSocketOptions( struct thread_Settings *inSettings ) {
 	    len++;  // Trailing null byte + extra
 	    buf = (char *) malloc(len);
 	    len = snprintf(buf, len, "%s %s", "bind to device", inSettings->mIfrnametx);
-	    WARN_errno(1, buf );
+	    WARN_errno(1, buf);
 	    free(buf);
 	    free(inSettings->mIfrnametx);
 	    inSettings->mIfrnametx = NULL;
@@ -139,17 +136,17 @@ void SetSocketOptions( struct thread_Settings *inSettings ) {
 	if (inSettings->mTTL > 0) {
 	    // set TTL
 	    int val = inSettings->mTTL;
-	    if ( !isIPV6(inSettings) ) {
-		int rc = setsockopt( inSettings->mSock, IPPROTO_IP, IP_MULTICAST_TTL,
+	    if (!isIPV6(inSettings)) {
+		int rc = setsockopt(inSettings->mSock, IPPROTO_IP, IP_MULTICAST_TTL,
 				     (char*) &val, (Socklen_t) sizeof(val));
 
-		WARN_errno( rc == SOCKET_ERROR, "multicast v4 ttl" );
+		WARN_errno(rc == SOCKET_ERROR, "multicast v4 ttl");
 	    } else
 #  ifdef HAVE_IPV6_MULTICAST
 	    {
-		int rc = setsockopt( inSettings->mSock, IPPROTO_IPV6, IPV6_MULTICAST_HOPS,
+		int rc = setsockopt(inSettings->mSock, IPPROTO_IPV6, IPV6_MULTICAST_HOPS,
 				     (char*) &val, (Socklen_t) sizeof(val));
-		WARN_errno( rc == SOCKET_ERROR, "multicast v6 ttl" );
+		WARN_errno(rc == SOCKET_ERROR, "multicast v6 ttl");
 	    }
 #  else
 	    FAIL_errno(1, "v6 multicast not supported", inSettings);
@@ -158,9 +155,9 @@ void SetSocketOptions( struct thread_Settings *inSettings ) {
 #endif
     } else if (inSettings->mTTL > 0) {
 	int val = inSettings->mTTL;
-	int rc = setsockopt( inSettings->mSock, IPPROTO_IP, IP_TTL,
+	int rc = setsockopt(inSettings->mSock, IPPROTO_IP, IP_TTL,
 			     (char*) &val, (Socklen_t) sizeof(val));
-	WARN_errno( rc == SOCKET_ERROR, "v4 ttl" );
+	WARN_errno(rc == SOCKET_ERROR, "v4 ttl");
     }
 
 #ifdef IP_TOS
@@ -169,32 +166,32 @@ void SetSocketOptions( struct thread_Settings *inSettings ) {
     if (isIPV6(inSettings)) {
 	const int dscp = inSettings->mTOS;
 	int rc = setsockopt(inSettings->mSock, IPPROTO_IPV6, IPV6_TCLASS, (char*) &dscp, sizeof(dscp));
-        WARN_errno( rc == SOCKET_ERROR, "setsockopt IPV6_TCLASS" );
+        WARN_errno(rc == SOCKET_ERROR, "setsockopt IPV6_TCLASS");
     } else
 #endif
     // set IP TOS (type-of-service) field
-    if ( inSettings->mTOS > 0 ) {
+    if (inSettings->mTOS > 0) {
         int  tos = inSettings->mTOS;
         Socklen_t len = sizeof(tos);
-        int rc = setsockopt( inSettings->mSock, IPPROTO_IP, IP_TOS,
-                             (char*) &tos, len );
-        WARN_errno( rc == SOCKET_ERROR, "setsockopt IP_TOS" );
+        int rc = setsockopt(inSettings->mSock, IPPROTO_IP, IP_TOS,
+                             (char*) &tos, len);
+        WARN_errno(rc == SOCKET_ERROR, "setsockopt IP_TOS");
     }
 #endif
 
-    if ( !isUDP( inSettings ) ) {
+    if (!isUDP(inSettings)) {
         // set the TCP maximum segment size
-        setsock_tcp_mss( inSettings->mSock, inSettings->mMSS );
+        setsock_tcp_mss(inSettings->mSock, inSettings->mMSS);
 
 #ifdef TCP_NODELAY
 
         // set TCP nodelay option
-        if ( isNoDelay( inSettings ) ) {
+        if (isNoDelay(inSettings)) {
             int nodelay = 1;
             Socklen_t len = sizeof(nodelay);
-            int rc = setsockopt( inSettings->mSock, IPPROTO_TCP, TCP_NODELAY,
-                                 (char*) &nodelay, len );
-            WARN_errno( rc == SOCKET_ERROR, "setsockopt TCP_NODELAY" );
+            int rc = setsockopt(inSettings->mSock, IPPROTO_TCP, TCP_NODELAY,
+                                 (char*) &nodelay, len);
+            WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_NODELAY");
         }
 #endif
     }
@@ -203,7 +200,7 @@ void SetSocketOptions( struct thread_Settings *inSettings ) {
     /* If socket pacing is specified try to enable it. */
     if (isFQPacing(inSettings) && inSettings->mFQPacingRate > 0) {
 	int rc = setsockopt(inSettings->mSock, SOL_SOCKET, SO_MAX_PACING_RATE, &inSettings->mFQPacingRate, sizeof(inSettings->mFQPacingRate));
-        WARN_errno( rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE" );
+        WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
     }
 #endif /* HAVE_SO_MAX_PACING_RATE */
 }
@@ -218,12 +215,12 @@ void SetSocketOptionsSendTimeout (struct thread_Settings *mSettings, int timer) 
     timeout.tv_sec = timer / 1000000;
     timeout.tv_usec = timer % 1000000;
 #endif
-    if (setsockopt( mSettings->mSock, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0 ) {
-	WARN_errno( mSettings->mSock == SO_SNDTIMEO, "socket" );
+    if (setsockopt(mSettings->mSock, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+	WARN_errno(mSettings->mSock == SO_SNDTIMEO, "socket");
     }
 }
 
-void SetSocketOptionsReceiveTimeout( struct thread_Settings *mSettings, int timer) {
+void SetSocketOptionsReceiveTimeout (struct thread_Settings *mSettings, int timer) {
     assert(timer>0);
 #ifdef WIN32
     // Windows SO_RCVTIMEO uses ms
@@ -233,8 +230,8 @@ void SetSocketOptionsReceiveTimeout( struct thread_Settings *mSettings, int time
     timeout.tv_sec = timer / 1000000;
     timeout.tv_usec = timer % 1000000;
 #endif
-    if (setsockopt( mSettings->mSock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0 ) {
-	WARN_errno( mSettings->mSock == SO_RCVTIMEO, "socket" );
+    if (setsockopt(mSettings->mSock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+	WARN_errno(mSettings->mSock == SO_RCVTIMEO, "socket");
     }
 }
 // end SetSocketOptions

@@ -152,7 +152,7 @@ void tcp_output_bidir_write_enhanced (struct TransferInfo *stats) {
 	printf("%s", report_bw_header);
     }
     _print_stats_common(stats);
-    printf(report_bw_sum_bidir_enhanced_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
+    printf("%s", report_bw_sum_bidir_enhanced_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
 }
 
 void tcp_output_read (struct TransferInfo *stats) {
@@ -295,12 +295,12 @@ void tcp_output_write_enhanced (struct TransferInfo *stats) {
 
 //UDP output
 void udp_output_read (struct TransferInfo *stats) {
-    if (!udp_server_header_printed) {
+    if (!udp_server_header_printed && !stats->header_printed) {
 	udp_server_header_printed = true;
 	printf("%s", report_bw_jitter_loss_header);
     }
     _print_stats_common(stats);
-    printf( report_bw_jitter_loss_format, stats->transferID,
+    printf(report_bw_jitter_loss_format, stats->transferID,
 	    stats->ts.iStart, stats->ts.iEnd,
 	    outbuffer, outbufferext,
 	    stats->jitter*1000.0, stats->cntError, stats->cntDatagrams,
@@ -388,7 +388,7 @@ void udp_output_read_enhanced_triptime (struct TransferInfo *stats) {
     _output_outoforder(stats);
 }
 void udp_output_write (struct TransferInfo *stats) {
-    if(!stats->header_printed ) {
+    if(!stats->header_printed) {
 	printf("%s", report_bw_header);
 	stats->header_printed = true;
     }
@@ -399,8 +399,8 @@ void udp_output_write (struct TransferInfo *stats) {
 }
 
 void udp_output_write_enhanced (struct TransferInfo *stats) {
-    if(!stats->header_printed ) {
-	printf("%s", report_bw_pps_enhanced_format);
+    if(!stats->header_printed) {
+	printf("%s", report_bw_pps_enhanced_header);
 	stats->header_printed = true;
     }
     _print_stats_common(stats);
@@ -470,7 +470,7 @@ void udp_output_sum_write(struct TransferInfo *stats) {
 }
 void udp_output_sum_read_enhanced(struct TransferInfo *stats) {
     _print_stats_common(stats);
-    printf( report_sum_bw_pps_enhanced_format,
+    printf(report_sum_bw_pps_enhanced_format,
 	    stats->ts.iStart, stats->ts.iEnd,
 	    outbuffer, outbufferext,
 	    stats->cntError, stats->cntDatagrams,
@@ -482,7 +482,7 @@ void udp_output_sum_write_enhanced(struct TransferInfo *stats) {
 	printf(report_bw_header);
     }
     _print_stats_common(stats);
-    printf( report_sum_bw_pps_enhanced_format,
+    printf(report_sum_bw_pps_enhanced_format,
 	    stats->ts.iStart, stats->ts.iEnd,
 	    outbuffer, outbufferext,
 	    stats->sock_callstats.write.WriteCnt,
@@ -588,15 +588,15 @@ static void output_window_size (struct ReportSettings *report) {
     if (report->common->winsize_requested == 0) {
         printf(" %s", window_default);
     } else if (winsize != report->common->winsize_requested) {
-        byte_snprintf( outbuffer, sizeof(outbuffer), report->common->winsize_requested,
-                       toupper( (int)report->common->Format));
+        byte_snprintf(outbuffer, sizeof(outbuffer), report->common->winsize_requested,
+                       toupper((int)report->common->Format));
 	outbuffer[(sizeof(outbuffer)-1)] = '\0';
 	printf(warn_window_requested, outbuffer);
     }
 }
 static void reporter_output_listener_settings (struct ReportSettings *report) {
     printf(isEnhanced(report->common) ? server_pid_port : server_port,
-	   (isUDP(report->common) ? "UDP" : "TCP"), report->common->Port, report->pid );
+	   (isUDP(report->common) ? "UDP" : "TCP"), report->common->Port, report->pid);
     if (report->common->Localhost != NULL) {
 	if (isEnhanced(report->common) && !SockAddr_isMulticast(&report->local)) {
 	    if (report->common->Ifrname)
@@ -607,7 +607,7 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
 	if (SockAddr_isMulticast(&report->local)) {
 	    if(!report->common->SSMMulticastStr)
 		if (!report->common->Ifrname)
-		    printf(join_multicast, report->common->Localhost );
+		    printf(join_multicast, report->common->Localhost);
 		else
 		    printf(join_multicast_starg_dev, report->common->Localhost,report->common->Ifrname);
 	    else if(!report->common->Ifrname)
@@ -617,7 +617,7 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
         }
     }
     if (isEnhanced(report->common)) {
-	byte_snprintf(outbuffer, sizeof(outbuffer), report->common->BufLen, toupper( (int)report->common->Format));
+	byte_snprintf(outbuffer, sizeof(outbuffer), report->common->BufLen, toupper((int)report->common->Format));
 	outbuffer[(sizeof(outbuffer)-1)] = '\0';
 	printf("%s: %s\n", server_read_size, outbuffer);
     }
@@ -699,7 +699,7 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
 		printf(multicast_ttl, data->common.TTL);
 	    }
 	} else if (isEnhanced(data->common)) {
-	    byte_snprintf(buffer, sizeof(buffer), data->common->BufLen, toupper( (int)data->info.mFormat));
+	    byte_snprintf(buffer, sizeof(buffer), data->common->BufLen, toupper((int)data->info.mFormat));
 	    buffer[(sizeof(buffer)-1)] = '\0';
 	    printf("%s: %s\n", ((data->common->ThreadMode == kMode_Client) ?
 				client_write_size : server_read_size), buffer);
@@ -710,16 +710,16 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
 	tmpbuf[39]='\0';
         printf(client_fq_pacing,tmpbuf);
     }
-    byte_snprintf(buffer, sizeof(buffer), data->connection.winsize, toupper( (int)data->info.mFormat));
+    byte_snprintf(buffer, sizeof(buffer), data->connection.winsize, toupper((int)data->info.mFormat));
 	    buffer[(sizeof(buffer)-1)] = '\0';
-	    printf("%s: %s", (isUDP( data ) ? udp_buffer_size : tcp_window_size), buffer );
-    if (data->connection.winsize_requested == 0 ) {
-        printf(" %s", window_default );
+	    printf("%s: %s", (isUDP(data) ? udp_buffer_size : tcp_window_size), buffer);
+    if (data->connection.winsize_requested == 0) {
+        printf(" %s", window_default);
     } else if (data->connection.winsize != data->connection.winsize_requested) {
-        byte_snprintf( buffer, sizeof(buffer), data->connection.winsize_requested,
-                       toupper( (int)data->info.mFormat));
+        byte_snprintf(buffer, sizeof(buffer), data->connection.winsize_requested,
+                       toupper((int)data->info.mFormat));
 	    buffer[(sizeof(buffer)-1)] = '\0';
-	printf( warn_window_requested, buffer );
+	printf(warn_window_requested, buffer);
     }
 }
 #endif
@@ -780,7 +780,7 @@ void reporter_print_connection_report(struct ConnectionInfo *report) {
 	snprintf(b, SNBUFFERSIZE-strlen(b), " (%s)", "l2mode");
 	b += strlen(b);
     }
-    if ((report->common->socket > 0) && (isPrintMSS(report->common) || isEnhanced(report->common)))  {
+    if (!isUDP(report->common) && (report->common->socket > 0) && (isPrintMSS(report->common) || isEnhanced(report->common)))  {
 	int inMSS = getsock_tcp_mss(report->common->socket);
 	if (isPrintMSS(report->common) && (inMSS <= 0)) {
 	    printf(report_mss_unsupported, report->common->socket);
@@ -809,7 +809,7 @@ void reporter_print_connection_report(struct ConnectionInfo *report) {
     }
 #endif
     if (peer->sa_family == AF_INET) {
-	inet_ntop( AF_INET, &((struct sockaddr_in*)peer)->sin_addr, remote_addr, REPORT_ADDRLEN);
+	inet_ntop(AF_INET, &((struct sockaddr_in*)peer)->sin_addr, remote_addr, REPORT_ADDRLEN);
     }
 #ifdef HAVE_IPV6
     else {
