@@ -674,14 +674,14 @@ struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings
 void write_UDP_AckFIN (struct TransferInfo *stats) {
     assert(stats!= NULL);
     int ackpacket_length = (int) (sizeof(struct UDP_datagram) + sizeof(struct server_hdr));
-    char *mBuf = (char *) calloc(1, ackpacket_length);
+    char *ackPacket = (char *) calloc(1, ackpacket_length);
     int success = 0;
-    assert(mBuf);
-    if (mBuf) {
-	struct UDP_datagram *UDP_Hdr = (struct UDP_datagram *)mBuf;
+    assert(ackPacket);
+    if (ackPacket) {
+	struct UDP_datagram *UDP_Hdr = (struct UDP_datagram *)ackPacket;
 	struct server_hdr *hdr = (struct server_hdr *)(UDP_Hdr+1);
 
-	UDP_Hdr = (struct UDP_datagram*) mBuf;
+	UDP_Hdr = (struct UDP_datagram*) ackPacket;
 	int flags = HEADER_VERSION1;
 #ifdef HAVE_INT64_T
 	flags |=  HEADER_SEQNO64B;
@@ -734,9 +734,9 @@ void write_UDP_AckFIN (struct TransferInfo *stats) {
 #ifdef HAVE_THREAD_DEBUG
 	    thread_debug("UDP server send done-ack w/server-stats to client (sock=%d)", stats->common->socket);
 #endif
-	    write(((stats->common->socketdrop > 0) ? stats->common->socketdrop : stats->common->socket), mBuf, ackpacket_length);
+	    write(((stats->common->socketdrop > 0) ? stats->common->socketdrop : stats->common->socket), ackPacket, ackpacket_length);
 #else
-	    write(stats->common->socket, mBuf, ackpacket_length);
+	    write(stats->common->socket, ackPacket, ackpacket_length);
 #endif
 	    // wait here is for silence, no more packets from the client
 	    fd_set readSet;
@@ -752,7 +752,7 @@ void write_UDP_AckFIN (struct TransferInfo *stats) {
 		success = 1;
 		break;
 	    }
-	    rc = read(stats->common->socket, mBuf, ackpacket_length);
+	    rc = read(stats->common->socket, ackPacket, ackpacket_length);
 	    WARN_errno(rc < 0, "read");
 	    if (rc > 0) {
 #ifdef HAVE_THREAD_DEBUG
@@ -760,6 +760,7 @@ void write_UDP_AckFIN (struct TransferInfo *stats) {
 #endif
 	    }
 	}
+	free(ackPacket);
     }
     if (!success)
 	fprintf(stderr, warn_ack_failed, stats->common->socket);
