@@ -140,6 +140,8 @@ extern const char report_bw_jitter_loss_format[];
 
 extern const char report_sum_bw_jitter_loss_format[];
 
+extern const char report_sumcnt_bw_jitter_loss_format[];
+
 /* -------------------------------------------------------------------
  * Enhanced reports (per -e)
  * ------------------------------------------------------------------- */
@@ -162,9 +164,12 @@ extern const char report_bw_read_enhanced_format[];
 
 extern const char report_sum_bw_read_enhanced_format[];
 
+extern const char report_sumcnt_bw_read_enhanced_format[];
+
 extern const char report_triptime_enhanced_format[];
 
 extern const char report_bw_write_enhanced_header[];
+
 extern const char report_bw_write_sumcnt_enhanced_header[];
 
 extern const char report_bw_write_enhanced_format[];
@@ -172,6 +177,7 @@ extern const char report_bw_write_enhanced_format[];
 extern const char report_bw_write_enhanced_nocwnd_format[];
 
 extern const char report_sum_bw_write_enhanced_format[];
+
 extern const char report_sumcnt_bw_write_enhanced_format[];
 
 extern const char report_bw_pps_enhanced_header[];
@@ -195,6 +201,8 @@ extern const char report_bw_jitter_loss_enhanced_isoch_format[];
 extern const char report_bw_jitter_loss_suppress_enhanced_format[];
 
 extern const char report_sum_bw_jitter_loss_enhanced_format[];
+
+extern const char report_sumcnt_bw_jitter_loss_enhanced_format[];
 
 extern const char report_bw_sum_bidir_format[];
 
