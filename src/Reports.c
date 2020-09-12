@@ -617,8 +617,8 @@ struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings
     stats->cntBytes = (intmax_t) ntohl(server->base.total_len2);
 #endif
     stats->ts.iStart = 0;
-    stats->ts.packetTime.tv_sec = ntohl(server->base.stop_sec);
-    stats->ts.packetTime.tv_usec += ntohl(server->base.stop_usec) / (double)rMillion;
+    stats->ts.iEnd = ntohl( server->base.stop_sec );
+    stats->ts.iEnd += ntohl( server->base.stop_usec ) / (double)rMillion;
     uint32_t flags = ntohl(server->base.flags);
     if ((flags & HEADER_SEQNO64B)) {
 	stats->cntError = (((intmax_t) ntohl(server->extend2.error_cnt2)) << 32) + \
