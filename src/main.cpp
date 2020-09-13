@@ -67,7 +67,7 @@
 #include "Condition.h"
 #include "Timestamp.hpp"
 #include "Listener.hpp"
-#include "List.h"
+#include "active_hosts.h"
 #include "util.h"
 
 #ifdef WIN32
