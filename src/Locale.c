@@ -417,6 +417,9 @@ const char report_sum_outoforder[] =
 const char report_peer [] =
 "[%3d] local %s port %u connected with %s port %u%s\n";
 
+const char report_peer_dev [] =
+"[%3d] local %s%%%s port %u connected with %s port %u%s\n";
+
 const char report_mss_unsupported[] =
 "[%3d] MSS and MTU size unknown (TCP_MAXSEG not supported)\n";
 

@@ -813,6 +813,9 @@ int Listener::udp_accept (thread_Settings *server) {
 	    // All UDP accepts here will use AF_INET.  This is intentional and needed
 	    rc = connect(server->mSock, (struct sockaddr*) &server->peer, server->size_peer);
 	    FAIL_errno(rc == SOCKET_ERROR, "connect UDP", mSettings);
+	    server->size_local = sizeof(iperf_sockaddr);
+	    getsockname(server->mSock, (sockaddr*) &server->local, &server->size_local);
+	    SockAddr_Ifrname(server);
 	    my_listen(); // This will set ListenSocket to a new sock fd
 	}
     }
