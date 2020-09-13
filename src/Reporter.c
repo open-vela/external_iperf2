@@ -145,7 +145,7 @@ void PostReport (struct ReportHeader *reporthdr) {
  * be as simple and fast as possible as it gets called for
  * every "packet".
  */
-void ReportPacket(struct ReporterData* data, struct ReportStruct *packet) {
+void ReportPacket (struct ReporterData* data, struct ReportStruct *packet) {
     assert(data != NULL);
 #ifdef HAVE_THREAD_DEBUG
     if (packet->packetID < 0) {
@@ -265,13 +265,13 @@ struct ConsumptionDetectorType {
 struct ConsumptionDetectorType consumption_detector = \
   {.accounted_packets = 0, .accounted_packet_threads = 0, .reporter_thread_suspends = 0};
 
-static inline void reset_consumption_detector(void) {
+static inline void reset_consumption_detector (void) {
     consumption_detector.accounted_packet_threads = thread_numtrafficthreads();
     if ((consumption_detector.accounted_packets = thread_numtrafficthreads() * MINPERQUEUEDEPTH) <= MINPACKETDEPTH) {
 	consumption_detector.accounted_packets = MINPACKETDEPTH;
     }
 }
-static inline void apply_consumption_detector(void) {
+static inline void apply_consumption_detector (void) {
     if (--consumption_detector.accounted_packet_threads <= 0) {
 	// All active threads have been processed for the loop,
 	// reset the thread counter and check the consumption rate
@@ -313,7 +313,7 @@ static void reporter_jobq_dump(void) {
 
 
 /* Concatenate pending reports and return the head */
-static inline struct ReportHeader *reporter_jobq_set_root(void) {
+static inline struct ReportHeader *reporter_jobq_set_root (void) {
     struct ReportHeader *root = NULL;
     Condition_Lock(ReportCond);
     // check the jobq for empty
@@ -617,14 +617,14 @@ static inline int reporter_process_report (struct ReportHeader *reporthdr) {
 #define L2DROPFILTERCOUNTER 100
 
 // Reporter private routines
-void reporter_handle_packet_null(struct ReporterData *data, struct ReportStruct *packet) {
+void reporter_handle_packet_null (struct ReporterData *data, struct ReportStruct *packet) {
     return;
 }
-void reporter_transfer_protocol_null(struct ReporterData *data, int final){
+void reporter_transfer_protocol_null (struct ReporterData *data, int final){
     return;
 }
 
-inline void reporter_handle_packet_pps(struct ReporterData *data, struct ReportStruct *packet) {
+inline void reporter_handle_packet_pps (struct ReporterData *data, struct ReportStruct *packet) {
     struct TransferInfo *stats = &data->info;
     if (!packet->emptyreport) {
         stats->total.Datagrams.current++;
@@ -642,7 +642,7 @@ inline void reporter_handle_packet_pps(struct ReporterData *data, struct ReportS
 #endif
 }
 
-static inline double reporter_handle_packet_oneway_transit(struct ReporterData *data, struct ReportStruct *packet) {
+static inline double reporter_handle_packet_oneway_transit (struct ReporterData *data, struct ReportStruct *packet) {
     struct TransferInfo *stats = &data->info;
     // Transit or latency updates done inline below
     double transit = TimeDifference(packet->packetTime, packet->sentTime);
@@ -774,7 +774,7 @@ inline void reporter_handle_packet_isochronous (struct ReporterData *data, struc
     }
 }
 
-inline void reporter_handle_packet_server_tcp(struct ReporterData *data, struct ReportStruct *packet) {
+inline void reporter_handle_packet_server_tcp (struct ReporterData *data, struct ReportStruct *packet) {
     struct TransferInfo *stats = &data->info;
     if (packet->packetLen > 0) {
 	int bin;
@@ -791,7 +791,7 @@ inline void reporter_handle_packet_server_tcp(struct ReporterData *data, struct 
     }
 }
 
-inline void reporter_handle_packet_server_udp(struct ReporterData *data, struct ReportStruct *packet) {
+inline void reporter_handle_packet_server_udp (struct ReporterData *data, struct ReportStruct *packet) {
     struct TransferInfo *stats = &data->info;
     stats->ts.packetTime = packet->packetTime;
     if (packet->emptyreport && (stats->transit.cntTransit == 0)) {
@@ -916,7 +916,7 @@ static void gettcpistats (struct ReporterData *data, int final) {
  * Report printing routines below
  */
 
-static inline void reporter_set_timestamps_time(struct ReportTimeStamps *times, enum TimeStampType tstype) {
+static inline void reporter_set_timestamps_time (struct ReportTimeStamps *times, enum TimeStampType tstype) {
     // There is a corner case when the first packet is also the last where the start time (which comes
     // from app level syscall) is greater than the packetTime (which come for kernel level SO_TIMESTAMP)
     // For this case set the start and end time to both zero.
@@ -952,7 +952,7 @@ static inline void reporter_set_timestamps_time(struct ReportTimeStamps *times, 
 }
 
 // If reports were missed, catch up now
-static inline void reporter_transfer_protocol_missed_reports(struct TransferInfo *stats, struct ReportStruct *packet) {
+static inline void reporter_transfer_protocol_missed_reports (struct TransferInfo *stats, struct ReportStruct *packet) {
     assert(stats->output_handler != NULL);
     while (TimeDifference(stats->ts.nextTime, packet->packetTime) < 0) {
 	reporter_set_timestamps_time(&stats->ts, INTERVAL);
@@ -1021,11 +1021,11 @@ static inline void reporter_reset_transfer_stats(struct ReporterData *data) {
 }
 #endif
 
-static inline void reporter_reset_transfer_stats_bidir(struct TransferInfo *stats) {
+static inline void reporter_reset_transfer_stats_bidir (struct TransferInfo *stats) {
     stats->total.Bytes.prev = stats->total.Bytes.current;
 }
 
-static inline void reporter_reset_transfer_stats_client_tcp(struct TransferInfo *stats) {
+static inline void reporter_reset_transfer_stats_client_tcp (struct TransferInfo *stats) {
     stats->total.Bytes.prev = stats->total.Bytes.current;
     stats->sock_callstats.write.WriteCnt = 0;
     stats->sock_callstats.write.WriteErr = 0;
@@ -1035,7 +1035,7 @@ static inline void reporter_reset_transfer_stats_client_tcp(struct TransferInfo 
 #endif
 }
 
-static inline void reporter_reset_transfer_stats_client_udp(struct TransferInfo *stats) {
+static inline void reporter_reset_transfer_stats_client_udp (struct TransferInfo *stats) {
     if (stats->cntError < 0) {
 	stats->cntError = 0;
     }
@@ -1049,7 +1049,7 @@ static inline void reporter_reset_transfer_stats_client_udp(struct TransferInfo 
     stats->isochstats.framelostcnt = 0;
     stats->isochstats.slipcnt = 0;
 }
-static inline void reporter_reset_transfer_stats_server_tcp(struct TransferInfo *stats) {
+static inline void reporter_reset_transfer_stats_server_tcp (struct TransferInfo *stats) {
     int ix;
     stats->total.Bytes.prev = stats->total.Bytes.current;
     stats->sock_callstats.read.cntRead = 0;
@@ -1065,7 +1065,7 @@ static inline void reporter_reset_transfer_stats_server_tcp(struct TransferInfo 
     stats->transit.m2Transit = 0;
     stats->arrivalSum = 0;
 }
-static inline void reporter_reset_transfer_stats_server_udp(struct TransferInfo *stats) {
+static inline void reporter_reset_transfer_stats_server_udp (struct TransferInfo *stats) {
     // Reset the enhanced stats for the next report interval
     stats->total.Bytes.prev = stats->total.Bytes.current;
     stats->total.Datagrams.prev = stats->total.Datagrams.current;
@@ -1094,7 +1094,7 @@ static inline void reporter_reset_transfer_stats_server_udp(struct TransferInfo 
 // o) set the TransferInfo struct and then calls the individual report output handler
 // o) updates the sum and bidir reports
 //
-void reporter_transfer_protocol_server_udp(struct ReporterData *data, int final) {
+void reporter_transfer_protocol_server_udp (struct ReporterData *data, int final) {
     struct TransferInfo *stats = &data->info;
     struct TransferInfo *sumstats = (data->GroupSumReport != NULL) ? &data->GroupSumReport->info : NULL;
     struct TransferInfo *bidirstats = (data->FullDuplexReport != NULL) ? &data->FullDuplexReport->info : NULL;
@@ -1169,7 +1169,7 @@ void reporter_transfer_protocol_server_udp(struct ReporterData *data, int final)
 	reporter_reset_transfer_stats_server_udp(stats);
 }
 
-void reporter_transfer_protocol_sum_server_udp(struct TransferInfo *stats, int final) {
+void reporter_transfer_protocol_sum_server_udp (struct TransferInfo *stats, int final) {
     assert(stats->output_handler != NULL);
     if (stats->sumflag) {
 	if (final) {
@@ -1199,7 +1199,7 @@ void reporter_transfer_protocol_sum_server_udp(struct TransferInfo *stats, int f
 	    reporter_reset_transfer_stats_server_udp(stats);
     }
 }
-void reporter_transfer_protocol_sum_client_udp(struct TransferInfo *stats, int final) {
+void reporter_transfer_protocol_sum_client_udp (struct TransferInfo *stats, int final) {
     assert(stats->output_handler != NULL);
     if (final) {
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
@@ -1216,7 +1216,7 @@ void reporter_transfer_protocol_sum_client_udp(struct TransferInfo *stats, int f
 	reporter_reset_transfer_stats_client_udp(stats);
 }
 
-void reporter_transfer_protocol_client_udp(struct ReporterData *data, int final) {
+void reporter_transfer_protocol_client_udp (struct ReporterData *data, int final) {
     struct TransferInfo *stats = &data->info;
     struct TransferInfo *sumstats = (data->GroupSumReport != NULL) ? &data->GroupSumReport->info : NULL;
     struct TransferInfo *bidirstats = (data->FullDuplexReport != NULL) ? &data->FullDuplexReport->info : NULL;
@@ -1251,7 +1251,7 @@ void reporter_transfer_protocol_client_udp(struct ReporterData *data, int final)
 	reporter_reset_transfer_stats_client_udp(stats);
 }
 
-void reporter_transfer_protocol_server_tcp(struct ReporterData *data, int final) {
+void reporter_transfer_protocol_server_tcp (struct ReporterData *data, int final) {
     struct TransferInfo *stats = &data->info;
     struct TransferInfo *sumstats = (data->GroupSumReport != NULL) ? &data->GroupSumReport->info : NULL;
     struct TransferInfo *bidirstats = (data->FullDuplexReport != NULL) ? &data->FullDuplexReport->info : NULL;
@@ -1299,7 +1299,7 @@ void reporter_transfer_protocol_server_tcp(struct ReporterData *data, int final)
 	reporter_reset_transfer_stats_server_tcp(stats);
 }
 
-void reporter_transfer_protocol_client_tcp(struct ReporterData *data, int final) {
+void reporter_transfer_protocol_client_tcp (struct ReporterData *data, int final) {
     struct TransferInfo *stats = &data->info;
     struct TransferInfo *sumstats = (data->GroupSumReport != NULL) ? &data->GroupSumReport->info : NULL;
     struct TransferInfo *bidirstats = (data->FullDuplexReport != NULL) ? &data->FullDuplexReport->info : NULL;
@@ -1407,7 +1407,7 @@ void reporter_transfer_protocol_client_all_final(struct ReporterData *data) {
 /*
  * Handles summing of threads
  */
-void reporter_transfer_protocol_sum_client_tcp(struct TransferInfo *stats, int final) {
+void reporter_transfer_protocol_sum_client_tcp (struct TransferInfo *stats, int final) {
     assert(stats->output_handler != NULL);
     if (!final || (final && (stats->cntBytes > 0) && !TimeZero(stats->ts.intervalTime))) {
 	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
@@ -1428,7 +1428,7 @@ void reporter_transfer_protocol_sum_client_tcp(struct TransferInfo *stats, int f
     }
 }
 
-void reporter_transfer_protocol_sum_server_tcp(struct TransferInfo *stats, int final) {
+void reporter_transfer_protocol_sum_server_tcp (struct TransferInfo *stats, int final) {
     assert(stats->output_handler != NULL);
     if (stats->sumflag) {
 	if (!final || (final && (stats->cntBytes > 0) && !TimeZero(stats->ts.intervalTime))) {
@@ -1453,7 +1453,7 @@ void reporter_transfer_protocol_sum_server_tcp(struct TransferInfo *stats, int f
 	}
     }
 }
-void reporter_transfer_protocol_bidir_tcp(struct TransferInfo *stats, int final) {
+void reporter_transfer_protocol_bidir_tcp (struct TransferInfo *stats, int final) {
     assert(stats->output_handler != NULL);
     if (!final || (final && (stats->cntBytes > 0) && !TimeZero(stats->ts.intervalTime))) {
 	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
@@ -1469,7 +1469,7 @@ void reporter_transfer_protocol_bidir_tcp(struct TransferInfo *stats, int final)
     }
 }
 
-void reporter_transfer_protocol_bidir_udp(struct TransferInfo *stats, int final) {
+void reporter_transfer_protocol_bidir_udp (struct TransferInfo *stats, int final) {
     assert(stats->output_handler != NULL);
 }
 
