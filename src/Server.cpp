@@ -57,7 +57,7 @@
 
 #include "headers.h"
 #include "Server.hpp"
-#include "List.h"
+#include "active_hosts.h"
 #include "Extractor.h"
 #include "Reporter.h"
 #include "Locale.h"
