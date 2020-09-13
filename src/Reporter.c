@@ -170,7 +170,7 @@ void ReportPacket(struct ReporterData* data, struct ReportStruct *packet) {
 
 /*
  * EndJob is called by a traffic thread to inform the reporter
- * thread to print a final report and to remove the data report from its jobq. 
+ * thread to print a final report and to remove the data report from its jobq.
  * It also handles the freeing reports and other closing actions
  */
 void EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
@@ -1106,6 +1106,8 @@ void reporter_transfer_protocol_server_udp(struct ReporterData *data, int final)
     // assume most of the  time out-of-order packets are
     // duplicate packets, so conditionally subtract them from the lost packets.
     stats->cntError = stats->total.Lost.current - stats->total.Lost.prev - stats->cntOutofOrder;
+    if (stats->cntError < 0)
+	stats->cntError = 0;
     stats->cntDatagrams = stats->PacketID - stats->total.Datagrams.prev;
     stats->cntIPG = stats->total.IPG.current - stats->total.IPG.prev;
     if (sumstats) {
@@ -1129,6 +1131,8 @@ void reporter_transfer_protocol_server_udp(struct ReporterData *data, int final)
 	    // duplicate packets, so conditionally subtract them from the lost packets.
 	    stats->cntError = stats->total.Lost.current - stats->total.Lost.prev;
 	    stats->cntError -= stats->cntOutofOrder;
+	    if (stats->cntError < 0)
+		stats->cntError = 0;
 	    stats->cntDatagrams = stats->PacketID - stats->total.Datagrams.prev;
 	    if (final)
 		reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
@@ -1140,6 +1144,8 @@ void reporter_transfer_protocol_server_udp(struct ReporterData *data, int final)
 	// duplicate packets, so conditionally subtract them from the lost packets.
 	stats->cntError = stats->total.Lost.current;
 	stats->cntError -= stats->cntOutofOrder;
+	if (stats->cntError < 0)
+	    stats->cntError = 0;
 	stats->cntDatagrams = stats->PacketID;
 	stats->cntIPG = stats->total.IPG.current;
 	stats->IPGsum = TimeDifference(stats->ts.packetTime, stats->ts.startTime);
@@ -1175,6 +1181,8 @@ void reporter_transfer_protocol_sum_server_udp(struct TransferInfo *stats, int f
 	    // duplicate packets, so conditionally subtract them from the lost packets.
 	    stats->cntError = stats->total.Lost.current;
 	    stats->cntError -= stats->cntOutofOrder;
+	    if (stats->cntError < 0)
+		stats->cntError = 0;
 	    stats->cntDatagrams = stats->total.Datagrams.current;
 	    stats->cntBytes = stats->total.Bytes.current;
 	} else {
@@ -1183,6 +1191,8 @@ void reporter_transfer_protocol_sum_server_udp(struct TransferInfo *stats, int f
 	    // duplicate packets, so conditionally subtract them from the lost packets.
 	    stats->cntError = stats->total.Lost.current - stats->total.Lost.prev;
 	    stats->cntError -= stats->cntOutofOrder;
+	    if (stats->cntError < 0)
+		stats->cntError = 0;
 	    stats->cntDatagrams = stats->total.Datagrams.current - stats->total.Datagrams.prev;
 	    stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
 	}
@@ -1530,6 +1540,8 @@ int reporter_condprint_frame_interval_report_udp (struct ReporterData *data, str
 	// duplicate packets, so conditionally subtract them from the lost packets.
 	stats->cntError = stats->total.Lost.current - stats->total.Lost.prev;
 	stats->cntError -= stats->cntOutofOrder;
+	if (stats->cntError < 0)
+	    stats->cntError = 0;
 	stats->cntDatagrams = stats->PacketID - stats->total.Datagrams.prev;
 	(*stats->output_handler)(stats);
 	reporter_reset_transfer_stats_server_udp(stats);
