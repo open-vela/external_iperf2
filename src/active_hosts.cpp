@@ -46,6 +46,7 @@
  *
  * active_hosts.c (was List.cpp)
  * rewrite by Robert McMahon
+ *
  * This is a list to hold active traffic and create sum groups
  * sum groups are traffic sessions from the same client host
  * -------------------------------------------------------------------
@@ -96,8 +97,7 @@ void Iperf_initialize_active_table (void) {
 }
 
 /*
- * Add Entry add to the list and optionally update thread count,
- * return true if host is already in the table
+ * Add Entry add to the list or update thread count
  */
 static void active_table_update (iperf_sockaddr *host, struct thread_Settings *agent) {
     assert(host != NULL);
@@ -128,6 +128,7 @@ static void active_table_update (iperf_sockaddr *host, struct thread_Settings *a
     }
 }
 
+// Thread access to store a host
 int Iperf_push_host (iperf_sockaddr *host, struct thread_Settings *agent) {
     Mutex_Lock(&active_table.my_mutex);
     active_table_update(host, agent);
@@ -136,6 +137,8 @@ int Iperf_push_host (iperf_sockaddr *host, struct thread_Settings *agent) {
     return groupid;
 }
 
+// Used for UDP push of a new host, returns negative value if the host/port is already present
+// This is critical because UDP is connectionless and designed to be stateless
 int Iperf_push_host_port_conditional (iperf_sockaddr *host, struct thread_Settings *agent) {
     int rc = -1;
     Mutex_Lock(&active_table.my_mutex);
@@ -148,7 +151,7 @@ int Iperf_push_host_port_conditional (iperf_sockaddr *host, struct thread_Settin
 }
 
 /*
- * Delete Entry del from the List
+ * Remove a host from the table
  */
 void Iperf_remove_host (iperf_sockaddr *del) {
     // remove_list_entry(entry) {
@@ -184,7 +187,7 @@ void Iperf_remove_host (iperf_sockaddr *del) {
 }
 
 /*
- * Destroy the List (cleanup function)
+ * Destroy the table
  */
 void Iperf_destroy_active_table (void) {
     Iperf_ListEntry *itr1 = active_table.root, *itr2;
@@ -200,9 +203,8 @@ void Iperf_destroy_active_table (void) {
 }
 
 /*
- * Check if the exact Entry find is present
+ * Check if the host and port are present in the active table
  */
-
 bool Iperf_host_port_present (iperf_sockaddr *find) {
     Iperf_ListEntry *itr = active_table.root;
     bool rc = false;
@@ -224,9 +226,7 @@ bool Iperf_host_port_present (iperf_sockaddr *find) {
 }
 
 /*
- * Check if a Entry find is in the List or if any
- * Entry exists that has the same host as the
- * Entry find
+ * Check if the host is present in the active table
  */
 static Iperf_ListEntry* Iperf_host_present (iperf_sockaddr *find) {
     Iperf_ListEntry *itr = active_table.root;
