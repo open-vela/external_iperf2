@@ -466,7 +466,6 @@ void udp_output_sum_write(struct TransferInfo *stats) {
 	   outbuffer, outbufferext,
 	   stats->jitter*1000.0, stats->cntError, stats->cntDatagrams,
 	   (100.0 * stats->cntError) / stats->cntDatagrams);
-    printf(report_sum_datagrams, stats->cntDatagrams);
 }
 void udp_output_sumcnt_write(struct TransferInfo *stats) {
     if (!udp_client_header_printed) {
@@ -479,7 +478,6 @@ void udp_output_sumcnt_write(struct TransferInfo *stats) {
 	   outbuffer, outbufferext,
 	   stats->jitter*1000.0, stats->cntError, stats->cntDatagrams,
 	   (100.0 * stats->cntError) / stats->cntDatagrams);
-    printf(report_sum_datagrams, stats->cntDatagrams);
 }
 void udp_output_sum_read_enhanced(struct TransferInfo *stats) {
     _print_stats_common(stats);
