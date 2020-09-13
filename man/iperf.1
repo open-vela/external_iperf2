@@ -639,9 +639,10 @@ To affect the physical output interface (e.g. dual homed systems) either use
 or configure policy routing per each -B source address and set the
 output interface there in the policy routes. On the server or receive,
 only packets destined to -B IP address will be received. It's also useful
-for multicast. For example, iperf -s -B 224.0.0.1%eth0 will receive ip
-multicast address received on eth0.  Finally, the device specifier is required
-for v6 link-local, e.g. -c [v6addr]%dev -V, to select the output interface.
+for multicast. For example, iperf -s -B 224.0.0.1%eth0 will only accept ip
+multicast packets with dest ip 224.0.0.1 that are received on the eth0 interface.
+Finally, the device specifier is required for v6 link-local,
+e.g. -c [v6addr]%dev -V, to select the output interface.
 .P
 The --reverse (-R), -r and -d are confusing.  \fBIf you want to test through
 a NAT firewall, use --reverse\fR (or -R on non-windows systems).  The latter two
