@@ -47,6 +47,7 @@
  * Reporter.c
  * by Kevin Gibbs <kgibbs@nlanr.net>
  *
+ * Major rewrite by Robert McMahon (Sept 2020, ver 2.0.14)
  * ________________________________________________________________ */
 
 #include <math.h>
@@ -572,9 +573,6 @@ static int reporter_process_transfer_report (struct ReporterData *this_ireport) 
 static inline int reporter_process_report (struct ReportHeader *reporthdr) {
     assert(reporthdr != NULL);
     int done = 1;
-    // report.type is a bit field which indicates the reports requested,
-    // note the special case for a Transfer interval and Connection report
-    // which are "compound reports"
     switch (reporthdr->type) {
     case DATA_REPORT:
 	done = reporter_process_transfer_report((struct ReporterData *)reporthdr->this_report);

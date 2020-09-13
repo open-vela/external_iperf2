@@ -19,7 +19,7 @@ iperf_SOURCES = \
 		Extractor.c \
 	        isochronous.cpp \
 		Launch.cpp \
-		List.cpp \
+		active_hosts.cpp \
 		Listener.cpp \
 		Locale.c \
 		PerfSocket.cpp \

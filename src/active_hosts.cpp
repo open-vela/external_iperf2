@@ -44,14 +44,14 @@
  * http://www.ncsa.uiuc.edu
  * ________________________________________________________________
  *
- * List.cpp
+ * active_hosts.c (was List.cpp)
  * rewrite by Robert McMahon
  * This is a list to hold active traffic and create sum groups
  * sum groups are traffic sessions from the same client host
  * -------------------------------------------------------------------
  */
 
-#include "List.h"
+#include "active_hosts.h"
 #include "Mutex.h"
 #include "SocketAddr.h"
 #include "Reporter.h"
@@ -61,7 +61,7 @@
  */
 static struct Iperf_Table active_table;
 static bool Iperf_host_port_present (iperf_sockaddr *find);
-static Iperf_ListEntry* Iperf_host_present (iperf_sockaddr *find);
+static struct Iperf_ListEntry* Iperf_host_present (iperf_sockaddr *find);
 
 #if HAVE_THREAD_DEBUG
 static void active_table_show_entry(const char *action, Iperf_ListEntry *entry, int found) {

@@ -56,7 +56,7 @@
 #include "Settings.hpp"
 #include "Reporter.h"
 #include "Locale.h"
-#include "List.h"
+#include "active_hosts.h"
 #include "payloads.h"
 
 static inline void my_str_copy(char **dst, char *src) {

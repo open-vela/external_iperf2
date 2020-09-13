@@ -46,6 +46,8 @@
  *
  * List.h
  * by Kevin Gibbs <kgibbs@ncsa.uiuc.edu>
+ *
+ * renamed to active_hosts.h
  * -------------------------------------------------------------------
  */
 
