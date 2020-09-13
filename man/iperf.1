@@ -608,25 +608,30 @@ The environment variable option settings haven't been maintained well.
 See the source code if these are of interest.
 .RE
 .SH NOTES
+.B Numeric options:
 Some numeric options support format characters per '<value>\fIc\fR'
 (e.g. 10M) where the \fIc\fR format characters are k,m,g,K,M,G.
 Lowercase format characters are 10^3 based and uppercase are 2^n
 based, e.g. 1k = 1000, 1K = 1024, 1m = 1,000,000 and 1M = 1,048,576
 .P
+.B Rate limiting:
 The -b option supports variable offered loads through the
 <mean>,<standard deviation> format, e.g. -b 100m,10m on the client.
 The distribution used is log normal.  Similar for the isochronous
-option.
+option. The -b on the server rate limits the reads.
 .P
-The -e or --enhanced latency output on the UDP servers assumes the
-clients' and servers' system clocks are synchronized.  Network Time
-Protocol (NTP) or Precision Time Protocol (PTP) are commonly used for
-this.  The reference clock(s) or oscillator's error will also affect
-the accuracy of UDP latency measurements.
+.B Synchronized clocks:
+The --trip-times options indicates that the client's and server's clocks are synchronized to a common reference.
+Network Time Protocol (NTP) or Precision Time Protocol (PTP) are commonly used for
+this.  The reference clock(s) error and the synchronization protocools will affect
+the accuracy of any end to end latency measurements.
 .P
-Binding is done via the -B for logical level and the percent (%) for device level
-on both the client and server. On the client, the -B option affects the bind() system
-call, and will set the source ip addresss and the source port, e.g. iperf -c <host>
+.B
+Binding
+is done at the logical level (ip address or layer 3) using the -B option
+and at the device (or layer 2) level using the percent (%) seperator for both the client
+and tne server. On the client, the -B option affects the \fBbind\fR(2)
+system call, and will set the source ip addresss and the source port, e.g. iperf -c <host>
 -B 192.168.100.2:6002. This controls the packet's source values but not routing.
 These can be confusing in that a route or device lookup may not
 be that of the device with the configured source IP.
@@ -635,27 +640,30 @@ routing table for the destination IP address resolves
 the ouput interface to be eth1, then the host will send the packet
 out device eth1 while using the source IP address of eth0 in the packet.
 To affect the physical output interface (e.g. dual homed systems) either use
--c <host>%<dev> (requires root) and bypasses this host route table lookup,
+-c <host>%<dev> (requires root) which bypasses this host route table lookup,
 or configure policy routing per each -B source address and set the
-output interface there in the policy routes. On the server or receive,
+output interface appropriately in the policy routes. On the server or receive,
 only packets destined to -B IP address will be received. It's also useful
-for multicast. For example, iperf -s -B 224.0.0.1%eth0 will only accept ip
-multicast packets with dest ip 224.0.0.1 that are received on the eth0 interface.
+for multicast. For example, iperf -s -B 224.0.0.1\fB%eth0\fR
+will only accept ip multicast packets with dest ip 224.0.0.1 that are
+received on the eth0 interface, while iperf -s -B 224.0.0.1 will
+receive those packets on any interface,
 Finally, the device specifier is required for v6 link-local,
 e.g. -c [v6addr]%dev -V, to select the output interface.
 .P
+.B Reverse:
 The --reverse (-R), -r and -d are confusing.  \fBIf you want to test through
 a NAT firewall, use --reverse\fR (or -R on non-windows systems).  The latter two
 of -d and -r remain supported for mostly compatibility reasons.  These open
 new sockets vs treat the originating socket as full duplex.  Firewall
-configuration is typically required to use -d and -r if a NAT gateway is
+configurations are typically required to use -d and -r if a NAT gateway is
 in the path. Also, the --reverse -b <rate> setting is a bit different.  For
-TCP it will rate limit the read side, i.e. the iperf client reading
+TCP it will rate limit the read side, i.e. the iperf server reading
 from the full duplex socket.  This will in turn flow control the reverse
-traffic per standard TCP congestion control.  The --reverse -b <rate> must
-be applied on the transmit (i.e. the reverse server) for UDP since
-there is no flow control with UDP.
+traffic per standard TCP congestion control.  The --reverse -b <rate> will
+be applied on the transmit for UDP since there is no flow control with UDP.
 .P
+.B TCP Connect times:
 The TCP connect time (or three way handshake) can be seen on the iperf
 client when the -e (--enhancedreports) option is set. Look for the
 ct=<value> in the connected message, e.g.in '[ 3] local 192.168.1.4
@@ -664,6 +672,7 @@ shows the 3WHS took 1.84 milliseconds.
 .P
 \fBLittle's Law\fR in queueing theory is a theorem that determines the average number of items (L) in a stationary queuing system based on the average waiting time (W) of an item within a system and the average number of items arriving at the system per unit of time (lambda). Mathematically, it's L = lambda * W. As used here, the units are bytes. The arrival rate is the taken from the writes.
 .P
+.B Network power:
 The network power (NetPwr) metric is \fBexperimental\fR.  It's a
 convenience function defined as throughput/delay.  For TCP, the delay
 is the sampled RTT times.  For UDP the delay is the end/end latency.
@@ -675,6 +684,7 @@ rate.  The metric is scaled to assist with human readability.  (Note:
 if this metric goes beyond the experimental state we'll consider a
 supporting and RTT sampling rate independent of the -i interval.)
 .P
+.B Fast Sampling:
 Use
 .B ./configure --enable-fastsampling
 and then compile from source to enable four digit (e.g. 1.0000) precision in reports' timestamps. Useful for sub-millisecond sampling.
