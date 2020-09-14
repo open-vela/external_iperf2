@@ -12,7 +12,7 @@ iperf \- perform network throughput tests
 
 .SH DESCRIPTION
 .LP
-iperf 2 is a tool for performing network throughput and latency measurements.  It can test
+iperf 2 is a tool for performing network throughput and latency measurements. It can test
 useing either TCP or UDP protocols. It supports both unidirectional and bidirectional
 traffic. Multiple simultaneous traffic streams are also supported. Metrics are displayed to
 help isolate the causes which impact performance. Setting the enhanced (-e) option provides all
@@ -51,7 +51,7 @@ perform layer 2 length checks on received UDP packets (requires systems that sup
 print TCP maximum segment size (MTU - TCP/IP header)
 .TP
 .BR "    --NUM_REPORT_STRUCTS " \fI<count>\fR
-Override the default shared memory size between the traffic thread(s) and reporter thread in order to mitigate mutex lock contentions.  The default value of 5000 should be sufficient for 1Gb/s networks. Increase this upon seeing the WARNing message of reporter thread too slow. If the WARNing message isn't seen, then increasing this won't have any significant effect (other than to use some additional memory.)
+Override the default shared memory size between the traffic thread(s) and reporter thread in order to mitigate mutex lock contentions. The default value of 5000 should be sufficient for 1Gb/s networks. Increase this upon seeing the WARNing message of reporter thread too slow. If the WARNing message isn't seen, then increasing this won't have any significant effect (other than to use some additional memory.)
 .TP
 .BR -o ", " --output " \fIfilename\fR"
 output the report or error message to this specified file
@@ -115,9 +115,9 @@ enable latency histograms for packets with -u (UDP) or for bursts and frames wit
 bind src ip addr and optional src device for receiving
 .TP
 .BR -D ", " --daemon " "
-run the server as a daemon.  On Windows this will run the specified
+run the server as a daemon. On Windows this will run the specified
 command-line under the IPerfService, installing the service if
-necessary.  Note the service is not configured to auto-start or
+necessary. Note the service is not configured to auto-start or
 restart - if you need a self-starting service you will need to create
 an init script or use Windows "sc" commands.
 .TP
@@ -136,7 +136,7 @@ Enable IPv6 reception by setting the domain and socket to AF_INET6 (Can receive 
 .TP
 .BR -b ", " --bandwidth " \fIn\fR[kmgKMG] | \fIn\fRpps"
 set target bandwidth to \fIn\fR bits/sec (default 1 Mbit/sec) or
-\fIn\fR packets per sec.  This may be used with TCP or UDP.  For variable loads use format mean,standard deviation
+\fIn\fR packets per sec. This may be used with TCP or UDP. For variable loads use format mean,standard deviation
 .TP
 .BR -c ", " --client " \fI\fIhost\fR | \fIhost\fR%\fIdevice\fR"
 run in client mode, connecting to \fIhost\fR  where the optional %dev will SO_BINDTODEVICE that output interface (requires root and see NOTES)
@@ -157,10 +157,10 @@ increment the destination ip address when using the parallel (-P) option
 set the interpacket gap to \fIn\fR (units of milliseconds) for packets within an isochronous frame (burst), requires --isochronous
 .TP
 .BR "    --isochronous[=" \fIfps\fR:\fImean\fR,\fIstdev\fR "]"
-send isochronous traffic with frequency frames per second and load defined by mean and standard deviation using a log normal distribution, defaults to 60:20m,0.  (Note: Here the suffixes indicate bytes/sec or bits/sec per use of uppercase or lowercase, respectively.  Also the p suffix is supported to set the burst size in packets, e.g. isochronous=2:25p will send two 25 packet bursts every second, or one 25 packet burst every 0.5 seconds.)
+send isochronous traffic with frequency frames per second and load defined by mean and standard deviation using a log normal distribution, defaults to 60:20m,0. (Note: Here the suffixes indicate bytes/sec or bits/sec per use of uppercase or lowercase, respectively. Also the p suffix is supported to set the burst size in packets, e.g. isochronous=2:25p will send two 25 packet bursts every second, or one 25 packet burst every 0.5 seconds.)
 .TP
 .BR "    --no-connect-sync "
-By default, parallel traffic threads (per -P greater than 1) will synchronize after their TCP connects and prior to each sending traffic, i.e. all the threads first complete (or error) the TCP 3WHS before any traffic thread will start sending.  This option disables that sychronization such that each traffic thread will start sending immediately after completing its successful connect.
+By default, parallel traffic threads (per -P greater than 1) will synchronize after their TCP connects and prior to each sending traffic, i.e. all the threads first complete (or error) the TCP 3WHS before any traffic thread will start sending. This option disables that sychronization such that each traffic thread will start sending immediately after completing its successful connect.
 .TP
 .BR "    --no-udp-fin "
 Don't perform the UDP final server to client exchange which means there won't be a final server report displayed on the client. All packets per the test will be from the client to the server and no packets should be sent in the other direction.
@@ -183,7 +183,7 @@ time in seconds to listen for new traffic connections, receive traffic or transm
 enable the measurement of end to end write to read latencies (client and server clocks must be synchronized)
 .TP
 .BR "    --txdelay-time "
-time in seconds to hold back or delay after the TCP connect and prior to the socket writes.  For UDP it's the delay between the traffic thread starting and the first write.
+time in seconds to hold back or delay after the TCP connect and prior to the socket writes. For UDP it's the delay between the traffic thread starting and the first write.
 .TP
 .BR "    --txstart-time "\fIn\fR.\fIn\fR
 set the txstart-time to \fIn\fR.\fIn\fR using unix or epoch time format (supports nanonsecond resolution, e.g 1536014418.839992457)
@@ -327,8 +327,8 @@ TCP window size: 85.3 KByte (default)
 Total number of socket reads
 .br
 .B Dist(bin=size)
-Eight bin histogram of the socket reads returned byte count.  Bin
-width is set per size.  Bins are separated by a colon.  In the
+Eight bin histogram of the socket reads returned byte count. Bin
+width is set per size. Bins are separated by a colon. In the
 example, the bins are 0-1K, 1K-2K, .., 7K-8K.
 
 .PP
@@ -379,7 +379,7 @@ TCP window size: 8.00 MByte (WARNING: requested 4.00 MByte)
 One way TCP write() to read() latency in mean/minimum/maximum/standard deviation format
 (Note: requires the client's and server's system clocks to be
 synchronized to a common reference, e.g. using precision time protocol
-PTP.  A GPS disciplined OCXO is a recommended reference.)
+PTP. A GPS disciplined OCXO is a recommended reference.)
 .br
 .B cnt
 Number of completed bursts received and used for the burst latency calculations
@@ -497,7 +497,7 @@ UDP buffer size: 8.00 MByte (WARNING: requested 4.00 MByte)
 End to end latency in mean/minimum/maximum/standard deviation format
 (Note: requires the client's and server's system clocks to be
 synchronized to a common reference, e.g. using precision time protocol
-PTP.  A GPS disciplined OCXO is a recommended reference.)
+PTP. A GPS disciplined OCXO is a recommended reference.)
 .br
 .B PPS
 Received packet rate in packets per second
@@ -559,7 +559,7 @@ UDP buffer size:  208 KByte (default)
 .TP
 .B where (per -e,)
 .B frames:tx/missed/slips
-Total number of isochronous frames or bursts. Total number of frame ids not sent.  Total number of frame slips
+Total number of isochronous frames or bursts. Total number of frame ids not sent. Total number of frame slips
 
 .PP
 
@@ -590,7 +590,7 @@ UDP buffer size:  208 KByte (default)
 .TP
 .B where,
 .B Frames/lost
-Total number of frames (or bursts) received.  Total number of bursts lost or errored
+Total number of frames (or bursts) received. Total number of bursts lost or errored
 .br
 .B
 T8-PDF(f)
@@ -617,13 +617,13 @@ based, e.g. 1k = 1000, 1K = 1024, 1m = 1,000,000 and 1M = 1,048,576
 .B Rate limiting:
 The -b option supports variable offered loads through the
 <mean>,<standard deviation> format, e.g. -b 100m,10m on the client.
-The distribution used is log normal.  Similar for the isochronous
+The distribution used is log normal. Similar for the isochronous
 option. The -b on the server rate limits the reads.
 .P
 .B Synchronized clocks:
 The --trip-times options indicates that the client's and server's clocks are synchronized to a common reference.
 Network Time Protocol (NTP) or Precision Time Protocol (PTP) are commonly used for
-this.  The reference clock(s) error and the synchronization protocools will affect
+this. The reference clock(s) error and the synchronization protocools will affect
 the accuracy of any end to end latency measurements.
 .P
 .B
@@ -649,19 +649,28 @@ will only accept ip multicast packets with dest ip 224.0.0.1 that are
 received on the eth0 interface, while iperf -s -B 224.0.0.1 will
 receive those packets on any interface,
 Finally, the device specifier is required for v6 link-local,
-e.g. -c [v6addr]%dev -V, to select the output interface.
+e.g. -c [v6addr]%<dev> -V, to select the output interface.
 .P
-.B Reverse:
-The --reverse (-R), -r and -d are confusing.  \fBIf you want to test through
-a NAT firewall, use --reverse\fR (or -R on non-windows systems).  The latter two
-of -d and -r remain supported for mostly compatibility reasons.  These open
-new sockets vs treat the originating socket as full duplex.  Firewall
-configurations are typically required to use -d and -r if a NAT gateway is
-in the path. Also, the --reverse -b <rate> setting is a bit different.  For
-TCP it will rate limit the read side, i.e. the iperf server reading
-from the full duplex socket.  This will in turn flow control the reverse
-traffic per standard TCP congestion control.  The --reverse -b <rate> will
-be applied on the transmit for UDP since there is no flow control with UDP.
+.B Reverse and bidirectional traffic:
+The \fB--reverse\fR (-R) and \fB--bidir\fR options can be confusing when compared to the
+legacy options of \fB-r\fR and \fB-d\fR. \fB It's suggested to use --reverse\fR if you
+want to test through a NAT firewall (or -R on non-windows systems). This applies
+role reversal of the test after opening the full duplex socket. The latter
+two of -d and -r remain supported for legacy support and compatibility reasons.
+These open new sockets in the opposite direction vs treat the originating socket
+as full duplex. Firewall piercing is typically required to use -d and -r
+if a NAT gateway is in the path. That's part of the reason it's
+highly encouraged to use the newer --reverse and --bidir and deprecate
+the use of the -r and -d options.
+.P
+Also, the --reverse -b <rate> setting behaves differently for TCP and UDP. For
+TCP it will rate limit the read side, i.e. the iperf client
+(role reversed to act as a server) reading from the full duplex socket.
+This will in turn flow control the reverse traffic per standard TCP
+congestion control. The --reverse -b <rate> will be applied on
+transmit (i.e. the server role reversed to act as a client) for UDP
+since there is no flow control with UDP. There is no option to
+directly rate limit the writes with TCP testing when using --reverse.
 .P
 .B TCP Connect times:
 The TCP connect time (or three way handshake) can be seen on the iperf
@@ -673,14 +682,14 @@ shows the 3WHS took 1.84 milliseconds.
 \fBLittle's Law\fR in queueing theory is a theorem that determines the average number of items (L) in a stationary queuing system based on the average waiting time (W) of an item within a system and the average number of items arriving at the system per unit of time (lambda). Mathematically, it's L = lambda * W. As used here, the units are bytes. The arrival rate is the taken from the writes.
 .P
 .B Network power:
-The network power (NetPwr) metric is \fBexperimental\fR.  It's a
-convenience function defined as throughput/delay.  For TCP, the delay
-is the sampled RTT times.  For UDP the delay is the end/end latency.
+The network power (NetPwr) metric is \fBexperimental\fR. It's a
+convenience function defined as throughput/delay. For TCP, the delay
+is the sampled RTT times. For UDP the delay is the end/end latency.
 Don't confuse this with the physics definition of power (delta
 energy/delta time) but more of a measure of a desireable property
-divided by an undesireable property.  Also note, one must use -i
+divided by an undesireable property. Also note, one must use -i
 interval with TCP to get this as that's what sets the RTT sampling
-rate.  The metric is scaled to assist with human readability.  (Note:
+rate. The metric is scaled to assist with human readability. (Note:
 if this metric goes beyond the experimental state we'll consider a
 supporting and RTT sampling rate independent of the -i interval.)
 .P
