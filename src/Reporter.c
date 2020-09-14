@@ -855,13 +855,13 @@ void reporter_handle_packet_client (struct ReporterData *data, struct ReportStru
 	// These are valid packets that need standard iperf accounting
 	stats->sock_callstats.write.WriteCnt++;
 	stats->sock_callstats.write.totWriteCnt++;
-	if (isUDP(stats->common)) {
-	    stats->PacketID = packet->packetID;
-	    reporter_handle_packet_pps(data, packet);
-	}
 	if (isIsochronous(stats->common)) {
 	    reporter_handle_packet_isochronous(data, packet);
 	}
+    }
+    if (isUDP(stats->common)) {
+	stats->PacketID = packet->packetID;
+	reporter_handle_packet_pps(data, packet);
     }
 }
 
@@ -953,13 +953,15 @@ static inline void reporter_set_timestamps_time (struct ReportTimeStamps *times,
 // If reports were missed, catch up now
 static inline void reporter_transfer_protocol_missed_reports (struct TransferInfo *stats, struct ReportStruct *packet) {
     assert(stats->output_handler != NULL);
-    while (TimeDifference(stats->ts.nextTime, packet->packetTime) < 0) {
+    while (TimeDifference(packet->packetTime, stats->ts.nextTime) > TimeDouble(stats->ts.intervalTime)) {
+//	printf("**** cmp=%f/%f next %ld.%ld packet %ld.%ld id=%ld\n", TimeDifference(packet->packetTime, stats->ts.nextTime), TimeDouble(stats->ts.intervalTime), stats->ts.nextTime.tv_sec, stats->ts.nextTime.tv_usec, packet->packetTime.tv_sec, packet->packetTime.tv_usec, packet->packetID);
 	reporter_set_timestamps_time(&stats->ts, INTERVAL);
 	struct TransferInfo emptystats;
 	memset(&emptystats, 0, sizeof(struct TransferInfo));
 	emptystats.ts.iStart = stats->ts.iStart;
 	emptystats.ts.iEnd = stats->ts.iEnd;
 	emptystats.common = stats->common;
+	emptystats.header_printed = 1;
 	(*stats->output_handler)(&emptystats);
     }
 }
@@ -1254,7 +1256,7 @@ void reporter_transfer_protocol_client_udp (struct ReporterData *data, int final
     }
     (*stats->output_handler)(stats);
     if (final)
-	printf(report_datagrams, stats->transferID, stats->cntDatagrams);
+	printf(report_datagrams, stats->transferID, stats->total.Datagrams.current);
     else
 	reporter_reset_transfer_stats_client_udp(stats);
 }
@@ -1496,11 +1498,6 @@ int reporter_condprint_time_interval_report (struct ReporterData *data, struct R
 	struct TransferInfo *sumstats = (data->GroupSumReport ? &data->GroupSumReport->info : NULL);
 	struct TransferInfo *bidirstats = (data->FullDuplexReport ? &data->FullDuplexReport->info : NULL);
 	stats->ts.packetTime = packet->packetTime;
-        // In the (hopefully unlikely event) the reporter fell behind
-        // ouput the missed reports to catch up
-#if 0
-	reporter_transfer_protocol_missed_reports(stats, packet);
-#endif
 #ifdef DEBUG_PPS
 	printf("*** packetID TRIGGER = %ld pt=%ld.%ld empty=%d nt=%ld.%ld\n",packet->packetID, packet->packetTime.tv_sec, packet->packetTime.tv_usec, packet->emptyreport, data->nextTime.tv_sec, data->nextTime.tv_usec);
 #endif
@@ -1522,6 +1519,9 @@ int reporter_condprint_time_interval_report (struct ReporterData *data, struct R
 		(*data->GroupSumReport->transfer_protocol_sum_handler)(sumstats, 0);
 	    }
 	}
+        // In the (hopefully unlikely event) the reporter fell behind
+        // ouput the missed reports to catch up
+	reporter_transfer_protocol_missed_reports(stats, packet);
     }
     return advance_jobq;
 }
