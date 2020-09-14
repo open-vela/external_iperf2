@@ -236,7 +236,6 @@ void Client::StartSynch (void) {
     // Two delays are supported:
     // o First is an absolute start time per unix epoch format
     // o Second is a holdback, a relative amount of seconds between the connect and data xfers
-#if defined(HAVE_CLOCK_NANOSLEEP)
     // check for an epoch based start time
     if (isTxStartTime(mSettings)) {
 	if (isIsochronous(mSettings)) {
@@ -244,6 +243,8 @@ void Client::StartSynch (void) {
 	    tmp.set(mSettings->txstart_epoch.tv_sec, mSettings->txstart_epoch.tv_usec);
 	    framecounter = new Isochronous::FrameCounter(mSettings->mFPS, tmp);
 	} else {
+	    // RJM move to compat delay.c
+#ifdef HAVE_CLOCK_NANOSLEEP
 	    timespec tmp;
 	    tmp.tv_sec = mSettings->txstart_epoch.tv_sec;
 	    tmp.tv_nsec = mSettings->txstart_epoch.tv_usec * 1000;
@@ -252,16 +253,29 @@ void Client::StartSynch (void) {
 		fprintf(stderr, "txstart failed clock_nanosleep()=%d\n", rc);
 		fflush(stderr);
 	    }
+#else
+	    now.setnow();
+	    Timestamp tmp;
+	    tmp.set(mSettings->txstart_epoch.tv_sec, mSettings->txstart_epoch.tv_usec);
+	    delay_loop(tmp.subUsec(now));
+#endif
 	}
     } else if (isTxHoldback(mSettings) && !isConnectOnly(mSettings)) {
-	timespec tmp;
-	tmp.tv_sec = mSettings->txholdback_timer.tv_sec;
-	tmp.tv_nsec = mSettings->txholdback_timer.tv_usec * 1000;
-	// See if this a delay between connect and data
-	int rc = clock_nanosleep(CLOCK_MONOTONIC, 0, &tmp, NULL);
-	if (rc) {
-	    fprintf(stderr, "txholdback failed clock_nanosleep()=%d\n", rc);
-	}
+#ifdef HAVE_CLOCK_NANOSLEEP
+	  timespec tmp;
+	  tmp.tv_sec = mSettings->txholdback_timer.tv_sec;
+	  tmp.tv_nsec = mSettings->txholdback_timer.tv_usec * 1000;
+	  // See if this a delay between connect and data
+	  int rc = clock_nanosleep(CLOCK_MONOTONIC, 0, &tmp, NULL);
+	  if (rc) {
+	      fprintf(stderr, "txholdback failed clock_nanosleep()=%d\n", rc);
+	  }
+#else
+	  now.setnow();
+	  Timestamp tmp;
+	  tmp.set(mSettings->txholdback_timer.tv_sec, mSettings->txholdback_timer.tv_usec);
+	  delay_loop(tmp.subUsec(now));
+#endif
     }
     int setbidirflag = 0;
     if (isBidir(mSettings)) {
@@ -272,8 +286,6 @@ void Client::StartSynch (void) {
     if (setbidirflag)
 	SetBidirReportStartTime();
     // Full duplex sockets need to be syncronized
-
-#endif
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Client start sync exited");
 #endif
