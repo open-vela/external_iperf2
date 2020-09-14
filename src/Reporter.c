@@ -856,8 +856,7 @@ void reporter_handle_packet_client (struct ReporterData *data, struct ReportStru
 	stats->sock_callstats.write.WriteCnt++;
 	stats->sock_callstats.write.totWriteCnt++;
 	if (isUDP(stats->common)) {
-	    if (packet->packetID > 0)
-		stats->PacketID = packet->packetID;
+	    stats->PacketID = packet->packetID;
 	    reporter_handle_packet_pps(data, packet);
 	}
 	if (isIsochronous(stats->common)) {
@@ -1048,6 +1047,7 @@ static inline void reporter_reset_transfer_stats_client_udp (struct TransferInfo
     stats->isochstats.framecnt = 0;
     stats->isochstats.framelostcnt = 0;
     stats->isochstats.slipcnt = 0;
+    stats->arrivalSum = 0;
 }
 static inline void reporter_reset_transfer_stats_server_tcp (struct TransferInfo *stats) {
     int ix;
@@ -1243,6 +1243,14 @@ void reporter_transfer_protocol_client_udp (struct ReporterData *data, int final
 	stats->sock_callstats.write.WriteCnt = stats->sock_callstats.write.totWriteCnt;
 	stats->cntIPG = stats->total.IPG.current;
 	stats->cntDatagrams = stats->PacketID;
+    } else {
+	if (stats->ts.iEnd > 0) {
+	    stats->cntDatagrams = stats->total.Datagrams.current - stats->total.Datagrams.prev;
+	    stats->cntIPG = (stats->total.IPG.current - stats->total.IPG.prev);
+	    stats->IPGsum = stats->arrivalSum;
+	} else {
+	    stats->cntIPG = 0;
+	}
     }
     (*stats->output_handler)(stats);
     if (final)
@@ -1389,9 +1397,9 @@ void reporter_transfer_protocol_client_all_final(struct ReporterData *data) {
 		stats->tripTime = 0;
 	}
 	if (stats->iEnd > 0) {
-	    stats->IPGcnt = (int) (stats->cntDatagrams / stats->iEnd);
+	    stats->cntIPG = (int) (stats->cntDatagrams / stats->iEnd);
 	} else {
-	    stats->IPGcnt = 0;
+	    stats->cntIPG = 0;
 	}
 	stats->IPGsum = 1;
         stats->free = 1;

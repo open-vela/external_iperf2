@@ -400,7 +400,7 @@ const char report_bw_sum_bidir_format[] =
 "[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec\n";
 
 const char report_bw_sum_bidir_enhanced_format[] =
-"[FD%d] " IPERFTimeFrmt " sec  %ss  %ss/sec %s %s\n";
+"[FD%d] " IPERFTimeFrmt " sec  %ss  %ss/sec\n";
 
 /* -------------------------------------------------------------------
  * Misc reports
