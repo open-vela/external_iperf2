@@ -243,7 +243,7 @@ void Client::StartSynch (void) {
 	    tmp.set(mSettings->txstart_epoch.tv_sec, mSettings->txstart_epoch.tv_usec);
 	    framecounter = new Isochronous::FrameCounter(mSettings->mFPS, tmp);
 	} else {
-	    // RJM move to compat delay.c
+	    // RJM move to compat/clock_nanonsleep.c
 #ifdef HAVE_CLOCK_NANOSLEEP
 	    timespec tmp;
 	    tmp.tv_sec = mSettings->txstart_epoch.tv_sec;
