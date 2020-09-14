@@ -675,6 +675,7 @@ void Client::RunRateLimitedTCP (void) {
  * UDP send loop
  */
 void Client::RunUDP (void) {
+    struct timeval prevsend = {.tv_sec = 0, .tv_usec = 0};
     struct UDP_datagram* mBuf_UDP = (struct UDP_datagram*) mBuf;
     int currLen;
 
@@ -791,7 +792,9 @@ void Client::RunUDP (void) {
 
 	// report packets
 	reportstruct->packetLen = (unsigned long) currLen;
+	reportstruct->prevSentTime = prevsend;
 	ReportPacket(myReport, reportstruct);
+	prevsend = reportstruct->packetTime;
 	// Insert delay here only if the running delay is greater than 100 usec,
 	// otherwise don't delay and immediately continue with the next tx.
 	if (delay >= 100000) {
@@ -807,6 +810,7 @@ void Client::RunUDP (void) {
  * UDP isochronous send loop
  */
 void Client::RunUDPIsochronous (void) {
+    struct timeval prevsend = {.tv_sec = 0, .tv_usec = 0};
     struct UDP_datagram* mBuf_UDP = (struct UDP_datagram*) mBuf;
     // skip over the UDP datagram (seq no, timestamp) to reach the isoch fields
     struct client_hdr_udp_isoch_tests *testhdr = (client_hdr_udp_isoch_tests *)(mBuf + sizeof(client_hdr_v1) + sizeof(UDP_datagram));
