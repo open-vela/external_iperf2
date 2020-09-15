@@ -1006,7 +1006,7 @@ inline void Client::WriteTcpTxHdr (struct ReportStruct *reportstruct, int burst_
 
 #ifdef SHOW_PACKETID
     printf("id %" PRIdMAX " (0x%" PRIxMAX ") -> 0x%x, 0x%x\n",
-	   packetID, packetID, id1, id2);
+	   reportstruct->packetID, reportstruct->packetID, id1, id2);
 #endif
 #else
     mBuf_burst->seqno_lower = htonl((reportstruct->packetID));
