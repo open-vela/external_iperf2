@@ -418,7 +418,6 @@ void udp_output_write_enhanced_isoch (struct TransferInfo *stats) {
 	stats->header_printed = true;
     }
     _print_stats_common(stats);
-    printf("****IGPcngt=%ld, sum=%f\n", stats->cntIPG, stats->IPGsum);
     printf(report_bw_pps_enhanced_isoch_format, stats->transferID,
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext,

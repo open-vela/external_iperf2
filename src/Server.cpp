@@ -168,7 +168,7 @@ void Server::RunTCP (void) {
     double tokens=0.000004;
 
     InitTrafficLoop();
-    struct timeval prevsend = {.tv_sec = 0, .tv_usec = 0};
+    struct timeval prevsend = myReport->info.ts.startTime;
 
     int burst_nleft = 0;
     burst_info.burst_id = 0;
@@ -659,9 +659,9 @@ void Server::RunUDP( void ) {
     int rxlen;
     int readerr = 0;
     bool lastpacket = 0;
-    struct timeval prevsend = {.tv_sec = 0, .tv_usec = 0};
 
     InitTrafficLoop();
+    struct timeval prevsend = myReport->info.ts.startTime;
 
     // Exit loop on three conditions
     // 1) Fatal read error
@@ -718,4 +718,3 @@ int Server::SkipFirstPayload (void) {
     }
     return n;
 }
-
