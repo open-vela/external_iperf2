@@ -87,6 +87,7 @@ Client::Client (thread_Settings *inSettings) {
 
     memset(&scratchpad, 0, sizeof(struct ReportStruct));
     reportstruct = &scratchpad;
+    reportstruct->packetID = 1;
     mySocket = isServerReverse(mSettings) ? mSettings->mSock : INVALID_SOCKET;
     connected = isServerReverse(mSettings);
     if (!isServerReverse(mSettings))
@@ -1220,11 +1221,20 @@ void Client::SendFirstPayload (void) {
 	     : (struct client_testhdr *) mBuf);
 	len = Settings_GenerateClientHdr(mSettings, tmp_hdr, startTime);
 	if (len > 0) {
+	    if (isUDP(mSettings)) {
+		struct UDP_datagram * mBuf_UDP = (struct UDP_datagram *) mBuf;
+		WritePacketID(reportstruct->packetID++);
+		mBuf_UDP->tv_sec  = htonl(reportstruct->packetTime.tv_sec);
+		mBuf_UDP->tv_usec = htonl(reportstruct->packetTime.tv_usec);
+		len += sizeof(struct UDP_datagram);
+	    }
 	    if (isPeerVerDetect(mSettings)) {
 		PeerXchange(len);
 	    } else {
 		currLen = send(mySocket, mBuf, len, 0);
 		WARN_errno(currLen < 0, "send_hdr");
+		reportstruct->packetLen = len;
+		ReportPacket(myReport, reportstruct);
 	    }
 	}
     }
