@@ -1082,6 +1082,8 @@ static inline void reporter_reset_transfer_stats_server_udp (struct TransferInfo
     stats->l2counts.unknown = 0;
     stats->l2counts.udpcsumerr = 0;
     stats->l2counts.lengtherr = 0;
+    if (stats->cntDatagrams)
+	stats->IPGsum = 0;
 }
 
 // These do the following
