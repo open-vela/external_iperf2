@@ -301,7 +301,6 @@ struct ReportTimeStamps {
     struct timeval nextTime;
     struct timeval intervalTime;
     struct timeval IPGstart;
-    struct timeval clientStartTime;
 };
 
 struct TransferInfo {
@@ -321,10 +320,8 @@ struct TransferInfo {
     intmax_t cntIPG;
     intmax_t PacketID;
     double jitter;
-    double IPGsum;
     double tripTime;
-    double arrivalSum;
-    double totarrivalSum;
+    double IPGsum;
     struct ShiftCounters total; // Shift counters used to calculate interval reports and hold totals
     union SendReadStats sock_callstats;
     struct IsochStats isochstats;

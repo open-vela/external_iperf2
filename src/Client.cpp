@@ -334,7 +334,7 @@ inline void Client::SetReportStartTime (void) {
 	Mutex_Unlock(&myReport->GroupSumReport->reference.lock);
     }
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Client(%d) report start=%ld.%ld next=%ld.%ld", mSettings->mSock, myReport->info.ts.startTime.tv_sec, myReport->info.ts.startTime.tv_usec, myReport->info.ts.nextTime.tv_sec, myReport->info.ts.nextTime.tv_usec);
+    thread_debug("Client(%d) report start/ipg=%ld.%ld next=%ld.%ld", mSettings->mSock, myReport->info.ts.startTime.tv_sec, myReport->info.ts.startTime.tv_usec, myReport->info.ts.nextTime.tv_sec, myReport->info.ts.nextTime.tv_usec);
 #endif
 }
 
@@ -476,7 +476,7 @@ void Client::RunTCP (void) {
     int burst_size =  mSettings->mBufLen;
     int burst_remaining = 0;
     int burst_id = 1;
-    struct timeval prevsend = {.tv_sec = 0, .tv_usec = 0};
+    struct timeval prevsend = myReport->info.ts.startTime;
 
     // RJM, consider moving this into the constructor
     if (isIsochronous(mSettings)) {
@@ -688,7 +688,7 @@ void Client::RunRateLimitedTCP (void) {
  * UDP send loop
  */
 void Client::RunUDP (void) {
-    struct timeval prevsend = {.tv_sec = 0, .tv_usec = 0};
+    struct timeval prevsend = myReport->info.ts.startTime;
     struct UDP_datagram* mBuf_UDP = (struct UDP_datagram*) mBuf;
     int currLen;
 
@@ -823,7 +823,7 @@ void Client::RunUDP (void) {
  * UDP isochronous send loop
  */
 void Client::RunUDPIsochronous (void) {
-    struct timeval prevsend = {.tv_sec = 0, .tv_usec = 0};
+    struct timeval prevsend = myReport->info.ts.startTime;
     struct UDP_datagram* mBuf_UDP = (struct UDP_datagram*) mBuf;
     // skip over the UDP datagram (seq no, timestamp) to reach the isoch fields
     struct client_hdr_udp_isoch_tests *testhdr = (client_hdr_udp_isoch_tests *)(mBuf + sizeof(client_hdr_v1) + sizeof(UDP_datagram));
@@ -951,8 +951,9 @@ void Client::RunUDPIsochronous (void) {
 
 	    reportstruct->frameID=frameid;
 	    reportstruct->packetLen = (unsigned long) currLen;
+	    reportstruct->prevSentTime = prevsend;
 	    ReportPacket(myReport, reportstruct);
-
+	    prevsend = reportstruct->packetTime;
 	    // Insert delay here only if the running delay is greater than 1 usec,
 	    // otherwise don't delay and immediately continue with the next tx.
 	    if (delay >= 1000) {
@@ -1216,6 +1217,7 @@ void Client::SendFirstPayload (void) {
 	    startTime.tv_sec = now.getSecs();
 	    startTime.tv_usec = now.getUsecs();
 	}
+	reportstruct->packetTime = startTime;
         struct client_testhdr* tmp_hdr = \
 	    (isUDP(mSettings) ? (struct client_testhdr *) (((struct UDP_datagram*)mBuf) + 1) \
 	     : (struct client_testhdr *) mBuf);
