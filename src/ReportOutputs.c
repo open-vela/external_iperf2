@@ -189,7 +189,7 @@ void tcp_output_read_enhanced_triptime (struct TransferInfo *stats) {
 	printf(report_bw_read_enhanced_netpwr_header, (stats->sock_callstats.read.binsize/1024.0));
     }
     double meantransit = (stats->transit.sumTransit / stats->transit.cntTransit);
-    double lambda = (stats->arrivalSum > 0.0) ? ((double)stats->cntBytes / stats->arrivalSum) : 0.0;
+    double lambda = (stats->IPGsum > 0.0) ? ((double)stats->cntBytes / stats->IPGsum) : 0.0;
     set_llawbuf(lambda, meantransit);
     _print_stats_common(stats);
     if (stats->cntBytes) {
@@ -323,7 +323,7 @@ void udp_output_read_enhanced (struct TransferInfo *stats) {
 	       0.0,0.0,0.0,0.0,0.0,0.0);
     } else {
 	double meantransit = (stats->transit.sumTransit / stats->transit.cntTransit);
-	double lambda = (stats->arrivalSum > 0.0) ? ((double)stats->cntBytes / stats->arrivalSum) : 0.0;
+	double lambda = (stats->IPGsum > 0.0) ? ((double)stats->cntBytes / stats->IPGsum) : 0.0;
 	set_llawbuf(lambda, meantransit);
 	printf(report_bw_jitter_loss_enhanced_format, stats->transferID,
 	       stats->ts.iStart, stats->ts.iEnd,
@@ -368,7 +368,7 @@ void udp_output_read_enhanced_triptime (struct TransferInfo *stats) {
 		   (stats->cntIPG / stats->IPGsum));
 	} else {
 	    double meantransit = (stats->transit.sumTransit / stats->transit.cntTransit);
-	    double lambda = (stats->arrivalSum > 0.0) ? ((double)stats->cntBytes / stats->arrivalSum) : 0.0;
+	    double lambda = (stats->IPGsum > 0.0) ? ((double)stats->cntBytes / stats->IPGsum) : 0.0;
 	    set_llawbuf(lambda, meantransit);
 	    printf(report_bw_jitter_loss_enhanced_isoch_format, stats->transferID,
 		   stats->ts.iStart, stats->ts.iEnd,
@@ -380,7 +380,7 @@ void udp_output_read_enhanced_triptime (struct TransferInfo *stats) {
 		   stats->transit.maxTransit*1e3,
 		   (stats->transit.cntTransit < 2) ? 0 : sqrt(stats->transit.m2Transit / (stats->transit.cntTransit - 1)) / 1e3,
 		   (stats->cntIPG / stats->IPGsum),
-		   ((stats->arrivalSum > 0.0) ? llaw_buf : 0),
+		   ((stats->IPGsum > 0.0) ? llaw_buf : 0),
 		   ((meantransit > 0.0) ? (NETPOWERCONSTANT * ((double) stats->cntBytes) / (double) (stats->ts.iEnd - stats->ts.iStart) / meantransit) : 0),
 		   stats->isochstats.framecnt, stats->isochstats.framelostcnt);
 	}
@@ -418,6 +418,7 @@ void udp_output_write_enhanced_isoch (struct TransferInfo *stats) {
 	stats->header_printed = true;
     }
     _print_stats_common(stats);
+    printf("****IGPcngt=%ld, sum=%f\n", stats->cntIPG, stats->IPGsum);
     printf(report_bw_pps_enhanced_isoch_format, stats->transferID,
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext,

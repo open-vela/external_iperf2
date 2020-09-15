@@ -630,15 +630,10 @@ inline void reporter_handle_packet_pps (struct ReporterData *data, struct Report
         stats->total.Datagrams.current++;
         stats->total.IPG.current++;
     }
-    stats->IPGsum += TimeDifference(packet->packetTime, stats->ts.IPGstart);
     stats->ts.IPGstart = packet->packetTime;
-    if (!TimeZero(packet->prevSentTime)) {
-        double delta = TimeDifference(packet->sentTime, packet->prevSentTime);
-        stats->arrivalSum += delta;
-        stats->totarrivalSum += delta;
-    }
+    stats->IPGsum += TimeDifference(packet->sentTime, packet->prevSentTime);
 #ifdef DEBUG_PPS
-    printf("*** IPGsum = %f cnt=%ld ipg=%ld.%ld pt=%ld.%ld id=%ld empty=%d\n", stats->IPGsum, stats->IPGcnt, stats->ts.IPGstart.tv_sec, stats->ts.IPGstart.tv_usec, packet->packetTime.tv_sec, packet->packetTime.tv_usec, packet->packetID, packet->emptyreport);
+    printf("*** IPGsum = %f cnt=%ld ipg=%ld.%ld pt=%ld.%ld id=%ld empty=%d transit=%f %ld.%ld\n", stats->IPGsum, stats->cntIPG, stats->ts.IPGstart.tv_sec, stats->ts.IPGstart.tv_usec, packet->packetTime.tv_sec, packet->packetTime.tv_usec, packet->packetID, packet->emptyreport, TimeDifference(packet->sentTime, packet->prevSentTime),packet->prevSentTime.tv_sec, packet->prevSentTime.tv_usec);
 #endif
 }
 
@@ -717,8 +712,7 @@ static inline void reporter_handle_burst_tcp_transit (struct ReporterData *data,
         double transit = reporter_handle_packet_oneway_transit(data, packet);
 	if (!TimeZero(stats->ts.prevpacketTime)) {
 	    double delta = TimeDifference(packet->sentTime, stats->ts.prevpacketTime);
-	    stats->arrivalSum += delta;
-	    stats->totarrivalSum += delta;
+	    stats->IPGsum += delta;
 	}
 	stats->ts.prevpacketTime = packet->sentTime;
 	if (stats->framelatency_histogram) {
@@ -1049,7 +1043,8 @@ static inline void reporter_reset_transfer_stats_client_udp (struct TransferInfo
     stats->isochstats.framecnt = 0;
     stats->isochstats.framelostcnt = 0;
     stats->isochstats.slipcnt = 0;
-    stats->arrivalSum = 0;
+    if (stats->cntDatagrams)
+	stats->IPGsum = 0;
 }
 static inline void reporter_reset_transfer_stats_server_tcp (struct TransferInfo *stats) {
     int ix;
@@ -1065,7 +1060,6 @@ static inline void reporter_reset_transfer_stats_server_tcp (struct TransferInfo
     stats->transit.vdTransit = 0;
     stats->transit.meanTransit = 0;
     stats->transit.m2Transit = 0;
-    stats->arrivalSum = 0;
 }
 static inline void reporter_reset_transfer_stats_server_udp (struct TransferInfo *stats) {
     // Reset the enhanced stats for the next report interval
@@ -1088,7 +1082,6 @@ static inline void reporter_reset_transfer_stats_server_udp (struct TransferInfo
     stats->l2counts.unknown = 0;
     stats->l2counts.udpcsumerr = 0;
     stats->l2counts.lengtherr = 0;
-    stats->arrivalSum = 0;
 }
 
 // These do the following
@@ -1139,6 +1132,7 @@ void reporter_transfer_protocol_server_udp (struct ReporterData *data, int final
 	    (*stats->output_handler)(stats);
 	}
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
+	stats->IPGsum = TimeDifference(stats->ts.packetTime, stats->ts.startTime);
 	stats->cntOutofOrder = stats->total.OutofOrder.current;
 	// assume most of the  time out-of-order packets are not
 	// duplicate packets, so conditionally subtract them from the lost packets.
@@ -1185,6 +1179,7 @@ void reporter_transfer_protocol_sum_server_udp (struct TransferInfo *stats, int 
 		stats->cntError = 0;
 	    stats->cntDatagrams = stats->total.Datagrams.current;
 	    stats->cntBytes = stats->total.Bytes.current;
+	    stats->IPGsum = TimeDifference(stats->ts.packetTime, stats->ts.startTime);
 	} else {
 	    stats->cntOutofOrder = stats->total.OutofOrder.current - stats->total.OutofOrder.prev;
 	    // assume most of the  time out-of-order packets are not
@@ -1210,6 +1205,7 @@ void reporter_transfer_protocol_sum_client_udp (struct TransferInfo *stats, int 
 	stats->sock_callstats.write.TCPretry = stats->sock_callstats.write.totTCPretry;
 	stats->cntDatagrams = stats->total.Datagrams.current;
 	stats->cntBytes = stats->total.Bytes.current;
+	stats->IPGsum = TimeDifference(stats->ts.packetTime, stats->ts.startTime);
     } else {
 	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
     }
@@ -1245,11 +1241,11 @@ void reporter_transfer_protocol_client_udp (struct ReporterData *data, int final
 	stats->sock_callstats.write.WriteCnt = stats->sock_callstats.write.totWriteCnt;
 	stats->cntIPG = stats->total.IPG.current;
 	stats->cntDatagrams = stats->PacketID;
+	stats->IPGsum = TimeDifference(stats->ts.packetTime, stats->ts.startTime);
     } else {
 	if (stats->ts.iEnd > 0) {
 	    stats->cntDatagrams = stats->total.Datagrams.current - stats->total.Datagrams.prev;
 	    stats->cntIPG = (stats->total.IPG.current - stats->total.IPG.prev);
-	    stats->IPGsum = stats->arrivalSum;
 	} else {
 	    stats->cntIPG = 0;
 	}
@@ -1289,7 +1285,6 @@ void reporter_transfer_protocol_server_tcp (struct ReporterData *data, int final
         }
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
         stats->cntBytes = stats->total.Bytes.current;
-	stats->arrivalSum = stats->totarrivalSum;
         stats->sock_callstats.read.cntRead = stats->sock_callstats.read.totcntRead;
         for (ix = 0; ix < TCPREADBINCOUNT; ix++) {
 	    stats->sock_callstats.read.bins[ix] = stats->sock_callstats.read.totbins[ix];
@@ -1499,7 +1494,7 @@ int reporter_condprint_time_interval_report (struct ReporterData *data, struct R
 	struct TransferInfo *bidirstats = (data->FullDuplexReport ? &data->FullDuplexReport->info : NULL);
 	stats->ts.packetTime = packet->packetTime;
 #ifdef DEBUG_PPS
-	printf("*** packetID TRIGGER = %ld pt=%ld.%ld empty=%d nt=%ld.%ld\n",packet->packetID, packet->packetTime.tv_sec, packet->packetTime.tv_usec, packet->emptyreport, data->nextTime.tv_sec, data->nextTime.tv_usec);
+	printf("*** packetID TRIGGER = %ld pt=%ld.%ld empty=%d nt=%ld.%ld\n",packet->packetID, packet->packetTime.tv_sec, packet->packetTime.tv_usec, packet->emptyreport, stats->ts.nextTime.tv_sec, stats->ts.nextTime.tv_usec);
 #endif
 	reporter_set_timestamps_time(&stats->ts, INTERVAL);
 	(*data->transfer_protocol_handler)(data, 0);
