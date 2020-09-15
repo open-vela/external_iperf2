@@ -3,13 +3,15 @@ By Robert McMahon
 September 2020
 Code at rev 2.0.14
 
-This document helps to describe the iperf 2 design. It's quite complicated. It's hoped this overview will help someone to understand the code.
+This document helps to describe the iperf 2 design. It's quite complicated. It's hoped this overview will help someone to understand the code. As with any openy source software, the authoritive information comes from reading the code itself.
 
-Iperf 2 is a designed as a multithreaded program. It's also a hybrid of C and C++ code. It's evolved over time having different developers starting with 1.7 version then stalling at 2.0.5. A new group with a WiFi focus took over the code base starting at 2.0.6 and up to 2.0.14. The only link between the groups been the code itself.
+Iperf 2 is a designed to be a multithreaded program. It's also a hybrid of C and C++ code tha evolved from 1.7 to 2.0.5 where it stalled. A new group from Broadcom with a WiFi focus took over the code base starting at 2.0.5 and we are now up to 2.0.14. The only link between the groups been the code itself.
+
+Iperf 3 is a new code base and isn't compatible with iperf 2. This document doesn't discuss iperf 3.
 
 Threading overview
 
-There are multiple threads being a listener thread, a reporter thread, and one or more traffic threads. The traffic threads are either a server or a client.
+There are multiple threads being a listener thread, a reporter thread, and one or more traffic threads. The traffic threads are either a server or a client, or a server in the role of a client or a client in the role of as server per the --reverse option.
 
 Listener (src/Listener.cpp include/Listener.hpp):
 
@@ -112,5 +114,7 @@ Server startups
 A day in the life of a UDP packet
 
 Write the packet microsecond timestamp and sequence number into the payload
+
+Traffic profiles and rate limiting.  The box mueller can be found in src/pdfs.c
 
 Debug support using configure --enable-thread-debug
