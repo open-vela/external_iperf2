@@ -173,6 +173,9 @@
 /* Define to 1 if you have the <net/if.h> header file. */
 #undef HAVE_NET_IF_H
 
+/* Define if packet level debugging is desired */
+#undef HAVE_PACKET_DEBUG
+
 /* */
 #undef HAVE_POSIX_THREAD
 

@@ -671,6 +671,8 @@ CFLAGS
 CC
 CHECKPROGRAMS_FALSE
 CHECKPROGRAMS_TRUE
+PACKET_DEBUG_FALSE
+PACKET_DEBUG_TRUE
 THREAD_DEBUG_FALSE
 THREAD_DEBUG_TRUE
 FASTSAMPLING_FALSE
@@ -758,6 +760,7 @@ enable_kalman
 enable_seqno64b
 enable_fastsampling
 enable_thread_debug
+enable_packet_debug
 enable_checkprograms
 enable_af_packet
 enable_dependency_tracking
@@ -1410,6 +1413,8 @@ Optional Features:
                           (default is disable)
   --enable-thread-debug   enable support for thread debugging (default is
                           disable)
+  --enable-packet-debug   enable support for packet level debugging (default
+                          is disable)
   --enable-checkprograms  enable support for building support programs such as
                           checkdelay, checkpdfs, etc. (default is disable)
   --enable-af-packet      Enable AF_PACKET support [default=yes]
@@ -3430,6 +3435,20 @@ fi
 else
   THREAD_DEBUG_TRUE='#'
   THREAD_DEBUG_FALSE=
+fi
+
+
+# Check whether --enable-packet_debug was given.
+if test "${enable_packet_debug+set}" = set; then :
+  enableval=$enable_packet_debug;
+fi
+
+ if test "x$enable_packet_debug" = "xyes"; then
+  PACKET_DEBUG_TRUE=
+  PACKET_DEBUG_FALSE='#'
+else
+  PACKET_DEBUG_TRUE='#'
+  PACKET_DEBUG_FALSE=
 fi
 
 
@@ -8796,6 +8815,12 @@ $as_echo "#define HAVE_FASTSAMPLING 1" >>confdefs.h
 
 fi
 
+if test "$enable_packet_debug" = yes; then
+
+$as_echo "#define HAVE_PACKET_DEBUG 1" >>confdefs.h
+
+fi
+
 case "$ac_cv_host" in
 *-mingw32)
         LIBS="$LIBS -static-libstdc++ -static";;
@@ -8960,6 +8985,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${THREAD_DEBUG_TRUE}" && test -z "${THREAD_DEBUG_FALSE}"; then
   as_fn_error $? "conditional \"THREAD_DEBUG\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${PACKET_DEBUG_TRUE}" && test -z "${PACKET_DEBUG_FALSE}"; then
+  as_fn_error $? "conditional \"PACKET_DEBUG\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${CHECKPROGRAMS_TRUE}" && test -z "${CHECKPROGRAMS_FALSE}"; then

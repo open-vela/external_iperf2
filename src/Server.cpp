@@ -492,14 +492,14 @@ inline bool Server::ReadPacketID (void) {
       // New client - Signed PacketID packed into unsigned id2,id
       reportstruct->packetID = ((uint32_t)ntohl(mBuf_UDP->id)) | ((uintmax_t)(ntohl(mBuf_UDP->id2)) << 32);
 
-#ifdef SHOW_PACKETID
+#ifdef HAVE_PACKET_DEBUG
       printf("id 0x%x, 0x%x -> %" PRIdMAX " (0x%" PRIxMAX ")\n",
 	     ntohl(mBuf_UDP->id), ntohl(mBuf_UDP->id2), reportstruct->packetID, reportstruct->packetID);
 #endif
     } else {
       // Old client - Signed PacketID in Signed id
       reportstruct->packetID = (int32_t)ntohl(mBuf_UDP->id);
-#ifdef SHOW_PACKETID
+#ifdef HAVE_PACKET_DEBUG
       printf("id 0x%x -> %" PRIdMAX " (0x%" PRIxMAX ")\n",
 	     ntohl(mBuf_UDP->id), reportstruct->packetID, reportstruct->packetID);
 #endif
