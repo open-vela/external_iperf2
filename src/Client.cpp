@@ -981,7 +981,7 @@ inline void Client::WritePacketID (intmax_t packetID) {
     mBuf_UDP->id = htonl(id1);
     mBuf_UDP->id2 = htonl(id2);
 
-#ifdef SHOW_PACKETID
+#ifdef HAVE_PACKET_DEBUG
     printf("id %" PRIdMAX " (0x%" PRIxMAX ") -> 0x%x, 0x%x\n",
 	   packetID, packetID, id1, id2);
 #endif
@@ -1005,7 +1005,7 @@ inline void Client::WriteTcpTxHdr (struct ReportStruct *reportstruct, int burst_
     mBuf_burst->seqno_lower = htonl(id1);
     mBuf_burst->seqno_upper = htonl(id2);
 
-#ifdef SHOW_PACKETID
+#ifdef HAVE_PACKET_DEBUG
     printf("id %" PRIdMAX " (0x%" PRIxMAX ") -> 0x%x, 0x%x\n",
 	   reportstruct->packetID, reportstruct->packetID, id1, id2);
 #endif

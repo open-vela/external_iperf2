@@ -49,6 +49,10 @@ AC_ARG_ENABLE(thread_debug, AC_HELP_STRING([--enable-thread-debug],
 	    [enable support for thread debugging (default is disable)]))
 AM_CONDITIONAL([THREAD_DEBUG], [test "x$enable_thread_debug" = "xyes"])
 
+AC_ARG_ENABLE(packet_debug, AC_HELP_STRING([--enable-packet-debug],
+	    [enable support for packet level debugging (default is disable)]))
+AM_CONDITIONAL([PACKET_DEBUG], [test "x$enable_packet_debug" = "xyes"])
+
 AC_ARG_ENABLE(checkprograms, AC_HELP_STRING([--enable-checkprograms],
 	    [enable support for building support programs such as checkdelay, checkpdfs, etc. (default is disable)]))
 AM_CONDITIONAL([CHECKPROGRAMS], [test "x$enable_checkprograms" = "xyes"])
@@ -314,6 +318,10 @@ fi
 
 if test "$enable_fastsampling" = yes; then
 AC_DEFINE([HAVE_FASTSAMPLING], 1, [Define if fast sampling for report intervals is desired])
+fi
+
+if test "$enable_packet_debug" = yes; then
+AC_DEFINE([HAVE_PACKET_DEBUG], 1, [Define if packet level debugging is desired])
 fi
 
 case "$ac_cv_host" in
