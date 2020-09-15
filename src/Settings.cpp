@@ -1356,6 +1356,7 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, struct client_tes
 	    return 0;
     uint32_t flags = 0, extendflags = 0;
     int len = 0;
+    uint16_t testflags = 0;
     memset(hdr, 0, sizeof(client_testhdr));
     flags = HEADER_SEQNO64B; // use 64 bit by default
 
@@ -1376,8 +1377,6 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, struct client_tes
 	hdr->udp.tlvoffset = htons((sizeof(client_hdr_udp_tests) + sizeof(client_hdr_v1) + sizeof(UDP_datagram)));
 	if (isL2LengthCheck(client) || isIsochronous(client) || isNoUDPfin(client) || isTripTime(client)) {
 	    flags |= HEADER_UDPTESTS;
-	    uint16_t testflags = 0;
-
 	    if (isL2LengthCheck(client)) {
 		testflags |= HEADER_L2LENCHECK;
 		if (isIPV6(client))
@@ -1387,14 +1386,14 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, struct client_tes
 		hdr->udp.tlvoffset = htons((sizeof(UDP_isoch_payload) + sizeof(client_hdr_udp_tests) + sizeof(client_hdr_v1) + sizeof(UDP_datagram)));
 		testflags |= HEADER_UDP_ISOCH;
 		if (isBidir(client) || isReverse(client)) {
-		  hdr->udp.isoch_ext.FPSl = htonl(client->mFPS);
-		  hdr->udp.isoch_ext.FPSu = htonl(((long)(client->mFPS) - (long)client->mFPS * rMillion));
-		  hdr->udp.isoch_ext.Meanl = htonl(client->mMean);
-		  hdr->udp.isoch_ext.Meanu = htonl(((long)(client->mMean) - (long)client->mMean * rMillion));
-		  hdr->udp.isoch_ext.Variancel = htonl(client->mVariance);
-		  hdr->udp.isoch_ext.Varianceu = htonl(((long)(client->mVariance) - (long)client->mVariance * rMillion));
-		  hdr->udp.isoch_ext.BurstIPGl = htonl(client->mBurstIPG);
-		  hdr->udp.isoch_ext.BurstIPGu = htonl(((long)(client->mBurstIPG) - (long)client->mBurstIPG * rMillion));
+		    hdr->udp.isoch_ext.FPSl = htonl(client->mFPS);
+		    hdr->udp.isoch_ext.FPSu = htonl(((long)(client->mFPS) - (long)client->mFPS * rMillion));
+		    hdr->udp.isoch_ext.Meanl = htonl(client->mMean);
+		    hdr->udp.isoch_ext.Meanu = htonl(((long)(client->mMean) - (long)client->mMean * rMillion));
+		    hdr->udp.isoch_ext.Variancel = htonl(client->mVariance);
+		    hdr->udp.isoch_ext.Varianceu = htonl(((long)(client->mVariance) - (long)client->mVariance * rMillion));
+		    hdr->udp.isoch_ext.BurstIPGl = htonl(client->mBurstIPG);
+		    hdr->udp.isoch_ext.BurstIPGu = htonl(((long)(client->mBurstIPG) - (long)client->mBurstIPG * rMillion));
 		}
 	    }
 	    if (isNoUDPfin(client)) {
@@ -1405,17 +1404,9 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, struct client_tes
 	    }
 	    // Write flags to header so the listener can determine the tests requested
 	    hdr->udp.testflags = htons(testflags);
-#if 0
 	    hdr->udp.mTOS = htonl(client->mTOS);
-	    //trip time values that don't change
-	    mBuf_burst->typelen.type = htonl(CLIENTTCPHDR);
-	    mBuf_burst->typelen.length =  htonl(sizeof(struct TCP_burst_payload));
-	    mBuf_burst->flags = htonl(HEADER_TRIPTIME | HEADER_SEQNO64B);
-	    mBuf_burst->start_tv_sec = htonl(myReport->info.ts.startTime.tv_sec);
-	    mBuf_burst->start_tv_usec = htonl(myReport->info.ts.startTime.tv_usec);
-#endif
 	}
-	if (isEnhanced(client)) {
+	if (isEnhanced(client) || isPeerVerDetect(client)) {
 	    flags |= HEADER_EXTEND_NOACK;
 	    hdr->udp.version_u = htonl(IPERF_VERSION_MAJORHEX);
 	    hdr->udp.version_l = htonl(IPERF_VERSION_MINORHEX);
