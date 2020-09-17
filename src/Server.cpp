@@ -180,7 +180,7 @@ void Server::RunTCP (void) {
     reportstruct->packetTime.tv_usec = now.getUsecs();
 
     while (InProgress() && !peerclose) {
-	reportstruct->emptyreport=0;
+	reportstruct->emptyreport=1;
 	currLen = 0;
 	// perform read
 	if (isBWSet(mSettings)) {
@@ -193,7 +193,7 @@ void Server::RunTCP (void) {
 	    int n = 0;
 	    int readLen = mSettings->mBufLen;
 	    if (burst_nleft > 0)
-	      readLen = (mSettings->mBufLen < burst_nleft) ? mSettings->mBufLen : burst_nleft;
+		readLen = (mSettings->mBufLen < burst_nleft) ? mSettings->mBufLen : burst_nleft;
 	    reportstruct->emptyreport=1;
 	    if ((isIsochronous(mSettings) || isTripTime(mSettings)) && (burst_nleft == 0)) {
 		if ((n = recvn(mSettings->mSock, (char *)&burst_info, sizeof(struct TCP_burst_payload), 0)) == sizeof(struct TCP_burst_payload)) {

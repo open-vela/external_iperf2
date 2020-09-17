@@ -135,7 +135,7 @@ void listener_spawn(struct thread_Settings *thread) {
 void server_spawn(struct thread_Settings *thread) {
     Server *theServer = NULL;
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Listener spawn server settings=%p GroupSumReport=%p sock=%d", \
+    thread_debug("spawn server settings=%p GroupSumReport=%p sock=%d", \
 		 (void *) thread, (void *)thread->mSumReport, thread->mSock);
 #endif
     // set traffic thread to realtime if needed

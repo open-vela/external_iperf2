@@ -1315,7 +1315,7 @@ void Settings_ReadClientSettingsV1 (struct thread_Settings **client, struct clie
  */
 void Settings_GenerateClientSettings(struct thread_Settings *server, struct thread_Settings **client, void *mBuf) {
     assert(server != NULL);
-    assert(hdr != NULL);
+    assert(mBuf != NULL);
     bool v1test = false;
     uint32_t flags = 0x0;
     uint32_t extendflags = 0x0;
