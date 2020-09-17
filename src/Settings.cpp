@@ -1237,8 +1237,7 @@ void Settings_GetLowerCaseArg(const char *inarg, char *outarg) {
 void Settings_GenerateListenerSettings(struct thread_Settings *client, struct thread_Settings **listener) {
     if (!isCompat(client) && \
          (client->mMode == kTest_DualTest || client->mMode == kTest_TradeOff)) {
-        *listener = new struct thread_Settings;
-        memcpy(*listener, client, sizeof(struct thread_Settings));
+	Settings_Copy(client, listener, 0);	
 	setCompat((*listener));
         unsetDaemon((*listener));
         if (client->mListenPort != 0) {
@@ -1247,7 +1246,7 @@ void Settings_GenerateListenerSettings(struct thread_Settings *client, struct th
             (*listener)->mPort   = client->mPort;
         }
 	if (client->mMode == kTest_TradeOff)
-	    (*listener)->mAmount   = 2 * client->mAmount;
+	    (*listener)->mAmount   = (2 * client->mAmount) + 2;
         (*listener)->mFileName   = NULL;
         (*listener)->mHost       = NULL;
         (*listener)->mLocalhost  = NULL;
