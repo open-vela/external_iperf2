@@ -70,15 +70,15 @@
 class Server {
 public:
     // stores server socket, port and TCP/UDP mode
-    Server( thread_Settings *inSettings );
+    Server(thread_Settings *inSettings);
 
     // destroy the server object
     ~Server();
 
     // accepts connection and receives data
-    void RunUDP ( void );
-    void RunTCP ( void );
-    static void Sig_Int( int inSigno );
+    void RunUDP(void);
+    void RunTCP(void);
+    static void Sig_Int(int inSigno);
 
 private:
     thread_Settings *mSettings;
@@ -88,15 +88,15 @@ private:
     ReportStruct scratchpad;
     ReportStruct *reportstruct;
 
-    void InitKernelTimeStamping (void);
-    void InitTrafficLoop (void);
+    void InitKernelTimeStamping(void);
+    void InitTrafficLoop(void);
     inline void SetBidirReportStartTime(void);
     inline void SetReportStartTime();
-    int ReadWithRxTimestamp (int *readerr);
-    bool ReadPacketID (void);
-    void L2_processing (void);
-    int L2_quintuple_filter (void);
-    void Isoch_processing (int);
+    int ReadWithRxTimestamp(int *readerr);
+    bool ReadPacketID(void);
+    void L2_processing(void);
+    int L2_quintuple_filter(void);
+    void udp_isoch_processing(int);
     bool InProgress(void);
     int SkipFirstPayload(void);
     Timestamp connect_done;

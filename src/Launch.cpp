@@ -178,7 +178,7 @@ static void clientside_client_reverse (struct thread_Settings *thread, Client *t
 	theClient->BarrierClient(thread->connects_done);
     if (theClient->isConnected()) {
 	struct thread_Settings *reverse_client = NULL;
-	Settings_Copy(thread, &reverse_client);
+	Settings_Copy(thread, &reverse_client, 0);
 	FAIL((!reverse_client || !(thread->mSock > 0)), "Reverse test failed to start per thread settings or socket problem",  thread);
 	theClient->StartSynch();
 	theClient->SendFirstPayload();
@@ -195,7 +195,7 @@ static void clientside_client_reverse (struct thread_Settings *thread, Client *t
 static void clientside_client_bidir (struct thread_Settings *thread, Client *theClient) {
     struct thread_Settings *reverse_client = NULL;
     thread->mBidirReport = InitSumReport(thread, -1, 1);
-    Settings_Copy(thread, &reverse_client);
+    Settings_Copy(thread, &reverse_client, 0);
     assert(reverse_client != NULL);
     theClient->my_connect();
 #ifdef HAVE_THREAD_DEBUG
@@ -327,7 +327,7 @@ void client_init(struct thread_Settings *clients) {
     // provided settings, unsetting the report flag and add
     // to the list of threads to start
     for (int i = 1; i < clients->mThreads; i++) {
-        Settings_Copy(clients, &next);
+        Settings_Copy(clients, &next, 1);
 	if (next) {
 	    if (isIncrDstIP(clients))
 		next->incrdstip = i;

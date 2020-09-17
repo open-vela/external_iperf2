@@ -132,7 +132,6 @@ Server::Server( thread_Settings *inSettings ) {
 /* -------------------------------------------------------------------
  * Destructor close socket.
  * ------------------------------------------------------------------- */
-
 Server::~Server (void) {
 #if HAVE_THREAD_DEBUG
     thread_debug("Server destructor sock=%d bidir=%s", mySocket, (isBidir(mSettings) ? "true" : "false"));
@@ -631,22 +630,21 @@ int Server::L2_quintuple_filter(void) {
     return 0;
 }
 
-inline void Server::Isoch_processing (int rxlen) {
+inline void Server::udp_isoch_processing (int rxlen) {
     // Ignore runt sized isoch packets
-    if (rxlen < (int) (sizeof(UDP_datagram) +  sizeof(client_hdr_v1) + sizeof(client_hdr_udp_isoch_tests))) {
+    if (rxlen < (int) (sizeof(struct UDP_datagram) +  sizeof(struct client_hdr_v1) + sizeof(struct client_hdrext) + sizeof(struct isoch_payload))) {
 	reportstruct->burstsize = 0;
 	reportstruct->remaining = 0;
 	reportstruct->frameID = 0;
     } else {
-	struct client_hdr_udp_isoch_tests *testhdr = (client_hdr_udp_isoch_tests *)(mBuf + sizeof(client_hdr_v1) + sizeof(UDP_datagram));
-	struct UDP_isoch_payload* mBuf_isoch = &(testhdr->isoch);
-	reportstruct->isochStartTime.tv_sec = ntohl(mBuf_isoch->start_tv_sec);
-	reportstruct->isochStartTime.tv_usec = ntohl(mBuf_isoch->start_tv_usec);
-	reportstruct->frameID = ntohl(mBuf_isoch->frameid);
-	reportstruct->prevframeID = ntohl(mBuf_isoch->prevframeid);
-	reportstruct->burstsize = ntohl(mBuf_isoch->burstsize);
-	reportstruct->burstperiod = ntohl(mBuf_isoch->burstperiod);
-	reportstruct->remaining = ntohl(mBuf_isoch->remaining);
+	struct client_udp_testhdr *udp_pkt = (struct client_udp_testhdr *)mBuf;
+	reportstruct->isochStartTime.tv_sec = ntohl(udp_pkt->isoch.start_tv_sec);
+	reportstruct->isochStartTime.tv_usec = ntohl(udp_pkt->isoch.start_tv_usec);
+	reportstruct->frameID = ntohl(udp_pkt->isoch.frameid);
+	reportstruct->prevframeID = ntohl(udp_pkt->isoch.prevframeid);
+	reportstruct->burstsize = ntohl(udp_pkt->isoch.burstsize);
+	reportstruct->burstperiod = ntohl(udp_pkt->isoch.burstperiod);
+	reportstruct->remaining = ntohl(udp_pkt->isoch.remaining);
     }
 }
 
@@ -697,7 +695,7 @@ void Server::RunUDP( void ) {
 		lastpacket = ReadPacketID();
 		prevsend = reportstruct->sentTime;
 		if (isIsochronous(mSettings)) {
-		    Isoch_processing(rxlen);
+		    udp_isoch_processing(rxlen);
 		}
 	    }
 	}
@@ -712,9 +710,9 @@ void Server::RunUDP( void ) {
 // this is needed only for TCP
 int Server::SkipFirstPayload (void) {
     int n = 0;
-    if (!isUDP(mSettings) && !isCompat(mSettings) && (mSettings->skipbytes > 0)) {
-	n = recvn(mySocket, mBuf, mSettings->skipbytes, 0);
-	FAIL_errno((n != mSettings->skipbytes), "skip read", mSettings);
+    if (!isUDP(mSettings) && !isCompat(mSettings) && (mSettings->header_bytes > 0)) {
+	n = recvn(mySocket, mBuf, mSettings->header_bytes, 0);
+	FAIL_errno((n != mSettings->header_bytes), "skip read", mSettings);
     }
     return n;
 }

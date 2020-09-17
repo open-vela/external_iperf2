@@ -59,6 +59,8 @@
 #include "Settings.hpp"
 #include "Timestamp.hpp"
 
+#define MAXDIFFTIMESTAMPSECS 60
+
 class Listener;
 
 class Listener {
