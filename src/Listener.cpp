@@ -929,6 +929,7 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		if ((lowerflags & REVERSE) != 0) {
 		    server->mThreadMode=kMode_Client;
 		    setServerReverse(server);
+		    unsetReport(server);
 		}
 		if ((upperflags & HEADER_TRIPTIME) != 0) {
 		    setTripTime(server);
