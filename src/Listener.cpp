@@ -906,23 +906,31 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		server->mMode = kTest_TradeOff;
 	    }
 	    if ((flags & HEADER_UDPTESTS) != 0) {
-		uint16_t testflags = htons(hdr->extend.udpflags);
+		uint16_t upperflags = htons(hdr->extend.upperflags);
+		uint16_t lowerflags = htons(hdr->extend.lowerflags);
 		// Handle stateless flags
-		if ((testflags & HEADER_UDP_ISOCH) != 0) {
+		if ((upperflags & HEADER_ISOCH) != 0) {
 		    setIsochronous(server);
 		}
-		if ((testflags & HEADER_L2ETHPIPV6) != 0) {
+		if ((upperflags & HEADER_L2ETHPIPV6) != 0) {
 		    setIPV6(server);
 		} else {
 		    unsetIPV6(server);
 		}
-		if ((testflags & HEADER_L2LENCHECK) != 0) {
+		if ((upperflags & HEADER_L2LENCHECK) != 0) {
 		    setL2LengthCheck(server);
 		}
-		if ((testflags & HEADER_NOUDPFIN) != 0) {
+		if ((upperflags & HEADER_NOUDPFIN) != 0) {
 		    setNoUDPfin(server);
 		}
-		if ((testflags & HEADER_PKTTRIPTIME) != 0) {
+		if ((lowerflags & BIDIR) != 0) {
+		    setBidir(server);
+		}
+		if ((lowerflags & REVERSE) != 0) {
+		    server->mThreadMode=kMode_Client;
+		    setServerReverse(server);
+		}
+		if ((upperflags & HEADER_TRIPTIME) != 0) {
 		    setTripTime(server);
 		    server->triptime_start.tv_sec = ntohl(hdr->start_tos.start_tv_sec);
 		    server->triptime_start.tv_usec = ntohl(hdr->start_tos.start_tv_usec);
@@ -957,11 +965,11 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		FAIL_errno(1, "read tcp test info", server);
 	    }
 	    if (flags & (HEADER_EXTEND_ACK | HEADER_EXTEND_NOACK)) {
-		uint32_t extendflags = 0;
+		uint16_t upperflags = htons(hdr->extend.upperflags);
+		uint16_t lowerflags = htons(hdr->extend.lowerflags);
 		server->peer_version_u = ntohl(hdr->extend.version_u);
 		server->peer_version_l = ntohl(hdr->extend.version_l);
-		extendflags = ntohl(hdr->extend.bothflags);
-		if ((extendflags & TCP_TRIPTIME) != 0) {
+		if ((upperflags & HEADER_TRIPTIME) != 0) {
 		    setTripTime(server);
 		    server->triptime_start.tv_sec = ntohl(hdr->start_tos.start_tv_sec);
 		    server->triptime_start.tv_usec = ntohl(hdr->start_tos.start_tv_usec);
@@ -974,13 +982,13 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		    assert(server->triptime_start.tv_sec != 0);
 		    assert(server->triptime_start.tv_usec != 0);
 		}
-		if ((extendflags & TCP_ISOCH) != 0) {
+		if ((upperflags & HEADER_ISOCH) != 0) {
 		    setIsochronous(server);
 		}
-		if ((extendflags & BIDIR) != 0) {
+		if ((lowerflags & BIDIR) != 0) {
 		    setBidir(server);
 		}
-		if ((extendflags & REVERSE) != 0) {
+		if ((lowerflags & REVERSE) != 0) {
 		    server->mThreadMode=kMode_Client;
 		    setServerReverse(server);
 		}
