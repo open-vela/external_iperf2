@@ -1397,10 +1397,7 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
     }
 #endif
 #endif
-    if (isServerReverse(server)) {
-	setServerReverse(server);
-	unsetReport(server);
-    } else if (isBidir(server)) {
+    if (isBidir(server)) {
 	setBidir((*client));
     }
 }
