@@ -61,27 +61,28 @@ extern "C" {
 #define HEADER_UDPTESTS     0x20000000
 #define HEADER_EXTEND_NOACK 0x10000000
 #define HEADER_SEQNO64B     0x08000000
+#define HEADER_LEN_BIT       0x00010000
 #define SERVER_HEADER_EXTEND 0x40000000
+#define RUN_NOW             0x00000001
 
+// newer flags available per HEADER_EXTEND
 // Below flags are used to pass test settings in *every* UDP packet
 // and not just during the header exchange
-#define HEADER_EXTEND_V2    0x80000000
-#define HEADER_UDP_ISOCH    0x00000001
-#define HEADER_L2ETHPIPV6   0x00000002
-#define HEADER_L2LENCHECK   0x00000004
-#define HEADER_NOUDPFIN     0x00000008
-#define HEADER_PKTTRIPTIME  0x00000010
+#define HEADER_UDP_ISOCH      0x0001
+#define HEADER_L2ETHPIPV6     0x0002
+#define HEADER_L2LENCHECK     0x0004
+#define HEADER_NOUDPFIN       0x0008
+#define HEADER_PKTTRIPTIME    0x0010
+#define HEADER_TOSSTARTTIME   0x0020
+#define HEADER_ISOCH_SETTINGS 0x0040
+#define HEADER_UNITS_PPS     0x0080
 
-#define RUN_NOW         0x00000001
-// newer flags available per HEADER_EXTEND
-#define UNITS_PPS             0x00000001
-#define SEQNO64B              0x00000002
-#define REALTIME              0x00000004
-#define REVERSE               0x00000008
-#define BIDIR                 0x00000010
-#define WRITEACK              0x00000020
-#define TCP_ISOCH             0x00000040
-#define TCP_TRIPTIME          0x00000080
+#define REALTIME              0x0004
+#define REVERSE               0x0008
+#define BIDIR                 0x0010
+#define WRITEACK              0x0020
+#define TCP_ISOCH             0x0040
+#define TCP_TRIPTIME          0x0080
 
 // later features
 #define HDRXACKMAX 2500000 // default 2.5 seconds, units microseconds
@@ -151,15 +152,16 @@ struct client_hdr_v1 {
      * tradeoff modes, wheither the speaker needs to start
      * immediately or after the audience finishes.
      */
-    int32_t flags;
+    int16_t flags;
+    int16_t hdrlen;
     int32_t numThreads;
     int32_t mPort;
-    int32_t bufferlen;
+    int32_t mBufLen;
     int32_t mWinBand;
     int32_t mAmount;
 };
 
-struct client_hdrext_isoch {
+struct client_hdrext_isoch_settings {
     int32_t FPSl;
     int32_t FPSu;
     int32_t Meanl;
@@ -171,19 +173,21 @@ struct client_hdrext_isoch {
 };
 
 struct client_hdrext {
-    struct hdr_typelen typelen;
-    int32_t flags;
-    int32_t version_u;
-    int32_t version_l;
-    int32_t reserved;
-    int32_t mRate;
-    int32_t mUDPRateUnits;
-    int32_t mRealtime;
-    int32_t mTOS;
-    uint32_t start_tv_sec;
-    uint32_t start_tv_usec;
+    int16_t udpflags;
+    int16_t bothflags;
+    uint32_t version_u;
+    uint32_t version_l;
+    uint32_t reserved;
+    int32_t Rate;
+    int32_t UDPRateUnits;
+    int32_t Realtime;
 };
 
+struct client_hdrext_starttime_tos {
+    uint32_t start_tv_sec;
+    uint32_t start_tv_usec;
+    uint32_t TOS;
+};
 
 /*
  * TCP Isoch/burst payload structure
@@ -266,9 +270,8 @@ struct TCP_burst_payload {
     uint32_t reserved4;
 };
 
-
 /*
- * UDP Isoch payload structure
+ * UDP Full Isoch payload structure
  *
  *                 0      7 8     15 16    23 24    31
  *                +--------+--------+--------+--------+
@@ -278,46 +281,75 @@ struct TCP_burst_payload {
  *                +--------+--------+--------+--------+
  *      0x08  3   |             tv_usec               |
  *                +--------+--------+--------+--------+
- *      0x0c  4   |    (reserved) seqno upper         |
+ *            4   |          seqno upper              |
  *                +--------+--------+--------+--------+
- *            5   |         v1 hdr                    |
+ *            5   |         flags (v1)                |
  *                +--------+--------+--------+--------+
- *            6   |         v1 hdr (continued)        |
+ *            6   |         numThreads (v1)           |
  *                +--------+--------+--------+--------+
- *            7   |         v1 hdr (continued)        |
+ *            7   |         mPort (v1)                |
  *                +--------+--------+--------+--------+
- *            8   |         v1 hdr (continued)        |
+ *            8   |         bufferLen (v1)            |
  *                +--------+--------+--------+--------+
- *            9   |         v1 hdr (continued)        |
+ *            9   |         mWinBand (v1)             |
  *                +--------+--------+--------+--------+
- *            10  |         v1 hdr (final)            |
+ *            10  |         mAmount (v1)              |
  *                +--------+--------+--------+--------+
- *            11  | udp test flags  | tlv offset      |
+ *            11  |   UDP flags     |  both flags     |
  *                +--------+--------+--------+--------+
  *            12  |        iperf version major        |
  *                +--------+--------+--------+--------+
  *            13  |        iperf version minor        |
  *                +--------+--------+--------+--------+
- *            14  |        isoch burst period (us)    |
+ *            14  |        reserved                   |
  *                +--------+--------+--------+--------+
- *            15  |        isoch start timestamp (s)  |
+ *            15  |        rate                       |
  *                +--------+--------+--------+--------+
- *            16  |        isoch start timestamp (us) |
+ *            16  |        rate units                 |
  *                +--------+--------+--------+--------+
- *            17  |        isoch prev frameid         |
+ *            17  |        realtime   (0.13)          |
  *                +--------+--------+--------+--------+
- *            18  |        isoch frameid              |
+ *            18  |        isoch burst period (us)    |
  *                +--------+--------+--------+--------+
- *            19  |        isoch burtsize             |
+ *            19  |        isoch start timestamp (s)  |
  *                +--------+--------+--------+--------+
- *            20  |        isoch bytes remaining      |
+ *            20  |        isoch start timestamp (us) |
  *                +--------+--------+--------+--------+
- *            21  |        isoch reserved             |
+ *            21  |        isoch prev frameid         |
+ *                +--------+--------+--------+--------+
+ *            22  |        isoch frameid              |
+ *                +--------+--------+--------+--------+
+ *            23  |        isoch burtsize             |
+ *                +--------+--------+--------+--------+
+ *            24  |        isoch bytes remaining      |
+ *                +--------+--------+--------+--------+
+ *            25  |        isoch reserved             |
+ *                +--------+--------+--------+--------+
+ *            26  |        start tv_sec  (0.14)       |
+ *                +--------+--------+--------+--------+
+ *            27  |        start tv_usec              |
+ *                +--------+--------+--------+--------+
+ *            28  |        TOS                        |
+ *                +--------+--------+--------+--------+
+ *            29  |        FPSl                       |
+ *                +--------+--------+--------+--------+
+ *            30  |        FPSu                       |
+ *                +--------+--------+--------+--------+
+ *            31  |        Meanl                      |
+ *                +--------+--------+--------+--------+
+ *            32  |        Meanu                      |
+ *                +--------+--------+--------+--------+
+ *            33  |        Variancel                  |
+ *                +--------+--------+--------+--------+
+ *            34  |        Varianceu                  |
+ *                +--------+--------+--------+--------+
+ *            35  |        BurstIPGl                  |
+ *                +--------+--------+--------+--------+
+ *            36  |        BurstIPG                   |
  *                +--------+--------+--------+--------+
  *
  */
-
-struct UDP_isoch_payload {
+struct isoch_payload {
     uint32_t burstperiod; //period units microseconds
     uint32_t start_tv_sec;
     uint32_t start_tv_usec;
@@ -326,24 +358,6 @@ struct UDP_isoch_payload {
     uint32_t burstsize;
     uint32_t remaining;
     uint32_t reserved;
-};
-
-// This is used for UDP tests that don't
-// require any handshake, i.e they are stateless
-struct client_hdr_udp_tests {
-// for 32 bit systems, skip over this field
-// so it remains interoperable with 64 bit peers
-    uint16_t testflags;
-    uint16_t tlvoffset;
-    uint32_t version_u;
-    uint32_t version_l;
-    uint32_t mTOS;
-    struct client_hdrext_isoch isoch_ext;
-};
-
-struct client_hdr_udp_isoch_tests {
-    struct client_hdr_udp_tests udptests;
-    struct UDP_isoch_payload isoch;
 };
 
 struct client_hdr_ack {
@@ -355,13 +369,12 @@ struct client_hdr_ack {
     uint32_t reserved2;
 };
 
-
 /*
  * TCP first payload structure
  *
  *                 0      7 8     15 16    23 24    31
  *                +--------+--------+--------+--------+
- *      0x00  1   |             flags (v1)            |
+ *      0x00  1   |         flags (v1)                |
  *                +--------+--------+--------+--------+
  *            2   |         numThreads (v1)           |
  *                +--------+--------+--------+--------+
@@ -373,11 +386,11 @@ struct client_hdr_ack {
  *                +--------+--------+--------+--------+
  *            6   |         mAmount (v1)              |
  *                +--------+--------+--------+--------+
- *            7   |        type                       |
+ *            7   |        type (0.13)                |
  *                +--------+--------+--------+--------+
- *            8   |        len                        |
+ *            8   |        len  (0.13)                |
  *                +--------+--------+--------+--------+
- *            9   |        flags                      |
+ *            9   |        flags (0.13)               |
  *                +--------+--------+--------+--------+
  *            10  |        iperf version major        |
  *                +--------+--------+--------+--------+
@@ -389,36 +402,45 @@ struct client_hdr_ack {
  *                +--------+--------+--------+--------+
  *            14  |        rate units                 |
  *                +--------+--------+--------+--------+
- *            15  |        realtime                   |
+ *            15  |        realtime   (0.13)          |
  *                +--------+--------+--------+--------+
- *            16  |        tos                        |
+ *            16  |        start tv_sec (0.14)        |
  *                +--------+--------+--------+--------+
- *            17  |        tv_sec (start)             |
+ *            17  |        start tv_usec              |
  *                +--------+--------+--------+--------+
- *           18   |        tv_usec (start)            |
+ *            18  |        TOS                        |
+ *                +--------+--------+--------+--------+
+ *            19  |        FPSl                       |
+ *                +--------+--------+--------+--------+
+ *            20  |        FPSu                       |
+ *                +--------+--------+--------+--------+
+ *            21  |        Meanl                      |
+ *                +--------+--------+--------+--------+
+ *            22  |        Meanu                      |
+ *                +--------+--------+--------+--------+
+ *            23  |        Variancel                  |
+ *                +--------+--------+--------+--------+
+ *            24  |        Varianceu                  |
+ *                +--------+--------+--------+--------+
+ *            25  |        BurstIPGl                  |
+ *                +--------+--------+--------+--------+
+ *            26  |        BurstIPG                   |
  *                +--------+--------+--------+--------+
  */
-struct client_testhdr {
-    struct client_hdr_v1 base;
-    union {
-	struct client_hdrext extend;
-	struct client_hdr_udp_tests udp;
-    };
-};
-
-struct client_testhdr_isoch {
-    struct client_hdr_v1 base;
-    union {
-	struct client_hdrext extend;
-	struct client_hdr_udp_tests udp;
-    };
-    struct client_hdrext_isoch isoch;
-};
-
-struct client_udphdr {
+struct client_udp_testhdr {
     struct UDP_datagram seqno_ts;
     struct client_hdr_v1 base;
     struct client_hdrext extend;
+    struct isoch_payload isoch;
+    struct client_hdrext_starttime_tos start_tos;
+    struct client_hdrext_isoch_settings isoch_settings;
+};
+
+struct client_tcp_testhdr {
+    struct client_hdr_v1 base;
+    struct client_hdrext extend;
+    struct client_hdrext_starttime_tos start_tos;
+    struct client_hdrext_isoch_settings isoch_settings;
 };
 
 /*
@@ -483,10 +505,10 @@ struct server_hdr {
 #pragma pack(pop)
 
 #define SIZEOF_UDPHDRMSG_V1 (sizeof(struct client_hdrv1) + sizeof(struct UDP_datagram))
-#define SIZEOF_UDPHDRMSG_EXT (sizeof(struct client_udphdr))
+#define SIZEOF_UDPHDRMSG_EXT (sizeof(struct client_udp_testhdr))
 #define SIZEOF_TCPHDRMSG_V1 (sizeof(struct client_hdr_v1))
-#define SIZEOF_TCPHDRMSG_EXT (sizeof(struct client_testhdr))
-#define MBUFALLOCSIZE (((int) sizeof(struct client_udphdr) > mSettings->mBufLen) ? (int) sizeof(struct client_udphdr) : mSettings->mBufLen)
+#define SIZEOF_TCPHDRMSG_EXT (sizeof(struct client_tcp_testhdr))
+#define MBUFALLOCSIZE (((int) sizeof(struct client_udp_testhdr) > mSettings->mBufLen) ? (int) sizeof(struct client_udp_testhdr) : mSettings->mBufLen)
 #ifdef __cplusplus
 } /* end extern "C" */
 #endif
