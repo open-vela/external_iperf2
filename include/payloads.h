@@ -68,21 +68,19 @@ extern "C" {
 // newer flags available per HEADER_EXTEND
 // Below flags are used to pass test settings in *every* UDP packet
 // and not just during the header exchange
-#define HEADER_UDP_ISOCH      0x0001
+#define HEADER_ISOCH          0x0001
 #define HEADER_L2ETHPIPV6     0x0002
 #define HEADER_L2LENCHECK     0x0004
 #define HEADER_NOUDPFIN       0x0008
-#define HEADER_PKTTRIPTIME    0x0010
+#define HEADER_TRIPTIME       0x0010
 #define HEADER_TOSSTARTTIME   0x0020
 #define HEADER_ISOCH_SETTINGS 0x0040
-#define HEADER_UNITS_PPS     0x0080
+#define HEADER_UNITS_PPS      0x0080
 
 #define REALTIME              0x0004
 #define REVERSE               0x0008
 #define BIDIR                 0x0010
 #define WRITEACK              0x0020
-#define TCP_ISOCH             0x0040
-#define TCP_TRIPTIME          0x0080
 
 // later features
 #define HDRXACKMAX 2500000 // default 2.5 seconds, units microseconds
@@ -173,8 +171,8 @@ struct client_hdrext_isoch_settings {
 };
 
 struct client_hdrext {
-    int16_t udpflags;
-    int16_t bothflags;
+    int16_t upperflags;
+    int16_t lowerflags;
     uint32_t version_u;
     uint32_t version_l;
     uint32_t reserved;
@@ -295,7 +293,7 @@ struct TCP_burst_payload {
  *                +--------+--------+--------+--------+
  *            10  |         mAmount (v1)              |
  *                +--------+--------+--------+--------+
- *            11  |   UDP flags     |  both flags     |
+ *            11  |   up flags      |   low flags     |
  *                +--------+--------+--------+--------+
  *            12  |        iperf version major        |
  *                +--------+--------+--------+--------+

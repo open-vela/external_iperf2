@@ -1237,7 +1237,7 @@ void Settings_GetLowerCaseArg(const char *inarg, char *outarg) {
 void Settings_GenerateListenerSettings(struct thread_Settings *client, struct thread_Settings **listener) {
     if (!isCompat(client) && \
          (client->mMode == kTest_DualTest || client->mMode == kTest_TradeOff)) {
-	Settings_Copy(client, listener, 0);	
+	Settings_Copy(client, listener, 0);
 	setCompat((*listener));
         unsetDaemon((*listener));
         if (client->mListenPort != 0) {
@@ -1440,8 +1440,8 @@ int Settings_GenerateClientHdrV1(struct thread_Settings *client, struct client_h
 int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, struct timeval startTime) {
     if (isCompat(client))
 	    return 0;
-    uint16_t udpflags = 0;
-    uint16_t bothflags = 0;
+    uint16_t upperflags = 0;
+    uint16_t lowerflags = 0;
     uint16_t len = 0;
     uint32_t flags = 0;
 
@@ -1450,14 +1450,11 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
     // flags common to both TCP and UDP
     if (isReverse(client)) {
 	flags |= HEADER_EXTEND_NOACK;
-        bothflags |= REVERSE;
+        lowerflags |= REVERSE;
     }
     if (isBidir(client)) {
 	flags |= HEADER_EXTEND_NOACK;
-        bothflags |= BIDIR;
-    }
-    if (isTripTime(client)) {
-	flags |= HEADER_EXTEND_NOACK;
+        lowerflags |= BIDIR;
     }
     // Now setup UDP and TCP specific passed settings from client to server
     if (isUDP(client)) { // UDP test information passed in every packet per being stateless
@@ -1469,16 +1466,17 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	if (isL2LengthCheck(client)) {
 	    flags |= (HEADER_UDPTESTS | HEADER_EXTEND_NOACK);
 	    if (isL2LengthCheck(client)) {
-		udpflags |= HEADER_L2LENCHECK;
+		upperflags |= HEADER_L2LENCHECK;
 		if (isIPV6(client))
-		    udpflags |= HEADER_L2ETHPIPV6;
+		    upperflags |= HEADER_L2ETHPIPV6;
 	    }
 	}
 	if (isIsochronous(client)) {
 	    flags |= (HEADER_UDPTESTS | HEADER_EXTEND_NOACK) ;
-	    udpflags |= HEADER_UDP_ISOCH;
+	    upperflags |= HEADER_ISOCH;
 	    len += sizeof(struct isoch_payload);
 	    if (isBidir(client) || isReverse(client)) {
+		upperflags |= HEADER_ISOCH_SETTINGS;
 		hdr->isoch_settings.FPSl = htonl(client->mFPS);
 		hdr->isoch_settings.FPSu = htonl(((long)(client->mFPS) - (long)client->mFPS * rMillion));
 		hdr->isoch_settings.Meanl = htonl(client->mMean);
@@ -1492,11 +1490,11 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	}
 	if (isNoUDPfin(client)) {
 	    flags |= (HEADER_UDPTESTS | HEADER_EXTEND_NOACK);
-	    udpflags |= HEADER_NOUDPFIN;
+	    upperflags |= HEADER_NOUDPFIN;
 	}
 	if (isTripTime(client)) {
 	    flags |= (HEADER_UDPTESTS | HEADER_EXTEND_NOACK);
-	    udpflags |= HEADER_PKTTRIPTIME;
+	    upperflags |= HEADER_TRIPTIME;
 	    hdr->start_tos.start_tv_sec = htonl(startTime.tv_sec);
 	    hdr->start_tos.start_tv_usec = htonl(startTime.tv_usec);
 	    hdr->start_tos.TOS = htonl(client->mTOS);
@@ -1506,13 +1504,13 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	    flags |= HEADER_EXTEND_NOACK;
 	    hdr->extend.Rate = htonl(client->mUDPRate);
 	    if (client->mUDPRateUnits == kRate_PPS) {
-		udpflags |= HEADER_UNITS_PPS;
+		upperflags |= HEADER_UNITS_PPS;
 	    }
 	}
 	if (flags & HEADER_EXTEND_NOACK) {
 	    // Write flags to header so the listener can determine the tests requested
-	    hdr->extend.udpflags = htons(udpflags);
-	    hdr->extend.bothflags = htons(bothflags);
+	    hdr->extend.upperflags = htons(upperflags);
+	    hdr->extend.lowerflags = htons(lowerflags);
 	    hdr->extend.version_u = htonl(IPERF_VERSION_MAJORHEX);
 	    hdr->extend.version_l = htonl(IPERF_VERSION_MINORHEX);
 	    len += sizeof(struct client_hdrext);
@@ -1529,7 +1527,7 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	memset(hdr, 0, sizeof(struct client_tcp_testhdr));
 	// Set up trip time
 	if (isTripTime(client)) {
-	    bothflags |= TCP_TRIPTIME;
+	    upperflags |= HEADER_TRIPTIME;
 	    hdr->start_tos.start_tv_sec = htonl(startTime.tv_sec);
 	    hdr->start_tos.start_tv_usec = htonl(startTime.tv_usec);
 	    hdr->start_tos.TOS = htonl(client->mTOS);
@@ -1537,8 +1535,9 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	}
 	if (isIsochronous(client)) {
 	    flags |= HEADER_EXTEND_NOACK;
-	    bothflags |= TCP_ISOCH;
+	    upperflags |= HEADER_ISOCH;
 	    if (isBidir(client) || isReverse(client)) {
+		upperflags |= HEADER_ISOCH_SETTINGS;
 		hdr->isoch_settings.FPSl = htonl(client->mFPS);
 		hdr->isoch_settings.FPSu = htonl(((long)(client->mFPS) - (long)client->mFPS * rMillion));
 		hdr->isoch_settings.Meanl = htonl(client->mMean);
@@ -1556,8 +1555,8 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	}
 	if (flags & HEADER_EXTEND_NOACK) {
 	    // Write flags to header so the listener can determine the tests requested
-	    hdr->extend.udpflags = htonl(0x0);
-	    hdr->extend.bothflags = htonl(bothflags);
+	    hdr->extend.upperflags = htonl(0x0);
+	    hdr->extend.lowerflags = htonl(lowerflags);
 	    hdr->extend.version_u = htonl(IPERF_VERSION_MAJORHEX);
 	    hdr->extend.version_l = htonl(IPERF_VERSION_MINORHEX);
 	    len += sizeof(struct client_hdrext);
