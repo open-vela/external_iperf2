@@ -84,6 +84,7 @@ Client::Client (thread_Settings *inSettings) {
     myJob = NULL;
     myReport = NULL;
     one_report = false;
+    udp_payload_minimum = 1;
 
     memset(&scratchpad, 0, sizeof(struct ReportStruct));
     reportstruct = &scratchpad;
@@ -826,8 +827,7 @@ void Client::RunUDPIsochronous (void) {
     struct timeval prevsend = myReport->info.ts.startTime;
     struct UDP_datagram* mBuf_UDP = (struct UDP_datagram*) mBuf;
     // skip over the UDP datagram (seq no, timestamp) to reach the isoch fields
-    struct client_hdr_udp_isoch_tests *testhdr = (client_hdr_udp_isoch_tests *)(mBuf + sizeof(client_hdr_v1) + sizeof(UDP_datagram));
-    struct UDP_isoch_payload* mBuf_isoch = &(testhdr->isoch);
+    struct client_udp_testhdr *udp_payload = (client_udp_testhdr *) mBuf;
 
     double delay_target = mSettings->mBurstIPG * 1000000;  // convert from milliseconds to nanoseconds
     double delay = 0;
@@ -835,39 +835,33 @@ void Client::RunUDPIsochronous (void) {
     int currLen = 1;
     int frameid=0;
     Timestamp t1;
-    int bytecntmin;
+
     // make sure the packet can carry the isoch payload
-    if (isModeTime(mSettings)) {
-	bytecntmin = sizeof(UDP_datagram) + sizeof(client_hdr_v1) + sizeof(struct client_hdr_udp_isoch_tests);
-    } else {
-	bytecntmin = 1;
-    }
     if (!framecounter) {
 	framecounter = new Isochronous::FrameCounter(mSettings->mFPS);
     }
-    mBuf_isoch->burstperiod = htonl(framecounter->period_us());
+    udp_payload->isoch.burstperiod = htonl(framecounter->period_us());
 
     int initdone = 0;
     int fatalwrite_err = 0;
     while (InProgress() && !fatalwrite_err) {
 	int bytecnt = (int) (lognormal(mSettings->mMean,mSettings->mVariance)) / (mSettings->mFPS * 8);
-	if (bytecnt < bytecntmin)
-	    bytecnt = bytecntmin;
+	if (bytecnt < udp_payload_minimum)
+	    bytecnt = udp_payload_minimum;
 	delay = 0;
 
 	// printf("bits=%d\n", (int) (mSettings->mFPS * bytecnt * 8));
-	mBuf_isoch->burstsize  = htonl(bytecnt);
-	mBuf_isoch->prevframeid  = htonl(frameid);
+	udp_payload->isoch.burstsize  = htonl(bytecnt);
+	udp_payload->isoch.prevframeid  = htonl(frameid);
 	reportstruct->burstsize=bytecnt;
 	frameid =  framecounter->wait_tick();
-	mBuf_isoch->frameid  = htonl(frameid);
+	udp_payload->isoch.frameid  = htonl(frameid);
 	lastPacketTime.setnow();
 	if (!initdone) {
 	    initdone = 1;
-	    mBuf_isoch->start_tv_sec = htonl(framecounter->getSecs());
-	    mBuf_isoch->start_tv_usec = htonl(framecounter->getUsecs());
+	    udp_payload->isoch.start_tv_sec = htonl(framecounter->getSecs());
+	    udp_payload->isoch.start_tv_usec = htonl(framecounter->getUsecs());
 	}
-
 	while ((bytecnt > 0) && InProgress()) {
 	    t1.setnow();
 	    reportstruct->packetTime.tv_sec = t1.getSecs();
@@ -910,11 +904,11 @@ void Client::RunUDPIsochronous (void) {
 
 	    // perform write
 	    if (isModeAmount(mSettings) && (mSettings->mAmount < (unsigned) mSettings->mBufLen)) {
-	        mBuf_isoch->remaining = htonl(mSettings->mAmount);
+	        udp_payload->isoch.remaining = htonl(mSettings->mAmount);
 		reportstruct->remaining=mSettings->mAmount;
 	        currLen = write(mySocket, mBuf, mSettings->mAmount);
 	    } else {
-	        mBuf_isoch->remaining = htonl(bytecnt);
+	        udp_payload->isoch.remaining = htonl(bytecnt);
 		reportstruct->remaining=bytecnt;
 	        currLen = write(mySocket, mBuf, (bytecnt < mSettings->mBufLen) ? bytecnt : mSettings->mBufLen);
 	    }
@@ -933,9 +927,9 @@ void Client::RunUDPIsochronous (void) {
 	    } else {
 		bytecnt -= currLen;
 		// adjust bytecnt so last packet of burst is greater or equal to min packet
-		if ((bytecnt > 0) && (bytecnt < bytecntmin)) {
-		    bytecnt = bytecntmin;
-		    mBuf_isoch->burstsize  = htonl(bytecnt);
+		if ((bytecnt > 0) && (bytecnt < udp_payload_minimum)) {
+		    bytecnt = udp_payload_minimum;
+		    udp_payload->isoch.burstsize  = htonl(bytecnt);
 		    reportstruct->burstsize=bytecnt;
 		}
 	    }
@@ -1218,18 +1212,20 @@ void Client::SendFirstPayload (void) {
 	    startTime.tv_usec = now.getUsecs();
 	}
 	reportstruct->packetTime = startTime;
-        struct client_testhdr* tmp_hdr = \
-	    (isUDP(mSettings) ? (struct client_testhdr *) (((struct UDP_datagram*)mBuf) + 1) \
-	     : (struct client_testhdr *) mBuf);
-	len = Settings_GenerateClientHdr(mSettings, tmp_hdr, startTime);
-	if (len > 0) {
-	    if (isUDP(mSettings)) {
-		struct UDP_datagram * mBuf_UDP = (struct UDP_datagram *) mBuf;
+        if (isUDP(mSettings)) {
+	    len = Settings_GenerateClientHdr(mSettings, (void *) mBuf, startTime);
+	    if (len > 0) {
+		struct client_udp_testhdr *tmphdr = (struct client_udp_testhdr *) mBuf;
 		WritePacketID(reportstruct->packetID++);
-		mBuf_UDP->tv_sec  = htonl(reportstruct->packetTime.tv_sec);
-		mBuf_UDP->tv_usec = htonl(reportstruct->packetTime.tv_usec);
 		len += sizeof(struct UDP_datagram);
+		tmphdr->start_tos.start_tv_sec  = htonl(reportstruct->packetTime.tv_sec);
+		tmphdr->start_tos.start_tv_usec = htonl(reportstruct->packetTime.tv_usec);
+		udp_payload_minimum = len;
 	    }
+	} else {
+	    len = Settings_GenerateClientHdr(mSettings, (void *) mBuf, startTime);
+	}
+	if (len > 0) {
 	    if (isPeerVerDetect(mSettings)) {
 		PeerXchange(len);
 	    } else {

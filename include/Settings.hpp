@@ -249,7 +249,7 @@ struct thread_Settings {
     int32_t peer_version_u;
     int32_t peer_version_l;
     double connecttime;
-    int skipbytes;
+    int header_bytes;
 };
 
 /*
@@ -473,7 +473,7 @@ struct thread_Settings {
 void Settings_Initialize(struct thread_Settings* main);
 
 // copy structure
-void Settings_Copy(struct thread_Settings* from, struct thread_Settings** into);
+void Settings_Copy(struct thread_Settings* from, struct thread_Settings** into, int copyall);
 
 // free associated memory
 void Settings_Destroy(struct thread_Settings *mSettings);
@@ -494,11 +494,12 @@ void Settings_GetUpperCaseArg(const char *,char *);
 void Settings_GenerateListenerSettings(struct thread_Settings *client, struct thread_Settings **listener);
 
 // generate settings for speaker instance
-struct client_testhdr; // forward declaration found in payloads.h
-void Settings_GenerateClientSettings(struct thread_Settings *server, struct thread_Settings **client, struct client_testhdr *hdr);
+ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thread_Settings **client, void * mBuf);
 
 // generate client header for server
-int Settings_GenerateClientHdr(struct thread_Settings *client, struct client_testhdr *hdr, struct timeval startTime);
+int Settings_GenerateClientHdr(struct thread_Settings *client, void * hdr, struct timeval startTime);
+
+int Settings_ClientHdrPeekLen(uint32_t flags);
 
 #ifdef __cplusplus
 } /* end extern "C" */

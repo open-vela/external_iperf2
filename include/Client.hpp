@@ -111,6 +111,7 @@ private:
     double delay_lower_bounds;
     intmax_t totLen;
     bool one_report;
+    int udp_payload_minimum;
 
     // TCP plain
     void RunTCP(void);

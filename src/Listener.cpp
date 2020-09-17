@@ -202,7 +202,7 @@ void Listener::Run (void) {
 	    WARN(1, "Failed setting socket to blocking mode");
 	}
 	// Instantiate another settings object to be used by the server thread
-	Settings_Copy(mSettings, &server);
+	Settings_Copy(mSettings, &server, 1);
 	FAIL(!server, "Failed memory allocation for server settings", mSettings);
 	server->mThreadMode = kMode_Server;
 	if (!isDataReport(mSettings))
@@ -299,13 +299,11 @@ void Listener::Run (void) {
 	    //
             if (isBidir(server) || (server->mMode != kTest_Normal)) {
 		thread_Settings *listener_client_settings = NULL;
-		Settings_GenerateClientSettings(server, &listener_client_settings, \
-						(isUDP(server) ? (struct client_testhdr *) (((struct UDP_datagram*)mBuf) + 1) \
-						 : (struct client_testhdr *) mBuf));
+		Settings_GenerateClientSettings(server, &listener_client_settings, mBuf);
 		// --bidir is following iperf3 naming, it's basically a full duplex test using the same socket
 		// this is slightly different than the legacy iperf2's -d and -r.
 		assert(listener_client_settings!=NULL);
-		listener_client_settings->skipbytes = 0;
+		listener_client_settings->header_bytes = 0;
 		if (isBidir(server)) {
 		    server->mBidirReport = InitSumReport(server, server->mSock, 1);
 		    listener_client_settings->mBidirReport = server->mBidirReport;
@@ -868,7 +866,7 @@ int Listener::apply_client_settings (thread_Settings *server) {
     int n, peeklen;
     uint32_t flags = 0;
     int rc = 1;
-    server->skipbytes = 0; // used to capture the length of the listener's read
+    server->header_bytes = 0; // used to capture the length of the listener's read
     // Set the receive timeout for the very first read based upon the -t
     // and not -i.
 
@@ -890,103 +888,117 @@ int Listener::apply_client_settings (thread_Settings *server) {
     }
     server->peer_version_u = 0;
     server->peer_version_l = 0;
+
     if (isUDP(server)) {
-	peeklen = sizeof(struct client_udphdr);
-	n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK);
-	FAIL_errno((n < peeklen), "read flags", server);
-	struct client_testhdr *hdr = (struct client_testhdr *) (((struct UDP_datagram*)mBuf) + 1);
+	n = recvn(server->mSock, mBuf, sizeof(uint32_t) + sizeof(struct UDP_datagram), MSG_PEEK);
+	FAIL_errno(n != (sizeof(uint32_t) + sizeof(struct UDP_datagram)), "read udp flags", server);
+	struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) mBuf;
 	flags = ntohl(hdr->base.flags);
-	if (flags & HEADER_SEQNO64B) {
-	    setSeqNo64b(server);
-	}
-	if ((flags & HEADER_UDPTESTS) != 0) {
-	    uint16_t testflags = htons(hdr->udp.testflags);
-	    // Handle stateless flags
-	    if ((testflags & HEADER_UDP_ISOCH) != 0) {
-		setIsochronous(server);
+	// figure out the length of the test header
+	if ((peeklen = Settings_ClientHdrPeekLen(flags) + sizeof(struct UDP_datagram)) > 0) {
+	    // read the test settings passed to the server by the client
+	    n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK);
+	    FAIL_errno((n < peeklen), "read udp test hdr", server);
+	    if (flags & HEADER_SEQNO64B) {
+		setSeqNo64b(server);
 	    }
-	    if ((testflags & HEADER_L2ETHPIPV6) != 0) {
-		setIPV6(server);
-	    } else {
-		unsetIPV6(server);
+	    if (((flags & HEADER_VERSION1) != 0) && ((flags & HEADER_EXTEND_NOACK) == 0) && ((flags & HEADER_EXTEND_ACK) == 0)) {
+		server->mMode = kTest_TradeOff;
 	    }
-	    if ((testflags & HEADER_L2LENCHECK) != 0) {
-		setL2LengthCheck(server);
+	    if ((flags & HEADER_UDPTESTS) != 0) {
+		uint16_t testflags = htons(hdr->extend.udpflags);
+		// Handle stateless flags
+		if ((testflags & HEADER_UDP_ISOCH) != 0) {
+		    setIsochronous(server);
+		}
+		if ((testflags & HEADER_L2ETHPIPV6) != 0) {
+		    setIPV6(server);
+		} else {
+		    unsetIPV6(server);
+		}
+		if ((testflags & HEADER_L2LENCHECK) != 0) {
+		    setL2LengthCheck(server);
+		}
+		if ((testflags & HEADER_NOUDPFIN) != 0) {
+		    setNoUDPfin(server);
+		}
+		if ((testflags & HEADER_PKTTRIPTIME) != 0) {
+		    setTripTime(server);
+		    server->triptime_start.tv_sec = ntohl(hdr->start_tos.start_tv_sec);
+		    server->triptime_start.tv_usec = ntohl(hdr->start_tos.start_tv_usec);
+		    server->mTOS = ntohl(hdr->start_tos.TOS);
+		    Timestamp now;
+		    if (TimeZero(server->triptime_start) || (abs(now.getSecs() - server->triptime_start.tv_sec) > MAXDIFFTIMESTAMPSECS)) {
+			fprintf(stdout,"ERROR: dropping connection because --trip-times set but client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
+			rc = 0;
+		    }
+		}
 	    }
-	    if ((testflags & HEADER_NOUDPFIN) != 0) {
-		setNoUDPfin(server);
+	    if (flags & (HEADER_EXTEND_NOACK | HEADER_EXTEND_NOACK | HEADER_UDPTESTS)) {
+		server->peer_version_u = ntohl(hdr->extend.version_u);
+		server->peer_version_l = ntohl(hdr->extend.version_l);
 	    }
-	    if ((testflags & HEADER_PKTTRIPTIME) != 0) {
-		setTripTime(server);
-		struct UDP_datagram *udppkt = (struct UDP_datagram*) mBuf;
-		server->triptime_start.tv_sec = ntohl(udppkt->tv_sec);
-		server->triptime_start.tv_usec = ntohl(udppkt->tv_usec);
-	    }
-	}
-	if (flags & HEADER_EXTEND_NOACK) {
-	    server->peer_version_u = ntohl(hdr->udp.version_u);
-	    server->peer_version_l = ntohl(hdr->udp.version_l);
 	}
     } else {
 	n = recvn(server->mSock, mBuf, sizeof(uint32_t), MSG_PEEK);
 	FAIL_errno((n != sizeof(uint32_t)), "read tcp flags", server);
-	struct client_testhdr *hdr = (struct client_testhdr *) mBuf;
+	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) mBuf;
 	flags = ntohl(hdr->base.flags);
-	peeklen = 0;
-	uint32_t extendflags = 0;
-	if (flags & HEADER_VERSION1) {
-	    peeklen = sizeof(struct client_hdr_v1);
-	}
-	if (flags & (HEADER_EXTEND_ACK | HEADER_EXTEND_NOACK)) {
-	    peeklen += sizeof(struct client_hdrext);
-	}
-	if (((flags & HEADER_VERSION1) != 0) && ((flags & HEADER_EXTEND_NOACK) == 0) && ((flags & HEADER_EXTEND_ACK) == 0)) {
-            server->mMode = kTest_TradeOff;
-	}
-	if (peeklen && ((n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK)) != peeklen)) {
-	    FAIL_errno(1, "read tcp test info", server);
-	}
-	if (flags & (HEADER_EXTEND_ACK | HEADER_EXTEND_NOACK)) {
-	    server->peer_version_u = ntohl(hdr->extend.version_u);
-	    server->peer_version_l = ntohl(hdr->extend.version_l);
-	    extendflags = ntohl(hdr->extend.flags);
-	    if ((extendflags & TCP_TRIPTIME) != 0) {
-		setTripTime(server);
-		server->triptime_start.tv_sec = ntohl(hdr->extend.start_tv_sec);
-		server->triptime_start.tv_usec = ntohl(hdr->extend.start_tv_usec);
-		Timestamp now;
-		#define MAXDIFFTIMESTAMPSECS 60
-		if (TimeZero(server->triptime_start) || (abs(now.getSecs() - server->triptime_start.tv_sec) > MAXDIFFTIMESTAMPSECS)) {
-		    fprintf(stdout,"ERROR: dropping connection because --trip-times set but client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
-		    rc = 0;
+	// figure out the length of the test header
+	if ((peeklen = Settings_ClientHdrPeekLen(flags)) > 0) {
+	    peeklen = Settings_ClientHdrPeekLen(flags);
+	    // read the test settings passed to the server by the client
+	    n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK);
+	    FAIL_errno((n < peeklen), "read udp test hdr", server);
+	    n = recvn(server->mSock, mBuf, sizeof(uint32_t) + sizeof(struct UDP_datagram), MSG_PEEK);
+	    FAIL_errno((n != sizeof(uint32_t)), "read tcp flags", server);
+	    struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) mBuf;
+	    if (peeklen && ((n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK)) != peeklen)) {
+		FAIL_errno(1, "read tcp test info", server);
+	    }
+	    if (flags & (HEADER_EXTEND_ACK | HEADER_EXTEND_NOACK)) {
+		uint32_t extendflags = 0;
+		server->peer_version_u = ntohl(hdr->extend.version_u);
+		server->peer_version_l = ntohl(hdr->extend.version_l);
+		extendflags = ntohl(hdr->extend.bothflags);
+		if ((extendflags & TCP_TRIPTIME) != 0) {
+		    setTripTime(server);
+		    server->triptime_start.tv_sec = ntohl(hdr->start_tos.start_tv_sec);
+		    server->triptime_start.tv_usec = ntohl(hdr->start_tos.start_tv_usec);
+		    server->mTOS = ntohl(hdr->start_tos.TOS);
+		    Timestamp now;
+		    if (TimeZero(server->triptime_start) || (abs(now.getSecs() - server->triptime_start.tv_sec) > MAXDIFFTIMESTAMPSECS)) {
+			fprintf(stdout,"ERROR: dropping connection because --trip-times set but client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
+			rc = 0;
+		    }
+		    assert(server->triptime_start.tv_sec != 0);
+		    assert(server->triptime_start.tv_usec != 0);
 		}
-		assert(server->triptime_start.tv_sec != 0);
-		assert(server->triptime_start.tv_usec != 0);
-	    }
-	    if ((extendflags & TCP_ISOCH) != 0) {
-		setIsochronous(server);
-	    }
-	    if ((extendflags & BIDIR) != 0) {
-		setBidir(server);
-	    }
-	    if ((extendflags & REVERSE) != 0) {
-		server->mThreadMode=kMode_Client;
-		setServerReverse(server);
-	    }
-	    server->mAmount = ntohl(hdr->base.mAmount);
-	    if ((server->mAmount & 0x80000000) > 0) {
-		setModeTime(server);
+		if ((extendflags & TCP_ISOCH) != 0) {
+		    setIsochronous(server);
+		}
+		if ((extendflags & BIDIR) != 0) {
+		    setBidir(server);
+		}
+		if ((extendflags & REVERSE) != 0) {
+		    server->mThreadMode=kMode_Client;
+		    setServerReverse(server);
+		}
+		server->mAmount = ntohl(hdr->base.mAmount);
+		if ((server->mAmount & 0x80000000) > 0) {
+		    setModeTime(server);
 #ifndef WIN32
-		server->mAmount |= 0xFFFFFFFF00000000LL;
+		    server->mAmount |= 0xFFFFFFFF00000000LL;
 #else
-		server->mAmount |= 0xFFFFFFFF00000000;
+		    server->mAmount |= 0xFFFFFFFF00000000;
 #endif
-		server->mAmount = -server->mAmount;
-	    } else {
-		unsetModeTime(server);
+		    server->mAmount = -server->mAmount;
+		} else {
+		    unsetModeTime(server);
+		}
 	    }
+	    server->header_bytes = peeklen;
 	}
-	server->skipbytes = peeklen;
     }
     // Handle case that requires an ack back to the client
     if ((flags & HEADER_EXTEND_ACK) != 0) {
