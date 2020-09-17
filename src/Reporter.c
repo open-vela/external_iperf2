@@ -1518,7 +1518,8 @@ int reporter_condprint_time_interval_report (struct ReporterData *data, struct R
 	}
         // In the (hopefully unlikely event) the reporter fell behind
         // ouput the missed reports to catch up
-	reporter_transfer_protocol_missed_reports(stats, packet);
+	if (stats->output_handler)
+	    reporter_transfer_protocol_missed_reports(stats, packet);
     }
     return advance_jobq;
 }
