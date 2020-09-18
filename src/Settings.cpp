@@ -1530,6 +1530,7 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	memset(hdr, 0, sizeof(struct client_tcp_testhdr));
 	// Set up trip time
 	if (isTripTime(client)) {
+	    flags |= HEADER_EXTEND_NOACK;
 	    upperflags |= HEADER_TRIPTIME;
 	    hdr->start_tos.start_tv_sec = htonl(startTime.tv_sec);
 	    hdr->start_tos.start_tv_usec = htonl(startTime.tv_usec);
