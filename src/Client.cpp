@@ -1217,24 +1217,22 @@ void Client::SendFirstPayload (void) {
 	    if (len > 0) {
 		struct client_udp_testhdr *tmphdr = (struct client_udp_testhdr *) mBuf;
 		WritePacketID(reportstruct->packetID++);
-		len += sizeof(struct UDP_datagram);
 		tmphdr->start_tos.start_tv_sec  = htonl(reportstruct->packetTime.tv_sec);
 		tmphdr->start_tos.start_tv_usec = htonl(reportstruct->packetTime.tv_usec);
 		udp_payload_minimum = len;
 	    }
 	} else {
 	    len = Settings_GenerateClientHdr(mSettings, (void *) mBuf, startTime);
-	}
-	if (len > 0) {
-	    if (isPeerVerDetect(mSettings)) {
-		PeerXchange(len);
-	    } else {
-		currLen = send(mySocket, mBuf, len, 0);
-		WARN_errno(currLen < 0, "send_hdr");
-		reportstruct->packetLen = len;
-		ReportPacket(myReport, reportstruct);
+	    if (len > 0) {
+		if (isPeerVerDetect(mSettings)) {
+		    PeerXchange(len);
+		}
 	    }
 	}
+	currLen = send(mySocket, mBuf, len, 0);
+	WARN_errno(currLen < 0, "send_hdr");
+	reportstruct->packetLen = len;
+	ReportPacket(myReport, reportstruct);
     }
 }
 
