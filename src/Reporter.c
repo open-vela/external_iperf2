@@ -1288,6 +1288,7 @@ void reporter_transfer_protocol_server_tcp (struct ReporterData *data, int final
         }
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
         stats->cntBytes = stats->total.Bytes.current;
+	stats->IPGsum = stats->ts.iEnd;
         stats->sock_callstats.read.cntRead = stats->sock_callstats.read.totcntRead;
         for (ix = 0; ix < TCPREADBINCOUNT; ix++) {
 	    stats->sock_callstats.read.bins[ix] = stats->sock_callstats.read.totbins[ix];
