@@ -1518,6 +1518,7 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	    if (!(flags & HEADER_EXTEND_NOACK) && (client->mMode == kTest_DualTest))
 		flags |= RUN_NOW;
 	}
+	len += sizeof(struct UDP_datagram);
 	hdr->base.flags = htonl(flags | ((len << 1) & 0xFFFE));
 	hdr->base.flags = htonl(flags | ((len << 1) & 0xFFFE));
     } else { // TCP first write with test information
