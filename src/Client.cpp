@@ -154,7 +154,9 @@ void Client::my_connect (void) {
     WARN_errno(mySocket == INVALID_SOCKET, "socket");
     // Socket is carried both by the object and the thread
     mSettings->mSock=mySocket;
-    if (mSettings->mThreads > 1) {
+    if ((mSettings->mThreads > 1) && !(isReverse(mSettings) && !(isBidir(mSettings))) {
+	// in the case of reverse the server side summing is
+	// all that's needed
 	Iperf_push_host(&mSettings->peer, mSettings);
     };
     SetSocketOptions(mSettings);
