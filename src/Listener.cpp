@@ -951,7 +951,7 @@ int Listener::apply_client_settings (thread_Settings *server) {
 	}
     } else {
 	n = recvn(server->mSock, mBuf, sizeof(uint32_t), MSG_PEEK);
-	FAIL_errno((n != sizeof(uint32_t)), "read tcp flags", server);
+	FAIL_errno((n < sizeof(uint32_t)), "read tcp flags", server);
 	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) mBuf;
 	flags = ntohl(hdr->base.flags);
 	// figure out the length of the test header
@@ -959,13 +959,8 @@ int Listener::apply_client_settings (thread_Settings *server) {
 	    peeklen = Settings_ClientHdrPeekLen(flags);
 	    // read the test settings passed to the server by the client
 	    n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK);
-	    FAIL_errno((n < peeklen), "read udp test hdr", server);
-	    n = recvn(server->mSock, mBuf, sizeof(uint32_t) + sizeof(struct UDP_datagram), MSG_PEEK);
-	    FAIL_errno((n != sizeof(uint32_t)), "read tcp flags", server);
+	    FAIL_errno((n < peeklen), "read tcp test info", server);
 	    struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) mBuf;
-	    if (peeklen && ((n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK)) != peeklen)) {
-		FAIL_errno(1, "read tcp test info", server);
-	    }
 	    if (flags & (HEADER_EXTEND_ACK | HEADER_EXTEND_NOACK)) {
 		uint16_t upperflags = htons(hdr->extend.upperflags);
 		uint16_t lowerflags = htons(hdr->extend.lowerflags);
