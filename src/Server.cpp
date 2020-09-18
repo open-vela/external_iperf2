@@ -75,7 +75,7 @@
  * Stores connected socket and socket info.
  * ------------------------------------------------------------------- */
 
-Server::Server( thread_Settings *inSettings ) {
+Server::Server (thread_Settings *inSettings) {
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Server constructor with thread=%p multihdr=%p(sock=%d)", (void *) inSettings, (void *)inSettings->mSumReport, inSettings->mSock);
 #endif
@@ -123,7 +123,7 @@ Server::Server( thread_Settings *inSettings ) {
 	timeout.tv_sec = sorcvtimer / 1000000;
 	timeout.tv_usec = sorcvtimer % 1000000;
 #endif
-	if (setsockopt( mSettings->mSock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0 ) {
+	if (setsockopt(mSettings->mSock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
 	    WARN_errno(mSettings->mSock == SO_RCVTIMEO, "socket");
 	}
     }
@@ -139,7 +139,7 @@ Server::~Server (void) {
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
     if (myDropSocket != INVALID_SOCKET) {
 	int rc = close(myDropSocket);
-	WARN_errno( rc == SOCKET_ERROR, "server close drop" );
+	WARN_errno(rc == SOCKET_ERROR, "server close drop");
 	myDropSocket = INVALID_SOCKET;
     }
 #endif
@@ -301,7 +301,7 @@ void Server::InitKernelTimeStamping (void) {
 
     int timestampOn = 1;
     if (setsockopt(mSettings->mSock, SOL_SOCKET, SO_TIMESTAMP, (int *) &timestampOn, sizeof(timestampOn)) < 0) {
-	WARN_errno( mSettings->mSock == SO_TIMESTAMP, "socket" );
+	WARN_errno(mSettings->mSock == SO_TIMESTAMP, "socket");
     }
 #endif
 }
@@ -387,11 +387,9 @@ void Server::InitTrafficLoop (void) {
 	    mSettings->triptime_start.tv_sec = ntohl(burst_info.send_tt.write_tv_sec);
 	    mSettings->triptime_start.tv_usec = ntohl(burst_info.send_tt.write_tv_usec);
 	    Timestamp now;
-#define MAXDIFFTIMESTAMPSECS 60
 	    if (TimeZero(mSettings->triptime_start) || (abs(now.getSecs() - mSettings->triptime_start.tv_sec) > MAXDIFFTIMESTAMPSECS)) {
-		fprintf(stdout,"ERROR: dropping connection because --trip-times set but client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
-		close(mSettings->mSock);
-		assert(0);
+		unsetTripTime(mSettings);
+		fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
 	    }
 	}
     }
@@ -416,7 +414,7 @@ void Server::InitTrafficLoop (void) {
 	it.it_value.tv_usec = (int) (10000 * (mSettings->mAmount -
 					      it.it_value.tv_sec * 100.0));
 	err = setitimer(ITIMER_REAL, &it, NULL);
-	FAIL_errno( err != 0, "setitimer", mSettings );
+	FAIL_errno(err != 0, "setitimer", mSettings);
 #endif
         mEndTime.setnow();
         mEndTime.add(mSettings->mAmount / 100.0);
@@ -441,7 +439,7 @@ inline int Server::ReadWithRxTimestamp (int *readerr) {
 
 #if HAVE_DECL_SO_TIMESTAMP
     cmsg = (struct cmsghdr *) &ctrl;
-    currLen = recvmsg( mSettings->mSock, &message, mSettings->recvflags );
+    currLen = recvmsg(mSettings->mSock, &message, mSettings->recvflags);
     if (currLen > 0) {
 	if (cmsg->cmsg_level == SOL_SOCKET &&
 	    cmsg->cmsg_type  == SCM_TIMESTAMP &&
@@ -451,7 +449,7 @@ inline int Server::ReadWithRxTimestamp (int *readerr) {
 	}
     }
 #else
-    currLen = recv( mSettings->mSock, mBuf, mSettings->mBufLen, mSettings->recvflags);
+    currLen = recv(mSettings->mSock, mBuf, mSettings->mBufLen, mSettings->recvflags);
 #endif
     if (currLen <=0) {
 	// Socket read timeout or read error
@@ -464,8 +462,8 @@ inline int Server::ReadWithRxTimestamp (int *readerr) {
 #else
 	    (errno != EAGAIN && errno != EWOULDBLOCK)
 #endif
-	    ) {
-	    WARN_errno( currLen, "recvmsg");
+	   ) {
+	    WARN_errno(currLen, "recvmsg");
 	    *readerr = 1;
 	}
 	currLen= 0;
@@ -508,8 +506,8 @@ inline bool Server::ReadPacketID (void) {
       terminate = true;
     }
     // read the sent timestamp from the rx packet
-    reportstruct->sentTime.tv_sec = ntohl( mBuf_UDP->tv_sec  );
-    reportstruct->sentTime.tv_usec = ntohl( mBuf_UDP->tv_usec );
+    reportstruct->sentTime.tv_sec = ntohl(mBuf_UDP->tv_sec);
+    reportstruct->sentTime.tv_usec = ntohl(mBuf_UDP->tv_usec);
     return terminate;
 }
 
@@ -552,7 +550,7 @@ void Server::L2_processing (void) {
 
 // Run the L2 packet through a quintuple check, i.e. proto/ip src/ip dst/src port/src dst
 // and return zero is there is a match, otherwize return nonzero
-int Server::L2_quintuple_filter(void) {
+int Server::L2_quintuple_filter (void) {
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
 
 #define IPV4SRCOFFSET 12  // the ipv4 source address offset from the l3 pdu
@@ -653,7 +651,7 @@ inline void Server::udp_isoch_processing (int rxlen) {
  * Sends termination flag several times at the end.
  * Does not close the socket.
  * ------------------------------------------------------------------- */
-void Server::RunUDP( void ) {
+void Server::RunUDP (void) {
     int rxlen;
     int readerr = 0;
     bool lastpacket = 0;
