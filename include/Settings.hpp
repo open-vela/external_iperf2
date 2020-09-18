@@ -81,6 +81,8 @@ extern "C" {
 #endif
 
 #define SLOPSECS 2
+#define MAXDIFFTIMESTAMPSECS 60
+#define MAXDIFFTXSTART 3600
 
 // server/client mode
 enum ThreadMode {

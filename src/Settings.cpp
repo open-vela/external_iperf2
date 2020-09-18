@@ -824,14 +824,6 @@ void Settings_Interpret(char option, const char *optarg, struct thread_Settings 
 		    if ((now.getSecs() - seconds) > 0) {
 			fprintf(stderr, "WARNING: start time of before now ignored\n");
 			unsetTxStartTime(mExtSettings);
-		    } else if (seconds - (now.getSecs()) > (6 * 3600)) {
-			int hours = (seconds - now.getSecs()) / 3600;
-			fprintf(stdout, "WARNING: start time %d hour(s) from now, continue (Y/N)? ", hours);
-			char ans;
-			scanf("%c", &ans);
-			if (!(ans == 'y' || ans == 'Y')) {
-			    exit(1);
-			}
 		    }
 		    break;
 		default:
