@@ -1201,37 +1201,33 @@ void Client::AwaitServerCloseEvent (void) {
 
 void Client::SendFirstPayload (void) {
     if (!isCompat(mSettings) && !isConnectOnly(mSettings)) {
-	int currLen = 0;
 	int len = 0;
-	struct timeval startTime;
 	if (myReport && !TimeZero(myReport->info.ts.startTime)) {
-	    startTime = myReport->info.ts.startTime;
+	    reportstruct->packetTime = myReport->info.ts.startTime;
 	} else {
 	    now.setnow();
-	    startTime.tv_sec = now.getSecs();
-	    startTime.tv_usec = now.getUsecs();
+	    reportstruct->packetTime.tv_sec = now.getSecs();
+	    reportstruct->packetTime.tv_usec = now.getUsecs();
 	}
-	reportstruct->packetTime = startTime;
         if (isUDP(mSettings)) {
-	    len = Settings_GenerateClientHdr(mSettings, (void *) mBuf, startTime);
+	    len = Settings_GenerateClientHdr(mSettings, (void *) mBuf, reportstruct->packetTime);
 	    if (len > 0) {
 		struct client_udp_testhdr *tmphdr = (struct client_udp_testhdr *) mBuf;
 		WritePacketID(reportstruct->packetID++);
-		tmphdr->start_tos.start_tv_sec  = htonl(reportstruct->packetTime.tv_sec);
-		tmphdr->start_tos.start_tv_usec = htonl(reportstruct->packetTime.tv_usec);
+		tmphdr->seqno_ts.tv_sec  = htonl(reportstruct->packetTime.tv_sec);
+		tmphdr->seqno_ts.tv_usec = htonl(reportstruct->packetTime.tv_usec);
 		udp_payload_minimum = len;
 	    }
 	} else {
-	    len = Settings_GenerateClientHdr(mSettings, (void *) mBuf, startTime);
+	    len = Settings_GenerateClientHdr(mSettings, (void *) mBuf, reportstruct->packetTime);
 	    if (len > 0) {
 		if (isPeerVerDetect(mSettings)) {
 		    PeerXchange(len);
 		}
 	    }
 	}
-	currLen = send(mySocket, mBuf, len, 0);
-	WARN_errno(currLen < 0, "send_hdr");
-	reportstruct->packetLen = len;
+	reportstruct->packetLen = send(mySocket, mBuf, len, 0);
+	WARN_errno(reportstruct->packetLen < 0, "send_hdr");
 	ReportPacket(myReport, reportstruct);
     }
 }

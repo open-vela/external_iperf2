@@ -872,13 +872,13 @@ int Listener::apply_client_settings (thread_Settings *server) {
 
 #ifdef WIN32
     int sorcvtimer = 2000;
-    if (isModeTime(server)) {
+    if (isServerModeTime(server)) {
 	// Windows SO_RCVTIMEO uses ms
 	DWORD timeout = (double) sorcvtimer / 1e3;
     }
 #else
     struct timeval timeout = {.tv_sec = 2, .tv_usec = 0};
-    if (isModeTime(server)) {
+    if (isServerModeTime(server)) {
 	timeout.tv_sec = server->mAmount / 100;
 	timeout.tv_usec = (server->mAmount % 100) * 10000;
     }
@@ -894,14 +894,14 @@ int Listener::apply_client_settings (thread_Settings *server) {
 	FAIL_errno(n != (sizeof(uint32_t) + sizeof(struct UDP_datagram)), "read udp flags", server);
 	struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) mBuf;
 	flags = ntohl(hdr->base.flags);
+	if (flags & HEADER_SEQNO64B) {
+	    setSeqNo64b(server);
+	}
 	// figure out the length of the test header
 	if ((peeklen = Settings_ClientHdrPeekLen(flags) + sizeof(struct UDP_datagram)) > 0) {
 	    // read the test settings passed to the server by the client
 	    n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK);
 	    FAIL_errno((n < peeklen), "read udp test hdr", server);
-	    if (flags & HEADER_SEQNO64B) {
-		setSeqNo64b(server);
-	    }
 	    if (((flags & HEADER_VERSION1) != 0) && ((flags & HEADER_EXTEND_NOACK) == 0) && ((flags & HEADER_EXTEND_ACK) == 0)) {
 		server->mMode = kTest_TradeOff;
 	    }
@@ -932,14 +932,14 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		    unsetReport(server);
 		}
 		if ((upperflags & HEADER_TRIPTIME) != 0) {
-		    setTripTime(server);
 		    server->triptime_start.tv_sec = ntohl(hdr->start_tos.start_tv_sec);
 		    server->triptime_start.tv_usec = ntohl(hdr->start_tos.start_tv_usec);
 		    server->mTOS = ntohl(hdr->start_tos.TOS);
 		    Timestamp now;
 		    if (TimeZero(server->triptime_start) || (abs(now.getSecs() - server->triptime_start.tv_sec) > MAXDIFFTIMESTAMPSECS)) {
-			fprintf(stdout,"WARN: --trip-times set but client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
-			unsetTripTime(server);
+			fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
+		    } else {
+			setTripTime(server);
 		    }
 		}
 	    }
