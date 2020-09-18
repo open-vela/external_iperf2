@@ -357,6 +357,15 @@ struct isoch_payload {
     uint32_t reserved;
 };
 
+struct client_udp_testhdr {
+    struct UDP_datagram seqno_ts;
+    struct client_hdr_v1 base;
+    struct client_hdrext extend;
+    struct isoch_payload isoch;
+    struct client_hdrext_starttime_tos start_tos;
+    struct client_hdrext_isoch_settings isoch_settings;
+};
+
 struct client_hdr_ack {
     struct hdr_typelen typelen;
     uint32_t flags;
@@ -424,15 +433,6 @@ struct client_hdr_ack {
  *            26  |        BurstIPG                   |
  *                +--------+--------+--------+--------+
  */
-struct client_udp_testhdr {
-    struct UDP_datagram seqno_ts;
-    struct client_hdr_v1 base;
-    struct client_hdrext extend;
-    struct isoch_payload isoch;
-    struct client_hdrext_starttime_tos start_tos;
-    struct client_hdrext_isoch_settings isoch_settings;
-};
-
 struct client_tcp_testhdr {
     struct client_hdr_v1 base;
     struct client_hdrext extend;

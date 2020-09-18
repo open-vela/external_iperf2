@@ -940,6 +940,7 @@ int Listener::apply_client_settings (thread_Settings *server) {
 			fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
 		    } else {
 			setTripTime(server);
+			setEnhanced(server);
 		    }
 		}
 	    }
@@ -971,17 +972,16 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		server->peer_version_u = ntohl(hdr->extend.version_u);
 		server->peer_version_l = ntohl(hdr->extend.version_l);
 		if ((upperflags & HEADER_TRIPTIME) != 0) {
-		    setTripTime(server);
 		    server->triptime_start.tv_sec = ntohl(hdr->start_tos.start_tv_sec);
 		    server->triptime_start.tv_usec = ntohl(hdr->start_tos.start_tv_usec);
 		    server->mTOS = ntohl(hdr->start_tos.TOS);
 		    Timestamp now;
 		    if (TimeZero(server->triptime_start) || (abs(now.getSecs() - server->triptime_start.tv_sec) > MAXDIFFTIMESTAMPSECS)) {
-			fprintf(stdout,"ERROR: dropping connection because --trip-times set but client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
-			rc = 0;
+			fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
+		    } else {
+			setTripTime(server);
+			setEnhanced(server);
 		    }
-		    assert(server->triptime_start.tv_sec != 0);
-		    assert(server->triptime_start.tv_usec != 0);
 		}
 		if ((upperflags & HEADER_ISOCH) != 0) {
 		    setIsochronous(server);
