@@ -1060,6 +1060,7 @@ static inline void reporter_reset_transfer_stats_server_tcp (struct TransferInfo
     stats->transit.vdTransit = 0;
     stats->transit.meanTransit = 0;
     stats->transit.m2Transit = 0;
+    stats->IPGsum = 0;
 }
 static inline void reporter_reset_transfer_stats_server_udp (struct TransferInfo *stats) {
     // Reset the enhanced stats for the next report interval
