@@ -951,7 +951,7 @@ int Listener::apply_client_settings (thread_Settings *server) {
 	}
     } else {
 	n = recvn(server->mSock, mBuf, sizeof(uint32_t), MSG_PEEK);
-	FAIL_errno((n < sizeof(uint32_t)), "read tcp flags", server);
+	FAIL_errno((n < (int) sizeof(uint32_t)), "read tcp flags", server);
 	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) mBuf;
 	flags = ntohl(hdr->base.flags);
 	// figure out the length of the test header
