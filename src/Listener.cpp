@@ -938,8 +938,8 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		    server->mTOS = ntohl(hdr->start_tos.TOS);
 		    Timestamp now;
 		    if (TimeZero(server->triptime_start) || (abs(now.getSecs() - server->triptime_start.tv_sec) > MAXDIFFTIMESTAMPSECS)) {
-			fprintf(stdout,"ERROR: dropping connection because --trip-times set but client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
-			rc = 0;
+			fprintf(stdout,"WARN: --trip-times set but client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
+			unsetTripTime(server);
 		    }
 		}
 	    }
