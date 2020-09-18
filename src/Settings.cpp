@@ -1317,83 +1317,91 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
     assert(server != NULL);
     assert(mBuf != NULL);
     bool v1test = false;
-    uint32_t flags = 0x0;
-    uint32_t extendflags = 0x0;
+    uint32_t flags = isUDP(server) ? ntohl(*(uint32_t *)((char *)mBuf + sizeof(struct UDP_datagram))) : ntohl(*(uint32_t *)mBuf);
+    uint16_t upperflags = 0;
+    thread_Settings *reversed_thread = NULL;
+    v1test = (((flags & HEADER_VERSION1) != 0) && ((flags & HEADER_EXTEND_NOACK) == 0) && ((flags & HEADER_EXTEND_ACK) == 0));
+    if (!(isBidir(server) || isServerReverse(server) || v1test)) {
+	*client = NULL;
+	return;
+    } else if (isBidir(server) || v1test) {
+	Settings_Copy(server, client, 0);
+	reversed_thread = *client;
+    } else if (isServerReverse(server)) {
+	reversed_thread = server;
+    }
     if (isUDP(server)) { // UDP test information passed in every packet per being stateless
 	struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) mBuf;
-	flags = ntohl(hdr->base.flags);
-	v1test = (((flags & HEADER_VERSION1) != 0) && ((flags & HEADER_EXTEND_NOACK) == 0) && ((flags & HEADER_EXTEND_ACK) == 0));
-	if (!(isBidir(server) || isServerReverse(server) || v1test)) {
-	    *client = NULL;
-	    return;
-	} else {
-	    Settings_Copy(server, client, 0);
-	    (*client)->mThreadMode = kMode_Client;
-	    if ((flags & HEADER_VERSION1) != 0) {
-		Settings_ReadClientSettingsV1(client, &hdr->base);
-		if (v1test)
-		    (*client)->mMode = ((flags & RUN_NOW) == 0 ? kTest_TradeOff : kTest_DualTest);
-		else
-		    (*client)->mMode = kTest_Normal;
-	    }
-	    if (isIsochronous(server) && (isBidir(server) || isReverse(server))) {
-		Settings_ReadClientSettingsIsoch(client, &hdr->isoch_settings);
-	    }
-	    if ((flags & HEADER_EXTEND_NOACK) || (flags & HEADER_EXTEND_ACK)) {
+	reversed_thread->mThreadMode = kMode_Client;
+	if ((flags & HEADER_VERSION1) != 0) {
+	    Settings_ReadClientSettingsV1(&reversed_thread, &hdr->base);
+	    if (v1test)
+		reversed_thread->mMode = ((flags & RUN_NOW) == 0 ? kTest_TradeOff : kTest_DualTest);
+	    else
+		reversed_thread->mMode = kTest_Normal;
+	}
+	if (isIsochronous(server) && (isBidir(server) || isServerReverse(server))) {
+	    Settings_ReadClientSettingsIsoch(&reversed_thread, &hdr->isoch_settings);
+	}
+	if ((flags & HEADER_EXTEND_NOACK) || (flags & HEADER_EXTEND_ACK)) {
+	    upperflags = ntohs(hdr->extend.upperflags);
+	    reversed_thread->mTOS = ntohs(hdr->extend.tos);
+	    if (isBidir(server) || isServerReverse(server))
+		reversed_thread->mUDPRate = ntohl(hdr->extend.Rate);
+	    else
+		server->mUDPRate = ntohl(hdr->extend.Rate);
+	    if ((upperflags & HEADER_UNITS_PPS) == HEADER_UNITS_PPS) {
 		if (isBidir(server))
-		    (*client)->mUDPRate = ntohl(hdr->extend.Rate);
+		    reversed_thread->mUDPRateUnits = kRate_PPS;
 		else
-		    server->mUDPRate = ntohl(hdr->extend.Rate);
-		if ((extendflags & HEADER_UNITS_PPS) == HEADER_UNITS_PPS) {
-		    if (isBidir(server))
-			(*client)->mUDPRateUnits = kRate_PPS;
-		    else
-			server->mUDPRateUnits = kRate_PPS;
-		} else {
-		    if (isBidir(server))
-			(*client)->mUDPRateUnits = kRate_BW;
-		    else
-			server->mUDPRateUnits = kRate_BW;
-		}
+		    server->mUDPRateUnits = kRate_PPS;
+	    } else {
+		if (isBidir(server))
+		    reversed_thread->mUDPRateUnits = kRate_BW;
+		else
+		    server->mUDPRateUnits = kRate_BW;
+	    }
+	    if (upperflags & HEADER_FQRATESET) {
+		setFQPacing(reversed_thread);
+		reversed_thread->mFQPacingRate = ntohl(hdr->start_fq.fqrate);
 	    }
 	}
     } else {
 	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) mBuf;
-	flags = ntohl(hdr->base.flags);
-	v1test = (((flags & HEADER_VERSION1) != 0) && ((flags & HEADER_EXTEND_NOACK) == 0) && ((flags & HEADER_EXTEND_ACK) == 0));
-	if (!(isBidir(server) || isServerReverse(server) || v1test)) {
-	    *client = NULL;
-	    return;
-	} else {
-	    Settings_Copy(server, client, 0);
-	    (*client)->mThreadMode = kMode_Client;
-	    if ((flags & HEADER_VERSION1) != 0) {
-		Settings_ReadClientSettingsV1(client, &hdr->base);
-		if (v1test)
-		    (*client)->mMode = ((flags & RUN_NOW) == 0 ? kTest_TradeOff : kTest_DualTest);
-		else
-		    (*client)->mMode = kTest_Normal;
-	    }
-	    if (isIsochronous(server) && (isBidir(server) || isReverse(server))) {
-		Settings_ReadClientSettingsIsoch(client, &hdr->isoch_settings);
-	    }
-	    if ((flags & HEADER_EXTEND_NOACK) || (flags & HEADER_EXTEND_ACK)) {
-		if (isBidir(server))
-		    (*client)->mUDPRate = ntohl(hdr->extend.Rate);
-		else
-		    server->mUDPRate = ntohl(hdr->extend.Rate);
-	    }
+	Settings_Copy(server, client, 0);
+	reversed_thread->mThreadMode = kMode_Client;
+	if ((flags & HEADER_VERSION1) != 0) {
+	    Settings_ReadClientSettingsV1(&reversed_thread, &hdr->base);
+	    if (v1test)
+		reversed_thread->mMode = ((flags & RUN_NOW) == 0 ? kTest_TradeOff : kTest_DualTest);
+	    else
+		reversed_thread->mMode = kTest_Normal;
+	}
+	if (isIsochronous(server) && (isBidir(server) || isServerReverse(server))) {
+	    Settings_ReadClientSettingsIsoch(&reversed_thread, &hdr->isoch_settings);
+	}
+	if ((flags & HEADER_EXTEND_NOACK) || (flags & HEADER_EXTEND_ACK)) {
+	    upperflags = ntohs(hdr->extend.upperflags);
+	    reversed_thread->mTOS = ntohs(hdr->extend.tos);
+	    if (isBidir(server))
+		reversed_thread->mUDPRate = ntohl(hdr->extend.Rate);
+	    else
+		server->mUDPRate = ntohl(hdr->extend.Rate);
+	}
+	if (upperflags & HEADER_FQRATESET) {
+	    setFQPacing(reversed_thread);
+	    reversed_thread->mFQPacingRate = ntohl(hdr->start_fq.fqrate);
 	}
     }
 #if 0
     if (((sockaddr*)&server->peer)->sa_family == AF_INET) {
 	inet_ntop(AF_INET, &((sockaddr_in*)&server->peer)->sin_addr,
-		  (*client)->mHost, REPORT_ADDRLEN);
+		  reversed_thread->mHost, REPORT_ADDRLEN);
     }
 #ifdef HAVE_IPV6
     else {
 	inet_ntop(AF_INET6, &((sockaddr_in6*)&server->peer)->sin6_addr,
-		  (*client)->mHost, REPORT_ADDRLEN);
+		  reversed_thread->mHost, REPORT_ADDRLEN);
     }
 #endif
 #endif
@@ -1447,11 +1455,11 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
     // flags common to both TCP and UDP
     if (isReverse(client)) {
 	flags |= HEADER_EXTEND_NOACK;
-        lowerflags |= REVERSE;
+        upperflags |= HEADER_REVERSE;
     }
     if (isBidir(client)) {
 	flags |= HEADER_EXTEND_NOACK;
-        lowerflags |= BIDIR;
+        upperflags |= HEADER_BIDIR;
     }
     // Now setup UDP and TCP specific passed settings from client to server
     if (isUDP(client)) { // UDP test information passed in every packet per being stateless
@@ -1488,13 +1496,18 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	    flags |= (HEADER_UDPTESTS | HEADER_EXTEND_NOACK);
 	    upperflags |= HEADER_NOUDPFIN;
 	}
-	if (isTripTime(client)) {
+	if (isTripTime(client) || isFQPacing(client)) {
 	    flags |= (HEADER_UDPTESTS | HEADER_EXTEND_NOACK);
-	    upperflags |= HEADER_TRIPTIME;
-	    hdr->start_tos.start_tv_sec = htonl(startTime.tv_sec);
-	    hdr->start_tos.start_tv_usec = htonl(startTime.tv_usec);
-	    hdr->start_tos.TOS = htonl(client->mTOS);
-	    len += sizeof(struct client_hdrext_starttime_tos);
+	    if (isFQPacing(client)) {
+		upperflags |= HEADER_FQRATESET;
+	    }
+	    if (isTripTime(client)) {
+		upperflags |= HEADER_TRIPTIME;
+	    }
+	    hdr->start_fq.fqrate = htonl(client->mFQPacingRate);
+	    hdr->start_fq.start_tv_sec = htonl(startTime.tv_sec);
+	    hdr->start_fq.start_tv_usec = htonl(startTime.tv_usec);
+	    len += sizeof(struct client_hdrext_starttime_fq);
 	}
 	if (isBWSet(client)) {
 	    flags |= HEADER_EXTEND_NOACK;
@@ -1509,6 +1522,7 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	    hdr->extend.lowerflags = htons(lowerflags);
 	    hdr->extend.version_u = htonl(IPERF_VERSION_MAJORHEX);
 	    hdr->extend.version_l = htonl(IPERF_VERSION_MINORHEX);
+	    hdr->extend.tos = htons(client->mTOS & 0xFF);
 	    len += sizeof(struct client_hdrext);
 	}
 	if ((flags & HEADER_EXTEND_NOACK) || (client->mMode != kTest_Normal)) {
@@ -1519,7 +1533,7 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	}
 	// isoch payload is an enclave field between v 0.13 and v0.14
 	// so figure out if it's there now - UDP only
-	if (isTripTime(client) || isIsochronous(client))
+	if (isTripTime(client) || isFQPacing(client) || isIsochronous(client))
 	    len += sizeof (struct isoch_payload);
 
 	len += sizeof(struct UDP_datagram);
@@ -1529,13 +1543,18 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) testhdr;
 	memset(hdr, 0, sizeof(struct client_tcp_testhdr));
 	// Set up trip time
-	if (isTripTime(client)) {
-	    flags |= HEADER_EXTEND_NOACK;
-	    upperflags |= HEADER_TRIPTIME;
-	    hdr->start_tos.start_tv_sec = htonl(startTime.tv_sec);
-	    hdr->start_tos.start_tv_usec = htonl(startTime.tv_usec);
-	    hdr->start_tos.TOS = htonl(client->mTOS);
-	    len += sizeof(struct client_hdrext_starttime_tos);
+	if (isTripTime(client) || isFQPacing(client)) {
+	    flags |= (HEADER_UDPTESTS | HEADER_EXTEND_NOACK);
+	    if (isFQPacing(client)) {
+		upperflags |= HEADER_FQRATESET;
+	    }
+	    if (isTripTime(client)) {
+		upperflags |= HEADER_TRIPTIME;
+	    }
+	    hdr->start_fq.fqrate = htonl(client->mFQPacingRate);
+	    hdr->start_fq.start_tv_sec = htonl(startTime.tv_sec);
+	    hdr->start_fq.start_tv_usec = htonl(startTime.tv_usec);
+	    len += sizeof(struct client_hdrext_starttime_fq);
 	}
 	if (isIsochronous(client)) {
 	    flags |= HEADER_EXTEND_NOACK;
