@@ -150,8 +150,7 @@ struct client_hdr_v1 {
      * tradeoff modes, wheither the speaker needs to start
      * immediately or after the audience finishes.
      */
-    int16_t flags;
-    int16_t hdrlen;
+    int32_t flags;
     int32_t numThreads;
     int32_t mPort;
     int32_t mBufLen;

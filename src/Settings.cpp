@@ -1515,7 +1515,7 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	if ((flags & HEADER_EXTEND_NOACK) || (client->mMode != kTest_Normal)) {
 	    flags |= HEADER_VERSION1;
 	    len += Settings_GenerateClientHdrV1(client, &hdr->base);
-	    if (client->mMode != kTest_DualTest)
+	    if (!(flags & HEADER_EXTEND_NOACK) && (client->mMode == kTest_DualTest))
 		flags |= RUN_NOW;
 	}
 	hdr->base.flags = htonl(flags | ((len << 1) & 0xFFFE));
@@ -1552,7 +1552,7 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	}
 	if (flags & HEADER_EXTEND_NOACK) {
 	    // Write flags to header so the listener can determine the tests requested
-	    hdr->extend.upperflags = htonl(0x0);
+	    hdr->extend.upperflags = htonl(upperflags);
 	    hdr->extend.lowerflags = htonl(lowerflags);
 	    hdr->extend.version_u = htonl(IPERF_VERSION_MAJORHEX);
 	    hdr->extend.version_l = htonl(IPERF_VERSION_MINORHEX);
@@ -1561,14 +1561,15 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	if ((flags & HEADER_EXTEND_NOACK) || (client->mMode != kTest_Normal)) {
 	    flags |= HEADER_VERSION1;
 	    len += Settings_GenerateClientHdrV1(client, &hdr->base);
-	    if (client->mMode != kTest_DualTest)
+	    if (!(flags & HEADER_EXTEND_NOACK) && (client->mMode == kTest_DualTest))
 		flags |= RUN_NOW;
 	}
 	if (isPeerVerDetect(client)) {
 	    flags &= ~HEADER_EXTEND_NOACK;
 	    flags |= HEADER_EXTEND_ACK;
 	}
-	hdr->base.flags = htonl(flags | ((len << 1) & 0xFFFE));
+	uint32_t fl = (flags | ((len << 1) & 0xFFFE));
+	hdr->base.flags = htonl(fl);
     }
     return (len);
 }
