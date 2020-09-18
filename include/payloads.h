@@ -76,11 +76,10 @@ extern "C" {
 #define HEADER_TOSSTARTTIME   0x0020
 #define HEADER_ISOCH_SETTINGS 0x0040
 #define HEADER_UNITS_PPS      0x0080
-
-#define REALTIME              0x0004
-#define REVERSE               0x0008
-#define BIDIR                 0x0010
-#define WRITEACK              0x0020
+#define HEADER_BWSET          0x0100
+#define HEADER_FQRATESET      0x0200
+#define HEADER_REVERSE        0x0400
+#define HEADER_BIDIR          0x0800
 
 // later features
 #define HDRXACKMAX 2500000 // default 2.5 seconds, units microseconds
@@ -174,16 +173,18 @@ struct client_hdrext {
     int16_t lowerflags;
     uint32_t version_u;
     uint32_t version_l;
-    uint32_t reserved;
+    uint16_t reserved;
+    uint16_t tos;
     int32_t Rate;
     int32_t UDPRateUnits;
     int32_t Realtime;
 };
 
-struct client_hdrext_starttime_tos {
+struct client_hdrext_starttime_fq {
+    uint32_t reserved;
+    uint32_t fqrate;
     uint32_t start_tv_sec;
     uint32_t start_tv_usec;
-    uint32_t TOS;
 };
 
 /*
@@ -298,7 +299,7 @@ struct TCP_burst_payload {
  *                +--------+--------+--------+--------+
  *            13  |        iperf version minor        |
  *                +--------+--------+--------+--------+
- *            14  |        reserved                   |
+ *            14  |        reserved          |  TOS   |
  *                +--------+--------+--------+--------+
  *            15  |        rate                       |
  *                +--------+--------+--------+--------+
@@ -322,27 +323,29 @@ struct TCP_burst_payload {
  *                +--------+--------+--------+--------+
  *            25  |        isoch reserved             |
  *                +--------+--------+--------+--------+
- *            26  |        start tv_sec  (0.14)       |
+ *            26  |        reserved (0.14 start)      |
  *                +--------+--------+--------+--------+
- *            27  |        start tv_usec              |
+ *            27  |        fqrate                     |
  *                +--------+--------+--------+--------+
- *            28  |        TOS                        |
+ *            28  |        start tv_sec  (0.14)       |
  *                +--------+--------+--------+--------+
- *            29  |        FPSl                       |
+ *            29  |        start tv_usec              |
  *                +--------+--------+--------+--------+
- *            30  |        FPSu                       |
+ *            30  |        FPSl                       |
  *                +--------+--------+--------+--------+
- *            31  |        Meanl                      |
+ *            31  |        FPSu                       |
  *                +--------+--------+--------+--------+
- *            32  |        Meanu                      |
+ *            32  |        Meanl                      |
  *                +--------+--------+--------+--------+
- *            33  |        Variancel                  |
+ *            33  |        Meanu                      |
  *                +--------+--------+--------+--------+
- *            34  |        Varianceu                  |
+ *            34  |        Variancel                  |
  *                +--------+--------+--------+--------+
- *            35  |        BurstIPGl                  |
+ *            35  |        Varianceu                  |
  *                +--------+--------+--------+--------+
- *            36  |        BurstIPG                   |
+ *            36  |        BurstIPGl                  |
+ *                +--------+--------+--------+--------+
+ *            37  |        BurstIPG                   |
  *                +--------+--------+--------+--------+
  *
  */
@@ -362,7 +365,7 @@ struct client_udp_testhdr {
     struct client_hdr_v1 base;
     struct client_hdrext extend;
     struct isoch_payload isoch;
-    struct client_hdrext_starttime_tos start_tos;
+    struct client_hdrext_starttime_fq start_fq;
     struct client_hdrext_isoch_settings isoch_settings;
 };
 
@@ -402,7 +405,7 @@ struct client_hdr_ack {
  *                +--------+--------+--------+--------+
  *            11  |        iperf version minor        |
  *                +--------+--------+--------+--------+
- *            12  |        reserved                   |
+ *            12  |        reserved          | TOS    |
  *                +--------+--------+--------+--------+
  *            13  |        rate                       |
  *                +--------+--------+--------+--------+
@@ -410,33 +413,35 @@ struct client_hdr_ack {
  *                +--------+--------+--------+--------+
  *            15  |        realtime   (0.13)          |
  *                +--------+--------+--------+--------+
- *            16  |        start tv_sec (0.14)        |
+ *            16  |        reserved (0.14 start)      |
  *                +--------+--------+--------+--------+
- *            17  |        start tv_usec              |
+ *            17  |        fqrate                     |
  *                +--------+--------+--------+--------+
- *            18  |        TOS                        |
+ *            18  |        start tv_sec (0.14)        |
  *                +--------+--------+--------+--------+
- *            19  |        FPSl                       |
+ *            19  |        start tv_usec              |
  *                +--------+--------+--------+--------+
- *            20  |        FPSu                       |
+ *            20  |        FPSl                       |
  *                +--------+--------+--------+--------+
- *            21  |        Meanl                      |
+ *            21  |        FPSu                       |
  *                +--------+--------+--------+--------+
- *            22  |        Meanu                      |
+ *            22  |        Meanl                      |
  *                +--------+--------+--------+--------+
- *            23  |        Variancel                  |
+ *            23  |        Meanu                      |
  *                +--------+--------+--------+--------+
- *            24  |        Varianceu                  |
+ *            24  |        Variancel                  |
  *                +--------+--------+--------+--------+
- *            25  |        BurstIPGl                  |
+ *            25  |        Varianceu                  |
  *                +--------+--------+--------+--------+
- *            26  |        BurstIPG                   |
+ *            26  |        BurstIPGl                  |
+ *                +--------+--------+--------+--------+
+ *            27  |        BurstIPG                   |
  *                +--------+--------+--------+--------+
  */
 struct client_tcp_testhdr {
     struct client_hdr_v1 base;
     struct client_hdrext extend;
-    struct client_hdrext_starttime_tos start_tos;
+    struct client_hdrext_starttime_fq start_fq;
     struct client_hdrext_isoch_settings isoch_settings;
 };
 
