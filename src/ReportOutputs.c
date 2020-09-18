@@ -188,7 +188,7 @@ void tcp_output_read_enhanced_triptime (struct TransferInfo *stats) {
 	report_bw_read_enhanced_netpwr_header_printed = true;
 	printf(report_bw_read_enhanced_netpwr_header, (stats->sock_callstats.read.binsize/1024.0));
     }
-    double meantransit = (stats->transit.sumTransit / stats->transit.cntTransit);
+    double meantransit = (stats->transit.cntTransit > 0) ? (stats->transit.sumTransit / stats->transit.cntTransit) : 0;
     double lambda = (stats->IPGsum > 0.0) ? ((double)stats->cntBytes / stats->IPGsum) : 0.0;
     set_llawbuf(lambda, meantransit);
     _print_stats_common(stats);
@@ -322,7 +322,7 @@ void udp_output_read_enhanced (struct TransferInfo *stats) {
 	       stats->cntDatagrams,
 	       0.0,0.0,0.0,0.0,0.0,0.0);
     } else {
-	double meantransit = (stats->transit.sumTransit / stats->transit.cntTransit);
+	double meantransit = (stats->transit.cntTransit > 0) ? (stats->transit.sumTransit / stats->transit.cntTransit) : 0;
 	double lambda = (stats->IPGsum > 0.0) ? ((double)stats->cntBytes / stats->IPGsum) : 0.0;
 	set_llawbuf(lambda, meantransit);
 	printf(report_bw_jitter_loss_enhanced_format, stats->transferID,
