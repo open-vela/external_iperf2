@@ -1519,6 +1519,7 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 		flags |= RUN_NOW;
 	}
 	hdr->base.flags = htonl(flags | ((len << 1) & 0xFFFE));
+	hdr->base.flags = htonl(flags | ((len << 1) & 0xFFFE));
     } else { // TCP first write with test information
 	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) testhdr;
 	memset(hdr, 0, sizeof(struct client_tcp_testhdr));
@@ -1552,8 +1553,8 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	}
 	if (flags & HEADER_EXTEND_NOACK) {
 	    // Write flags to header so the listener can determine the tests requested
-	    hdr->extend.upperflags = htonl(upperflags);
-	    hdr->extend.lowerflags = htonl(lowerflags);
+	    hdr->extend.upperflags = htons(upperflags);
+	    hdr->extend.lowerflags = htons(lowerflags);
 	    hdr->extend.version_u = htonl(IPERF_VERSION_MAJORHEX);
 	    hdr->extend.version_l = htonl(IPERF_VERSION_MINORHEX);
 	    len += sizeof(struct client_hdrext);
@@ -1568,8 +1569,7 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	    flags &= ~HEADER_EXTEND_NOACK;
 	    flags |= HEADER_EXTEND_ACK;
 	}
-	uint32_t fl = (flags | ((len << 1) & 0xFFFE));
-	hdr->base.flags = htonl(fl);
+	hdr->base.flags = htonl((flags | ((len << 1) & 0xFFFE)));
     }
     return (len);
 }
