@@ -778,6 +778,10 @@ void reporter_print_connection_report(struct ConnectionInfo *report) {
     } else if (isServerReverse(report->common) || isReverse(report->common)) {
 	snprintf(b, SNBUFFERSIZE-strlen(b), " (reverse)");
 	b += strlen(b);
+	if (isFQPacing(report->common)) {
+	    snprintf(b, SNBUFFERSIZE-strlen(b), " (fq)");
+	    b += strlen(b);
+	}
     }
     if (isTripTime(report->common)) {
 	snprintf(b, SNBUFFERSIZE-strlen(b), " (trip-times)");
