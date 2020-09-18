@@ -1471,7 +1471,6 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	if (isIsochronous(client)) {
 	    flags |= (HEADER_UDPTESTS | HEADER_EXTEND_NOACK) ;
 	    upperflags |= HEADER_ISOCH;
-	    len += sizeof(struct isoch_payload);
 	    if (isBidir(client) || isReverse(client)) {
 		upperflags |= HEADER_ISOCH_SETTINGS;
 		hdr->isoch_settings.FPSl = htonl(client->mFPS);
@@ -1518,6 +1517,11 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	    if (!(flags & HEADER_EXTEND_NOACK) && (client->mMode == kTest_DualTest))
 		flags |= RUN_NOW;
 	}
+	// isoch payload is an enclave field between v 0.13 and v0.14
+	// so figure out if it's there now - UDP only
+	if (isTripTime(client) || isIsochronous(client))
+	    len += sizeof (struct isoch_payload);
+
 	len += sizeof(struct UDP_datagram);
 	hdr->base.flags = htonl(flags | ((len << 1) & 0xFFFE));
 	hdr->base.flags = htonl(flags | ((len << 1) & 0xFFFE));
