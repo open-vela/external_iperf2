@@ -495,6 +495,9 @@ void PrintMSS(struct ReporterData *data);
 
 void write_UDP_AckFIN(struct TransferInfo *stats);
 
+int reporter_process_transfer_report (struct ReporterData *this_ireport);
+int reporter_process_report (struct ReportHeader *reporthdr);
+
 #ifdef __cplusplus
 } /* end extern "C" */
 #endif
