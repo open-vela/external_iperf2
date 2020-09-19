@@ -380,7 +380,7 @@ void Server::InitTrafficLoop (void) {
 	setbidirflag = bidir_start_barrier(&mSettings->mBidirReport->bidir_barrier);
     }
     // Case of --trip-times and --reverse or --bidir, listener handles normal case
-    if (isTripTime(mSettings) && (isReverse(mSettings) || isBidir(mSettings))) {
+    if (isTripTime(mSettings) && TimeZero(mSettings->triptime_start)) {
 	struct TCP_burst_payload burst_info;
 	int n = 0;
 	if ((n = recvn(mSettings->mSock, (char *)&burst_info, sizeof(struct TCP_burst_payload), MSG_PEEK)) == sizeof(struct TCP_burst_payload)) {
