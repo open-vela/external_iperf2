@@ -297,7 +297,7 @@ void Listener::Run (void) {
 	    // offsets per TCP or UDP. Basically, TCP starts at byte 0 but UDP
 	    // has to skip over the UDP seq no, etc.
 	    //
-            if (isBidir(server) || (server->mMode != kTest_Normal)) {
+            if (isBidir(server) || isServerReverse(server) || (server->mMode != kTest_Normal)) {
 		thread_Settings *listener_client_settings = NULL;
 		Settings_GenerateClientSettings(server, &listener_client_settings, mBuf);
 		// --bidir is following iperf3 naming, it's basically a full duplex test using the same socket
