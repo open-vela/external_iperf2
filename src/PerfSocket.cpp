@@ -97,6 +97,7 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
 	if (rc == SOCKET_ERROR) {
 	    fprintf(stderr, "Attempt to set '%s' congestion control failed: %s\n",
 		    inSettings->mCongestion, strerror(errno));
+	    unsetCongestionControl(inSettings);
 	}
 #else
 	fprintf(stderr, "The -Z option is not available on this operating system\n");
