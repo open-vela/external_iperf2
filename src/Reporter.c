@@ -113,7 +113,7 @@ void PostReport (struct ReportHeader *reporthdr) {
 	 * Process the report in this thread
 	 */
 	reporthdr->next = NULL;
-	process_report ( reporthdr );
+	reporter_process_report(reporthdr);
 #endif
     }
 }
@@ -435,26 +435,6 @@ static void reporter_compute_connect_times (struct ReportHeader *hdr, double con
     }
 #endif
 }
-
-/*
- * Used for single threaded reporting
- */
-void process_report (struct ReportHeader *report) {
-#if 0
-    if (report != NULL) {
-      if (reporter_process_report(report)) {
-	    if (report->report.info.latency_histogram) {
-		histogram_delete(report->report.info.latency_histogram);
-	    }
-	    if (report->report.info.framelatency_histogram) {
-		histogram_delete(report->report.info.framelatency_histogram);
-	    }
-            free(report);
-        }
-    }
-#endif
-}
-
 
 // The Transfer or Data report is by far the most complicated report
 
