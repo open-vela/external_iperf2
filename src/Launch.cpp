@@ -163,7 +163,9 @@ static void clientside_client_basic (struct thread_Settings *thread, Client *the
 	theClient->BarrierClient(thread->connects_done);
     if (theClient->isConnected()) {
 	theClient->StartSynch();
-	theClient->SendFirstPayload();
+	if (!isCompat(thread)) {
+	    theClient->SendFirstPayload();
+	}
 	theClient->Run();
     }
 }
