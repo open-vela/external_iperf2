@@ -520,13 +520,6 @@ struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, d
 	creport->epochStartTime.tv_sec = inSettings->accept_time.tv_sec;
 	creport->epochStartTime.tv_usec = inSettings->accept_time.tv_usec;
     }
-    // RJM FIX THIS
-    if (isFQPacing(inSettings) && (inSettings->mThreadMode == kMode_Client)) {
-	char tmpbuf[40];
-	byte_snprintf(tmpbuf, sizeof(tmpbuf), inSettings->mFQPacingRate, 'a');
-	tmpbuf[39]='\0';
-        printf(client_fq_pacing,tmpbuf);
-    }
     //  Copy state from the settings object into the connection report
     creport->connect_times.min = FLT_MAX;
     creport->connect_times.max = FLT_MIN;

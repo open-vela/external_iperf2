@@ -786,11 +786,6 @@ void reporter_print_connection_report(struct ConnectionInfo *report) {
     if (isTripTime(report->common)) {
 	snprintf(b, SNBUFFERSIZE-strlen(b), " (trip-times)");
 	b += strlen(b);
-	if (report->common->ThreadMode == kMode_Server) {
-	    snprintf(b, SNBUFFERSIZE-strlen(b), " (%ld.%ld)", \
-		     report->epochStartTime.tv_sec, (long) report->epochStartTime.tv_usec);
-	    b += strlen(b);
-	}
     }
     if (isL2LengthCheck(report->common)) {
 	snprintf(b, SNBUFFERSIZE-strlen(b), " (l2mode)");
@@ -863,7 +858,7 @@ void reporter_print_connection_report(struct ConnectionInfo *report) {
 	       outbuffer);
     }
 #endif
-    if ((report->epochStartTime.tv_sec) && (report->common->ThreadMode == kMode_Client)) {
+    if ((report->epochStartTime.tv_sec) && (report->common->ThreadMode == kMode_Client) && !isServerReverse(report->common)) {
 	struct tm ts;
 	char start_timebuf[80];
 #ifdef HAVE_CLOCK_GETTIME

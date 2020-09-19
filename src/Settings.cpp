@@ -1315,14 +1315,18 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
     uint16_t upperflags = 0;
     thread_Settings *reversed_thread = NULL;
     v1test = (((flags & HEADER_VERSION1) != 0) && ((flags & HEADER_EXTEND_NOACK) == 0) && ((flags & HEADER_EXTEND_ACK) == 0));
-    if (!(isBidir(server) || isServerReverse(server) || v1test)) {
+#ifdef HAVE_THREAD_DEBUG
+    if (v1test)
+	thread_debug("header set for a version 1 test");
+#endif
+    if (!(isBidir(server) || v1test)) {
 	*client = NULL;
 	return;
     } else if (isBidir(server) || v1test) {
 	Settings_Copy(server, client, 0);
 	reversed_thread = *client;
-    } else if (isServerReverse(server)) {
-	reversed_thread = server;
+	unsetTxStartTime(reversed_thread);
+        unsetTxHoldback(reversed_thread);
     }
     if (isUDP(server)) { // UDP test information passed in every packet per being stateless
 	struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) mBuf;

@@ -297,7 +297,7 @@ void Listener::Run (void) {
 	    // offsets per TCP or UDP. Basically, TCP starts at byte 0 but UDP
 	    // has to skip over the UDP seq no, etc.
 	    //
-            if (isBidir(server) || isServerReverse(server) || (server->mMode != kTest_Normal)) {
+            if (isBidir(server) || (server->mMode != kTest_Normal)) {
 		thread_Settings *listener_client_settings = NULL;
 		Settings_GenerateClientSettings(server, &listener_client_settings, mBuf);
 		// --bidir is following iperf3 naming, it's basically a full duplex test using the same socket
@@ -907,6 +907,7 @@ int Listener::apply_client_settings (thread_Settings *server) {
 	    }
 	    if ((flags & HEADER_UDPTESTS) != 0) {
 		uint16_t upperflags = htons(hdr->extend.upperflags);
+		server->mTOS = ntohs(hdr->extend.tos);
 		// Handle stateless flags
 		if ((upperflags & HEADER_ISOCH) != 0) {
 		    setIsochronous(server);
@@ -929,6 +930,10 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		    server->mThreadMode=kMode_Client;
 		    setServerReverse(server);
 		    unsetReport(server);
+		}
+		if (upperflags & HEADER_FQRATESET) {
+		    setFQPacing(server);
+		    server->mFQPacingRate = ntohl(hdr->start_fq.fqrate);
 		}
 		if ((upperflags & HEADER_TRIPTIME) != 0) {
 		    server->triptime_start.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
@@ -961,6 +966,7 @@ int Listener::apply_client_settings (thread_Settings *server) {
 	    struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) mBuf;
 	    if (flags & (HEADER_EXTEND_ACK | HEADER_EXTEND_NOACK)) {
 		uint16_t upperflags = htons(hdr->extend.upperflags);
+		server->mTOS = ntohs(hdr->extend.tos);
 		server->peer_version_u = ntohl(hdr->extend.version_u);
 		server->peer_version_l = ntohl(hdr->extend.version_l);
 		if ((upperflags & HEADER_TRIPTIME) != 0) {
@@ -983,6 +989,10 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		if ((upperflags & HEADER_REVERSE) != 0) {
 		    server->mThreadMode=kMode_Client;
 		    setServerReverse(server);
+		}
+		if (upperflags & HEADER_FQRATESET) {
+		    setFQPacing(server);
+		    server->mFQPacingRate = ntohl(hdr->start_fq.fqrate);
 		}
 		server->mAmount = ntohl(hdr->base.mAmount);
 		if ((server->mAmount & 0x80000000) > 0) {
