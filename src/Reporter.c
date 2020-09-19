@@ -72,33 +72,12 @@ extern "C" {
 # define INITIAL_PACKETID 0
 #endif
 
-/*
-  The following 4 functions are provided for Reporting
-  styles that do not have all the reporting formats. For
-  instance the provided CSV format does not have a settings
-  report so it uses settings_notimpl.
-  */
-void* connection_notimpl( struct ConnectionInfo * nused, int nuse ) {
-    return NULL;
-}
-void settings_notimpl( struct ReporterData * nused ) { }
-void statistics_notimpl( struct TransferInfo * nused ) { }
-void serverstatistics_notimpl( struct ConnectionInfo *nused1, struct TransferInfo *nused2 ) { }
-
-// To add a reporting style include its header here.
-#include "report_CSV.h"
-
 struct ReportHeader *ReportRoot = NULL;
 struct ReportHeader *ReportPendingHead = NULL;
 struct ReportHeader *ReportPendingTail = NULL;
-static int reporter_process_report (struct ReportHeader *report);
-void process_report (struct ReportHeader *report);
-int reporter_print(struct ReporterData *data, int type, int end);
-
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 static void gettcpistats(struct ReporterData *data, int final);
 #endif
-
 
 // Reporter's reset of stats after a print occurs
 static void reporter_reset_transfer_stats_client_tcp(struct TransferInfo *stats);
@@ -165,7 +144,7 @@ void ReportPacket (struct ReporterData* data, struct ReportStruct *packet) {
     /*
      * Process the report in this thread
      */
-    process_report(data);
+    reporter_process_transfer_report(data);
 #endif
 }
 
@@ -479,7 +458,7 @@ void process_report (struct ReportHeader *report) {
 
 // The Transfer or Data report is by far the most complicated report
 
-static int reporter_process_transfer_report (struct ReporterData *this_ireport) {
+int reporter_process_transfer_report (struct ReporterData *this_ireport) {
     assert(this_ireport != NULL);
     assert(this_ireport->packet_handler != NULL);
     struct TransferInfo *sumstats = (this_ireport->GroupSumReport ? &this_ireport->GroupSumReport->info : NULL);
@@ -570,7 +549,7 @@ static int reporter_process_transfer_report (struct ReporterData *this_ireport) 
  * can't use them anymore (except for the DATA REPORT);
  *
  */
-static inline int reporter_process_report (struct ReportHeader *reporthdr) {
+inline int reporter_process_report (struct ReportHeader *reporthdr) {
     assert(reporthdr != NULL);
     int done = 1;
     switch (reporthdr->type) {
