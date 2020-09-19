@@ -1424,10 +1424,12 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
     if (isBidir(server)) {
 	setBidir((*client));
     }
+#if HAVE_DECL_SO_MAX_PACING_RATE
     if (isFQPacing(reversed_thread)) {
 	int rc = setsockopt(reversed_thread->mSock, SOL_SOCKET, SO_MAX_PACING_RATE, &reversed_thread->mFQPacingRate, sizeof(reversed_thread->mFQPacingRate));
         WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
     }
+#endif
 }
 
 int Settings_GenerateClientHdrV1(struct thread_Settings *client, struct client_hdr_v1 *hdr) {

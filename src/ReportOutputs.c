@@ -244,7 +244,7 @@ void tcp_output_read_enhanced_triptime (struct TransferInfo *stats) {
 void tcp_output_write (struct TransferInfo *stats) {
     if (!tcp_client_header_printed) {
 	tcp_client_header_printed = true;
-	printf(report_bw_header);
+	printf("%s", report_bw_header);
     }
     _print_stats_common(stats);
     printf(report_bw_format, stats->transferID,
@@ -255,7 +255,7 @@ void tcp_output_write (struct TransferInfo *stats) {
 void tcp_output_write_enhanced (struct TransferInfo *stats) {
     if (!tcp_client_header_printed) {
 	tcp_client_header_printed = true;
-	printf(report_bw_write_enhanced_header);
+	printf("%s", report_bw_write_enhanced_header);
     }
     _print_stats_common(stats);
 #ifndef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
@@ -458,7 +458,7 @@ void udp_output_sumcnt_read(struct TransferInfo *stats) {
 void udp_output_sum_write(struct TransferInfo *stats) {
     if (!udp_client_header_printed) {
 	udp_client_header_printed = true;
-	printf(report_bw_header);
+	printf("%s", report_bw_header);
     }
     _print_stats_common(stats);
     printf(report_sum_bw_jitter_loss_format,
@@ -470,7 +470,7 @@ void udp_output_sum_write(struct TransferInfo *stats) {
 void udp_output_sumcnt_write(struct TransferInfo *stats) {
     if (!udp_client_header_printed) {
 	udp_client_header_printed = true;
-	printf(report_bw_header);
+	printf("%s", report_bw_header);
     }
     _print_stats_common(stats);
     printf(report_sumcnt_bw_jitter_loss_format, stats->threadcnt,
@@ -490,7 +490,7 @@ void udp_output_sum_read_enhanced(struct TransferInfo *stats) {
 void udp_output_sum_write_enhanced(struct TransferInfo *stats) {
     if (!tcp_client_header_printed) {
 	tcp_client_header_printed = true;
-	printf(report_bw_header);
+	printf("%s", report_bw_header);
     }
     _print_stats_common(stats);
     printf(report_sum_bw_pps_enhanced_format,
@@ -525,7 +525,7 @@ void tcp_output_sum_read_enhanced(struct TransferInfo *stats) {
 void tcp_output_sumcnt_read(struct TransferInfo *stats) {
     if (!tcp_server_header_printed) {
 	tcp_server_header_printed = true;
-	printf(report_bw_sumcnt_header);
+	printf("%s", report_bw_sumcnt_header);
     }
     _print_stats_common(stats);
     printf(report_sumcnt_bw_format, stats->threadcnt,
@@ -535,7 +535,7 @@ void tcp_output_sumcnt_read(struct TransferInfo *stats) {
 void tcp_output_sumcnt_read_enhanced (struct TransferInfo *stats) {
     if (!tcp_server_header_printed) {
 	tcp_server_header_printed = true;
-	printf(report_bw_write_sumcnt_enhanced_header);
+	printf("%s", report_bw_write_sumcnt_enhanced_header);
     }
     _print_stats_common(stats);
     printf(report_sumcnt_bw_write_enhanced_format, stats->threadcnt,
@@ -549,7 +549,7 @@ void tcp_output_sumcnt_read_enhanced (struct TransferInfo *stats) {
 void tcp_output_sum_write(struct TransferInfo *stats) {
     if (!tcp_client_header_printed) {
 	tcp_client_header_printed = true;
-	printf(report_bw_header);
+	printf("%s", report_bw_header);
     }
     _print_stats_common(stats);
     printf(report_sum_bw_format,
@@ -559,7 +559,7 @@ void tcp_output_sum_write(struct TransferInfo *stats) {
 void tcp_output_sumcnt_write(struct TransferInfo *stats) {
     if (!tcp_client_header_printed) {
 	tcp_client_header_printed = true;
-	printf(report_bw_sumcnt_header);
+	printf("%s", report_bw_sumcnt_header);
     }
     _print_stats_common(stats);
     printf(report_sumcnt_bw_format, stats->threadcnt,
@@ -578,7 +578,7 @@ void tcp_output_sum_write_enhanced(struct TransferInfo *stats) {
 void tcp_output_sumcnt_write_enhanced (struct TransferInfo *stats) {
     if (!tcp_client_header_printed) {
 	tcp_client_header_printed = true;
-	printf(report_bw_write_sumcnt_enhanced_header);
+	printf("%s", report_bw_write_sumcnt_enhanced_header);
     }
     _print_stats_common(stats);
     printf(report_sumcnt_bw_write_enhanced_format, stats->threadcnt,
@@ -907,7 +907,7 @@ void reporter_print_connection_report(struct ConnectionInfo *report) {
 	    b += strlen(b);
 	}
     }
-    if (report->peerversion) {
+    if (report->peerversion[0] != '\0') {
 	snprintf(b, SNBUFFERSIZE-strlen(b), "%s", report->peerversion);
 	b += strlen(b);
     }
