@@ -1010,6 +1010,14 @@ int Listener::apply_client_settings (thread_Settings *server) {
 	    server->header_bytes = peeklen;
 	}
     }
+    // Check to enable pacing for the reverse path
+#if HAVE_DECL_SO_MAX_PACING_RATE
+    /* If socket pacing is specified try to enable it. */
+    if (isFQPacing(server)) {
+	int rc = setsockopt(server->mSock, SOL_SOCKET, SO_MAX_PACING_RATE, &server->mFQPacingRate, sizeof(server->mFQPacingRate));
+        WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
+    }
+#endif /* HAVE_SO_MAX_PACING_RATE */
     // Handle case that requires an ack back to the client
     if ((flags & HEADER_EXTEND_ACK) != 0) {
 	client_test_ack(server);
