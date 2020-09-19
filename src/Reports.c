@@ -86,6 +86,7 @@ static void common_copy (struct ReportCommon **common, struct thread_Settings *i
     my_str_copy(&(*common)->Ifrname, inSettings->mIfrname);
     my_str_copy(&(*common)->Ifrnametx, inSettings->mIfrnametx);
     my_str_copy(&(*common)->SSMMulticastStr, inSettings->mSSMMulticastStr);
+    my_str_copy(&(*common)->Congestion, inSettings->mCongestion);
     // copy some relevant settings
     (*common)->flags = inSettings->flags;
     (*common)->flags_extend = inSettings->flags_extend;
@@ -126,6 +127,8 @@ static void free_common_copy (struct ReportCommon *common) {
 	free(common->Ifrnametx);
     if (common->SSMMulticastStr)
 	free(common->SSMMulticastStr);
+    if (common->Congestion)
+	free(common->Congestion);
     free(common);
 }
 
