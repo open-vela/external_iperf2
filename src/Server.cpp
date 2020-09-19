@@ -379,15 +379,15 @@ void Server::InitTrafficLoop (void) {
 	assert(mSettings->mBidirReport != NULL);
 	setbidirflag = bidir_start_barrier(&mSettings->mBidirReport->bidir_barrier);
     }
-    // Case of reverse and --trip-times
-    if (isReverse(mSettings) && isTripTime(mSettings)) {
-	int n = -1;
+    // Case of --trip-times and --reverse or --bidir, listener handles normal case
+    if (isTripTime(mSettings) && (isReverse(mSettings) || isBidir(mSettings))) {
 	struct TCP_burst_payload burst_info;
+	int n = 0;
 	if ((n = recvn(mSettings->mSock, (char *)&burst_info, sizeof(struct TCP_burst_payload), MSG_PEEK)) == sizeof(struct TCP_burst_payload)) {
-	    mSettings->triptime_start.tv_sec = ntohl(burst_info.send_tt.write_tv_sec);
-	    mSettings->triptime_start.tv_usec = ntohl(burst_info.send_tt.write_tv_usec);
+	    mSettings->triptime_start.tv_sec = ntohl(burst_info.start_tv_sec);
+	    mSettings->triptime_start.tv_usec = ntohl(burst_info.start_tv_usec);
 	    Timestamp now;
-	    if (TimeZero(mSettings->triptime_start) || (abs(now.getSecs() - mSettings->triptime_start.tv_sec) > MAXDIFFTIMESTAMPSECS)) {
+	    if ((abs(now.getSecs() - mSettings->triptime_start.tv_sec)) > MAXDIFFTIMESTAMPSECS) {
 		unsetTripTime(mSettings);
 		fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
 	    }
