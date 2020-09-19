@@ -618,7 +618,8 @@ based, e.g. 1k = 1000, 1K = 1024, 1m = 1,000,000 and 1M = 1,048,576
 The -b option supports variable offered loads through the
 <mean>,<standard deviation> format, e.g. -b 100m,10m on the client.
 The distribution used is log normal. Similar for the isochronous
-option. The -b on the server rate limits the reads.
+option. The -b on the server rate limits the reads. Socket pacing is
+supported with --fq-rate setting and will work with the --reverese and --bidir option as well.
 .P
 .B Synchronized clocks:
 The --trip-times options indicates that the client's and server's clocks are synchronized to a common reference.
