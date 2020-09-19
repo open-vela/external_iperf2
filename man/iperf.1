@@ -615,30 +615,31 @@ Lowercase format characters are 10^3 based and uppercase are 2^n
 based, e.g. 1k = 1000, 1K = 1024, 1m = 1,000,000 and 1M = 1,048,576
 .P
 .B Rate limiting:
-The -b option supports variable offered loads through the
-<mean>,<standard deviation> format, e.g. -b 100m,10m on the client.
-The distribution used is log normal. Similar for the isochronous
-option. The -b on the server rate limits the reads. Socket pacing is
-supported with --fq-rate setting and will work with the --reverese and --bidir option as well.
+The -b option supports read and write rate limiting at the application level.  The -b option
+on the client also supports variable offered loads through the <mean>,<standard deviation> format, e.g.
+-b 100m,10m. The distribution used is log normal. Similar for the isochronous
+option. The -b on the server rate limits the reads. Socket based pacing is also
+supported using the --fq-rate long option. This will work with the --reverse
+and --bidir options as well.
 .P
 .B Synchronized clocks:
-The --trip-times options indicates that the client's and server's clocks are synchronized to a common reference.
+The --trip-times option indicates that the client's and server's clocks are synchronized to a common reference.
 Network Time Protocol (NTP) or Precision Time Protocol (PTP) are commonly used for
-this. The reference clock(s) error and the synchronization protocools will affect
+this. The reference clock(s) error and the synchronization protocols will affect
 the accuracy of any end to end latency measurements.
 .P
 .B
 Binding
 is done at the logical level (ip address or layer 3) using the -B option
-and at the device (or layer 2) level using the percent (%) seperator for both the client
+and at the device (or layer 2) level using the percent (%) separator for both the client
 and tne server. On the client, the -B option affects the \fBbind\fR(2)
-system call, and will set the source ip addresss and the source port, e.g. iperf -c <host>
+system call, and will set the source ip address and the source port, e.g. iperf -c <host>
 -B 192.168.100.2:6002. This controls the packet's source values but not routing.
 These can be confusing in that a route or device lookup may not
 be that of the device with the configured source IP.
 So, for example, if the IP address of eth0 is used for -B and the
 routing table for the destination IP address resolves
-the ouput interface to be eth1, then the host will send the packet
+the output interface to be eth1, then the host will send the packet
 out device eth1 while using the source IP address of eth0 in the packet.
 To affect the physical output interface (e.g. dual homed systems) either use
 -c <host>%<dev> (requires root) which bypasses this host route table lookup,
@@ -680,19 +681,19 @@ ct=<value> in the connected message, e.g.in '[ 3] local 192.168.1.4
 port 48736 connected with 192.168.1.1 port 5001 \fB(ct=1.84 ms)\fR'
 shows the 3WHS took 1.84 milliseconds.
 .P
-\fBLittle's Law\fR in queueing theory is a theorem that determines the average number of items (L) in a stationary queuing system based on the average waiting time (W) of an item within a system and the average number of items arriving at the system per unit of time (lambda). Mathematically, it's L = lambda * W. As used here, the units are bytes. The arrival rate is the taken from the writes.
+\fBLittle's Law\fR in queueing theory is a theorem that determines the average number of items (L) in a stationary queuing system based on the average waiting time (W) of an item within a system and the average number of items arriving at the system per unit of time (lambda). Mathematically, it's L = lambda * W. As used here, the units are bytes. The arrival rate is taken from the writes.
 .P
 .B Network power:
 The network power (NetPwr) metric is \fBexperimental\fR. It's a
-convenience function defined as throughput/delay. For TCP, the delay
-is the sampled RTT times. For UDP the delay is the end/end latency.
+convenience function defined as throughput/delay.
+For TCP transmits, the delay is the sampled RTT times.
+For TCP receives, the delay is the write to read latency.
+For UDP the delay is the end/end latency.
 Don't confuse this with the physics definition of power (delta
-energy/delta time) but more of a measure of a desireable property
-divided by an undesireable property. Also note, one must use -i
+energy/delta time) but more of a measure of a desirable property
+divided by an undesirable property. Also note, one must use -i
 interval with TCP to get this as that's what sets the RTT sampling
-rate. The metric is scaled to assist with human readability. (Note:
-if this metric goes beyond the experimental state we'll consider a
-supporting and RTT sampling rate independent of the -i interval.)
+rate. The metric is scaled to assist with human readability.
 .P
 .B Fast Sampling:
 Use
