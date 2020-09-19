@@ -1027,7 +1027,6 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
     } else if (isTripTime(mExtSettings) && (isReverse(mExtSettings) || isBidir(mExtSettings))) {
 	setEnhanced(mExtSettings);
     }
-
     if (mExtSettings->mThreadMode != kMode_Client) {
 	if (isVaryLoad(mExtSettings)) {
 	    fprintf(stderr, "WARNING: option of variance ignored as not supported on the server\n");
@@ -1042,6 +1041,15 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
 	fprintf(stderr, "WARNING: client will send traffic forever or until an external signal (e.g. SIGINT or SIGTERM) occurs to stop it\n");
     }
 
+
+    if (isCongestionControl(mExtSettings)) {
+	if (isReverse(mExtSettings)) {
+	    fprintf(stderr, "WARNING: tcp congestion control cannot be applied with --reverse, must apply on the remote host\n");
+	    unsetCongestionControl(mExtSettings);
+	}
+	if (isBidir(mExtSettings))
+	    fprintf(stderr, "WARNING: tcp congestion control will only be applied on transmit traffic, use -Z on the server\n");
+    }
     // UDP histogram optional settings
     if (isRxHistogram(mExtSettings) && (mExtSettings->mThreadMode != kMode_Client) && mExtSettings->mRxHistogramStr) {
 	// check for optional arguments to change histogram settings
