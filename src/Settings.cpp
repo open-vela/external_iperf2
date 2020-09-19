@@ -1024,6 +1024,8 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
 	}
 	if (isModeTime(mExtSettings) && isReverse(mExtSettings))
 	    mExtSettings->mAmount += mExtSettings->mAmount;
+    } else if (isTripTime(mExtSettings) && (isReverse(mExtSettings) || isBidir(mExtSettings))) {
+	setEnhanced(mExtSettings);
     }
 
     if (mExtSettings->mThreadMode != kMode_Client) {
