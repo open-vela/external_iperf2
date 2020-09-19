@@ -64,11 +64,11 @@ class Listener;
 class Listener {
 public:
     // stores server port and TCP/UDP mode
-    Listener( thread_Settings *inSettings );
+    Listener(thread_Settings *inSettings);
     // destroy the server object
     ~Listener();
     // accepts connections and starts Servers
-    void Run( void );
+    void Run(void);
 
 private:
     int mClients;

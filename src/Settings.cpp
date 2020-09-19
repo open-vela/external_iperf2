@@ -655,15 +655,17 @@ void Settings_Interpret(char option, const char *optarg, struct thread_Settings 
 
         case 'y': // Reporting Style
             switch (*optarg) {
-                case 'c':
-                case 'C':
-                    mExtSettings->mReportMode = kReport_CSV;
-                    break;
-                default:
-                    fprintf(stderr, warn_invalid_report_style, optarg);
+	    case 'c':
+	    case 'C':
+		mExtSettings->mReportMode = kReport_CSV;
+		setNoSettReport(mExtSettings);
+		setNoSettReport(mExtSettings);
+		setNoConnReport(mExtSettings);
+		break;
+	    default:
+		fprintf(stderr, warn_invalid_report_style, optarg);
             }
             break;
-
 
             // more esoteric options
         case 'B': // specify bind address

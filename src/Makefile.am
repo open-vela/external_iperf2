@@ -23,13 +23,11 @@ iperf_SOURCES = \
 		Listener.cpp \
 		Locale.c \
 		PerfSocket.cpp \
-		ReportCSV.c \
 		Reporter.c \
 		Reports.c \
 		ReportOutputs.c \
 		Server.cpp \
 		Settings.cpp \
-		Write_ack.cpp \
 		SocketAddr.c \
 		gnu_getopt.c \
 		gnu_getopt_long.c \

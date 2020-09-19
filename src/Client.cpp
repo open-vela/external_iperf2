@@ -206,7 +206,7 @@ void Client::my_connect (void) {
 	    mySocket = INVALID_SOCKET;
 	}
     }
-    if (isReport(mSettings)) {
+    if (isReport(mSettings) && isSettingsReport(mSettings)) {
 	struct ReportHeader *tmp = InitSettingsReport(mSettings);
 	assert(tmp!=NULL);
 	PostReport(tmp);

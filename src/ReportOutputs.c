@@ -588,6 +588,103 @@ void tcp_output_sumcnt_write_enhanced (struct TransferInfo *stats) {
 	   stats->sock_callstats.write.WriteErr,
 	   stats->sock_callstats.write.TCPretry);
 }
+
+// CSV output (note, not thread safe, only reporter can call these)
+static char __timestring[200];
+static void format_timestamp (struct timeval *timestamp, int enhanced) {
+    if (!enhanced) {
+	strftime(__timestring, 80, "%Y%m%d%H%M%S", localtime(&timestamp->tv_sec));
+    } else {
+	strftime(__timestring, 80, "%Y%m%d%H%M%S", localtime(&timestamp->tv_sec));
+	snprintf((__timestring + strlen(__timestring)), 160, ".%.3d", (int) (timestamp->tv_usec/1000));
+    }
+}
+
+static char __ips_ports_string[CSVPEERLIMIT];
+static void format_ips_ports_string (struct TransferInfo *stats) {
+    char local_addr[REPORT_ADDRLEN];
+    char remote_addr[REPORT_ADDRLEN];
+    struct sockaddr *local = ((struct sockaddr*)&stats->common->local);
+    struct sockaddr *peer = ((struct sockaddr*)&stats->common->peer);
+    __ips_ports_string[0] = '\0';
+    if (local->sa_family == AF_INET) {
+        inet_ntop(AF_INET, &((struct sockaddr_in*)local)->sin_addr,
+                   local_addr, REPORT_ADDRLEN);
+    }
+#ifdef HAVE_IPV6
+      else {
+        inet_ntop(AF_INET6, &((struct sockaddr_in6*)local)->sin6_addr,
+                   local_addr, REPORT_ADDRLEN);
+    }
+#endif
+    if (peer->sa_family == AF_INET) {
+        inet_ntop(AF_INET, &((struct sockaddr_in*)peer)->sin_addr,
+                   remote_addr, REPORT_ADDRLEN);
+    }
+#ifdef HAVE_IPV6
+      else {
+        inet_ntop(AF_INET6, &((struct sockaddr_in6*)peer)->sin6_addr,
+                   remote_addr, REPORT_ADDRLEN);
+    }
+#endif
+    snprintf(__ips_ports_string, REPORT_ADDRLEN*2+10, reportCSV_peer,
+             local_addr, (local->sa_family == AF_INET ?
+                          ntohs(((struct sockaddr_in*)local)->sin_port) :
+#ifdef HAVE_IPV6
+                          ntohs(((struct sockaddr_in6*)local)->sin6_port)),
+#else
+                          0),
+#endif
+            remote_addr, (peer->sa_family == AF_INET ?
+                          ntohs(((struct sockaddr_in*)peer)->sin_port) :
+#ifdef HAVE_IPV6
+                          ntohs(((struct sockaddr_in6*)peer)->sin6_port)));
+#else
+                          0));
+#endif
+}
+
+void udp_output_basic_csv (struct TransferInfo *stats) {
+    format_timestamp(&stats->ts.nextTime, isEnhanced(stats->common));
+    if (stats->csv_peer[0] == '\0') {
+	format_ips_ports_string(stats);
+	strncpy(&stats->csv_peer[0], &__ips_ports_string[0], CSVPEERLIMIT);
+	stats->csv_peer[(CSVPEERLIMIT - 1)] = '\0';
+    }
+    intmax_t speed = (intmax_t) (((stats->cntBytes > 0) && (stats->ts.iEnd -  stats->ts.iStart) > 0.0) ? \
+				 (((double)stats->cntBytes * 8.0) / (stats->ts.iEnd -  stats->ts.iStart)) : 0);
+    printf( reportCSV_bw_jitter_loss_format,
+	   __timestring,
+	    stats->csv_peer,
+	    stats->transferID,
+	    stats->ts.iStart,
+	    stats->ts.iEnd,
+	    stats->cntBytes,
+	    speed,
+	    stats->jitter*1000.0,
+	    stats->cntError,
+	    stats->cntDatagrams,
+	    (100.0 * stats->cntError) / stats->cntDatagrams, stats->cntOutofOrder );
+}
+void tcp_output_basic_csv (struct TransferInfo *stats) {
+    format_timestamp(&stats->ts.nextTime, isEnhanced(stats->common));
+    if (stats->csv_peer[0] == '\0') {
+	format_ips_ports_string(stats);
+	strncpy(&stats->csv_peer[0], &__ips_ports_string[0], CSVPEERLIMIT);
+	stats->csv_peer[(CSVPEERLIMIT - 1)] = '\0';
+    }
+    intmax_t speed = (intmax_t) (((stats->cntBytes > 0) && (stats->ts.iEnd -  stats->ts.iStart) > 0.0) ? \
+				 (((double)stats->cntBytes * 8.0) / (stats->ts.iEnd -  stats->ts.iStart)) : 0);
+    printf(reportCSV_bw_format,
+	   __timestring,
+	   stats->csv_peer,
+	   stats->transferID,
+	   stats->ts.iStart,
+	   stats->ts.iEnd,
+	   stats->cntBytes,
+	   speed);
+}
+
 /*
  * Report the client or listener Settings in default style
  */
@@ -761,8 +858,8 @@ void reporter_print_connection_report(struct ConnectionInfo *report) {
     // copy the inet_ntop into temp buffers, to avoid overwriting
     char local_addr[REPORT_ADDRLEN];
     char remote_addr[REPORT_ADDRLEN];
-    struct sockaddr *local = ((struct sockaddr*)&report->local);
-    struct sockaddr *peer = ((struct sockaddr*)&report->peer);
+    struct sockaddr *local = ((struct sockaddr*)&report->common->local);
+    struct sockaddr *peer = ((struct sockaddr*)&report->common->peer);
     outbuffer[0]='\0';
     outbufferext[0]='\0';
     outbufferext2[0]='\0';

@@ -109,6 +109,10 @@ static void common_copy (struct ReportCommon **common, struct thread_Settings *i
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
     (*common)->socketdrop = inSettings->mSockDrop;
 #endif
+    (*common)->peer = inSettings->peer;
+    (*common)->size_peer = inSettings->size_peer;
+    (*common)->local = inSettings->local;
+    (*common)->size_local = inSettings->size_local;
 }
 
 static void free_common_copy (struct ReportCommon *common) {
@@ -362,6 +366,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 					  &ReportCond, &inSettings->awake_me);
     if (inSettings->numreportstructs)
 	fprintf (stdout, "[%3d] NUM_REPORT_STRUCTS override from %d to %d\n", inSettings->mSock, NUM_REPORT_STRUCTS, inSettings->numreportstructs);
+    ireport->info.csv_peer[0] = '\0';
 
     // Set up the function vectors, there are three
     // 1) packet_handler: does packet accounting per the test and protocol
@@ -372,7 +377,9 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	if (isUDP(inSettings)) {
 	    ireport->packet_handler = reporter_handle_packet_server_udp;
 	    ireport->transfer_protocol_handler = reporter_transfer_protocol_server_udp;
-	    if (isIsochronous(inSettings)) {
+            if (inSettings->mReportMode == kReport_CSV) {
+		ireport->info.output_handler = udp_output_basic_csv;
+	    } else if (isIsochronous(inSettings)) {
 		ireport->info.output_handler = udp_output_read_enhanced_triptime;
 	    } else if (isBidir(inSettings)) {
 		ireport->info.output_handler =  (isEnhanced(inSettings) ? NULL : NULL);
@@ -384,7 +391,9 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	} else {
 	    ireport->packet_handler = reporter_handle_packet_server_tcp;
 	    ireport->transfer_protocol_handler = reporter_transfer_protocol_server_tcp;
-	    if (isTripTime(inSettings))
+            if (inSettings->mReportMode == kReport_CSV) {
+		ireport->info.output_handler = tcp_output_basic_csv;
+	    } else if (isTripTime(inSettings))
 		ireport->info.output_handler = tcp_output_read_enhanced_triptime;
 	    else if (isEnhanced(inSettings)) {
 		ireport->info.output_handler = (isSumOnly(inSettings) ? NULL : tcp_output_read_enhanced);
@@ -397,7 +406,9 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	ireport->packet_handler = reporter_handle_packet_client;
 	if (isUDP(inSettings)) {
 	    ireport->transfer_protocol_handler = reporter_transfer_protocol_client_udp;
-	    if (isIsochronous(inSettings)) {
+            if (inSettings->mReportMode == kReport_CSV) {
+		ireport->info.output_handler = udp_output_basic_csv;
+	    } else if (isIsochronous(inSettings)) {
 		ireport->info.output_handler = udp_output_write_enhanced_isoch;
 	    } else if (isEnhanced(inSettings)) {
 		ireport->info.output_handler = udp_output_write_enhanced;
@@ -408,6 +419,8 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	    ireport->transfer_protocol_handler = reporter_transfer_protocol_client_tcp;
 	    if (isSumOnly(inSettings)) {
 		ireport->info.output_handler = NULL;
+	    } else if (inSettings->mReportMode == kReport_CSV) {
+		ireport->info.output_handler = tcp_output_basic_csv;
 	    } else if (isEnhanced(inSettings) || isIsochronous(inSettings)) {
 		ireport->info.output_handler = tcp_output_write_enhanced;
 	    } else if (!isEnhanced(inSettings) && isBidir(inSettings)) {
@@ -511,10 +524,6 @@ struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, d
     common_copy(&creport->common, inSettings);
     // Fill out known fields for the connection report
     reporter_peerversion(creport, inSettings->peer_version_u, inSettings->peer_version_l);
-    creport->peer = inSettings->peer;
-    creport->size_peer = inSettings->size_peer;
-    creport->local = inSettings->local;
-    creport->size_local = inSettings->size_local;
     creport->connecttime = ct;
     if (isEnhanced(inSettings) && isTxStartTime(inSettings)) {
 	creport->epochStartTime.tv_sec = inSettings->txstart_epoch.tv_sec;

@@ -222,6 +222,10 @@ struct ReportCommon {
     int TCPWin;
     int winsize_requested;
     unsigned int FQPacingRate;
+    iperf_sockaddr peer;
+    Socklen_t size_peer;
+    iperf_sockaddr local;
+    Socklen_t size_local;
     char* Host;                   // -c
     char* Localhost;              // -B
     char* Ifrname;
@@ -240,10 +244,6 @@ struct ReportCommon {
 
 struct ConnectionInfo {
     struct ReportCommon *common;
-    iperf_sockaddr peer;
-    Socklen_t size_peer;
-    iperf_sockaddr local;
-    Socklen_t size_local;
     double connecttime;
     double txholdbacktime;
     struct timeval epochStartTime;
@@ -305,7 +305,6 @@ struct ReportTimeStamps {
 };
 
 struct TransferInfo {
-    void *reserved_delay;
     struct ReportCommon *common;
     struct ReportTimeStamps ts;
     void (*output_handler) (struct TransferInfo *stats);
@@ -334,6 +333,7 @@ struct TransferInfo {
     // Packet and frame state info
     uint32_t matchframeID;
     uint32_t frameID;
+    char csv_peer[CSVPEERLIMIT];
 };
 
 struct SumReport {
@@ -480,6 +480,10 @@ void udp_output_write_enhanced_isoch(struct TransferInfo *stats);
 void udp_output_sum_write_enhanced (struct TransferInfo *stats);
 void udp_output_sumcnt_write(struct TransferInfo *stats);
 void udp_output_sumcnt_write_enhanced (struct TransferInfo *stats);
+
+// CSV output
+void udp_output_basic_csv(struct TransferInfo *stats);
+void tcp_output_basic_csv(struct TransferInfo *stats);
 
 // Rest of the reporter output routines
 void reporter_connect_printf_tcp_final (struct ReportHeader *reporthdr);
