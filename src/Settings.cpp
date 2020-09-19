@@ -1476,11 +1476,11 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 
     // flags common to both TCP and UDP
     if (isReverse(client)) {
-	flags |= HEADER_EXTEND_NOACK;
+	flags |= (isUDP(client) ? (HEADER_EXTEND_NOACK | HEADER_UDPTESTS) : HEADER_EXTEND_NOACK);
         upperflags |= HEADER_REVERSE;
     }
     if (isBidir(client)) {
-	flags |= HEADER_EXTEND_NOACK;
+	flags |= (isUDP(client) ? (HEADER_EXTEND_NOACK | HEADER_UDPTESTS) : HEADER_EXTEND_NOACK);
         upperflags |= HEADER_BIDIR;
     }
     // Now setup UDP and TCP specific passed settings from client to server
