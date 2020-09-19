@@ -1000,6 +1000,9 @@ inline void Client::WriteTcpTxHdr (struct ReportStruct *reportstruct, int burst_
     struct TCP_burst_payload * mBuf_burst = (struct TCP_burst_payload *) mBuf;
     // store packet ID into buffer
     reportstruct->packetID += burst_size;
+    mBuf_burst->start_tv_sec = htonl(myReport->info.ts.startTime.tv_sec);
+    mBuf_burst->start_tv_usec = htonl(myReport->info.ts.startTime.tv_usec);
+
 #ifdef HAVE_INT64_T
     // Pack signed 64bit packetID into unsigned 32bit id1 + unsigned
     // 32bit id2.  A legacy server reading only id1 will still be able
