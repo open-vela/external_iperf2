@@ -83,6 +83,7 @@ extern "C" {
 #define SLOPSECS 2
 #define MAXDIFFTIMESTAMPSECS 60
 #define MAXDIFFTXSTART 3600
+#define CSVPEERLIMIT ((REPORT_ADDRLEN * 2) + 40)
 
 // server/client mode
 enum ThreadMode {
@@ -438,7 +439,7 @@ struct thread_Settings {
 #define unsetReport(settings)      settings->flags &= ~FLAG_REPORTSETTINGS
 #define unsetMulticast(settings)   settings->flags &= ~FLAG_MULTICAST
 #define unsetSSMMulticast(settings)   settings->flags &= ~FLAG_SSM_MULTICAST
-#define unsetNoSettReport(settings)   settings->flags &= ~FLAG_NOSETTREPORT
+#define unsetNoSettingsReport(settings)   settings->flags &= ~FLAG_NOSETTREPORT
 #define unsetNoConnReport(settings)   settings->flags &= ~FLAG_NOCONNREPORT
 #define unsetNoDataReport(settings)   settings->flags &= ~FLAG_NODATAREPORT
 #define unsetNoServReport(settings)   settings->flags &= ~FLAG_NOSERVREPORT

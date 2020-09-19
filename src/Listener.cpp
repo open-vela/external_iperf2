@@ -402,7 +402,7 @@ void Listener::my_listen (void) {
 	}
 
     // update the reporter thread
-    if (isReport(mSettings)) {
+    if (isReport(mSettings) && isSettingsReport(mSettings)) {
         struct ReportHeader *report_settings = InitSettingsReport(mSettings);
 	assert(report_settings != NULL);
 	// disable future settings reports, listener should only do it once
