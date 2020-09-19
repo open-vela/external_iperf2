@@ -227,6 +227,7 @@ struct ReportCommon {
     char* Ifrname;
     char* Ifrnametx;
     char* SSMMulticastStr;
+    char* Congestion;
 #if WIN32
     SOCKET socket;
 #else
