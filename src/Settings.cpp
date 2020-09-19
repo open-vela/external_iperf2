@@ -1005,6 +1005,15 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
 	    mExtSettings->mBufLen = kDefault_TCPBufLen;
 	}
     }
+    // compat mode doesn't support these test settings
+    int compat_nosupport = (isReverse(mExtSettings) | isBidir(mExtSettings) | isTripTime(mExtSettings) | isVaryLoad(mExtSettings) \
+			    | isRxHistogram(mExtSettings) |  isIsochronous(mExtSettings) \
+			    | isEnhanced(mExtSettings) | (mExtSettings->mMode != kTest_Normal));
+    if (isCompat(mExtSettings) && compat_nosupport) {
+	fprintf(stderr, "ERROR: compatability mode requested with settings not supported\n");
+	exit(1);
+    }
+
     // Handle default UDP offered load (TCP will be max, i.e. no read() or write() rate limiting)
     if (!isBWSet(mExtSettings) && isUDP(mExtSettings)) {
 	mExtSettings->mUDPRate = kDefault_UDPRate;
@@ -1040,7 +1049,6 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
 	setModeInfinite(mExtSettings);
 	fprintf(stderr, "WARNING: client will send traffic forever or until an external signal (e.g. SIGINT or SIGTERM) occurs to stop it\n");
     }
-
 
     if (isCongestionControl(mExtSettings)) {
 	if (isReverse(mExtSettings)) {
@@ -1184,7 +1192,7 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
 	    strip_v6_brackets(mExtSettings->mHost);
 	// get the socket address settings from the host, needed for link-local and multicast tests
 	SockAddr_setHostname(mExtSettings->mHost, &tmp,
-			      (isIPV6(mExtSettings) ? 1 : 0));
+			     (isIPV6(mExtSettings) ? 1 : 0));
 	if (isIPV6(mExtSettings) && SockAddr_isLinklocal(&tmp)) {
 	    // link-local doesn't use SO_BINDTODEVICE but includes it in the host string
 	    // so stitch things back together and null the bind to name
