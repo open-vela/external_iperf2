@@ -98,7 +98,7 @@ private:
     inline void WritePacketID(intmax_t);
     inline void WriteTcpTxHdr(struct ReportStruct *, int, int);
     void InitTrafficLoop(void);
-    inline void SetReportStartTime(void);
+    void SetReportStartTime(void);
     inline void SetBidirReportStartTime(void);
     void FinishTrafficActions(void);
     void AwaitServerFinPacket(void);
