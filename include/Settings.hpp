@@ -439,7 +439,7 @@ struct thread_Settings {
 #define unsetReport(settings)      settings->flags &= ~FLAG_REPORTSETTINGS
 #define unsetMulticast(settings)   settings->flags &= ~FLAG_MULTICAST
 #define unsetSSMMulticast(settings)   settings->flags &= ~FLAG_SSM_MULTICAST
-#define unsetNoSettingsReport(settings)   settings->flags &= ~FLAG_NOSETTREPORT
+#define unsetNoSettReport(settings)   settings->flags &= ~FLAG_NOSETTREPORT
 #define unsetNoConnReport(settings)   settings->flags &= ~FLAG_NOCONNREPORT
 #define unsetNoDataReport(settings)   settings->flags &= ~FLAG_NODATAREPORT
 #define unsetNoServReport(settings)   settings->flags &= ~FLAG_NOSERVREPORT

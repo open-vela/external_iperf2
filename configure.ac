@@ -277,16 +277,16 @@ if test "$ac_cv_have_ipv6" = yes; then
   fi
 fi
 
-if test "$enable_debuginfo" = yes; then
-AC_DEFINE([DBG_MJZ], 1, [Define if debugging info is desired])
-fi
 
 if test "$enable_thread_debug" = yes; then
-AC_DEFINE([HAVE_THREAD_DEBUG], 1, [Define for thread level debugging of the code])
+   AC_DEFINE([HAVE_THREAD_DEBUG], 1, [Define for thread level debugging of the code])
 else
-AC_DEFINE([NDEBUG], [1], [Define to disable asserts])
+   if test "$enable_debuginfo" = yes; then
+   AC_DEFINE([DBG_MJZ], 1, [Define if debugging info is desired])
+   else
+   AC_DEFINE([NDEBUG], [1], [Define to disable asserts])
+   fi
 fi
-
 
 if test "$enable_web100" != no; then
 if test -e "/proc/web100"; then
