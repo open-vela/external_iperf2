@@ -162,7 +162,8 @@ static void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport
 	case kMode_Client :
 	    if (isUDP(inSettings)) {
 		sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_udp;
-		sumreport->info.output_handler =  (isSumOnly(inSettings) ? udp_output_sumcnt_write : udp_output_sum_write);
+		sumreport->info.output_handler =  (isSumOnly(inSettings) ? udp_output_sumcnt_write : \
+						   (isEnhanced(inSettings) ? udp_output_sum_write_enhanced : udp_output_sum_write));
 	    } else {
 		sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_tcp;
 		sumreport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_write : tcp_output_sum_write);
@@ -413,7 +414,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	    } else if (isEnhanced(inSettings)) {
 		ireport->info.output_handler = udp_output_write_enhanced;
 	    } else {
-		ireport->info.output_handler = udp_output_write;
+		ireport->info.output_handler = (isSumOnly(inSettings) ? NULL :udp_output_write);
 	    }
 	} else {
 	    ireport->transfer_protocol_handler = reporter_transfer_protocol_client_tcp;

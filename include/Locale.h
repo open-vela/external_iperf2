@@ -236,6 +236,8 @@ extern const char report_mss[];
 
 extern const char report_datagrams[];
 
+extern const char report_sumcnt_datagrams[];
+
 extern const char report_sum_datagrams[];
 
 extern const char server_reporting[];
