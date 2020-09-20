@@ -222,6 +222,9 @@ struct ReportCommon {
     int TCPWin;
     int winsize_requested;
     unsigned int FQPacingRate;
+    int RXbins;
+    int RXbinsize;
+    int RXunits;
     iperf_sockaddr peer;
     Socklen_t size_peer;
     iperf_sockaddr local;
