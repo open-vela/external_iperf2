@@ -394,7 +394,6 @@ const char report_frame_tcp_enhanced_header[] =
 /* -------------------------------------------------------------------
  * Bidir reports
  * ------------------------------------------------------------------- */
-
 const char report_bw_sum_bidir_format[] =
 "[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec\n";
 
