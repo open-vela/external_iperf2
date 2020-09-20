@@ -152,7 +152,7 @@ void Listener::Run (void) {
     }
     Timestamp now;
 #define SINGLECLIENTDELAY_DURATION 50000 // units is microseconds
-    while (!sInterupted && (isSingleClient(mSettings) || mCount)) {
+    while (!sInterupted && mCount) {
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug("Listener main loop port %d ", mSettings->mPort);
 #endif
@@ -163,8 +163,8 @@ void Listener::Run (void) {
 #endif
 	    break;
 	}
-	// Serialize in the event -1 or SingleClient is set
-	if (isSingleClient(mSettings)) {
+	// Serialize in the event the -1 option or --singleclient is set
+	if (isSingleClient(mSettings) && mCount && (thread_numtrafficthreads() > 0)) {
 	    // Start with a delay in the event some traffic
 	    // threads are pending to be scheduled and haven't
 	    // had a chance to update the traffic thread count.
@@ -172,12 +172,9 @@ void Listener::Run (void) {
 	    // might better but also more complex. This delay
 	    // really should be good enough unless the os scheduler sucks
 	    delay_loop(SINGLECLIENTDELAY_DURATION);
-	    if (thread_numtrafficthreads() > 0) {
 #ifdef HAVE_THREAD_DEBUG
-		thread_debug("Listener single client loop");
+	    thread_debug("Listener single client loop");
 #endif
-		continue;
-	    }
 	}
 	// Use a select() with a timeout if -t is set
 	if (mMode_Time) {
@@ -330,13 +327,7 @@ void Listener::Run (void) {
 	    }
 	}
 	// Now start the server side traffic threads
-	if (isUDP(mSettings) && isSingleUDP(mSettings)) {
-	    UDPSingleServer(server);
-	} else {
-	    thread_start_all(server);
-	    if (isSingleClient(mSettings))
-		delay_loop(SINGLECLIENTDELAY_DURATION);
-	}
+	thread_start_all(server);
     }
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Listener exiting port/sig/threads %d/%d/%d", mSettings->mPort, sInterupted, mCount);
@@ -1071,10 +1062,4 @@ int Listener::client_test_ack(thread_Settings *server) {
 	WARN_errno(rc < 0, "tcpnodelay");
     }
     return rc;
-}
-
-void Listener::UDPSingleServer(thread_Settings *server) {
-    assert(server != NULL);
-    Settings_Destroy(server);
-    fprintf(stderr, "UDP single server or non threaded code not implemented\n");
 }

@@ -227,9 +227,9 @@ static void Free_iReport (struct ReporterData *ireport) {
 		 (void *)ireport, ireport->reporter_thread_suspends, (void *) ireport->packetring, \
 		 (void *)ireport->info.latency_histogram, (void *) ireport->info.framelatency_histogram);
 #endif
-    if (ireport->packetring && ireport->info.total.Bytes.current && \
+    if (ireport->packetring && ireport->info.total.Bytes.current && !(isSingleUDP(ireport->info.common)) && \
 	!TimeZero(ireport->info.ts.intervalTime) && (ireport->reporter_thread_suspends < 3)) {
-	fprintf(stdout, "WARN: this test was likley CPU bound (%d) (or may not be detecting the underlying network devices)\n", \
+	fprintf(stdout, "WARN: this test may have been CPU bound (%d) (or may not be detecting the underlying network devices)\n", \
 		ireport->reporter_thread_suspends);
     }
     if (ireport->packetring) {
@@ -362,8 +362,8 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
     // Create a new packet ring which is used to communicate
     // packet stats from the traffic thread to the reporter
     // thread.  The reporter thread does all packet accounting
-    ireport->packetring = packetring_init((inSettings->numreportstructs ? inSettings->numreportstructs : NUM_REPORT_STRUCTS), \
-					  &ReportCond, &inSettings->awake_me);
+    ireport->packetring = packetring_init((inSettings->numreportstructs ? inSettings->numreportstructs : (isSingleUDP(inSettings) ? 40 : NUM_REPORT_STRUCTS)), \
+					  &ReportCond, (isSingleUDP(inSettings) ? NULL : &inSettings->awake_me));
     if (inSettings->numreportstructs)
 	fprintf (stdout, "[%3d] NUM_REPORT_STRUCTS override from %d to %d\n", inSettings->mSock, NUM_REPORT_STRUCTS, inSettings->numreportstructs);
     ireport->info.csv_peer[0] = '\0';

@@ -67,8 +67,11 @@ struct PacketRing * packetring_init (int count, struct Condition *awake_consumer
     pr->producer = 0;
     pr->consumer = 0;
     pr->maxcount = count;
-    pr->awake_consumer = awake_consumer;
     pr->awake_producer = awake_producer;
+    if (!awake_producer)
+	pr->mutex_enable=0;
+    else
+	pr->mutex_enable=1;
     pr->consumerdone = 0;
     pr->awaitcounter = 0;
 #ifdef HAVE_THREAD_DEBUG
@@ -86,23 +89,25 @@ inline void packetring_enqueue (struct PacketRing *pr, struct ReportStruct *meta
     while (((pr->producer == pr->maxcount) && (pr->consumer == 0)) || \
 	   ((pr->producer + 1) == pr->consumer)) {
 	// Signal the consumer thread to process a full queue
-        Condition_Signal(pr->awake_consumer);
-	// Wait for the consumer to create some queue space
-	Condition_Lock((*(pr->awake_producer)));
-	pr->awaitcounter++;
+	if (pr->mutex_enable) {
+	    Condition_Signal(pr->awake_consumer);
+	    // Wait for the consumer to create some queue space
+	    Condition_Lock((*(pr->awake_producer)));
+	    pr->awaitcounter++;
 #ifdef HAVE_THREAD_DEBUG_PERF
-	{
-	    struct timeval now;
-	    static struct timeval prev={.tv_sec=0, .tv_usec=0};
-	    gettimeofday( &now, NULL );
-	    if (!prev.tv_sec || (TimeDifference(now, prev) > 1.0)) {
-		prev = now;
-		thread_debug( "Not good, traffic's packet ring %p stalled per %p", (void *)pr, (void *)&pr->awake_producer);
+	    {
+		struct timeval now;
+		static struct timeval prev={.tv_sec=0, .tv_usec=0};
+		gettimeofday( &now, NULL );
+		if (!prev.tv_sec || (TimeDifference(now, prev) > 1.0)) {
+		    prev = now;
+		    thread_debug( "Not good, traffic's packet ring %p stalled per %p", (void *)pr, (void *)&pr->awake_producer);
+		}
 	    }
-	}
 #endif
-	Condition_TimedWait(pr->awake_producer, 1);
-	Condition_Unlock((*(pr->awake_producer)));
+	    Condition_TimedWait(pr->awake_producer, 1);
+	    Condition_Unlock((*(pr->awake_producer)));
+	}
     }
     int writeindex;
     if ((pr->producer + 1) == pr->maxcount)
@@ -128,13 +133,15 @@ inline struct ReportStruct *packetring_dequeue (struct PacketRing *pr) {
     packet = (pr->data + readindex);
     // advance the consumer pointer last
     pr->consumer = readindex;
-    // Signal the traffic thread assigned to this ring
-    // when the ring goes from having something to empty
-    if (pr->producer == pr->consumer) {
+    if (pr->mutex_enable) {
+	// Signal the traffic thread assigned to this ring
+	// when the ring goes from having something to empty
+	if (pr->producer == pr->consumer) {
 #ifdef HAVE_THREAD_DEBUG
-	// thread_debug( "Consumer signal packet ring %p empty per %p", (void *)pr, (void *)&pr->awake_producer);
+	    // thread_debug( "Consumer signal packet ring %p empty per %p", (void *)pr, (void *)&pr->awake_producer);
 #endif
-	Condition_Signal(pr->awake_producer);
+	    Condition_Signal(pr->awake_producer);
+	}
     }
     return packet;
 }

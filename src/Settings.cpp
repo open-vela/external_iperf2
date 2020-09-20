@@ -772,7 +772,9 @@ void Settings_Interpret(char option, const char *optarg, struct thread_Settings 
             break;
 
         case 'U': // single threaded UDP server
+	    setUDP(mExtSettings);
             setSingleUDP(mExtSettings);
+            setSingleClient(mExtSettings);
             break;
 
         case 'V': // IPv6 Domain
