@@ -414,7 +414,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	    } else if (isEnhanced(inSettings)) {
 		ireport->info.output_handler = udp_output_write_enhanced;
 	    } else {
-		ireport->info.output_handler = (isSumOnly(inSettings) ? NULL :udp_output_write);
+		ireport->info.output_handler = (isSumOnly(inSettings) ? NULL : udp_output_write);
 	    }
 	} else {
 	    ireport->transfer_protocol_handler = reporter_transfer_protocol_client_tcp;
