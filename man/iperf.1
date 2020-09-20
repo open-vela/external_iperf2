@@ -39,7 +39,7 @@ MBytes, GBytes (see NOTES for more)
 print a help synopsis
 .TP
 .BR -i ", " --interval " < \fIn\fR[p] | f >"
-sample or display interval reports every \fIn\fR seconds (default) or \fIn\fR packets (per optional p suffix.) If f is used then the interval will be each frame or burst.
+sample or display interval reports every \fIn\fR seconds (default) or \fIn\fR packets (per optional p suffix.) If f is used then the interval will be each frame or burst. The frame interval reporting is experimental.  Also suggest a compile with fast-sampling, i.e. ./configure --enable-fastsampling
 .TP
 .BR -l ", " --len " \fIn\fR[kmKM]"
 set read/write buffer size (TCP) or length (UDP) to \fIn\fR (TCP default 128K, UDP default 1470)

@@ -514,6 +514,8 @@ void Settings_Interpret(char option, const char *optarg, struct thread_Settings 
 		// scan for frames as units
 		if ((sscanf(optarg,"%c", &framechar)) && ((framechar == 'f') || (framechar == 'F'))) {
 		    mExtSettings->mIntervalMode = kInterval_Frames;
+		    setEnhanced(mExtSettings);
+		    setFrameInterval(mExtSettings);
 		} else {
 		    char *end;
 		    strcpy(tmp, optarg);
