@@ -57,6 +57,18 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+
+#define HEADING_FLAG(HEADING) __ ## HEADING ## _print_done
+#define HEADING_HDR(HEADING) HEADING ## _header
+#define HEADING_PRINT_COND(HEADING)	        \
+  do {                                          \
+      if (!HEADING_FLAG(HEADING)) {		\
+	  printf("%s", HEADING_HDR(HEADING));	\
+	  HEADING_FLAG(HEADING) = 1;		\
+      }					        \
+  } while(0)
+
 /* -------------------------------------------------------------------
  * usage
  * ------------------------------------------------------------------- */
@@ -126,6 +138,7 @@ extern const char client_fq_pacing[];
  * ------------------------------------------------------------------- */
 
 extern const char report_bw_header[];
+
 extern const char report_bw_sumcnt_header[];
 
 extern const char report_bw_format[];
