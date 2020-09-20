@@ -1128,6 +1128,9 @@ void reporter_transfer_protocol_server_udp (struct ReporterData *data, int final
 	if (stats->latency_histogram) {
 	    stats->latency_histogram->final = 1;
 	}
+	if (stats->framelatency_histogram) {
+	    stats->framelatency_histogram->final = 1;
+	}
     }
     if (stats->output_handler)
 	(*stats->output_handler)(stats);
