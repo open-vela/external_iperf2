@@ -321,6 +321,7 @@ struct thread_Settings {
 #define FLAG_NOUDPFIN       0x00200000
 #define FLAG_NOCONNECTSYNC  0x00400000
 #define FLAG_SUMONLY        0x00800000
+#define FLAG_FRAMEINTERVAL  0x01000000
 
 #define isBuflenSet(settings)      ((settings->flags & FLAG_BUFLENSET) != 0)
 #define isCompat(settings)         ((settings->flags & FLAG_COMPAT) != 0)
@@ -373,6 +374,7 @@ struct thread_Settings {
 #define isNoUDPfin(settings)       ((settings->flags_extend & FLAG_NOUDPFIN) != 0)
 #define isNoConnectSync(settings)  ((settings->flags_extend & FLAG_NOCONNECTSYNC) != 0)
 #define isSumOnly(settings)        ((settings->flags_extend & FLAG_SUMONLY) != 0)
+#define isFrameInterval(settings)  ((settings->flags_extend & FLAG_FRAMEINTERVAL) != 0)
 
 #define setBuflenSet(settings)     settings->flags |= FLAG_BUFLENSET
 #define setCompat(settings)        settings->flags |= FLAG_COMPAT
@@ -422,6 +424,7 @@ struct thread_Settings {
 #define setNoUDPfin(settings)      settings->flags_extend |= FLAG_NOUDPFIN
 #define setNoConnectSync(settings) settings->flags_extend |= FLAG_NOCONNECTSYNC
 #define setSumOnly(settings)       settings->flags_extend |= FLAG_SUMONLY
+#define setFrameInterval(settings) settings->flags_extend |= FLAG_FRAMEINTERVAL
 
 #define unsetBuflenSet(settings)   settings->flags &= ~FLAG_BUFLENSET
 #define unsetCompat(settings)      settings->flags &= ~FLAG_COMPAT
@@ -471,6 +474,7 @@ struct thread_Settings {
 #define unsetNoUDPfin(settings)     settings->flags_extend &= ~FLAG_NOUDPFIN
 #define unsetNoConnectSync(settings) settings->flags_extend &= ~FLAG_NOCONNECTSYNC
 #define unsetSumOnly(settings) settings->flags_extend &= ~FLAG_SUMONLY
+#define unsetFrameInterval(settings) settings->flags_extend &= ~FLAG_FRAMEINTERVAL
 
 // set to defaults
 void Settings_Initialize(struct thread_Settings* main);
