@@ -3,9 +3,9 @@ By Robert McMahon
 September 2020
 Code at rev 2.0.14
 
-This document helps to describe the iperf 2 design. It's quite complicated. It's hoped this overview will help someone to understand the code. As with any openy source software, the authoritive information comes from reading the code itself.
+This document helps to describe the iperf 2 design. It's quite complicated. It's hoped this overview will help someone to understand the code. As with any open source software, the authoritative information comes from reading the code itself.
 
-Iperf 2 is a designed to be a multithreaded program. It's also a hybrid of C and C++ code tha evolved from 1.7 to 2.0.5 where it stalled. A new group from Broadcom with a WiFi focus took over the code base starting at 2.0.5 and we are now up to 2.0.14. The only link between the groups been the code itself.
+Iperf 2 is a designed to be a multi-threaded program. It's also a hybrid of C and C++ code that evolved from 1.7 to 2.0.5 where it stalled. A new group from Broadcom with a WiFi focus took over the code base starting at 2.0.5 and we are now up to 2.0.14. The only link between the groups been the code itself.
 
 Iperf 3 is a new code base and isn't compatible with iperf 2. This document doesn't discuss iperf 3.
 
@@ -31,7 +31,7 @@ o) Spawn a server thread which will receive traffic from a client
 
 Reporter (src/Reporter.c include/Reporter.h):
 
-There is one reporter thread for a client and one for a server (excluding full duplex traffic where the reporter handles both a client and a server.) The goal of the reporter thread is to decouple user i/o from traffic. This allows the tool to measure traffic performance unrelated to user i/o. The reporter thread also does traffic accounting. The reporter thread outputs the followint types of reports
+There is one reporter thread for a client and one for a server (excluding full duplex traffic where the reporter handles both a client and a server.) The goal of the reporter thread is to decouple user i/o from traffic. This allows the tool to measure traffic performance unrelated to user i/o. The reporter thread also does traffic accounting. The reporter thread outputs the following types of reports
 
 o) settings report
 o) connection report
@@ -75,11 +75,11 @@ Common settings are deep copies from the thread settings object. This help to de
 
 Data Report and packet rings
 
-The data report warrant its own section do to it complexity.  The core of the data report is a packet ring and statistics per that traffic thread. The packet ring allows the traffic thread to communicate read or write statistics to the reporter thread using shared memory and very limited syscalls or mutexes. The packer ring has proodcder and consumer pointer. The ring elemeentw are report structs.
+The data report warrant its own section do to it complexity.  The core of the data report is a packet ring and statistics per that traffic thread. The packet ring allows the traffic thread to communicate read or write statistics to the reporter thread using shared memory and very limited syscalls or mutexes. The packet ring has producer and consumer pointer. The ring elements are report structs.
 
 Packet rings (src/packetring.c include/packetring.h)
 
-A packet ring is a circular buffer between a traffic thread and reporter thread. A traffic thread is a producer and the reporter thread is the consumer. There is one packet ring per each traffic thread. The one reporter thread services all the traffic threads' rings. A traffic thread posts packet, read or write information using a Reportstruct. This is the necessary and sufficient infomation such that the reporter thread can perform the threads performance accounting as well as display interval or final reports.
+A packet ring is a circular buffer between a traffic thread and reporter thread. A traffic thread is a producer and the reporter thread is the consumer. There is one packet ring per each traffic thread. The one reporter thread services all the traffic threads' rings. A traffic thread posts packet, read or write information using a Reportstruct. This is the necessary and sufficient information such that the reporter thread can perform the threads performance accounting as well as display interval or final reports.
 
 Summing (src/list.cpp include/list.hpp)
 
@@ -87,11 +87,11 @@ Packet or read or write summing is done on a per client (host ip) basis. All tra
 
 Function vectors (src/Reports.c src/Reporter.c src/ReportOutputs.c)
 
-The implementation of the reporter uses function vectors to handle the various types of traffic reporting. It's done this way so there aren't any inline tests, i.e. the function pointers are intialized at report creation time.  These consist of
+The implementation of the reporter uses function vectors to handle the various types of traffic reporting. It's done this way so there aren't any inline tests, i.e. the function pointers are initialized at report creation time.  These consist of
 
 *packet_handler() - this is used to account for tcp or udp write or read called for every read or write
-*transfer_protcol_handler() - used to ready the data before it's output handler is called,
-*transfer_protcol_handler() - used to ready the summation data before it's output handler is called
+*transfer_protocol_handler() - used to ready the data before it's output handler is called,
+*transfer_protocol_handler() - used to ready the summation data before it's output handler is called
 *output_handler() - used to format output and print the output
 *transfer_interval_handler() - used to select between time based or write/frame/burst reporting
 
@@ -101,7 +101,7 @@ Startup (src/main.cpp src/Launch.cpp)
 
 Thread creation:
 
-There are three primary aspects of startup. The code is in main.cpp, Launch.cpp and Listener.cpp. The primary purpose of this code is to determine settings and instaniate thread ojbects with those settings.  The thread objects are then strated by the running operating system thead create callls per thread_start() found in compat/Thread.c  Thee main function there is thread_run_wrapper which spawns a thread type.
+There are three primary aspects of startup. The code is in main.cpp, Launch.cpp and Listener.cpp. The primary purpose of this code is to determine settings and instantiate thread ojbects with those settings.  The thread objects are then strated by the running operating system thead create callls per thread_start() found in compat/Thread.c  Thee main function there is thread_run_wrapper which spawns a thread type.
 
 The run main.cpp is to read user settings, instantiate a setttings thread objec, and, for a client, initiate their threads, while for a server, initiate the listener thread. On the server side, the listener thread will instantiate server and client threads.
 
