@@ -1002,7 +1002,7 @@ static inline void reporter_reset_transfer_stats_client_udp (struct TransferInfo
 	stats->cntError = 0;
     }
     stats->total.Lost.prev = stats->total.Lost.current;
-    stats->total.Datagrams.prev = stats->PacketID;
+    stats->total.Datagrams.prev = stats->total.Datagrams.current;
     stats->total.Bytes.prev = stats->total.Bytes.current;
     stats->total.IPG.prev = stats->total.IPG.current;
     stats->sock_callstats.write.WriteCnt = 0;
@@ -1180,16 +1180,20 @@ void reporter_transfer_protocol_sum_client_udp (struct TransferInfo *stats, int 
 	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
     }
     (*stats->output_handler)(stats);
-    if (!final)
+
+    if (!final) {
+	stats->threadcnt = 0;
 	reporter_reset_transfer_stats_client_udp(stats);
+    } else
+	printf(report_sumcnt_datagrams, stats->threadcnt, stats->total.Datagrams.current);
 }
 
 void reporter_transfer_protocol_client_udp (struct ReporterData *data, int final) {
     struct TransferInfo *stats = &data->info;
     struct TransferInfo *sumstats = (data->GroupSumReport != NULL) ? &data->GroupSumReport->info : NULL;
     struct TransferInfo *bidirstats = (data->FullDuplexReport != NULL) ? &data->FullDuplexReport->info : NULL;
-    assert(stats->output_handler != NULL);
     stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
+    stats->cntDatagrams = stats->total.Datagrams.current - stats->total.Datagrams.prev;
     if (sumstats) {
 	sumstats->total.Bytes.current += stats->cntBytes;
 	sumstats->sock_callstats.write.WriteErr += stats->sock_callstats.write.WriteErr;
@@ -1200,6 +1204,7 @@ void reporter_transfer_protocol_client_udp (struct ReporterData *data, int final
 	if (sumstats->IPGsum < stats->IPGsum)
 	    sumstats->IPGsum = stats->IPGsum;
 	sumstats->total.IPG.current += stats->cntIPG;
+	sumstats->threadcnt++;
     }
     if (bidirstats) {
 	bidirstats->total.Bytes.current += stats->cntBytes;
@@ -1214,17 +1219,17 @@ void reporter_transfer_protocol_client_udp (struct ReporterData *data, int final
 	stats->IPGsum = TimeDifference(stats->ts.packetTime, stats->ts.startTime);
     } else {
 	if (stats->ts.iEnd > 0) {
-	    stats->cntDatagrams = stats->total.Datagrams.current - stats->total.Datagrams.prev;
 	    stats->cntIPG = (stats->total.IPG.current - stats->total.IPG.prev);
 	} else {
 	    stats->cntIPG = 0;
 	}
     }
-    (*stats->output_handler)(stats);
-    if (final)
-	printf(report_datagrams, stats->transferID, stats->total.Datagrams.current);
-    else
-	reporter_reset_transfer_stats_client_udp(stats);
+    if (stats->output_handler) {
+	(*stats->output_handler)(stats);
+	if (final)
+	    printf(report_datagrams, stats->transferID, stats->total.Datagrams.current);
+    }
+    reporter_reset_transfer_stats_client_udp(stats);
 }
 
 void reporter_transfer_protocol_server_tcp (struct ReporterData *data, int final) {

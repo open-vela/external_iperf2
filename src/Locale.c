@@ -335,7 +335,6 @@ const char report_sumcnt_bw_write_enhanced_format[] =
 const char report_bw_write_sumcnt_enhanced_header[] =
 "[SUM-cnt] Interval" IPERFTimeSpace "Transfer    Bandwidth       Write/Err  Rtry\n";
 
-
 const char report_bw_pps_enhanced_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer     Bandwidth      Write/Err  PPS\n";
 
@@ -428,6 +427,9 @@ const char report_mss[] =
 
 const char report_datagrams[] =
 "[%3d] Sent %d datagrams\n";
+
+const char report_sumcnt_datagrams[] =
+"[SUM-%d] Sent %d datagrams\n";
 
 const char report_sum_datagrams[] =
 "[SUM] Sent %d datagrams\n";
