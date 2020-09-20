@@ -920,6 +920,7 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		if ((upperflags & HEADER_REVERSE) != 0) {
 		    server->mThreadMode=kMode_Client;
 		    setServerReverse(server);
+		    setNoUDPfin(server);
 		    unsetReport(server);
 		}
 		if (upperflags & HEADER_FQRATESET) {
