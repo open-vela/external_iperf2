@@ -13,10 +13,10 @@ iperf \- perform network throughput tests
 .SH DESCRIPTION
 .LP
 iperf 2 is a tool for performing network throughput and latency measurements. It can test
-useing either TCP or UDP protocols. It supports both unidirectional and bidirectional
+using either TCP or UDP protocols. It supports both unidirectional and bidirectional
 traffic. Multiple simultaneous traffic streams are also supported. Metrics are displayed to
 help isolate the causes which impact performance. Setting the enhanced (-e) option provides all
-availble metrics.
+available metrics.
 .LP
 The user must establish both a both a server (to discard traffic)
 and a client (to generate traffic) for a test to occur. The client and server
@@ -24,7 +24,7 @@ typically are on different hosts or computers but need not be.
 .SH "GENERAL OPTIONS"
 .TP
 .BR -b ", " --bandwidth " "
-set the target bandwidth and optional standard devation per
+set the target bandwidth and optional standard deviation per
 \fI<mean>\fR,\fI[<stdev>]\fR (See NOTES for suffixes)
 .TP
 .BR -e ", " --enhanced " "
@@ -51,7 +51,7 @@ perform layer 2 length checks on received UDP packets (requires systems that sup
 print TCP maximum segment size (MTU - TCP/IP header)
 .TP
 .BR "    --NUM_REPORT_STRUCTS " \fI<count>\fR
-Override the default shared memory size between the traffic thread(s) and reporter thread in order to mitigate mutex lock contentions. The default value of 5000 should be sufficient for 1Gb/s networks. Increase this upon seeing the WARNing message of reporter thread too slow. If the WARNing message isn't seen, then increasing this won't have any significant effect (other than to use some additional memory.)
+Override the default shared memory size between the traffic thread(s) and reporter thread in order to mitigate mutex lock contentions. The default value of 5000 should be sufficient for 1Gb/s networks. Increase this upon seeing the Warning message of reporter thread too slow. If the Warning message isn't seen, then increasing this won't have any significant effect (other than to use some additional memory.)
 .TP
 .BR -o ", " --output " \fIfilename\fR"
 output the report or error message to this specified file
@@ -160,7 +160,7 @@ set the interpacket gap to \fIn\fR (units of milliseconds) for packets within an
 send isochronous traffic with frequency frames per second and load defined by mean and standard deviation using a log normal distribution, defaults to 60:20m,0. (Note: Here the suffixes indicate bytes/sec or bits/sec per use of uppercase or lowercase, respectively. Also the p suffix is supported to set the burst size in packets, e.g. isochronous=2:25p will send two 25 packet bursts every second, or one 25 packet burst every 0.5 seconds.)
 .TP
 .BR "    --no-connect-sync "
-By default, parallel traffic threads (per -P greater than 1) will synchronize after their TCP connects and prior to each sending traffic, i.e. all the threads first complete (or error) the TCP 3WHS before any traffic thread will start sending. This option disables that sychronization such that each traffic thread will start sending immediately after completing its successful connect.
+By default, parallel traffic threads (per -P greater than 1) will synchronize after their TCP connects and prior to each sending traffic, i.e. all the threads first complete (or error) the TCP 3WHS before any traffic thread will start sending. This option disables that synchronization such that each traffic thread will start sending immediately after completing its successful connect.
 .TP
 .BR "    --no-udp-fin "
 Don't perform the UDP final server to client exchange which means there won't be a final server report displayed on the client. All packets per the test will be from the client to the server and no packets should be sent in the other direction.
@@ -198,7 +198,7 @@ input the data to be transmitted from a file
 input the data to be transmitted from stdin
 .TP
 .BR -L ", " --listenport " \fIn\fR"
-port to recieve bidirectional tests back on
+port to receive bidirectional tests back on
 .TP
 .BR -P ", " --parallel " \fIn\fR"
 number of parallel client threads to run
@@ -590,7 +590,7 @@ UDP buffer size:  208 KByte (default)
 .TP
 .B where,
 .B Frames/lost
-Total number of frames (or bursts) received. Total number of bursts lost or errored
+Total number of frames (or bursts) received. Total number of bursts lost or error-ed
 .br
 .B
 T8-PDF(f)
@@ -632,7 +632,7 @@ the accuracy of any end to end latency measurements.
 Binding
 is done at the logical level (ip address or layer 3) using the -B option
 and at the device (or layer 2) level using the percent (%) separator for both the client
-and tne server. On the client, the -B option affects the \fBbind\fR(2)
+and the server. On the client, the -B option affects the \fBbind\fR(2)
 system call, and will set the source ip address and the source port, e.g. iperf -c <host>
 -B 192.168.100.2:6002. This controls the packet's source values but not routing.
 These can be confusing in that a route or device lookup may not
