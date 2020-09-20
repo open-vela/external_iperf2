@@ -180,19 +180,24 @@ void EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
     packet.packetID = -1;
     packet.packetLen = finalpacket->packetLen;
     packet.packetTime = finalpacket->packetTime;
-    ReportPacket(report, &packet);
+    if (isSingleUDP(report->info.common)) {
+	packetring_enqueue(report->packetring, &packet);
+	reporter_process_transfer_report(report);
+    } else {
+	ReportPacket(report, &packet);
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug( "Traffic thread awaiting reporter to be done with %p and cond %p", (void *)report, (void *) report->packetring->awake_producer);
+	thread_debug( "Traffic thread awaiting reporter to be done with %p and cond %p", (void *)report, (void *) report->packetring->awake_producer);
 #endif
-    Condition_Lock((*(report->packetring->awake_producer)));
-    while (!report->packetring->consumerdone) {
-	// This wait time is the lag between the reporter thread
-	// and the traffic thread, a reporter thread with lots of
-	// reports (e.g. fastsampling) can lag per the i/o
-	Condition_TimedWait(report->packetring->awake_producer, 1);
-	// printf("Consumer done may be stuck\n");
+	Condition_Lock((*(report->packetring->awake_producer)));
+	while (!report->packetring->consumerdone) {
+	    // This wait time is the lag between the reporter thread
+	    // and the traffic thread, a reporter thread with lots of
+	    // reports (e.g. fastsampling) can lag per the i/o
+	    Condition_TimedWait(report->packetring->awake_producer, 1);
+	    // printf("Consumer done may be stuck\n");
+	}
+	Condition_Unlock((*(report->packetring->awake_producer)));
     }
-    Condition_Unlock((*(report->packetring->awake_producer)));
     if (isUDP(stats->common)) {
 	if ((stats->common->ThreadMode == kMode_Server) && !isMulticast(stats->common) && !isNoUDPfin(stats->common)) {
 	    // send a UDP acknowledgement back except when:
@@ -303,7 +308,9 @@ static inline struct ReportHeader *reporter_jobq_set_root (void) {
 	if (!ReportPendingHead) {
 	    Condition_TimedWait(&ReportCond, 1);
 #ifdef HAVE_THREAD_DEBUG
-	    thread_debug( "Jobq *WAIT* exit  %p/%p cond=%p", (void *) ReportRoot, (void *) ReportPendingHead, (void *) &ReportCond);
+	    thread_debug( "Jobq *WAIT* exit  %p/%p cond=%p threads=%d", \
+			  (void *) ReportRoot, (void *) ReportPendingHead, \
+			  (void *) &ReportCond, thread_numtrafficthreads());
 #endif
 	}
     }
@@ -455,7 +462,8 @@ int reporter_process_transfer_report (struct ReporterData *this_ireport) {
     // Note: If this detection is not going off it means
     // the system is likely CPU bound and iperf is now likely
     // becoming a CPU bound test vs a network i/o bound test
-    apply_consumption_detector();
+    if (!isSingleUDP(this_ireport->info.common))
+	apply_consumption_detector();
     // If there are more packets to process then handle them
     struct ReportStruct *packet = NULL;
     int advance_jobq = 0;

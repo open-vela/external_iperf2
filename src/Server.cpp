@@ -419,7 +419,8 @@ void Server::InitTrafficLoop (void) {
         mEndTime.setnow();
         mEndTime.add(mSettings->mAmount / 100.0);
     }
-    PostReport(myJob);
+    if (!isSingleUDP(mSettings))
+	PostReport(myJob);
     // The first payload is different for TCP so read it and report it
     // before entering the main loop
     reportstruct->packetLen = SkipFirstPayload();
@@ -697,7 +698,12 @@ void Server::RunUDP (void) {
 		}
 	    }
 	}
-	ReportPacket(myReport, reportstruct);
+	if (!isSingleUDP(mSettings))
+	    ReportPacket(myReport, reportstruct);
+	else {
+	    packetring_enqueue(myReport->packetring, reportstruct);
+	    reporter_process_transfer_report(myReport);
+	}
     }
     disarm_itimer();
     EndJob(myJob, reportstruct);
