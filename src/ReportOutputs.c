@@ -671,6 +671,12 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
     if (isSingleClient(report->common)) {
 	fprintf(stdout, "Server set to single client traffic mode (serialize traffic tests)\n");
     }
+    if (isSingleClient(report->common)) {
+	fprintf(stdout, "Server set to single client traffic mode (serialize traffic tests)\n");
+    }
+    if (isFrameInterval(report->common)) {
+	fprintf(stdout, "Frame or burst interval reporting feature is experimental - suggest fast-sampling as well\n");
+    }
     output_window_size(report);
     printf("\n");
 }
