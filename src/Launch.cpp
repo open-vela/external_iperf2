@@ -187,6 +187,7 @@ static void clientside_client_reverse (struct thread_Settings *thread, Client *t
 	reverse_client->mSock = thread->mSock; // use the same socket for both directions
 	reverse_client->mThreadMode = kMode_Server;
 	setServerReverse(reverse_client); // cause the connection report to show reverse
+	setNoUDPfin(reverse_client); // disable the fin report - no need
 	thread_start(reverse_client);
 	// Nothing was posted to reporter thread so free here
 	if (theClient->myJob)
