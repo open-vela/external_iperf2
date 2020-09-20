@@ -351,6 +351,12 @@ void udp_output_read_enhanced_triptime (struct TransferInfo *stats) {
 		   stats->isochstats.framecnt, stats->isochstats.framelostcnt);
 	}
     }
+    if (stats->latency_histogram) {
+	histogram_print(stats->latency_histogram, stats->ts.iStart, stats->ts.iEnd);
+    }
+    if (stats->framelatency_histogram) {
+	histogram_print(stats->framelatency_histogram, stats->ts.iStart, stats->ts.iEnd);
+    }
     _output_outoforder(stats);
 }
 void udp_output_write (struct TransferInfo *stats) {
@@ -673,6 +679,10 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
     }
     if (isSingleClient(report->common)) {
 	fprintf(stdout, "Server set to single client traffic mode (serialize traffic tests)\n");
+    }
+    if (isRxHistogram(report->common)) {
+	fprintf(stdout, "Enabled rx-histograms bin-width=%0.3f ms, bins=%d (clients must use --trip-times)\n", \
+		((1e3 * report->common->RXbinsize) / pow(10,report->common->RXunits)), report->common->RXbins);
     }
     if (isFrameInterval(report->common)) {
 	fprintf(stdout, "Frame or burst interval reporting feature is experimental - suggest fast-sampling as well\n");

@@ -113,6 +113,9 @@ static void common_copy (struct ReportCommon **common, struct thread_Settings *i
     (*common)->size_peer = inSettings->size_peer;
     (*common)->local = inSettings->local;
     (*common)->size_local = inSettings->size_local;
+    (*common)->RXbins =inSettings->mRXbins;
+    (*common)->RXbinsize =inSettings->mRXbinsize;
+    (*common)->RXunits =inSettings->mRXunits;
 }
 
 static void free_common_copy (struct ReportCommon *common) {
@@ -471,7 +474,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
     }
     if (inSettings->mThreadMode == kMode_Server) {
 	ireport->info.sock_callstats.read.binsize = inSettings->mBufLen / 8;
-	if (isRxHistogram(inSettings) && isUDP(inSettings)) {
+	if (isRxHistogram(inSettings) && isUDP(inSettings) && isTripTime(inSettings)) {
 	    char name[] = "T8";
 	    ireport->info.latency_histogram =  histogram_init(inSettings->mRXbins,inSettings->mRXbinsize,0,\
 							      pow(10,inSettings->mRXunits), \
