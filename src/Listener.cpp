@@ -879,6 +879,7 @@ int Listener::apply_client_settings (thread_Settings *server) {
     }
     server->peer_version_u = 0;
     server->peer_version_l = 0;
+    server->mMode = kTest_Normal;
 
     if (isUDP(server)) {
 	n = recvn(server->mSock, mBuf, sizeof(uint32_t) + sizeof(struct UDP_datagram), MSG_PEEK);
@@ -893,41 +894,49 @@ int Listener::apply_client_settings (thread_Settings *server) {
 	    // read the test settings passed to the server by the client
 	    n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK);
 	    FAIL_errno((n < peeklen), "read udp test hdr", server);
-	    if (((flags & HEADER_VERSION1) != 0) && ((flags & HEADER_EXTEND_NOACK) == 0) && ((flags & HEADER_EXTEND_ACK) == 0)) {
-		server->mMode = kTest_TradeOff;
+	    if (flags & HEADER_VERSION1) {
+		if (flags & RUN_NOW)
+		    server->mMode = kTest_DualTest;
+		else
+		    server->mMode = kTest_TradeOff;
 	    }
-	    if ((flags & HEADER_UDPTESTS) != 0) {
-		uint16_t upperflags = htons(hdr->extend.upperflags);
+	    uint16_t upperflags = htons(hdr->extend.upperflags);
+	    if (flags & HEADER_UDPTESTS) {
 		server->mTOS = ntohs(hdr->extend.tos);
 		// Handle stateless flags
-		if ((upperflags & HEADER_ISOCH) != 0) {
+		if (upperflags & HEADER_ISOCH) {
 		    setIsochronous(server);
 		}
-		if ((upperflags & HEADER_L2ETHPIPV6) != 0) {
+		if (upperflags & HEADER_L2ETHPIPV6) {
 		    setIPV6(server);
 		} else {
 		    unsetIPV6(server);
 		}
-		if ((upperflags & HEADER_L2LENCHECK) != 0) {
+		if (upperflags & HEADER_L2LENCHECK) {
 		    setL2LengthCheck(server);
 		}
-		if ((upperflags & HEADER_NOUDPFIN) != 0) {
+		if (upperflags & HEADER_NOUDPFIN) {
 		    setNoUDPfin(server);
 		}
-		if ((upperflags & HEADER_BIDIR) != 0) {
+	    }
+	    if (flags & HEADER_VERSION2) {
+		server->mAmount = ntohl(hdr->base.mAmount);
+		if (upperflags & HEADER_BIDIR) {
 		    setBidir(server);
 		}
-		if ((upperflags & HEADER_REVERSE) != 0) {
+		if (upperflags & HEADER_REVERSE)  {
 		    server->mThreadMode=kMode_Client;
 		    setServerReverse(server);
 		    setNoUDPfin(server);
 		    unsetReport(server);
 		}
+#if HAVE_DECL_SO_MAX_PACING_RATE
 		if (upperflags & HEADER_FQRATESET) {
 		    setFQPacing(server);
 		    server->mFQPacingRate = ntohl(hdr->start_fq.fqrate);
 		}
-		if ((upperflags & HEADER_TRIPTIME) != 0) {
+#endif
+		if (upperflags & HEADER_TRIPTIME) {
 		    server->triptime_start.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
 		    server->triptime_start.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
 		    Timestamp now;
@@ -939,7 +948,7 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		    }
 		}
 	    }
-	    if (flags & (HEADER_EXTEND_NOACK | HEADER_EXTEND_NOACK | HEADER_UDPTESTS)) {
+	    if (flags & (HEADER_EXTEND_ACK | HEADER_VERSION2)) {
 		server->peer_version_u = ntohl(hdr->extend.version_u);
 		server->peer_version_l = ntohl(hdr->extend.version_l);
 	    }
@@ -956,12 +965,15 @@ int Listener::apply_client_settings (thread_Settings *server) {
 	    n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK);
 	    FAIL_errno((n < peeklen), "read tcp test info", server);
 	    struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) mBuf;
-	    if (flags & (HEADER_EXTEND_ACK | HEADER_EXTEND_NOACK)) {
+	    if (flags & HEADER_VERSION1) {
+		if (flags & RUN_NOW)
+		    server->mMode = kTest_DualTest;
+		else
+		    server->mMode = kTest_TradeOff;
+	    } else if (flags & HEADER_VERSION2) {
 		uint16_t upperflags = htons(hdr->extend.upperflags);
 		server->mTOS = ntohs(hdr->extend.tos);
-		server->peer_version_u = ntohl(hdr->extend.version_u);
-		server->peer_version_l = ntohl(hdr->extend.version_l);
-		if ((upperflags & HEADER_TRIPTIME) != 0) {
+		if (upperflags & HEADER_TRIPTIME) {
 		    server->triptime_start.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
 		    server->triptime_start.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
 		    Timestamp now;
@@ -972,46 +984,49 @@ int Listener::apply_client_settings (thread_Settings *server) {
 			setEnhanced(server);
 		    }
 		}
-		if ((upperflags & HEADER_ISOCH) != 0) {
+		if (upperflags & HEADER_ISOCH) {
 		    setIsochronous(server);
 		}
-		if ((upperflags & HEADER_BIDIR) != 0) {
+		if (upperflags & HEADER_BIDIR) {
 		    setBidir(server);
 		}
-		if ((upperflags & HEADER_REVERSE) != 0) {
+		if (upperflags & HEADER_REVERSE) {
 		    server->mThreadMode=kMode_Client;
 		    setServerReverse(server);
 		}
+#if HAVE_DECL_SO_MAX_PACING_RATE
 		if (upperflags & HEADER_FQRATESET) {
 		    setFQPacing(server);
 		    server->mFQPacingRate = ntohl(hdr->start_fq.fqrate);
+		    int rc = setsockopt(server->mSock, SOL_SOCKET, SO_MAX_PACING_RATE, &server->mFQPacingRate, sizeof(server->mFQPacingRate));
+		    WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
 		}
-		server->mAmount = ntohl(hdr->base.mAmount);
-		if ((server->mAmount & 0x80000000) > 0) {
-		    setModeTime(server);
-#ifndef WIN32
-		    server->mAmount |= 0xFFFFFFFF00000000LL;
-#else
-		    server->mAmount |= 0xFFFFFFFF00000000;
 #endif
-		    server->mAmount = -server->mAmount;
-		} else {
-		    unsetModeTime(server);
+		server->mAmount = ntohl(hdr->base.mAmount);
+		if (flags & (HEADER_EXTEND_ACK | HEADER_VERSION2)) {
+		    server->peer_version_u = ntohl(hdr->extend.version_u);
+		    server->peer_version_l = ntohl(hdr->extend.version_l);
 		}
+
 	    }
-	    server->header_bytes = peeklen;
 	}
     }
-    // Check to enable pacing for the reverse path
-#if HAVE_DECL_SO_MAX_PACING_RATE
-    /* If socket pacing is specified try to enable it. */
-    if (isFQPacing(server)) {
-	int rc = setsockopt(server->mSock, SOL_SOCKET, SO_MAX_PACING_RATE, &server->mFQPacingRate, sizeof(server->mFQPacingRate));
-        WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
+    if (isServerReverse(server) || (server->mMode != kTest_Normal)) {
+	if ((server->mAmount & 0x80000000) > 0) {
+	    setModeTime(server);
+#ifndef WIN32
+	    server->mAmount |= 0xFFFFFFFF00000000LL;
+#else
+	    server->mAmount |= 0xFFFFFFFF00000000;
+#endif
+	    server->mAmount = -server->mAmount;
+	} else {
+	    unsetModeTime(server);
+	}
     }
-#endif /* HAVE_SO_MAX_PACING_RATE */
+    server->header_bytes = peeklen;
     // Handle case that requires an ack back to the client
-    if ((flags & HEADER_EXTEND_ACK) != 0) {
+    if (!isUDP(server) && (flags & HEADER_EXTEND_ACK)) {
 	client_test_ack(server);
     }
     return rc;
