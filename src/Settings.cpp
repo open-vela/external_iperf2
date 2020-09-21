@@ -353,6 +353,7 @@ void Settings_Copy(struct thread_Settings *from, struct thread_Settings **into, 
 	(*into)->mIfrname = NULL;
 	(*into)->mIfrnametx = NULL;
 	(*into)->mIsochronousStr = NULL;
+	(*into)->mCongestion = NULL;
 	// apply the server side congestion setting to reverse clients
 	if (from->mIsochronousStr != NULL) {
 	    (*into)->mIsochronousStr = new char[ strlen(from->mIsochronousStr) + 1];
@@ -1340,7 +1341,7 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
     if (flags & HEADER_VERSION1)
 	thread_debug("header set for a version 1 test");
 #endif
-    if (!(isBidir(server) || (flags & HEADER_VERSION1))) {
+    if (isBidir(server) || (flags & HEADER_VERSION1)) {
 	Settings_Copy(server, client, 0);
 	reversed_thread = *client;
 	unsetTxStartTime(reversed_thread);
@@ -1350,7 +1351,6 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 	}
     } else if (isServerReverse(server)) {
 	reversed_thread = server;
-
     } else {
 	assert(0);
 	return;
@@ -1368,28 +1368,30 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 		reversed_thread->mMode = kTest_DualTest;
 	    else
 		reversed_thread->mMode = kTest_Normal;
-	} else if (flags & HEADER_VERSION2) {
-	    upperflags = ntohs(hdr->extend.upperflags);
-	    reversed_thread->mTOS = ntohs(hdr->extend.tos);
+	} else if (flags & (HEADER_EXTEND| HEADER_VERSION2)) {
 	    reversed_thread->mUDPRate = ntohl(hdr->extend.Rate);
+	    upperflags = ntohs(hdr->extend.upperflags);
 	    if ((upperflags & HEADER_UNITS_PPS) == HEADER_UNITS_PPS) {
 		reversed_thread->mUDPRateUnits = kRate_PPS;
 	    } else {
 		reversed_thread->mUDPRateUnits = kRate_BW;
 	    }
-	    if (isIsochronous(server)) {
-		Settings_ReadClientSettingsIsoch(&reversed_thread, &hdr->isoch_settings);
-	    }
-#if HAVE_DECL_SO_MAX_PACING_RATE
-	    if (upperflags & HEADER_FQRATESET) {
-		setFQPacing(reversed_thread);
-		reversed_thread->mFQPacingRate = ntohl(hdr->start_fq.fqrate);
-		if (isFQPacing(reversed_thread)) {
-		    int rc = setsockopt(reversed_thread->mSock, SOL_SOCKET, SO_MAX_PACING_RATE, &reversed_thread->mFQPacingRate, sizeof(reversed_thread->mFQPacingRate));
-		    WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
+	    if (flags & HEADER_VERSION2) {
+		reversed_thread->mTOS = ntohs(hdr->extend.tos);
+		if (isIsochronous(server)) {
+		    Settings_ReadClientSettingsIsoch(&reversed_thread, &hdr->isoch_settings);
 		}
-	    }
+#if HAVE_DECL_SO_MAX_PACING_RATE
+		if (upperflags & HEADER_FQRATESET) {
+		    setFQPacing(reversed_thread);
+		    reversed_thread->mFQPacingRate = ntohl(hdr->start_fq.fqrate);
+		    if (isFQPacing(reversed_thread)) {
+			int rc = setsockopt(reversed_thread->mSock, SOL_SOCKET, SO_MAX_PACING_RATE, &reversed_thread->mFQPacingRate, sizeof(reversed_thread->mFQPacingRate));
+			WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
+		    }
+		}
 #endif
+	    }
 	}
     } else { //tcp first payload
 	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) mBuf;
@@ -1399,22 +1401,25 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 		reversed_thread->mMode = kTest_DualTest;
 	    else
 		reversed_thread->mMode = kTest_Normal;
-	} else if (flags & HEADER_VERSION2) {
-	    if (isIsochronous(server)) {
-		Settings_ReadClientSettingsIsoch(&reversed_thread, &hdr->isoch_settings);
-	    }
+	} else if (flags & (HEADER_EXTEND | HEADER_VERSION2)) {
+	    reversed_thread->mUDPRate = ntohl(hdr->extend.Rate);
 	    upperflags = ntohs(hdr->extend.upperflags);
-	    reversed_thread->mTOS = ntohs(hdr->extend.tos);
-#if HAVE_DECL_SO_MAX_PACING_RATE
-	    if (upperflags & HEADER_FQRATESET) {
-		setFQPacing(reversed_thread);
-		reversed_thread->mFQPacingRate = ntohl(hdr->start_fq.fqrate);
-		if (isFQPacing(reversed_thread)) {
-		    int rc = setsockopt(reversed_thread->mSock, SOL_SOCKET, SO_MAX_PACING_RATE, &reversed_thread->mFQPacingRate, sizeof(reversed_thread->mFQPacingRate));
-		    WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
+	    if (flags & HEADER_VERSION2) {
+		reversed_thread->mTOS = ntohs(hdr->extend.tos);
+		if (isIsochronous(server)) {
+		    Settings_ReadClientSettingsIsoch(&reversed_thread, &hdr->isoch_settings);
 		}
-	    }
+#if HAVE_DECL_SO_MAX_PACING_RATE
+		if (upperflags & HEADER_FQRATESET) {
+		    setFQPacing(reversed_thread);
+		    reversed_thread->mFQPacingRate = ntohl(hdr->start_fq.fqrate);
+		    if (isFQPacing(reversed_thread)) {
+			int rc = setsockopt(reversed_thread->mSock, SOL_SOCKET, SO_MAX_PACING_RATE, &reversed_thread->mFQPacingRate, sizeof(reversed_thread->mFQPacingRate));
+			WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
+		    }
+		}
 #endif
+	    }
 	}
     }
 }

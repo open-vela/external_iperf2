@@ -296,32 +296,29 @@ void Listener::Run (void) {
 	    //
             if (isBidir(server) || isServerReverse(server) || (server->mMode != kTest_Normal)) {
 		thread_Settings *listener_client_settings = NULL;
+		// read client header for reverse settings
 		Settings_GenerateClientSettings(server, &listener_client_settings, mBuf);
-		// --bidir is following iperf3 naming, it's basically a full duplex test using the same socket
-		// this is slightly different than the legacy iperf2's -d and -r.
-		assert(listener_client_settings!=NULL);
-		listener_client_settings->header_bytes = 0;
-		if (isBidir(server)) {
-		    server->mBidirReport = InitSumReport(server, server->mSock, 1);
-		    listener_client_settings->mBidirReport = server->mBidirReport;
-		    setBidir(listener_client_settings);
-		    setServerReverse(listener_client_settings);
+		if (listener_client_settings) {
+		    Iperf_push_host(&listener_client_settings->peer, listener_client_settings);
+		    listener_client_settings->header_bytes = 0;
+		    if (isBidir(server)) {
+			server->mBidirReport = InitSumReport(server, server->mSock, 1);
+			listener_client_settings->mBidirReport = server->mBidirReport;
 #if HAVE_THREAD_DEBUG
-		    thread_debug("BiDir report client=%p/%p server=%p/%p", (void *) listener_client_settings, (void *) listener_client_settings->mBidirReport, (void *) server, (void *) server->mBidirReport);
+			thread_debug("BiDir report client=%p/%p server=%p/%p", (void *) listener_client_settings, (void *) listener_client_settings->mBidirReport, (void *) server, (void *) server->mBidirReport);
 #endif
-		    listener_client_settings->mThreadMode=kMode_Client;
-		    server->runNow =  listener_client_settings;
-		} else if (server->mMode != kTest_Normal) {
-		    // client init will also handle -P instantiations if needed
-		    client_init(listener_client_settings);
-		    if (listener_client_settings->mMode == kTest_DualTest) {
-#ifdef HAVE_THREAD
 			server->runNow =  listener_client_settings;
+		    } else if (server->mMode != kTest_Normal) {
+			client_init(listener_client_settings);
+			if (listener_client_settings->mMode == kTest_DualTest) {
+#ifdef HAVE_THREAD
+			    server->runNow =  listener_client_settings;
 #else
-			server->runNext = listener_client_settings;
+			    server->runNext = listener_client_settings;
 #endif
-		    } else {
-			server->runNext =  listener_client_settings;
+			} else {
+			    server->runNext =  listener_client_settings;
+			}
 		    }
 		}
 	    }
@@ -902,7 +899,6 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		    server->mMode = kTest_TradeOff;
 	    }
 	    if (flags & (HEADER_EXTEND | HEADER_VERSION2)) {
-		server->mAmount = ntohl(hdr->base.mAmount);
 		upperflags = htons(hdr->extend.upperflags);
 		server->mTOS = ntohs(hdr->extend.tos);
 		server->peer_version_u = ntohl(hdr->extend.version_u);
@@ -928,6 +924,7 @@ int Listener::apply_client_settings (thread_Settings *server) {
 	    if (flags & HEADER_VERSION2) {
 		if (upperflags & HEADER_BIDIR) {
 		    setBidir(server);
+		    setServerReverse(server);
 		}
 		if (upperflags & HEADER_REVERSE)  {
 		    server->mThreadMode=kMode_Client;
@@ -975,7 +972,6 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		    server->mMode = kTest_TradeOff;
 	    }
 	    if (flags & (HEADER_EXTEND | HEADER_VERSION2)) {
-		server->mAmount = ntohl(hdr->base.mAmount);
 		upperflags = htons(hdr->extend.upperflags);
 		server->mTOS = ntohs(hdr->extend.tos);
 		server->peer_version_u = ntohl(hdr->extend.version_u);
@@ -997,6 +993,7 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		if (flags & HEADER_VERSION2) {
 		    if (upperflags & HEADER_BIDIR) {
 			setBidir(server);
+			setServerReverse(server);
 		    }
 		    if (upperflags & HEADER_REVERSE) {
 			server->mThreadMode=kMode_Client;
@@ -1012,19 +1009,6 @@ int Listener::apply_client_settings (thread_Settings *server) {
 #endif
 		}
 	    }
-	}
-    }
-    if (isServerReverse(server) || (server->mMode != kTest_Normal)) {
-	if ((server->mAmount & 0x80000000) > 0) {
-	    setModeTime(server);
-#ifndef WIN32
-	    server->mAmount |= 0xFFFFFFFF00000000LL;
-#else
-	    server->mAmount |= 0xFFFFFFFF00000000;
-#endif
-	    server->mAmount = -server->mAmount;
-	} else {
-	    unsetModeTime(server);
 	}
     }
     server->header_bytes = peeklen;
