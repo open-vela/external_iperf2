@@ -226,7 +226,7 @@ bool Client::isConnected (void) {
 // There are multiple startup synchronizations, this code
 // handles them all. The caller decides to apply them
 // either before connect() or after connect() and before writes()
-void Client::StartSynch (void) {
+int Client::StartSynch (void) {
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Client start sync enterred");
 #endif
@@ -293,7 +293,8 @@ void Client::StartSynch (void) {
     int setbidirflag = 0;
     if (isBidir(mSettings)) {
 	assert(mSettings->mBidirReport != NULL);
-	setbidirflag = bidir_start_barrier(&mSettings->mBidirReport->bidir_barrier);
+	if ((setbidirflag = bidir_start_barrier(&mSettings->mBidirReport->bidir_barrier)) < 0)
+	    return -1;
     }
     SetReportStartTime();
     if (setbidirflag)
@@ -302,6 +303,7 @@ void Client::StartSynch (void) {
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Client start sync exited");
 #endif
+    return 0;
 }
 
 inline void Client::SetBidirReportStartTime (void) {

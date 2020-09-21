@@ -87,7 +87,7 @@ static int bidir_startstop_barrier (struct BarrierMutex *barrier) {
 	    if ((timeout == 0) && (barrier->count != 2)) {
 		fprintf(stdout, "Barrier timeout per full duplex traffic\n");
 		Condition_Unlock(barrier->await);
-		exit(-1);
+		return -1;
 	    }
 	}
 	barrier->count=0;
@@ -98,14 +98,14 @@ static int bidir_startstop_barrier (struct BarrierMutex *barrier) {
 int bidir_start_barrier (struct BarrierMutex *barrier) {
     int rc=bidir_startstop_barrier(barrier);
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("BiDir start barrier done on condition %p ", (void *)&barrier->await, rc);
+    thread_debug("BiDir start barrier done on condition %p rc=%d", (void *)&barrier->await, rc);
 #endif
     return rc;
 }
 int bidir_stop_barrier (struct BarrierMutex *barrier) {
     int rc = bidir_startstop_barrier(barrier);
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("BiDir stop barrier done on condition %p ", (void *)&barrier->await, rc);
+    thread_debug("BiDir stop barrier done on condition %p rc=%d", (void *)&barrier->await, rc);
 #endif
     return rc;
 }
@@ -218,9 +218,10 @@ static void clientside_client_bidir (struct thread_Settings *thread, Client *the
 	    reverse_client->mAmount += (SLOPSECS * 100);  // add 2 sec for slop on reverse, units are 10 ms
 	}
 	thread_start(reverse_client);
-	theClient->StartSynch();
-	theClient->SendFirstPayload();
-	theClient->Run();
+	if (theClient->StartSynch() != -1) {
+	    theClient->SendFirstPayload();
+	    theClient->Run();
+	}
     }
 }
 
@@ -236,8 +237,9 @@ static void serverside_client_bidir(struct thread_Settings *thread, Client *theC
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Listener spawn client bidir thread (sock=%d)", thread->mSock);
 #endif
-    theClient->StartSynch();
-    theClient->Run();
+    if (theClient->StartSynch() != -1) {
+	theClient->Run();
+    }
 }
 
 /*
