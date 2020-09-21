@@ -471,6 +471,7 @@ void tcp_output_bidir_sum_enhanced(struct TransferInfo *stats);
 void udp_output_read(struct TransferInfo *stats);
 void udp_output_read_enhanced(struct TransferInfo *stats);
 void udp_output_read_enhanced_triptime(struct TransferInfo *stats);
+void udp_output_read_enhanced_triptime_isoch(struct TransferInfo *stats);
 void udp_output_sum_read(struct TransferInfo *stats);
 void udp_output_sumcnt_read(struct TransferInfo *stats);
 void udp_output_sumcnt_read_enhanced (struct TransferInfo *stats);

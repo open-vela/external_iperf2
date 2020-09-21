@@ -67,6 +67,7 @@ static int HEADING_FLAG(report_bw_write_enhanced) = 0;
 static int HEADING_FLAG(report_bw_write_enhanced_netpwr) = 0;
 static int HEADING_FLAG(report_bw_pps_enhanced) = 0;
 static int HEADING_FLAG(report_bw_pps_enhanced_isoch) = 0;
+static int HEADING_FLAG(report_bw_jitter_loss_pps) = 0;
 static int HEADING_FLAG(report_bw_jitter_loss_enhanced) = 0;
 static int HEADING_FLAG(report_bw_jitter_loss_enhanced_isoch) = 0;
 static int HEADING_FLAG(report_frame_jitter_loss_enhanced) = 0;
@@ -281,6 +282,18 @@ void udp_output_read (struct TransferInfo *stats) {
 }
 
 void udp_output_read_enhanced (struct TransferInfo *stats) {
+    HEADING_PRINT_COND(report_bw_jitter_loss_pps);
+    _print_stats_common(stats);
+    printf(report_bw_jitter_loss_pps_format, stats->transferID,
+	    stats->ts.iStart, stats->ts.iEnd,
+	    outbuffer, outbufferext,
+	    stats->jitter*1000.0, stats->cntError, stats->cntDatagrams,
+	   (100.0 * stats->cntError) / stats->cntDatagrams,
+	   (stats->cntIPG ? (stats->cntIPG / stats->IPGsum) : 0.0));
+    _output_outoforder(stats);
+}
+
+void udp_output_read_enhanced_triptime (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw_jitter_loss_enhanced);
     _print_stats_common(stats);
     if (!stats->cntIPG) {
@@ -309,7 +322,7 @@ void udp_output_read_enhanced (struct TransferInfo *stats) {
     }
     _output_outoforder(stats);
 }
-void udp_output_read_enhanced_triptime (struct TransferInfo *stats) {
+void udp_output_read_enhanced_triptime_isoch (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw_jitter_loss_enhanced_isoch);
     _print_stats_common(stats);
     if (!stats->cntIPG) {
