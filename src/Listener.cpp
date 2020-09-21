@@ -856,6 +856,7 @@ int Listener::apply_client_settings (thread_Settings *server) {
     assert(mBuf != NULL);
     int n, peeklen;
     uint32_t flags = 0;
+    uint16_t upperflags = 0;
     int rc = 1;
     server->header_bytes = 0; // used to capture the length of the listener's read
     // Set the receive timeout for the very first read based upon the -t
@@ -900,9 +901,14 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		else
 		    server->mMode = kTest_TradeOff;
 	    }
-	    uint16_t upperflags = htons(hdr->extend.upperflags);
-	    if (flags & HEADER_UDPTESTS) {
+	    if (flags & (HEADER_EXTEND | HEADER_VERSION2)) {
+		server->mAmount = ntohl(hdr->base.mAmount);
+		upperflags = htons(hdr->extend.upperflags);
 		server->mTOS = ntohs(hdr->extend.tos);
+		server->peer_version_u = ntohl(hdr->extend.version_u);
+		server->peer_version_l = ntohl(hdr->extend.version_l);
+	    }
+	    if (flags & HEADER_UDPTESTS) {
 		// Handle stateless flags
 		if (upperflags & HEADER_ISOCH) {
 		    setIsochronous(server);
@@ -920,7 +926,6 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		}
 	    }
 	    if (flags & HEADER_VERSION2) {
-		server->mAmount = ntohl(hdr->base.mAmount);
 		if (upperflags & HEADER_BIDIR) {
 		    setBidir(server);
 		}
@@ -948,9 +953,7 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		    }
 		}
 	    }
-	    if (flags & (HEADER_EXTEND_ACK | HEADER_VERSION2)) {
-		server->peer_version_u = ntohl(hdr->extend.version_u);
-		server->peer_version_l = ntohl(hdr->extend.version_l);
+	    if (flags & (HEADER_EXTEND | HEADER_VERSION2)) {
 	    }
 	}
     } else {
@@ -970,9 +973,13 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		    server->mMode = kTest_DualTest;
 		else
 		    server->mMode = kTest_TradeOff;
-	    } else if (flags & HEADER_VERSION2) {
-		uint16_t upperflags = htons(hdr->extend.upperflags);
+	    }
+	    if (flags & (HEADER_EXTEND | HEADER_VERSION2)) {
+		server->mAmount = ntohl(hdr->base.mAmount);
+		upperflags = htons(hdr->extend.upperflags);
 		server->mTOS = ntohs(hdr->extend.tos);
+		server->peer_version_u = ntohl(hdr->extend.version_u);
+		server->peer_version_l = ntohl(hdr->extend.version_l);
 		if (upperflags & HEADER_TRIPTIME) {
 		    server->triptime_start.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
 		    server->triptime_start.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
@@ -987,27 +994,23 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		if (upperflags & HEADER_ISOCH) {
 		    setIsochronous(server);
 		}
-		if (upperflags & HEADER_BIDIR) {
-		    setBidir(server);
-		}
-		if (upperflags & HEADER_REVERSE) {
-		    server->mThreadMode=kMode_Client;
-		    setServerReverse(server);
-		}
+		if (flags & HEADER_VERSION2) {
+		    if (upperflags & HEADER_BIDIR) {
+			setBidir(server);
+		    }
+		    if (upperflags & HEADER_REVERSE) {
+			server->mThreadMode=kMode_Client;
+			setServerReverse(server);
+		    }
 #if HAVE_DECL_SO_MAX_PACING_RATE
-		if (upperflags & HEADER_FQRATESET) {
-		    setFQPacing(server);
-		    server->mFQPacingRate = ntohl(hdr->start_fq.fqrate);
-		    int rc = setsockopt(server->mSock, SOL_SOCKET, SO_MAX_PACING_RATE, &server->mFQPacingRate, sizeof(server->mFQPacingRate));
-		    WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
-		}
+		    if (upperflags & HEADER_FQRATESET) {
+			setFQPacing(server);
+			server->mFQPacingRate = ntohl(hdr->start_fq.fqrate);
+			int rc = setsockopt(server->mSock, SOL_SOCKET, SO_MAX_PACING_RATE, &server->mFQPacingRate, sizeof(server->mFQPacingRate));
+			WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
+		    }
 #endif
-		server->mAmount = ntohl(hdr->base.mAmount);
-		if (flags & (HEADER_EXTEND_ACK | HEADER_VERSION2)) {
-		    server->peer_version_u = ntohl(hdr->extend.version_u);
-		    server->peer_version_l = ntohl(hdr->extend.version_l);
 		}
-
 	    }
 	}
     }
@@ -1026,7 +1029,7 @@ int Listener::apply_client_settings (thread_Settings *server) {
     }
     server->header_bytes = peeklen;
     // Handle case that requires an ack back to the client
-    if (!isUDP(server) && (flags & HEADER_EXTEND_ACK)) {
+    if (!isUDP(server) && (flags & HEADER_EXTEND)) {
 	client_test_ack(server);
     }
     return rc;
