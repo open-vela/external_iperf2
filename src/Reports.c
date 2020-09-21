@@ -337,6 +337,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
     /*
      * Create the report header and an ireport (if needed)
      */
+    assert(inSettings!=NULL);
     struct ReportHeader *reporthdr = (struct ReportHeader *) calloc(1, sizeof(struct ReportHeader));
     if (reporthdr == NULL) {
 	FAIL(1, "Out of Memory!!\n", inSettings);

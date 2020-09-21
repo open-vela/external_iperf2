@@ -377,7 +377,8 @@ void Server::InitTrafficLoop (void) {
     int setbidirflag = 0;
     if (isBidir(mSettings)) {
 	assert(mSettings->mBidirReport != NULL);
-	setbidirflag = bidir_start_barrier(&mSettings->mBidirReport->bidir_barrier);
+	if ((setbidirflag = bidir_start_barrier(&mSettings->mBidirReport->bidir_barrier)) < 0)
+	    exit(-1);
     }
     // Case of --trip-times and --reverse or --bidir, listener handles normal case
     if (isTripTime(mSettings) && TimeZero(mSettings->triptime_start)) {
