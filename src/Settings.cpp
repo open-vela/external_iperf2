@@ -1601,9 +1601,11 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	}
 	if (!(flags & HEADER_VERSION2) && (client->mMode != kTest_Normal)) {
 	    flags |= HEADER_VERSION1;
-	    len += Settings_GenerateClientHdrV1(client, &hdr->base);
 	    if (client->mMode == kTest_DualTest)
 		flags |= RUN_NOW;
+	}
+	if (flags & (HEADER_VERSION1 | HEADER_VERSION2)) {
+	    len += Settings_GenerateClientHdrV1(client, &hdr->base);
 	}
 	hdr->base.flags = htonl((flags | ((len << 1) & 0xFFFE)));
     }
