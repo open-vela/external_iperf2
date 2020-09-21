@@ -383,8 +383,11 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	    ireport->transfer_protocol_handler = reporter_transfer_protocol_server_udp;
             if (inSettings->mReportMode == kReport_CSV) {
 		ireport->info.output_handler = udp_output_basic_csv;
-	    } else if (isIsochronous(inSettings)) {
-		ireport->info.output_handler = udp_output_read_enhanced_triptime;
+	    } else if (isTripTime(inSettings)) {
+		if (isIsochronous(inSettings))
+		    ireport->info.output_handler = udp_output_read_enhanced_triptime_isoch;
+		else
+		    ireport->info.output_handler = udp_output_read_enhanced_triptime;
 	    } else if (isBidir(inSettings)) {
 		ireport->info.output_handler =  (isEnhanced(inSettings) ? NULL : NULL);
 	    } else if (isEnhanced(inSettings)) {
