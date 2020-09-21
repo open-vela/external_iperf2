@@ -57,7 +57,7 @@ extern "C" {
  * base flags, keep compatible with older versions
  */
 #define HEADER_VERSION1     0x80000000
-#define HEADER_EXTEND_ACK   0x40000000
+#define HEADER_EXTEND       0x40000000
 #define HEADER_UDPTESTS     0x20000000
 #define HEADER_SEQNO64B     0x08000000
 #define HEADER_VERSION2     0x04000000
