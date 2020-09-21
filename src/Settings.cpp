@@ -1335,13 +1335,12 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
     uint32_t flags = isUDP(server) ? ntohl(*(uint32_t *)((char *)mBuf + sizeof(struct UDP_datagram))) : ntohl(*(uint32_t *)mBuf);
     uint16_t upperflags = 0;
     thread_Settings *reversed_thread = NULL;
+    *client = NULL;
 #ifdef HAVE_THREAD_DEBUG
-    if (v1test)
+    if (flags & HEADER_VERSION1)
 	thread_debug("header set for a version 1 test");
 #endif
     if (!(isBidir(server) || (flags & HEADER_VERSION1))) {
-	*client = NULL;
-    } else  {
 	Settings_Copy(server, client, 0);
 	reversed_thread = *client;
 	unsetTxStartTime(reversed_thread);
@@ -1349,66 +1348,73 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 	if (isBidir(reversed_thread)) {
 	    setBidir(reversed_thread);
 	}
-	if (isUDP(server)) { // UDP test information passed in every packet per being stateless
-	    struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) mBuf;
-	    reversed_thread->mThreadMode = kMode_Client;
-	    if (isBidir(reversed_thread)) {
-		setNoUDPfin(reversed_thread);
+    } else if (isServerReverse(server)) {
+	reversed_thread = server;
+
+    } else {
+	assert(0);
+	return;
+    }
+    reversed_thread->mThreadMode = kMode_Client;
+
+    if (isUDP(server)) { // UDP test information passed in every packet per being stateless
+	struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) mBuf;
+	if (isBidir(reversed_thread)) {
+	    setNoUDPfin(reversed_thread);
+	}
+	Settings_ReadClientSettingsV1(&reversed_thread, &hdr->base);
+	if (flags & HEADER_VERSION1) {
+	    if (flags & RUN_NOW)
+		reversed_thread->mMode = kTest_DualTest;
+	    else
+		reversed_thread->mMode = kTest_Normal;
+	} else if (flags & HEADER_VERSION2) {
+	    upperflags = ntohs(hdr->extend.upperflags);
+	    reversed_thread->mTOS = ntohs(hdr->extend.tos);
+	    reversed_thread->mUDPRate = ntohl(hdr->extend.Rate);
+	    if ((upperflags & HEADER_UNITS_PPS) == HEADER_UNITS_PPS) {
+		reversed_thread->mUDPRateUnits = kRate_PPS;
+	    } else {
+		reversed_thread->mUDPRateUnits = kRate_BW;
 	    }
-	    Settings_ReadClientSettingsV1(&reversed_thread, &hdr->base);
-	    if (flags & HEADER_VERSION1) {
-		if (flags & RUN_NOW)
-		    reversed_thread->mMode = kTest_DualTest;
-		else
-		    reversed_thread->mMode = kTest_Normal;
-	    } else if (flags & HEADER_VERSION2) {
-		upperflags = ntohs(hdr->extend.upperflags);
-		reversed_thread->mTOS = ntohs(hdr->extend.tos);
-		reversed_thread->mUDPRate = ntohl(hdr->extend.Rate);
-		if ((upperflags & HEADER_UNITS_PPS) == HEADER_UNITS_PPS) {
-		    reversed_thread->mUDPRateUnits = kRate_PPS;
-		} else {
-		    reversed_thread->mUDPRateUnits = kRate_BW;
-		}
-		if (isIsochronous(server)) {
-		    Settings_ReadClientSettingsIsoch(&reversed_thread, &hdr->isoch_settings);
-		}
+	    if (isIsochronous(server)) {
+		Settings_ReadClientSettingsIsoch(&reversed_thread, &hdr->isoch_settings);
+	    }
 #if HAVE_DECL_SO_MAX_PACING_RATE
-		if (upperflags & HEADER_FQRATESET) {
-		    setFQPacing(reversed_thread);
-		    reversed_thread->mFQPacingRate = ntohl(hdr->start_fq.fqrate);
-		    if (isFQPacing(reversed_thread)) {
-			int rc = setsockopt(reversed_thread->mSock, SOL_SOCKET, SO_MAX_PACING_RATE, &reversed_thread->mFQPacingRate, sizeof(reversed_thread->mFQPacingRate));
-			WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
-		    }
+	    if (upperflags & HEADER_FQRATESET) {
+		setFQPacing(reversed_thread);
+		reversed_thread->mFQPacingRate = ntohl(hdr->start_fq.fqrate);
+		if (isFQPacing(reversed_thread)) {
+		    int rc = setsockopt(reversed_thread->mSock, SOL_SOCKET, SO_MAX_PACING_RATE, &reversed_thread->mFQPacingRate, sizeof(reversed_thread->mFQPacingRate));
+		    WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
 		}
-#endif
 	    }
-	} else { //tcp first payload
-	    struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) mBuf;
-	    Settings_ReadClientSettingsV1(&reversed_thread, &hdr->base);
-	    if (flags & HEADER_VERSION1) {
-		if (flags & RUN_NOW)
-		    reversed_thread->mMode = kTest_DualTest;
-		else
-		    reversed_thread->mMode = kTest_Normal;
-	    } else if (flags & HEADER_VERSION2) {
-		if (isIsochronous(server)) {
-		    Settings_ReadClientSettingsIsoch(&reversed_thread, &hdr->isoch_settings);
-		}
-		upperflags = ntohs(hdr->extend.upperflags);
-		reversed_thread->mTOS = ntohs(hdr->extend.tos);
+#endif
+	}
+    } else { //tcp first payload
+	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) mBuf;
+	Settings_ReadClientSettingsV1(&reversed_thread, &hdr->base);
+	if (flags & HEADER_VERSION1) {
+	    if (flags & RUN_NOW)
+		reversed_thread->mMode = kTest_DualTest;
+	    else
+		reversed_thread->mMode = kTest_Normal;
+	} else if (flags & HEADER_VERSION2) {
+	    if (isIsochronous(server)) {
+		Settings_ReadClientSettingsIsoch(&reversed_thread, &hdr->isoch_settings);
+	    }
+	    upperflags = ntohs(hdr->extend.upperflags);
+	    reversed_thread->mTOS = ntohs(hdr->extend.tos);
 #if HAVE_DECL_SO_MAX_PACING_RATE
-		if (upperflags & HEADER_FQRATESET) {
-		    setFQPacing(reversed_thread);
-		    reversed_thread->mFQPacingRate = ntohl(hdr->start_fq.fqrate);
-		    if (isFQPacing(reversed_thread)) {
-			int rc = setsockopt(reversed_thread->mSock, SOL_SOCKET, SO_MAX_PACING_RATE, &reversed_thread->mFQPacingRate, sizeof(reversed_thread->mFQPacingRate));
-			WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
-		    }
+	    if (upperflags & HEADER_FQRATESET) {
+		setFQPacing(reversed_thread);
+		reversed_thread->mFQPacingRate = ntohl(hdr->start_fq.fqrate);
+		if (isFQPacing(reversed_thread)) {
+		    int rc = setsockopt(reversed_thread->mSock, SOL_SOCKET, SO_MAX_PACING_RATE, &reversed_thread->mFQPacingRate, sizeof(reversed_thread->mFQPacingRate));
+		    WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
 		}
-#endif
 	    }
+#endif
 	}
     }
 }
