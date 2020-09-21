@@ -1472,7 +1472,7 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	 * set the default offset where underlying "inline" subsystems can write into the udp payload
 	 */
 	if (isL2LengthCheck(client)) {
-	    flags |= (HEADER_UDPTESTS | HEADER_VERSION2);
+	    flags |= (HEADER_UDPTESTS | HEADER_EXTEND);
 	    if (isL2LengthCheck(client)) {
 		upperflags |= HEADER_L2LENCHECK;
 		if (isIPV6(client))
@@ -1480,9 +1480,10 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	    }
 	}
 	if (isIsochronous(client)) {
-	    flags |= (HEADER_UDPTESTS | HEADER_VERSION2) ;
+	    flags |= (HEADER_UDPTESTS | HEADER_EXTEND) ;
 	    upperflags |= HEADER_ISOCH;
 	    if (isBidir(client) || isReverse(client)) {
+		flags |= HEADER_VERSION2;
 		upperflags |= HEADER_ISOCH_SETTINGS;
 		hdr->isoch_settings.FPSl = htonl(client->mFPS);
 		hdr->isoch_settings.FPSu = htonl(((long)(client->mFPS) - (long)client->mFPS * rMillion));
@@ -1513,13 +1514,13 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	    len += sizeof(struct client_hdrext_starttime_fq);
 	}
 	if (isBWSet(client)) {
-	    flags |= HEADER_VERSION2;
+	    flags |= (HEADER_EXTEND | HEADER_VERSION2);
 	    hdr->extend.Rate = htonl(client->mUDPRate);
 	    if (client->mUDPRateUnits == kRate_PPS) {
 		upperflags |= HEADER_UNITS_PPS;
 	    }
 	}
-	if (flags & HEADER_VERSION2) {
+	if (flags & (HEADER_EXTEND | HEADER_VERSION2)) {
 	    // Write flags to header so the listener can determine the tests requested
 	    hdr->extend.upperflags = htons(upperflags);
 	    hdr->extend.lowerflags = htons(lowerflags);
@@ -1530,12 +1531,15 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	}
 	if (!(flags & HEADER_VERSION2) && (client->mMode != kTest_Normal)) {
 	    flags |= HEADER_VERSION1;
-	    len += Settings_GenerateClientHdrV1(client, &hdr->base);
 	    if (client->mMode == kTest_DualTest)
 		flags |= RUN_NOW;
 	}
+	if (flags & (HEADER_VERSION1 | HEADER_VERSION2)) {
+	    len += Settings_GenerateClientHdrV1(client, &hdr->base);
+	}
 	// isoch payload is an enclave field between v 0.13 and v0.14
 	// so figure out if it's there now - UDP only
+	// will be filled in by the client write
 	if (isTripTime(client) || isFQPacing(client) || isIsochronous(client))
 	    len += sizeof (struct isoch_payload);
 
@@ -1546,7 +1550,7 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	memset(hdr, 0, sizeof(struct client_tcp_testhdr));
 	// Set up trip time
 	if (isTripTime(client) || isFQPacing(client)) {
-	    flags |= (HEADER_UDPTESTS | HEADER_VERSION2);
+	    flags |= HEADER_VERSION2;
 	    if (isFQPacing(client)) {
 		upperflags |= HEADER_FQRATESET;
 	    }
@@ -1575,10 +1579,13 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	    }
 	}
 	if (isBWSet(client)) {
-	    flags |= HEADER_VERSION2;
+	    flags |= (HEADER_EXTEND | HEADER_VERSION2);
 	    hdr->extend.Rate = htonl(client->mUDPRate);
 	}
-	if (flags & HEADER_VERSION2) {
+	if (isPeerVerDetect(client)) {
+	    flags |= HEADER_EXTEND;
+	}
+	if (flags & (HEADER_EXTEND | HEADER_VERSION2)) {
 	    // Write flags to header so the listener can determine the tests requested
 	    hdr->extend.upperflags = htons(upperflags);
 	    hdr->extend.lowerflags = htons(lowerflags);
@@ -1591,9 +1598,6 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	    len += Settings_GenerateClientHdrV1(client, &hdr->base);
 	    if (client->mMode == kTest_DualTest)
 		flags |= RUN_NOW;
-	}
-	if (isPeerVerDetect(client)) {
-	    flags |= HEADER_EXTEND_ACK;
 	}
 	hdr->base.flags = htonl((flags | ((len << 1) & 0xFFFE)));
     }
