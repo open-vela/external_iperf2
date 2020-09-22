@@ -753,6 +753,12 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
     if (isCongestionControl(report->common) && report->common->Congestion) {
 	fprintf(stdout, "TCP congestion control set to %s\n", report->common->Congestion);
     }
+    if (isIPG(report->common)) {
+	byte_snprintf(outbuffer, sizeof(outbuffer), report->common->FQPacingRate, 'a');
+	outbuffer[(sizeof(outbuffer)-1)] = '\0';
+        fprintf(stdout, "IPG set to %0.4f milliseconds (%d pps), UDP payload len %d bytes\n", \
+		report->common->pktIPG, (int)(round)(1000.0 / report->common->pktIPG), report->common->BufLen);
+    }
     output_window_size(report);
     printf("\n");
 }

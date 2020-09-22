@@ -941,7 +941,8 @@ void Settings_Interpret(char option, const char *optarg, struct thread_Settings 
 		char *end;
 		mExtSettings->mBurstIPG = strtof(optarg,&end);
 		if (*end != '\0') {
-		    fprintf (stderr, "Invalid value of '%s' for --ipg\n", optarg);
+		    fprintf (stderr, "ERRPORE: Invalid value of '%s' for --ipg\n", optarg);
+		    exit(1);
 		}
 	    }
 	    if (numreportstructs) {

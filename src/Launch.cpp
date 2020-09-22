@@ -163,6 +163,8 @@ static void clientside_client_basic (struct thread_Settings *thread, Client *the
 	// When -P > 1 then all threads finish connect before starting traffic
 	theClient->BarrierClient(thread->connects_done);
     if (theClient->isConnected()) {
+	if (thread->mThreads > 1)
+	    Iperf_push_host(&thread->peer, thread);
 	theClient->StartSynch();
 	if (!isCompat(thread)) {
 	    theClient->SendFirstPayload();

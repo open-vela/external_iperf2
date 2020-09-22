@@ -116,6 +116,7 @@ static void common_copy (struct ReportCommon **common, struct thread_Settings *i
     (*common)->RXbins =inSettings->mRXbins;
     (*common)->RXbinsize =inSettings->mRXbinsize;
     (*common)->RXunits =inSettings->mRXunits;
+    (*common)->pktIPG =inSettings->mBurstIPG;
 }
 
 static void free_common_copy (struct ReportCommon *common) {
