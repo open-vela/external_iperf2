@@ -1439,18 +1439,19 @@ void reporter_transfer_protocol_sum_server_tcp (struct TransferInfo *stats, int 
     }
 }
 void reporter_transfer_protocol_bidir_tcp (struct TransferInfo *stats, int final) {
-    assert(stats->output_handler != NULL);
     if (!final || (final && (stats->cntBytes > 0) && !TimeZero(stats->ts.intervalTime))) {
 	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
 	if (final)
 	    reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
-	(*stats->output_handler)(stats);
+	if (*stats->output_handler)
+	    (*stats->output_handler)(stats);
 	stats->total.Bytes.prev = stats->total.Bytes.current;
     }
     if (final) {
 	stats->cntBytes = stats->total.Bytes.current;
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
-	(*stats->output_handler)(stats);
+	if (*stats->output_handler)
+	    (*stats->output_handler)(stats);
     }
 }
 
