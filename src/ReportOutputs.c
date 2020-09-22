@@ -744,11 +744,6 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
 	byte_snprintf(variancebuf, sizeof(variancebuf), report->isochstats.mVariance, 'a');
 	meanbuf[39]='\0'; variancebuf[39]='\0';
 	printf(client_isochronous, report->isochstats.mFPS, meanbuf, variancebuf, (report->isochstats.mBurstInterval/1000.0), (report->isochstats.mBurstIPG/1000.0));
-#if 0
-	if ((report->isochstats.mMean / report->isochstats.mFPS) < ((double) (sizeof(struct UDP_reportgram) + sizeof(struct client_hdr_v1) + sizeof(struct client_hdr_udp_isoch_tests)))) {
-	    fprintf(stderr, "Warning: Requested mean too small to carry isoch payload, code will auto adjust payload sizes\n");
-	}
-#endif
     }
     if (isFQPacing(report->common)) {
 	byte_snprintf(outbuffer, sizeof(outbuffer), report->common->FQPacingRate, 'a');
@@ -761,83 +756,17 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
     output_window_size(report);
     printf("\n");
 }
-#if 0
-    assert(reporthdr != NULL);
-    if (data->common->ThreadMode == kMode_Listener) {
-    } else  {
-    if (isIsochronous(data->common)) {
-	int len;
-	char meanbuf[40];
-	char variancebuf[40];
-	byte_snprintf(meanbuf, sizeof(meanbuf), data->isochstats.mMean, 'a');
-	byte_snprintf(variancebuf, sizeof(variancebuf), data->isochstats.mVariance, 'a');
-	meanbuf[39]='\0'; variancebuf[39]='\0';
-	printf(client_udp_isochronous, data->isochstats.mFPS, meanbuf, variancebuf, (data->isochstats.mBurstInterval/1000.0), (data->isochstats.mBurstIPG/1000.0));
-	if ((data->isochstats.mMean / data->isochstats.mFPS) < ((double) (sizeof(struct UDP_datagram) + sizeof(struct client_hdr_v1) + sizeof(struct client_hdr_udp_isoch_tests)))) {
-	    fprintf(stderr, "Warning: Requested mean too small to carry isoch payload, code will auto adjust payload sizes\n");
-	}
-    } else if (isUDP(data->common)) {
-	    if (data->common->ThreadMode != kMode_Listener) {
-		double delay_target;
-		if (data->common->UDPRateUnits == kRate_BW) {
-		    delay_target = (double) (data->common->BufLen * 8000000.0 / data->common->UDPRate);
-		} else {
-		    delay_target = (1e6 / data->common->UDPRate);
-		}
-#ifdef HAVE_CLOCK_NANOSLEEP
-		printf(client_datagram_size, data->common->BufLen, delay_target);
-#else
-  #ifdef HAVE_KALMAN
-		printf(client_datagram_size_kalman, data->common->BufLen, delay_target);
-  #else
-		printf(client_datagram_size, data->common->BufLen, delay_target);
-  #endif
-#endif
-	    } else {
-		printf(server_datagram_size, data->common->BufLen);
-	    }
-	    if (SockAddr_isMulticast(&data->connection.peer)) {
-		printf(multicast_ttl, data->common.TTL);
-	    }
-	} else if (isEnhanced(data->common)) {
-	    byte_snprintf(buffer, sizeof(buffer), data->common->BufLen, toupper((int)data->info.mFormat));
-	    buffer[(sizeof(buffer)-1)] = '\0';
-	    printf("%s: %s\n", ((data->common->ThreadMode == kMode_Client) ?
-				client_write_size : server_read_size), buffer);
-	}
-    if (isFQPacing(data) && (data->common->ThreadMode == kMode_Client)) {
-	char tmpbuf[40];
-	byte_snprintf(tmpbuf, sizeof(tmpbuf), data->FQPacingRate, 'a');
-	tmpbuf[39]='\0';
-        printf(client_fq_pacing,tmpbuf);
-    }
-    byte_snprintf(buffer, sizeof(buffer), data->connection.winsize, toupper((int)data->info.mFormat));
-	    buffer[(sizeof(buffer)-1)] = '\0';
-	    printf("%s: %s", (isUDP(data) ? udp_buffer_size : tcp_window_size), buffer);
-    if (data->connection.winsize_requested == 0) {
-        printf(" %s", window_default);
-    } else if (data->connection.winsize != data->connection.winsize_requested) {
-        byte_snprintf(buffer, sizeof(buffer), data->connection.winsize_requested,
-                       toupper((int)data->info.mFormat));
-	    buffer[(sizeof(buffer)-1)] = '\0';
-	printf(warn_window_requested, buffer);
-    }
-}
-#endif
 
-void reporter_connect_printf_tcp_final (struct ReportHeader *reporthdr) {
-#if 0
-    struct TransferInfo *stats = &data->info;
-    if (reporthdr->connect_times.cnt > 1) {
-        double variance = (reporthdr->connect_times.cnt < 2) ? 0 : sqrt(reporthdr->connect_times.m2 / (reporthdr->connect_times.cnt - 1));
+void reporter_connect_printf_tcp_final (struct ConnectionInfo * report) {
+    if (report->connect_times.cnt > 1) {
+        double variance = (report->connect_times.cnt < 2) ? 0 : sqrt(report->connect_times.m2 / (report->connect_times.cnt - 1));
         fprintf(stdout, "[ CT] final connect times (min/avg/max/stdev) = %0.3f/%0.3f/%0.3f/%0.3f ms (tot/err) = %d/%d\n", \
-		reporthdr->connect_times.min,  \
-	        (reporthdr->connect_times.sum / reporthdr->connect_times.cnt), \
-		reporthdr->connect_times.max, variance,  \
-		(reporthdr->connect_times.cnt + reporthdr->connect_times.err), \
-		reporthdr->connect_times.err);
+		report->connect_times.min,  \
+	        (report->connect_times.sum / report->connect_times.cnt), \
+		report->connect_times.max, variance,  \
+		(report->connect_times.cnt + report->connect_times.err), \
+		report->connect_times.err);
     }
-#endif
 }
 
 void reporter_print_connection_report(struct ConnectionInfo *report) {
@@ -970,8 +899,6 @@ void reporter_print_connection_report(struct ConnectionInfo *report) {
 	fflush(stdout);
     }
 }
-// end ReportPeer
-
 
 void reporter_print_settings_report(struct ReportSettings *report) {
     assert(report != NULL);

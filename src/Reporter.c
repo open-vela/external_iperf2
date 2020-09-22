@@ -85,6 +85,8 @@ static void reporter_reset_transfer_stats_client_udp(struct TransferInfo *stats)
 static void reporter_reset_transfer_stats_server_udp(struct TransferInfo *stats);
 static void reporter_reset_transfer_stats_server_tcp(struct TransferInfo *stats);
 
+static struct ConnectionInfo *myConnectionReport;
+
 void PostReport (struct ReportHeader *reporthdr) {
 #ifdef HAVE_THREAD_DEBUG
     char rs[REPORTTXTMAX];
@@ -330,6 +332,30 @@ static inline struct ReportHeader *reporter_jobq_set_root (struct thread_Setting
     Condition_Unlock(ReportCond);
     return root;
 }
+
+static void reporter_update_connect_time (double connect_time) {
+    assert(myConnectionReport != NULL);
+    if (connect_time > 0.0) {
+	myConnectionReport->connect_times.sum += connect_time;
+	if ((myConnectionReport->connect_times.cnt++) == 1) {
+	    myConnectionReport->connect_times.vd = connect_time;
+	    myConnectionReport->connect_times.mean = connect_time;
+	    myConnectionReport->connect_times.m2 = connect_time * connect_time;
+	} else {
+	    myConnectionReport->connect_times.vd = connect_time - myConnectionReport->connect_times.mean;
+	    myConnectionReport->connect_times.mean = myConnectionReport->connect_times.mean + (myConnectionReport->connect_times.vd / myConnectionReport->connect_times.cnt);
+	    myConnectionReport->connect_times.m2 = myConnectionReport->connect_times.m2 + (myConnectionReport->connect_times.vd * (connect_time - myConnectionReport->connect_times.mean));
+	}
+	// mean min max tests
+	if (connect_time < myConnectionReport->connect_times.min)
+	    myConnectionReport->connect_times.min = connect_time;
+	if (connect_time > myConnectionReport->connect_times.max)
+	    myConnectionReport->connect_times.max = connect_time;
+    } else {
+	myConnectionReport->connect_times.err++;
+    }
+}
+
 /*
  * This function is the loop that the reporter thread processes
  */
@@ -337,6 +363,7 @@ void reporter_spawn (struct thread_Settings *thread) {
 #ifdef HAVE_THREAD_DEBUG
     thread_debug( "Reporter thread started");
 #endif
+    myConnectionReport = InitConnectOnlyReport(thread);
     /*
      * reporter main loop needs to wait on all threads being started
      */
@@ -408,9 +435,10 @@ void reporter_spawn (struct thread_Settings *thread) {
 	    }
 	}
     }
-    if (thread->reporthdr) {
-        reporter_connect_printf_tcp_final(thread->reporthdr);
-	FreeReport(thread->reporthdr);
+    if (myConnectionReport) {
+	if (myConnectionReport->connect_times.cnt > 1)
+	    reporter_connect_printf_tcp_final(myConnectionReport);
+	FreeConnectionReport(myConnectionReport);
     }
 #ifdef HAVE_THREAD_DEBUG
     if (sInterupted)
@@ -419,33 +447,7 @@ void reporter_spawn (struct thread_Settings *thread) {
 #endif
 }
 
-static void reporter_compute_connect_times (struct ReportHeader *hdr, double connect_time) {
-#if 0
-    // Compute end/end delay stats
-    if (connect_time > 0.0) {
-	hdr->connect_times.sum += connect_time;
-	if ((hdr->connect_times.cnt++) == 1) {
-	    hdr->connect_times.vd = connect_time;
-	    hdr->connect_times.mean = connect_time;
-	    hdr->connect_times.m2 = connect_time * connect_time;
-	} else {
-	    hdr->connect_times.vd = connect_time - hdr->connect_times.mean;
-	    hdr->connect_times.mean = hdr->connect_times.mean + (hdr->connect_times.vd / hdr->connect_times.cnt);
-	    hdr->connect_times.m2 = hdr->connect_times.m2 + (hdr->connect_times.vd * (connect_time - hdr->connect_times.mean));
-	}
-	// mean min max tests
-	if (connect_time < hdr->connect_times.min)
-	    hdr->connect_times.min = connect_time;
-	if (connect_time > hdr->connect_times.max)
-	    hdr->connect_times.max = connect_time;
-    } else {
-	hdr->connect_times.err++;
-    }
-#endif
-}
-
 // The Transfer or Data report is by far the most complicated report
-
 int reporter_process_transfer_report (struct ReporterData *this_ireport) {
     assert(this_ireport != NULL);
     assert(this_ireport->packet_handler != NULL);
@@ -554,9 +556,17 @@ inline int reporter_process_report (struct ReportHeader *reporthdr) {
 	}
 	break;
     case CONNECTION_REPORT:
-	reporter_print_connection_report((struct ConnectionInfo *)reporthdr->this_report);
+    {
+	struct ConnectionInfo *creport = (struct ConnectionInfo *)reporthdr->this_report;
+	assert(creport!=NULL);
+	if (creport->common->ThreadMode == kMode_Client) {
+	    // Clients' connect times will be inputs to the overall connect stats
+	    reporter_update_connect_time(creport->connecttime);
+	}
+	reporter_print_connection_report(creport);
 	fflush(stdout);
 	FreeReport(reporthdr);
+    }
 	break;
     case SETTINGS_REPORT:
 	reporter_print_settings_report((struct ReportSettings *)reporthdr->this_report);
@@ -826,7 +836,6 @@ void reporter_handle_packet_client (struct ReporterData *data, struct ReportStru
 	reporter_handle_packet_pps(data, packet);
     }
 }
-
 
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 static void gettcpistats (struct ReporterData *data, int final) {
