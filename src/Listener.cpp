@@ -881,6 +881,10 @@ int Listener::apply_client_settings (thread_Settings *server) {
 
     if (isUDP(server)) {
 	n = recvn(server->mSock, mBuf, sizeof(uint32_t) + sizeof(struct UDP_datagram), MSG_PEEK);
+	if (n == 0) {
+	    //peer closed the socket, with no writes e.g. a connect-only test
+	    return -1;
+	}
 	FAIL_errno(n != (sizeof(uint32_t) + sizeof(struct UDP_datagram)), "read udp flags", server);
 	struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) mBuf;
 	flags = ntohl(hdr->base.flags);
@@ -955,6 +959,10 @@ int Listener::apply_client_settings (thread_Settings *server) {
 	}
     } else {
 	n = recvn(server->mSock, mBuf, sizeof(uint32_t), MSG_PEEK);
+	if (n == 0) {
+	    //peer closed the socket, with no writes e.g. a connect-only test
+	    return -1;
+	}
 	FAIL_errno((n < (int) sizeof(uint32_t)), "read tcp flags", server);
 	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) mBuf;
 	flags = ntohl(hdr->base.flags);
