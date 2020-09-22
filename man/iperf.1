@@ -154,7 +154,7 @@ Set a rate to be used with fair-queueing based socket-level pacing, in bytes or 
 increment the destination ip address when using the parallel (-P) option
 .TP
 .BR "    --ipg "\fIn\fR
-set the interpacket gap to \fIn\fR (units of milliseconds) for packets within an isochronous frame (burst), requires --isochronous
+set the interpacket gap to \fIn\fR (units of milliseconds) for packets or within a frame/burst when --isochronous is set
 .TP
 .BR "    --isochronous[=" \fIfps\fR:\fImean\fR,\fIstdev\fR "]"
 send isochronous traffic with frequency frames per second and load defined by mean and standard deviation using a log normal distribution, defaults to 60:20m,0. (Note: Here the suffixes indicate bytes/sec or bits/sec per use of uppercase or lowercase, respectively. Also the p suffix is supported to set the burst size in packets, e.g. isochronous=2:25p will send two 25 packet bursts every second, or one 25 packet burst every 0.5 seconds.)
