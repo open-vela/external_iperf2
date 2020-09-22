@@ -260,7 +260,7 @@ void Listener::Run (void) {
 	    // Note 2: The mBuf read is a peek so the server's traffic thread started later
 	    // will also process the first message from an accounting perspective.
 	    // This is required for accurate traffic statistics
-	    if (!apply_client_settings(server)) {
+	    if (apply_client_settings(server) <= 0) {
 	       if (isConnectionReport(server) && !isSumOnly(server)) {
 		   PostReport(InitConnectionReport(server, 0));
 	        }
