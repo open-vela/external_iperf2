@@ -60,6 +60,7 @@
 #include "Listener.hpp"
 #include "Server.hpp"
 #include "PerfSocket.hpp"
+#include "active_hosts.h"
 
 static int bidir_startstop_barrier (struct BarrierMutex *barrier) {
     int rc = 0;
@@ -186,9 +187,20 @@ static void clientside_client_reverse (struct thread_Settings *thread, Client *t
 	theClient->SendFirstPayload();
 	reverse_client->mSock = thread->mSock; // use the same socket for both directions
 	reverse_client->mThreadMode = kMode_Server;
-	setServerReverse(reverse_client); // cause the connection report to show reverse
+	setReverse(reverse_client);
 	setNoUDPfin(reverse_client); // disable the fin report - no need
+	if (thread->mThreads > 1)
+	    Iperf_push_host(&reverse_client->peer, reverse_client);
 	thread_start(reverse_client);
+	if (!thread_equalid(reverse_client->mTID, thread_zeroid()) && \
+	    !(pthread_join(reverse_client->mTID, NULL) != 0)) {
+#ifdef HAVE_THREAD_DEBUG
+	    thread_debug("Client join reverse done (sock=%d)", thread->mSock);
+#endif
+	} else {
+	    fprintf(stderr, "thread join on reverse failed\n");
+	    exit(-1);
+	}
 	// Nothing was posted to reporter thread so free here
 	if (theClient->myJob)
 	    FreeReport(theClient->myJob);
@@ -208,6 +220,10 @@ static void clientside_client_bidir (struct thread_Settings *thread, Client *the
 	// When -P > 1 then all threads finish connect before starting traffic
 	theClient->BarrierClient(thread->connects_done);
     if (theClient->isConnected()) {
+	if (thread->mThreads > 1) {
+	    Iperf_push_host(&thread->peer, thread);
+	    Iperf_push_host(&reverse_client->peer, reverse_client);
+	}
 	thread->mBidirReport->info.common->socket = thread->mSock;
 	thread->mBidirReport->info.transferID = thread->mSock;
 	FAIL((!reverse_client || !(thread->mSock > 0)), "Reverse test failed to start per thread settings or socket problem",  thread);

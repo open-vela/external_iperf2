@@ -305,6 +305,7 @@ static inline struct ReportHeader *reporter_jobq_set_root (void) {
 	// The reporter is starting from an empty state
 	// so set the load detect to trigger an initial delay
 	reset_consumption_detector();
+	reporter_clear_heading_flags();
 	if (!ReportPendingHead) {
 	    Condition_TimedWait(&ReportCond, 1);
 #ifdef HAVE_THREAD_DEBUG
