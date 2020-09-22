@@ -144,7 +144,7 @@ static void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport
 	if (isUDP(inSettings)) {
 	} else {
 	    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
-	    sumreport->info.output_handler = (isSumOnly(inSettings) ? NULL : \
+	    sumreport->info.output_handler = ((isSumOnly(inSettings) || (inSettings->mReportMode == kReport_CSV)) ? NULL : \
 					      (isEnhanced(inSettings) ? tcp_output_bidir_sum_enhanced : tcp_output_bidir_sum));
 	}
     } else {
@@ -177,6 +177,10 @@ static void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport
 	    FAIL(1, "SetSumReport", inSettings);
 	}
     }
+    // overide output handlers when csv reporting set
+    if (inSettings->mReportMode == kReport_CSV)
+	sumreport->info.output_handler = NULL;
+
 }
 
 struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, int bidir) {
@@ -401,7 +405,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 		else
 		    ireport->info.output_handler = udp_output_read_enhanced_triptime;
 	    } else if (isBidir(inSettings)) {
-		ireport->info.output_handler =  (isEnhanced(inSettings) ? NULL : NULL);
+		ireport->info.output_handler =  udp_output_read;
 	    } else if (isEnhanced(inSettings)) {
 		ireport->info.output_handler = udp_output_read_enhanced;
 	    } else {
@@ -412,12 +416,14 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	    ireport->transfer_protocol_handler = reporter_transfer_protocol_server_tcp;
             if (inSettings->mReportMode == kReport_CSV) {
 		ireport->info.output_handler = tcp_output_basic_csv;
+	    } else if (isSumOnly(inSettings)) {
+		ireport->info.output_handler = NULL;
 	    } else if (isTripTime(inSettings))
 		ireport->info.output_handler = tcp_output_read_enhanced_triptime;
 	    else if (isEnhanced(inSettings)) {
-		ireport->info.output_handler = (isSumOnly(inSettings) ? NULL : tcp_output_read_enhanced);
+		ireport->info.output_handler = tcp_output_read_enhanced;
 	    } else {
-		ireport->info.output_handler = ((isSumOnly(inSettings) | isBidir(inSettings)) ? NULL : tcp_output_read);
+		ireport->info.output_handler = tcp_output_read;
 	    }
 	}
 	break;
@@ -436,10 +442,10 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	    }
 	} else {
 	    ireport->transfer_protocol_handler = reporter_transfer_protocol_client_tcp;
-	    if (isSumOnly(inSettings)) {
-		ireport->info.output_handler = NULL;
-	    } else if (inSettings->mReportMode == kReport_CSV) {
+	    if (inSettings->mReportMode == kReport_CSV) {
 		ireport->info.output_handler = tcp_output_basic_csv;
+	    } else if (isSumOnly(inSettings)) {
+		ireport->info.output_handler = NULL;
 	    } else if (isEnhanced(inSettings) || isIsochronous(inSettings)) {
 		ireport->info.output_handler = tcp_output_write_enhanced;
 	    } else if (!isEnhanced(inSettings) && isBidir(inSettings)) {

@@ -662,7 +662,6 @@ void Settings_Interpret(char option, const char *optarg, struct thread_Settings 
 	    case 'C':
 		mExtSettings->mReportMode = kReport_CSV;
 		setNoSettReport(mExtSettings);
-		setNoSettReport(mExtSettings);
 		setNoConnReport(mExtSettings);
 		break;
 	    default:
