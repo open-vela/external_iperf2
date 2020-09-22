@@ -386,6 +386,7 @@ typedef void (* report_serverstatistics)( struct ConnectionInfo *, struct Transf
 struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, int bidir);
 struct ReportHeader* InitIndividualReport(struct thread_Settings *inSettings);
 struct ReportHeader* InitConnectionReport(struct thread_Settings *inSettings, double ct);
+struct ConnectionInfo* InitConnectOnlyReport(struct thread_Settings *inSettings);
 struct ReportHeader *InitSettingsReport(struct thread_Settings *inSettings);
 struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings, struct server_hdr *server);
 void PostReport(struct ReportHeader *reporthdr);
@@ -393,6 +394,7 @@ void ReportPacket(struct ReporterData *reporthdr, struct ReportStruct *packet);
 void EndJob(struct ReportHeader *reporthdr,  struct ReportStruct *packet);
 void FreeReport(struct ReportHeader *reporthdr);
 void FreeSumReport (struct SumReport *sumreport);
+void FreeConnectionReport(struct ConnectionInfo *reporthdr);
 void ReportServerUDP(struct thread_Settings *inSettings, struct server_hdr *server);
 void ReportConnections(struct thread_Settings *inSettings );
 void reporter_dump_job_queue(void);
@@ -439,9 +441,7 @@ void reporter_transfer_protocol_sum_client_udp(struct TransferInfo *stats, int f
 void reporter_transfer_protocol_sum_server_udp(struct TransferInfo *stats, int final);
 void reporter_transfer_protocol_bidir_tcp(struct TransferInfo *stats, int final);
 void reporter_transfer_protocol_bidir_udp(struct TransferInfo *stats, int final);
-#if 0
-void reporter_connect_printf_tcp_final(struct ReportHeader *multihdr);
-#endif
+
 
 // Reporter print routines
 // TCP server
@@ -490,13 +490,13 @@ void udp_output_basic_csv(struct TransferInfo *stats);
 void tcp_output_basic_csv(struct TransferInfo *stats);
 
 // Rest of the reporter output routines
-void reporter_connect_printf_tcp_final (struct ReportHeader *reporthdr);
 void reporter_print_connection_report(struct ConnectionInfo *report);
 void reporter_print_settings_report(struct ReportSettings *report);
 void reporter_print_server_relay_report(struct ServerRelay *report);
 void reporter_peerversion (struct ConnectionInfo *report, uint32_t upper, uint32_t lower);
 void PrintMSS(struct ReporterData *data);
 void reporter_default_heading_flags(int);
+void reporter_connect_printf_tcp_final(struct ConnectionInfo *report);
 
 void write_UDP_AckFIN(struct TransferInfo *stats);
 
