@@ -201,11 +201,21 @@ struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, in
     }
     SetSumHandlers(inSettings, sumreport, bidir);
     if (bidir) {
-	sumreport->bidir_barrier.count = 0;
-	Condition_Initialize(&sumreport->bidir_barrier.await);
-	sumreport->bidir_barrier.timeout = (isModeTime(inSettings) ? ((int)(inSettings->mAmount / 100) + 1) : 2);
-	if (sumreport->bidir_barrier.timeout < MINBARRIERTIMEOUT)
-	    sumreport->bidir_barrier.timeout = MINBARRIERTIMEOUT;
+	if (!isServerReverse(inSettings)) {
+	    sumreport->bidir_barrier.count = 0;
+	    Condition_Initialize(&sumreport->bidir_barrier.await);
+	    sumreport->bidir_barrier.timeout = (isModeTime(inSettings) ? ((int)(inSettings->mAmount / 100) + 1) : 2);
+	    if (sumreport->bidir_barrier.timeout < MINBARRIERTIMEOUT)
+		sumreport->bidir_barrier.timeout = MINBARRIERTIMEOUT;
+	} else {
+	    if (isTripTime(inSettings)) {
+		sumreport->info.ts.startTime = inSettings->triptime_start;
+	    } else {
+		sumreport->info.ts.startTime = inSettings->accept_time;
+	    }
+	    sumreport->info.ts.nextTime = sumreport->info.ts.startTime;
+	    TimeAdd(sumreport->info.ts.nextTime, sumreport->info.ts.intervalTime);
+	}
     }
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Init sum report %p id=%d", (void *)sumreport, inID);
