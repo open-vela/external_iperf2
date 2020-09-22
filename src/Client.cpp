@@ -706,20 +706,23 @@ void Client::RunUDP (void) {
     double delay = 0;
     double adjust = 0;
 
-    // compute delay target in units of nanoseconds
-    if (mSettings->mUDPRateUnits == kRate_BW) {
-	// compute delay for bandwidth restriction, constrained to [0,1] seconds
-	delay_target = (double) (mSettings->mBufLen * ((kSecs_to_nsecs * kBytes_to_Bits)
-							/ mSettings->mUDPRate));
+    if (mSettings->mBurstIPG > 0.0) {
+	delay_target = mSettings->mBurstIPG * 1000000;  // convert from milliseconds to nanoseconds
     } else {
-	delay_target = 1e9 / mSettings->mUDPRate;
+	// compute delay target in units of nanoseconds
+	if (mSettings->mUDPRateUnits == kRate_BW) {
+	    // compute delay for bandwidth restriction, constrained to [0,1] seconds
+	    delay_target = (double) (mSettings->mBufLen * ((kSecs_to_nsecs * kBytes_to_Bits)
+							   / mSettings->mUDPRate));
+	} else {
+	    delay_target = 1e9 / mSettings->mUDPRate;
+	}
+	if (delay_target < 0  ||
+	    delay_target > 1.0 * kSecs_to_nsecs) {
+	    fprintf(stderr, warn_delay_large, delay_target / kSecs_to_nsecs);
+	    delay_target = 1.0 * kSecs_to_nsecs;
+	}
     }
-    if (delay_target < 0  ||
-	 delay_target > 1.0 * kSecs_to_nsecs) {
-	fprintf(stderr, warn_delay_large, delay_target / kSecs_to_nsecs);
-	delay_target = 1.0 * kSecs_to_nsecs;
-    }
-
     // Set this to > 0 so first loop iteration will delay the IPG
     currLen = 1;
     double variance = mSettings->mVariance;
