@@ -700,7 +700,7 @@ void Client::RunUDP (void) {
     double delay = 0;
     double adjust = 0;
 
-    if (mSettings->mBurstIPG > 0.0) {
+    if (isIPG(mSettings)) {
 	delay_target = mSettings->mBurstIPG * 1000000;  // convert from milliseconds to nanoseconds
     } else {
 	// compute delay target in units of nanoseconds

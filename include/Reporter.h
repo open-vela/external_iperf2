@@ -225,6 +225,7 @@ struct ReportCommon {
     int RXbins;
     int RXbinsize;
     int RXunits;
+    double pktIPG;
     iperf_sockaddr peer;
     Socklen_t size_peer;
     iperf_sockaddr local;
