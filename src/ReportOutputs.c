@@ -74,22 +74,22 @@ static int HEADING_FLAG(report_frame_jitter_loss_enhanced) = 0;
 static int HEADING_FLAG(report_frame_tcp_enhanced) = 0;
 static int HEADING_FLAG(report_bw_write_sumcnt_enhanced) = 0;
 
-void reporter_clear_heading_flags (void) {
-    HEADING_FLAG(report_bw) = 0;
-    HEADING_FLAG(report_bw_sumcnt) = 0;
-    HEADING_FLAG(report_bw_jitter_loss) = 0;
-    HEADING_FLAG(report_bw_read_enhanced) = 0;
-    HEADING_FLAG(report_bw_read_enhanced_netpwr) = 0;
-    HEADING_FLAG(report_bw_write_enhanced) = 0;
-    HEADING_FLAG(report_bw_write_enhanced_netpwr) = 0;
-    HEADING_FLAG(report_bw_pps_enhanced) = 0;
-    HEADING_FLAG(report_bw_pps_enhanced_isoch) = 0;
-    HEADING_FLAG(report_bw_jitter_loss_pps) = 0;
-    HEADING_FLAG(report_bw_jitter_loss_enhanced) = 0;
-    HEADING_FLAG(report_bw_jitter_loss_enhanced_isoch) = 0;
-    HEADING_FLAG(report_frame_jitter_loss_enhanced) = 0;
-    HEADING_FLAG(report_frame_tcp_enhanced) = 0;
-    HEADING_FLAG(report_bw_write_sumcnt_enhanced) = 0;
+void reporter_default_heading_flags (int flag) {
+    HEADING_FLAG(report_bw) = flag;
+    HEADING_FLAG(report_bw_sumcnt) = flag;
+    HEADING_FLAG(report_bw_jitter_loss) = flag;
+    HEADING_FLAG(report_bw_read_enhanced) = flag;
+    HEADING_FLAG(report_bw_read_enhanced_netpwr) = flag;
+    HEADING_FLAG(report_bw_write_enhanced) = flag;
+    HEADING_FLAG(report_bw_write_enhanced_netpwr) = flag;
+    HEADING_FLAG(report_bw_pps_enhanced) = flag;
+    HEADING_FLAG(report_bw_pps_enhanced_isoch) = flag;
+    HEADING_FLAG(report_bw_jitter_loss_pps) = flag;
+    HEADING_FLAG(report_bw_jitter_loss_enhanced) = flag;
+    HEADING_FLAG(report_bw_jitter_loss_enhanced_isoch) = flag;
+    HEADING_FLAG(report_frame_jitter_loss_enhanced) = flag;
+    HEADING_FLAG(report_frame_tcp_enhanced) = flag;
+    HEADING_FLAG(report_bw_write_sumcnt_enhanced) = flag;
 }
 
 static inline void _print_stats_common (struct TransferInfo *stats) {
@@ -574,41 +574,42 @@ static char __ips_ports_string[CSVPEERLIMIT];
 static void format_ips_ports_string (struct TransferInfo *stats) {
     char local_addr[REPORT_ADDRLEN];
     char remote_addr[REPORT_ADDRLEN];
-    struct sockaddr *local = ((struct sockaddr*)&stats->common->local);
-    struct sockaddr *peer = ((struct sockaddr*)&stats->common->peer);
+    int reverse = (stats->common->ThreadMode == kMode_Server);
+    struct sockaddr *local = (reverse ? (struct sockaddr*)&stats->common->peer : (struct sockaddr*)&stats->common->local);
+    struct sockaddr *peer = (reverse ? (struct sockaddr*)&stats->common->local : (struct sockaddr*)&stats->common->peer);
     __ips_ports_string[0] = '\0';
     if (local->sa_family == AF_INET) {
         inet_ntop(AF_INET, &((struct sockaddr_in*)local)->sin_addr,
-                   local_addr, REPORT_ADDRLEN);
+		  local_addr, REPORT_ADDRLEN);
     }
 #ifdef HAVE_IPV6
-      else {
+    else {
         inet_ntop(AF_INET6, &((struct sockaddr_in6*)local)->sin6_addr,
-                   local_addr, REPORT_ADDRLEN);
+		  local_addr, REPORT_ADDRLEN);
     }
 #endif
     if (peer->sa_family == AF_INET) {
         inet_ntop(AF_INET, &((struct sockaddr_in*)peer)->sin_addr,
-                   remote_addr, REPORT_ADDRLEN);
+		  remote_addr, REPORT_ADDRLEN);
     }
 #ifdef HAVE_IPV6
-      else {
+    else {
         inet_ntop(AF_INET6, &((struct sockaddr_in6*)peer)->sin6_addr,
-                   remote_addr, REPORT_ADDRLEN);
+		  remote_addr, REPORT_ADDRLEN);
     }
 #endif
     snprintf(__ips_ports_string, REPORT_ADDRLEN*2+10, reportCSV_peer,
-             local_addr, (local->sa_family == AF_INET ?
-                          ntohs(((struct sockaddr_in*)local)->sin_port) :
+	     local_addr, (local->sa_family == AF_INET ?
+			  ntohs(((struct sockaddr_in*)local)->sin_port) :
 #ifdef HAVE_IPV6
-                          ntohs(((struct sockaddr_in6*)local)->sin6_port)),
+			  ntohs(((struct sockaddr_in6*)local)->sin6_port)),
 #else
-                          0),
+	     0),
 #endif
-            remote_addr, (peer->sa_family == AF_INET ?
-                          ntohs(((struct sockaddr_in*)peer)->sin_port) :
+	remote_addr, (peer->sa_family == AF_INET ?
+		      ntohs(((struct sockaddr_in*)peer)->sin_port) :
 #ifdef HAVE_IPV6
-                          ntohs(((struct sockaddr_in6*)peer)->sin6_port)));
+		      ntohs(((struct sockaddr_in6*)peer)->sin6_port)));
 #else
                           0));
 #endif
@@ -623,7 +624,7 @@ void udp_output_basic_csv (struct TransferInfo *stats) {
     }
     intmax_t speed = (intmax_t) (((stats->cntBytes > 0) && (stats->ts.iEnd -  stats->ts.iStart) > 0.0) ? \
 				 (((double)stats->cntBytes * 8.0) / (stats->ts.iEnd -  stats->ts.iStart)) : 0);
-    printf( reportCSV_bw_jitter_loss_format,
+    printf(reportCSV_bw_jitter_loss_format,
 	   __timestring,
 	    stats->csv_peer,
 	    stats->transferID,
