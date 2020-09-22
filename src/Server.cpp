@@ -374,7 +374,7 @@ void Server::InitTrafficLoop (void) {
         myDropSocket = mSettings->mSockDrop;
 #endif
     int setbidirflag = 0;
-    if (isBidir(mSettings)) {
+    if (isBidir(mSettings) && !isServerReverse(mSettings)) {
 	assert(mSettings->mBidirReport != NULL);
 	if ((setbidirflag = bidir_start_barrier(&mSettings->mBidirReport->bidir_barrier)) < 0)
 	    exit(-1);

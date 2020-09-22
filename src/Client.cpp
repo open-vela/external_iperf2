@@ -286,7 +286,7 @@ int Client::StartSynch (void) {
 	}
     }
     int setbidirflag = 0;
-    if (isBidir(mSettings)) {
+    if (isBidir(mSettings) && !isServerReverse(mSettings)) {
 	assert(mSettings->mBidirReport != NULL);
 	if ((setbidirflag = bidir_start_barrier(&mSettings->mBidirReport->bidir_barrier)) < 0)
 	    return -1;
