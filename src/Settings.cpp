@@ -1038,19 +1038,24 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
 	}
     }
     // Bail outs
+    bool bail = false;
     if (mExtSettings->mThreadMode == kMode_Client) {
 	if (isSumOnly(mExtSettings) && !(mExtSettings->mThreads > 1)) {
 	    fprintf(stderr, "ERROR: option of --sum-only requires -P greater than 1\n");
+	    bail = true;
 	}
         if (isUDP(mExtSettings)) {
 	    if (isConnectOnly(mExtSettings)) {
 		fprintf(stderr, "ERROR: option of --connect-only not supported with -u UDP\n");
+		bail = true;
 	    }
 	    if (isTxHoldback(mExtSettings)) {
 		fprintf(stderr, "ERROR: option of --txdelay-time is not supported with -u UDP\n");
+		bail = true;
 	    }
 	    if (isIPG(mExtSettings) && isBWSet(mExtSettings)) {
 		fprintf(stderr, "ERROR: options of --b and --ipg cannot be applied together\n");
+		bail = true;
 	    }
 	    if (mExtSettings->mBurstIPG < 0.0) {
 		fprintf(stderr, "ERROR: option --ipg must be a postive value\n");
@@ -1058,63 +1063,82 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
 	} else {
 	    if (isIPG(mExtSettings)) {
 		fprintf(stderr, "ERROR: option --ipg requires -u UDP\n");
+		bail = true;
 	    }
 	    if (isNoUDPfin(mExtSettings)) {
 		fprintf(stderr, "ERROR: option --no-udp-fin requires -u UDP\n");
+		bail = true;
 	    }
+
 	}
 	if (isRxHistogram(mExtSettings)) {
 	    fprintf(stderr, "ERROR: option of --histograms is not supported on the client\n");
+	    bail = true;
 	}
 	if (isCongestionControl(mExtSettings) && isReverse(mExtSettings)) {
 	    fprintf(stderr, "ERROR: tcp congestion control -Z and --reverse cannot be applied together\n");
+	    bail = true;
 	}
 	if (isBidir(mExtSettings) && isReverse(mExtSettings)) {
 	    fprintf(stderr, "ERROR: options of --bidir and --reverse cannot be applied together\n");
+	    bail = true;
 	}
 	if (isBWSet(mExtSettings) && isIsochronous(mExtSettings)) {
 	    fprintf(stderr, "ERROR: options of --b and --isochronous cannot be applied together\n");
+	    bail = true;
 	}
-	exit(1);
     } else {
         if (isTripTime(mExtSettings)) {
             fprintf(stderr, "ERROR: setting of option --trip-times is not supported on the server\n");
+	    bail = true;
 	}
 	if (isVaryLoad(mExtSettings)) {
 	    fprintf(stderr, "ERROR: option of variance per -b is not supported on the server\n");
+	    bail = true;
 	}
 	if (isTxStartTime(mExtSettings)) {
 	    fprintf(stderr, "ERROR: option of --txstart-time is not supported on the server\n");
+	    bail = true;
 	}
 	if (isTxHoldback(mExtSettings)) {
 	    fprintf(stderr, "ERROR: option of --txdelay-time is not supported on the server\n");
+	    bail = true;
 	}
         if (isConnectOnly(mExtSettings)) {
 	    fprintf(stderr, "ERROR: option of --connect-only is not supported on the server\n");
+	    bail = true;
 	}
 	if (isIPG(mExtSettings)) {
 	    fprintf(stderr, "ERROR: option of --ipg is not suppported on the server\n");
+	    bail = true;
 	}
 	if (isIsochronous(mExtSettings)) {
 	    fprintf(stderr, "ERROR: option of --isochronous is not suppported on the server\n");
+	    bail = true;
 	}
 	if (isBidir(mExtSettings)) {
 	    fprintf(stderr, "ERROR: option of --bidir is not suppported on the server\n");
+	    bail = true;
 	}
 	if (isReverse(mExtSettings)) {
 	    fprintf(stderr, "ERROR: option of --reverse is not suppported on the server\n");
+	    bail = true;
 	}
 	if (isIncrDstIP(mExtSettings)) {
 	    fprintf(stderr, "ERROR: option of --incr-dstpip is not suppported on the server\n");
+	    bail = true;
 	}
 	if (isFQPacing(mExtSettings)) {
 	    fprintf(stderr, "ERROR: option of --fq-rate is not suppported on the server\n");
+	    bail = true;
 	}
 	if (isNoUDPfin(mExtSettings)) {
 	    fprintf(stderr, "ERROR: option of --no-udp-fin is not suppported on the server\n");
+	    bail = true;
 	}
-	exit(1);
     }
+    if (bail)
+	exit(1);
     // UDP histogram optional settings
     if (isRxHistogram(mExtSettings) && (mExtSettings->mThreadMode != kMode_Client) && mExtSettings->mRxHistogramStr) {
 	// check for optional arguments to change histogram settings
