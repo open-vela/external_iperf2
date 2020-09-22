@@ -246,7 +246,7 @@ const char report_sum_bw_format[] =
 "[SUM] " IPERFTimeFrmt " sec  %ss  %ss/sec\n";
 
 const char report_sumcnt_bw_format[] =
-"[SUM-%d " IPERFTimeFrmt " sec  %ss  %ss/sec\n";
+"[SUM-%d] " IPERFTimeFrmt " sec  %ss  %ss/sec\n";
 
 const char report_bw_jitter_loss_header[] =
 "[ ID] Interval       Transfer     Bandwidth        Jitter   Lost/Total Datagrams\n";
