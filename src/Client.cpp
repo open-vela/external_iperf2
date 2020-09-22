@@ -171,12 +171,6 @@ void Client::my_connect (void) {
 
     // connect socket
     if (!isUDP(mSettings)) {
-        // Synchronize prior to connect() only on a connect-only test
-        // Tests with data xfer will sync after the connect()
-        // and before the writes()
-        if (isConnectOnly(mSettings))
-	    StartSynch();
-
 	connect_start.setnow();
 	rc = connect(mySocket, (sockaddr*) &mSettings->peer,
 		      SockAddr_get_sizeof_sockaddr(&mSettings->peer));
