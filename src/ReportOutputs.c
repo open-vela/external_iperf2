@@ -74,6 +74,24 @@ static int HEADING_FLAG(report_frame_jitter_loss_enhanced) = 0;
 static int HEADING_FLAG(report_frame_tcp_enhanced) = 0;
 static int HEADING_FLAG(report_bw_write_sumcnt_enhanced) = 0;
 
+void reporter_clear_heading_flags (void) {
+    HEADING_FLAG(report_bw) = 0;
+    HEADING_FLAG(report_bw_sumcnt) = 0;
+    HEADING_FLAG(report_bw_jitter_loss) = 0;
+    HEADING_FLAG(report_bw_read_enhanced) = 0;
+    HEADING_FLAG(report_bw_read_enhanced_netpwr) = 0;
+    HEADING_FLAG(report_bw_write_enhanced) = 0;
+    HEADING_FLAG(report_bw_write_enhanced_netpwr) = 0;
+    HEADING_FLAG(report_bw_pps_enhanced) = 0;
+    HEADING_FLAG(report_bw_pps_enhanced_isoch) = 0;
+    HEADING_FLAG(report_bw_jitter_loss_pps) = 0;
+    HEADING_FLAG(report_bw_jitter_loss_enhanced) = 0;
+    HEADING_FLAG(report_bw_jitter_loss_enhanced_isoch) = 0;
+    HEADING_FLAG(report_frame_jitter_loss_enhanced) = 0;
+    HEADING_FLAG(report_frame_tcp_enhanced) = 0;
+    HEADING_FLAG(report_bw_write_sumcnt_enhanced) = 0;
+}
+
 static inline void _print_stats_common (struct TransferInfo *stats) {
     assert(stats!=NULL);
     byte_snprintf(outbuffer, sizeof(outbuffer), (double) stats->cntBytes, toupper((int)stats->common->Format));

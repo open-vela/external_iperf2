@@ -178,7 +178,6 @@ void Server::RunTCP (void) {
     now.setnow();
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
-
     while (InProgress() && !peerclose) {
 	reportstruct->emptyreport=1;
 	currLen = 0;
@@ -404,8 +403,8 @@ void Server::InitTrafficLoop (void) {
     reportstruct->l2len = 0;
     reportstruct->l2errors = 0x0;
 
-    if (isServerModeTime(mSettings) || (isModeTime(mSettings) && (isServerReverse(mSettings) || isBidir(mSettings)))) {
-	if (isServerReverse(mSettings) || isBidir(mSettings))
+    if (isServerModeTime(mSettings) || (isModeTime(mSettings) && (isServerReverse(mSettings) || isBidir(mSettings) || isReverse(mSettings)))) {
+	if (isServerReverse(mSettings) || isBidir(mSettings) || isReverse(mSettings))
 	   mSettings->mAmount += (SLOPSECS * 100);  // add 2 sec for slop on reverse, units are 10 ms
 #ifdef HAVE_SETITIMER
         int err;

@@ -64,8 +64,8 @@
 #include "isochronous.hpp"
 #include "pdfs.h"
 #include "version.h"
-#include "active_hosts.h"
 #include "payloads.h"
+#include "active_hosts.h"
 
 // const double kSecs_to_usecs = 1e6;
 const double kSecs_to_nsecs = 1e9;
@@ -154,11 +154,6 @@ void Client::my_connect (void) {
     WARN_errno(mySocket == INVALID_SOCKET, "socket");
     // Socket is carried both by the object and the thread
     mSettings->mSock=mySocket;
-    if ((mSettings->mThreads > 1) && (!(isReverse(mSettings) && !(isBidir(mSettings))))) {
-	// in the case of reverse the server side summing is
-	// all that's needed
-	Iperf_push_host(&mSettings->peer, mSettings);
-    };
     SetSocketOptions(mSettings);
     SockAddr_localAddr(mSettings);
     if (mSettings->mLocalhost != NULL) {
@@ -422,7 +417,6 @@ void Client::InitTrafficLoop (void) {
         mEndTime.setnow();
         mEndTime.add(mSettings->mAmount / 100.0);
     }
-
     readAt = mBuf;
     lastPacketTime.set(myReport->info.ts.startTime.tv_sec, myReport->info.ts.startTime.tv_usec);
     if (isConnectionReport(mSettings) && isPeerVerDetect(mSettings) && !isSumOnly(mSettings))
@@ -433,13 +427,15 @@ void Client::InitTrafficLoop (void) {
     // Finally, post this thread's "job report" which the reporter thread
     // will continuously process as long as there are packets flowing
     // right now the ring is empty
-    if (isDataReport(mSettings)) {
-	assert(myJob!=NULL);
-	assert(myReport!=NULL);
-	PostReport(myJob);
+    if (!isReverse(mSettings)) {
+	if (isDataReport(mSettings)) {
+	    assert(myJob!=NULL);
+	    assert(myReport!=NULL);
+	    PostReport(myJob);
+	}
     }
     one_report = ((!isUDP(mSettings) && !isEnhanced(mSettings) && (mSettings->mIntervalMode != kInterval_Time) \
-		   && !isIsochronous(mSettings)  && !isTripTime(mSettings)) ? true : false);
+		   && !isIsochronous(mSettings) && !isTripTime(mSettings) && !isReverse(mSettings)) ? true : false);
 }
 
 /* -------------------------------------------------------------------
