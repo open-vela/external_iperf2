@@ -1095,7 +1095,7 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
 	if (isIPG(mExtSettings)) {
 	    fprintf(stderr, "ERROR: option of --ipg is not suppported on the server\n");
 	}
-	if (!isIsochronous(mExtSettings)) {
+	if (isIsochronous(mExtSettings)) {
 	    fprintf(stderr, "ERROR: option of --isochronous is not suppported on the server\n");
 	}
 	if (isBidir(mExtSettings)) {

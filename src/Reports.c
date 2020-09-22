@@ -227,6 +227,22 @@ struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, in
     return sumreport;
 }
 
+struct ConnectionInfo * InitConnectOnlyReport (struct thread_Settings *thread) {
+    assert(thread != NULL);
+    // this connection report used only by report for accumulate stats
+    struct ConnectionInfo *creport = (struct ConnectionInfo *) calloc(1, sizeof(struct ConnectionInfo));
+    if (!creport) {
+	FAIL(1, "Out of Memory!!\n", thread);
+    }
+    common_copy(&creport->common, thread);
+    creport->connect_times.min = FLT_MAX;
+    creport->connect_times.max = FLT_MIN;
+    creport->connect_times.vd = 0;
+    creport->connect_times.m2 = 0;
+    creport->connect_times.mean = 0;
+    return creport;
+}
+
 void FreeSumReport (struct SumReport *sumreport) {
     assert(sumreport);
 #ifdef HAVE_THREAD_DEBUG
@@ -264,7 +280,7 @@ static void Free_iReport (struct ReporterData *ireport) {
     free(ireport);
 }
 
-static void Free_cReport (struct ConnectionInfo *report) {
+void FreeConnectionReport (struct ConnectionInfo *report) {
     free_common_copy(report->common);
     free(report);
 }
@@ -291,7 +307,7 @@ void FreeReport (struct ReportHeader *reporthdr) {
 	Free_iReport((struct ReporterData *)reporthdr->this_report);
 	break;
     case CONNECTION_REPORT:
-	Free_cReport((struct ConnectionInfo *)reporthdr->this_report);
+	FreeConnectionReport((struct ConnectionInfo *)reporthdr->this_report);
 	break;
     case SETTINGS_REPORT:
 	Free_sReport((struct ReportSettings *)reporthdr->this_report);
