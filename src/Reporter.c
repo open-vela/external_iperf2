@@ -297,7 +297,7 @@ static void reporter_jobq_dump(void) {
 
 
 /* Concatenate pending reports and return the head */
-static inline struct ReportHeader *reporter_jobq_set_root (void) {
+static inline struct ReportHeader *reporter_jobq_set_root (struct thread_Settings *inSettings) {
     struct ReportHeader *root = NULL;
     Condition_Lock(ReportCond);
     // check the jobq for empty
@@ -305,7 +305,7 @@ static inline struct ReportHeader *reporter_jobq_set_root (void) {
 	// The reporter is starting from an empty state
 	// so set the load detect to trigger an initial delay
 	reset_consumption_detector();
-	reporter_clear_heading_flags();
+	reporter_default_heading_flags((inSettings->mReportMode == kReport_CSV));
 	if (!ReportPendingHead) {
 	    Condition_TimedWait(&ReportCond, 1);
 #ifdef HAVE_THREAD_DEBUG
@@ -369,7 +369,7 @@ void reporter_spawn (struct thread_Settings *thread) {
      *    either traffic threads are still running or a Listener thread
      *    is running. If equal to 1 then only the reporter thread is alive
      */
-    while ((reporter_jobq_set_root() != NULL) || (thread_numuserthreads() > 1)){
+    while ((reporter_jobq_set_root(thread) != NULL) || (thread_numuserthreads() > 1)){
 #ifdef HAVE_THREAD_DEBUG
 	// thread_debug( "Jobq *HEAD* %p (%d)", (void *) ReportRoot, thread_numuserthreads());
 #endif
@@ -914,7 +914,6 @@ static inline void reporter_set_timestamps_time (struct ReportTimeStamps *times,
 
 // If reports were missed, catch up now
 static inline void reporter_transfer_protocol_missed_reports (struct TransferInfo *stats, struct ReportStruct *packet) {
-    assert(stats->output_handler != NULL);
     while (TimeDifference(packet->packetTime, stats->ts.nextTime) > TimeDouble(stats->ts.intervalTime)) {
 //	printf("**** cmp=%f/%f next %ld.%ld packet %ld.%ld id=%ld\n", TimeDifference(packet->packetTime, stats->ts.nextTime), TimeDouble(stats->ts.intervalTime), stats->ts.nextTime.tv_sec, stats->ts.nextTime.tv_usec, packet->packetTime.tv_sec, packet->packetTime.tv_usec, packet->packetID);
 	reporter_set_timestamps_time(&stats->ts, INTERVAL);
@@ -924,7 +923,8 @@ static inline void reporter_transfer_protocol_missed_reports (struct TransferInf
 	emptystats.ts.iEnd = stats->ts.iEnd;
 	emptystats.common = stats->common;
 	emptystats.header_printed = 1;
-	(*stats->output_handler)(&emptystats);
+	if (stats->output_handler)
+	    (*stats->output_handler)(&emptystats);
     }
 }
 #if 0
@@ -1100,7 +1100,8 @@ void reporter_transfer_protocol_server_udp (struct ReporterData *data, int final
 	    stats->cntDatagrams = stats->PacketID - stats->total.Datagrams.prev;
 	    if (final)
 		reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
-	    (*stats->output_handler)(stats);
+	    if (stats->output_handler)
+		(*stats->output_handler)(stats);
 	}
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
 	stats->IPGsum = TimeDifference(stats->ts.packetTime, stats->ts.startTime);
@@ -1140,7 +1141,6 @@ void reporter_transfer_protocol_server_udp (struct ReporterData *data, int final
 }
 
 void reporter_transfer_protocol_sum_server_udp (struct TransferInfo *stats, int final) {
-    assert(stats->output_handler != NULL);
     if (stats->sumflag) {
 	if (final) {
 	    reporter_set_timestamps_time(&stats->ts, TOTAL);
@@ -1165,13 +1165,13 @@ void reporter_transfer_protocol_sum_server_udp (struct TransferInfo *stats, int 
 	    stats->cntDatagrams = stats->total.Datagrams.current - stats->total.Datagrams.prev;
 	    stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
 	}
-	(*stats->output_handler)(stats);
+	if (stats->output_handler)
+	    (*stats->output_handler)(stats);
 	if (!final)
 	    reporter_reset_transfer_stats_server_udp(stats);
     }
 }
 void reporter_transfer_protocol_sum_client_udp (struct TransferInfo *stats, int final) {
-    assert(stats->output_handler != NULL);
     if (final) {
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
 	stats->sock_callstats.write.WriteErr = stats->sock_callstats.write.totWriteErr;
@@ -1183,7 +1183,8 @@ void reporter_transfer_protocol_sum_client_udp (struct TransferInfo *stats, int 
     } else {
 	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
     }
-    (*stats->output_handler)(stats);
+    if (stats->output_handler)
+	(*stats->output_handler)(stats);
 
     if (!final) {
 	stats->threadcnt = 0;
@@ -1393,12 +1394,12 @@ void reporter_transfer_protocol_client_all_final(struct ReporterData *data) {
  * Handles summing of threads
  */
 void reporter_transfer_protocol_sum_client_tcp (struct TransferInfo *stats, int final) {
-    assert(stats->output_handler != NULL);
     if (!final || (final && (stats->cntBytes > 0) && !TimeZero(stats->ts.intervalTime))) {
 	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
 	if (final)
 	    reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
-	(*stats->output_handler)(stats);
+	if (stats->output_handler)
+	    (*stats->output_handler)(stats);
 	if (!final)
 	    stats->threadcnt = 0;
 	reporter_reset_transfer_stats_client_tcp(stats);
@@ -1409,18 +1410,19 @@ void reporter_transfer_protocol_sum_client_tcp (struct TransferInfo *stats, int 
 	stats->sock_callstats.write.TCPretry = stats->sock_callstats.write.totTCPretry;
 	stats->cntBytes = stats->total.Bytes.current;
         reporter_set_timestamps_time(&stats->ts, TOTAL);
-	(*stats->output_handler)(stats);
+	if (stats->output_handler)
+	    (*stats->output_handler)(stats);
     }
 }
 
 void reporter_transfer_protocol_sum_server_tcp (struct TransferInfo *stats, int final) {
-    assert(stats->output_handler != NULL);
     if (stats->sumflag) {
 	if (!final || (final && (stats->cntBytes > 0) && !TimeZero(stats->ts.intervalTime))) {
 	    stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
 	    if (final)
 		reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
-	    (*stats->output_handler)(stats);
+	    if (stats->output_handler)
+		(*stats->output_handler)(stats);
 	    if (!final)
 		stats->threadcnt = 0;
 	    reporter_reset_transfer_stats_server_tcp(stats);
@@ -1434,7 +1436,8 @@ void reporter_transfer_protocol_sum_server_tcp (struct TransferInfo *stats, int 
 	    }
 	    stats->cntBytes = stats->total.Bytes.current;
 	    reporter_set_timestamps_time(&stats->ts, TOTAL);
-	    (*stats->output_handler)(stats);
+	    if (stats->output_handler)
+		(*stats->output_handler)(stats);
 	}
     }
 }
@@ -1443,14 +1446,14 @@ void reporter_transfer_protocol_bidir_tcp (struct TransferInfo *stats, int final
 	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
 	if (final)
 	    reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
-	if (*stats->output_handler)
+	if (stats->output_handler)
 	    (*stats->output_handler)(stats);
 	stats->total.Bytes.prev = stats->total.Bytes.current;
     }
     if (final) {
 	stats->cntBytes = stats->total.Bytes.current;
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
-	if (*stats->output_handler)
+	if (stats->output_handler)
 	    (*stats->output_handler)(stats);
     }
 }
@@ -1526,7 +1529,8 @@ int reporter_condprint_frame_interval_report_udp (struct ReporterData *data, str
 	if (stats->cntError < 0)
 	    stats->cntError = 0;
 	stats->cntDatagrams = stats->PacketID - stats->total.Datagrams.prev;
-	(*stats->output_handler)(stats);
+	if (stats->output_handler)
+	    (*stats->output_handler)(stats);
 	reporter_reset_transfer_stats_server_udp(stats);
 	advance_jobq = 1;
     }
@@ -1550,7 +1554,8 @@ int reporter_condprint_frame_interval_report_tcp (struct ReporterData *data, str
 	stats->ts.packetTime = packet->packetTime;
 	reporter_set_timestamps_time(&stats->ts, FRAME);
 	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
-	(*stats->output_handler)(stats);
+	if (stats->output_handler)
+	    (*stats->output_handler)(stats);
 	reporter_reset_transfer_stats_client_tcp(stats);
 	advance_jobq = 1;
     }

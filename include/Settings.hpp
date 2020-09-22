@@ -100,9 +100,7 @@ enum ThreadMode {
 // report mode
 enum ReportMode {
     kReport_Default = 0,
-    kReport_CSV,
-    //kReport_XML,
-    kReport_MAXIMUM
+    kReport_CSV
 };
 
 // test mode
