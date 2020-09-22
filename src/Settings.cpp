@@ -86,7 +86,6 @@ static int writeack = 0;
 static int infinitetime = 0;
 static int connectonly = 0;
 static int burstipg = 0;
-static int burstipg_set = 0;
 static int isochronous = 0;
 static int noudpfin = 0;
 static int numreportstructs = 0;
@@ -938,7 +937,7 @@ void Settings_Interpret(char option, const char *optarg, struct thread_Settings 
 	    }
 	    if (burstipg) {
 		burstipg = 0;
-		burstipg_set = 1;
+		setIPG(mExtSettings);
 		char *end;
 		mExtSettings->mBurstIPG = strtof(optarg,&end);
 		if (*end != '\0') {
@@ -1024,45 +1023,97 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
     if (!isBWSet(mExtSettings) && isUDP(mExtSettings)) {
 	mExtSettings->mUDPRate = kDefault_UDPRate;
     }
-    if ((mExtSettings->mThreadMode == kMode_Client) && isSumOnly(mExtSettings) && !(mExtSettings->mThreads > 1))  {
-	fprintf(stderr, "ERROR: option of --sum-only requires -P greater than 1\n");
-	exit(1);
-    }
-    if (mExtSettings->mThreadMode != kMode_Client)  {
-        if (isTripTime(mExtSettings)) {
-            fprintf(stderr, "WARNING: setting of option --trip-times is recommended on the client and not on the server\n");
-	}
-        if (isConnectOnly(mExtSettings)) {
-            unsetConnectOnly(mExtSettings);
-            fprintf(stderr, "ERROR: option of --connect-only requires tcp (not udp) and is only supported on the client and not on the server\n");
-	    exit(1);
-	}
-	if (isModeTime(mExtSettings) && isReverse(mExtSettings))
-	    mExtSettings->mAmount += mExtSettings->mAmount;
-    } else if (isTripTime(mExtSettings) && (isReverse(mExtSettings) || isBidir(mExtSettings))) {
+    if (isTripTime(mExtSettings) && (isReverse(mExtSettings) || isBidir(mExtSettings))) {
 	setEnhanced(mExtSettings);
     }
-    if (mExtSettings->mThreadMode != kMode_Client) {
+    // Warnings
+    if (mExtSettings->mThreadMode == kMode_Client) {
+	if (isModeTime(mExtSettings) && infinitetime) {
+	    unsetModeTime(mExtSettings);
+	    setModeInfinite(mExtSettings);
+	    fprintf(stderr, "WARNING: client will send traffic forever or until an external signal (e.g. SIGINT or SIGTERM) occurs to stop it\n");
+	}
+	if (isBidir(mExtSettings) && isCongestionControl(mExtSettings)) {
+	    fprintf(stderr, "WARNING: tcp congestion control will only be applied on transmit traffic, use -Z on the server\n");
+	}
+    }
+    // Bail outs
+    if (mExtSettings->mThreadMode == kMode_Client) {
+	if (isSumOnly(mExtSettings) && !(mExtSettings->mThreads > 1)) {
+	    fprintf(stderr, "ERROR: option of --sum-only requires -P greater than 1\n");
+	}
+        if (isUDP(mExtSettings)) {
+	    if (isConnectOnly(mExtSettings)) {
+		fprintf(stderr, "ERROR: option of --connect-only not supported with -u UDP\n");
+	    }
+	    if (isTxHoldback(mExtSettings)) {
+		fprintf(stderr, "ERROR: option of --txdelay-time is not supported with -u UDP\n");
+	    }
+	    if (isIPG(mExtSettings) && isBWSet(mExtSettings)) {
+		fprintf(stderr, "ERROR: options of --b and --ipg cannot be applied together\n");
+	    }
+	    if (mExtSettings->mBurstIPG < 0.0) {
+		fprintf(stderr, "ERROR: option --ipg must be a postive value\n");
+	    }
+	} else {
+	    if (isIPG(mExtSettings)) {
+		fprintf(stderr, "ERROR: option --ipg requires -u UDP\n");
+	    }
+	    if (isNoUDPfin(mExtSettings)) {
+		fprintf(stderr, "ERROR: option --no-udp-fin requires -u UDP\n");
+	    }
+	}
+	if (isRxHistogram(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of --histograms is not supported on the client\n");
+	}
+	if (isCongestionControl(mExtSettings) && isReverse(mExtSettings)) {
+	    fprintf(stderr, "ERROR: tcp congestion control -Z and --reverse cannot be applied together\n");
+	}
+	if (isBidir(mExtSettings) && isReverse(mExtSettings)) {
+	    fprintf(stderr, "ERROR: options of --bidir and --reverse cannot be applied together\n");
+	}
+	if (isBWSet(mExtSettings) && isIsochronous(mExtSettings)) {
+	    fprintf(stderr, "ERROR: options of --b and --isochronous cannot be applied together\n");
+	}
+	exit(1);
+    } else {
+        if (isTripTime(mExtSettings)) {
+            fprintf(stderr, "ERROR: setting of option --trip-times is not supported on the server\n");
+	}
 	if (isVaryLoad(mExtSettings)) {
-	    fprintf(stderr, "WARNING: option of variance ignored as not supported on the server\n");
+	    fprintf(stderr, "ERROR: option of variance per -b is not supported on the server\n");
 	}
 	if (isTxStartTime(mExtSettings)) {
-	    unsetTxStartTime(mExtSettings);
-	    fprintf(stderr, "WARNING: option of --txstart-time ignored as not supported on the server\n");
+	    fprintf(stderr, "ERROR: option of --txstart-time is not supported on the server\n");
 	}
-    } else if (isModeTime(mExtSettings) && infinitetime) {
-        unsetModeTime(mExtSettings);
-	setModeInfinite(mExtSettings);
-	fprintf(stderr, "WARNING: client will send traffic forever or until an external signal (e.g. SIGINT or SIGTERM) occurs to stop it\n");
-    }
-
-    if (isCongestionControl(mExtSettings)) {
+	if (isTxHoldback(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of --txdelay-time is not supported on the server\n");
+	}
+        if (isConnectOnly(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of --connect-only is not supported on the server\n");
+	}
+	if (isIPG(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of --ipg is not suppported on the server\n");
+	}
+	if (!isIsochronous(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of --isochronous is not suppported on the server\n");
+	}
+	if (isBidir(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of --bidir is not suppported on the server\n");
+	}
 	if (isReverse(mExtSettings)) {
-	    fprintf(stderr, "WARNING: tcp congestion control cannot be applied with --reverse, must apply on the remote host\n");
-	    unsetCongestionControl(mExtSettings);
+	    fprintf(stderr, "ERROR: option of --reverse is not suppported on the server\n");
 	}
-	if (isBidir(mExtSettings))
-	    fprintf(stderr, "WARNING: tcp congestion control will only be applied on transmit traffic, use -Z on the server\n");
+	if (isIncrDstIP(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of --incr-dstpip is not suppported on the server\n");
+	}
+	if (isFQPacing(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of --fq-rate is not suppported on the server\n");
+	}
+	if (isNoUDPfin(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of --no-udp-fin is not suppported on the server\n");
+	}
+	exit(1);
     }
     // UDP histogram optional settings
     if (isRxHistogram(mExtSettings) && (mExtSettings->mThreadMode != kMode_Client) && mExtSettings->mRxHistogramStr) {
@@ -1095,7 +1146,6 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
     // L2 settings
     if (l2checks && isUDP(mExtSettings)) {
 	l2checks = 0;
-
 	// Client controls hash or not
 	if (mExtSettings->mThreadMode == kMode_Client) {
 	    setL2LengthCheck(mExtSettings);
@@ -1106,15 +1156,6 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
 #else
 	    fprintf(stderr, "WARNING: option --l2checks not supported on this platform\n");
 #endif
-	}
-    }
-
-    if (mExtSettings->mBurstIPG > 0.0) {
-	if (!isIsochronous(mExtSettings)) {
-	    fprintf(stderr, "WARNING: option --ipg requires the --isochronous option\n");
-	}
-	if (mExtSettings->mThreadMode != kMode_Client) {
-	    fprintf(stderr, "WARNING: option --ipg only supported on clients\n");
 	}
     }
     if (isIsochronous(mExtSettings) && mExtSettings->mIsochronousStr) {
