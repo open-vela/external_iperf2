@@ -247,8 +247,11 @@ static void serverside_client_reverse (struct thread_Settings *thread, Client *t
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Listener spawn client reverse thread (sock=%d)", thread->mSock);
 #endif
-    theClient->StartSynch();
-    theClient->Run();
+    if (theClient->StartSynch() != -1) {
+	if (isTripTime(thread) || isIsochronous(thread))
+	    theClient->SendFirstPayload();
+	theClient->Run();
+    }
 }
 
 static void serverside_client_bidir(struct thread_Settings *thread, Client *theClient) {
@@ -256,6 +259,8 @@ static void serverside_client_bidir(struct thread_Settings *thread, Client *theC
     thread_debug("Listener spawn client bidir thread (sock=%d)", thread->mSock);
 #endif
     if (theClient->StartSynch() != -1) {
+	if (isTripTime(thread) || isIsochronous(thread))
+	    theClient->SendFirstPayload();
 	theClient->Run();
     }
 }

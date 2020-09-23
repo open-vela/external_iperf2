@@ -1230,7 +1230,7 @@ void Client::SendFirstPayload (void) {
 	} else {
 	    len = Settings_GenerateClientHdr(mSettings, (void *) mBuf, reportstruct->packetTime);
 	    if (len > 0) {
-		if (isPeerVerDetect(mSettings)) {
+		if (isPeerVerDetect(mSettings) && !isServerReverse(mSettings)) {
 		    PeerXchange(len);
 		}
 	    }
