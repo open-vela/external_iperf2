@@ -374,6 +374,12 @@ bool Server::InitTrafficLoop (void) {
     if (mSettings->mSockDrop > 0)
         myDropSocket = mSettings->mSockDrop;
 #endif
+    // Initialze the reportstruct scratchpad
+    reportstruct = &scratchpad;
+    reportstruct->packetID = 0;
+    reportstruct->l2len = 0;
+    reportstruct->l2errors = 0x0;
+
     int setbidirflag = 0;
     if (isBidir(mSettings) && !isServerReverse(mSettings)) {
 	assert(mSettings->mBidirReport != NULL);
@@ -389,16 +395,15 @@ bool Server::InitTrafficLoop (void) {
 	    struct client_udp_testhdr *udp_pkt = (struct client_udp_testhdr *)mBuf;
 	    mSettings->triptime_start.tv_sec = ntohl(udp_pkt->start_fq.start_tv_sec);
 	    mSettings->triptime_start.tv_usec = ntohl(udp_pkt->start_fq.start_tv_usec);
-	    mSettings->header_bytes = 0;
 	} else {
 	    struct client_tcp_testhdr *tcp_pkt = (client_tcp_testhdr *)mBuf;
-	    int n = recvn(mSettings->mSock, mBuf, (int) sizeof(struct client_tcp_testhdr), MSG_PEEK);
+	    int n = recvn(mSettings->mSock, mBuf, (int) sizeof(struct client_tcp_testhdr), 0);
 	    if (n==0)  {
 		return false;
 	    }
 	    mSettings->triptime_start.tv_sec = ntohl(tcp_pkt->start_fq.start_tv_sec);
 	    mSettings->triptime_start.tv_usec = ntohl(tcp_pkt->start_fq.start_tv_usec);
-	    mSettings->header_bytes = n;
+	    reportstruct->packetID = n;	    
 	}
     }
     if (isTripTime(mSettings)) {
@@ -411,12 +416,6 @@ bool Server::InitTrafficLoop (void) {
     SetReportStartTime();
     if (setbidirflag)
 	SetBidirReportStartTime();
-
-    // Initialze the reportstruct scratchpad
-    reportstruct = &scratchpad;
-    reportstruct->packetID = 0;
-    reportstruct->l2len = 0;
-    reportstruct->l2errors = 0x0;
 
     if (isServerModeTime(mSettings) || (isModeTime(mSettings) && (isServerReverse(mSettings) || isBidir(mSettings) || isReverse(mSettings)))) {
 	if (isServerReverse(mSettings) || isBidir(mSettings) || isReverse(mSettings))
@@ -438,7 +437,6 @@ bool Server::InitTrafficLoop (void) {
 	PostReport(myJob);
     // The first payload is different for TCP so read it and report it
     // before entering the main loop
-    reportstruct->packetLen = SkipFirstPayload();
     if (reportstruct->packetLen > 0) {
 	// printf("**** burst size = %d id = %d\n", burst_info.burst_size, burst_info.burst_id);
 	reportstruct->frameID = 0;
@@ -727,13 +725,3 @@ void Server::RunUDP (void) {
     Iperf_remove_host(&mSettings->peer);
 }
 // end Recv
-
-// this is needed only for TCP
-int Server::SkipFirstPayload (void) {
-    int n = 0;
-    if (!isUDP(mSettings) && !isCompat(mSettings) && (mSettings->header_bytes > 0)) {
-	n = recvn(mySocket, mBuf, mSettings->header_bytes, 0);
-	FAIL_errno((n != mSettings->header_bytes), "skip read", mSettings);
-    }
-    return n;
-}

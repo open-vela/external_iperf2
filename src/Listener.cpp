@@ -309,7 +309,6 @@ void Listener::Run (void) {
 		Settings_GenerateClientSettings(server, &listener_client_settings, mBuf);
 		if (listener_client_settings) {
 		    Iperf_push_host(&listener_client_settings->peer, listener_client_settings);
-		    listener_client_settings->header_bytes = 0;
 		    if (isBidir(server)) {
 			server->mBidirReport = InitSumReport(server, server->mSock, 1);
 			listener_client_settings->mBidirReport = server->mBidirReport;
@@ -864,7 +863,6 @@ int Listener::apply_client_settings (thread_Settings *server) {
     uint32_t flags = 0;
     uint16_t upperflags = 0;
     int rc = 1;
-    server->header_bytes = 0; // used to capture the length of the listener's read
     // Set the receive timeout for the very first read based upon the -t
     // and not -i.
 
@@ -1021,7 +1019,6 @@ int Listener::apply_client_settings (thread_Settings *server) {
 	    }
 	}
     }
-    server->header_bytes = peeklen;
     // Handle case that requires an ack back to the client
     if (!isUDP(server) && (flags & HEADER_EXTEND)) {
 	client_test_ack(server);
