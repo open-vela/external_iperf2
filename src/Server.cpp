@@ -388,22 +388,44 @@ bool Server::InitTrafficLoop (void) {
     }
     // Case of --trip-times and --reverse or --bidir, listener handles normal case
     if (isTripTime(mSettings) && TimeZero(mSettings->triptime_start)) {
+	int n = 0;
+	uint32_t flags = 0;
+	int peeklen = 0;
 	if (isUDP(mSettings)) {
-	    int n = recvn(mSettings->mSock, mBuf, (int) sizeof(struct client_udp_testhdr), MSG_PEEK);
-	    if (n==0)
-		return false;
-	    struct client_udp_testhdr *udp_pkt = (struct client_udp_testhdr *)mBuf;
+	    n = recvn(mSettings->mSock, mBuf, sizeof(uint32_t) + sizeof(struct UDP_datagram), MSG_PEEK);
+	    if (n == 0) {
+		//peer closed the socket, with no writes e.g. a connect-only test
+		return -1;
+	    }
+	    FAIL_errno(n != (sizeof(uint32_t) + sizeof(struct UDP_datagram)), "read udp flags", mSettings);
+	    struct client_udp_testhdr *udp_pkt = (struct client_udp_testhdr *) mBuf;
+	    flags = ntohl(udp_pkt->base.flags);
+	    if ((peeklen = Settings_ClientHdrPeekLen(flags) + sizeof(struct UDP_datagram)) > 0) {
+		n = recvn(mSettings->mSock, mBuf, peeklen, MSG_PEEK);
+		FAIL_errno((n < peeklen), "read udp test hdr", mSettings);
+	    }
 	    mSettings->triptime_start.tv_sec = ntohl(udp_pkt->start_fq.start_tv_sec);
 	    mSettings->triptime_start.tv_usec = ntohl(udp_pkt->start_fq.start_tv_usec);
 	} else {
-	    struct client_tcp_testhdr *tcp_pkt = (client_tcp_testhdr *)mBuf;
-	    int n = recvn(mSettings->mSock, mBuf, (int) sizeof(struct client_tcp_testhdr), 0);
-	    if (n==0)  {
-		return false;
+	    n = recvn(mSettings->mSock, mBuf, sizeof(uint32_t), MSG_PEEK);
+	    if (n == 0) {
+		//peer closed the socket, with no writes e.g. a connect-only test
+		return -1;
 	    }
-	    mSettings->triptime_start.tv_sec = ntohl(tcp_pkt->start_fq.start_tv_sec);
-	    mSettings->triptime_start.tv_usec = ntohl(tcp_pkt->start_fq.start_tv_usec);
-	    reportstruct->packetID = n;	    
+	    FAIL_errno((n < (int) sizeof(uint32_t)), "read tcp flags", mSettings);
+	    struct client_tcp_testhdr *tcp_pkt = (struct client_tcp_testhdr *) mBuf;
+	    flags = ntohl(tcp_pkt->base.flags);
+	    // figure out the length of the test header
+	    if ((peeklen = Settings_ClientHdrPeekLen(flags)) > 0) {
+		peeklen = Settings_ClientHdrPeekLen(flags);
+		// read the test settings passed to the mSettings by the client
+		n = recvn(mSettings->mSock, mBuf, peeklen, 0);
+		FAIL_errno((n < peeklen), "read tcp test info", mSettings);
+		struct client_tcp_testhdr *tcp_pkt = (struct client_tcp_testhdr *) mBuf;
+		mSettings->triptime_start.tv_sec = ntohl(tcp_pkt->start_fq.start_tv_sec);
+		mSettings->triptime_start.tv_usec = ntohl(tcp_pkt->start_fq.start_tv_usec);
+		reportstruct->packetID = n;
+	    }
 	}
     }
     if (isTripTime(mSettings)) {
