@@ -7,7 +7,7 @@ This document helps to describe the iperf 2 design. It's quite complicated. It's
 
 Iperf 2 is a designed to be a multi-threaded program. It's also a hybrid of C and C++ code that evolved from 1.7 to 2.0.5 where it stalled. A new group from Broadcom with a WiFi focus took over the code base starting at 2.0.5 and we are now up to 2.0.14. The only link between the groups been the code itself.
 
-Iperf 3 is a new code base and isn't compatible with iperf 2. This document doesn't discuss iperf 3.
+Iperf 3 is a code base and isn't compatible with iperf 2. This document doesn't discuss iperf 3.
 
 Threading overview
 
@@ -118,3 +118,5 @@ Write the packet microsecond timestamp and sequence number into the payload
 Traffic profiles and rate limiting.  The box mueller can be found in src/pdfs.c
 
 Debug support using configure --enable-thread-debug
+
+File system structure

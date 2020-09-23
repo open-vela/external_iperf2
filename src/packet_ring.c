@@ -97,7 +97,7 @@ inline void packetring_enqueue (struct PacketRing *pr, struct ReportStruct *meta
 #ifdef HAVE_THREAD_DEBUG_PERF
 	    {
 		struct timeval now;
-		static struct timeval prev={.tv_sec=0, .tv_usec=0};
+		static struct timeval prev={0, 0};
 		gettimeofday( &now, NULL );
 		if (!prev.tv_sec || (TimeDifference(now, prev) > 1.0)) {
 		    prev = now;
