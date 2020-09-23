@@ -994,15 +994,8 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		server->peer_version_u = ntohl(hdr->extend.version_u);
 		server->peer_version_l = ntohl(hdr->extend.version_l);
 		if (upperflags & HEADER_TRIPTIME) {
-		    server->triptime_start.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
-		    server->triptime_start.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
-		    Timestamp now;
-		    if ((abs(now.getSecs() - server->triptime_start.tv_sec)) > MAXDIFFTIMESTAMPSECS) {
-			fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
-		    } else {
-			setTripTime(server);
-			setEnhanced(server);
-		    }
+		    setTripTime(server);
+		    setEnhanced(server);
 		}
 		if (upperflags & HEADER_ISOCH) {
 		    setIsochronous(server);
