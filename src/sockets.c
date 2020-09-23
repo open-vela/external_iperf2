@@ -101,9 +101,8 @@ void setsock_tcp_mss (int inSock, int inMSS) {
  * returns the TCP maximum segment size
  * ------------------------------------------------------------------- */
 
-int getsock_tcp_mss (int inSock) {
+int getsock_tcp_mss  (int inSock) {
     int theMSS = -1;
-
 #ifdef TCP_MAXSEG
     int rc;
     Socklen_t len;
@@ -114,7 +113,6 @@ int getsock_tcp_mss (int inSock) {
     rc = getsockopt(inSock, IPPROTO_TCP, TCP_MAXSEG, (char*)&theMSS, &len);
     WARN_errno(rc == SOCKET_ERROR, "getsockopt TCP_MAXSEG");
 #endif
-
     return theMSS;
 } /* end getsock_tcp_mss */
 

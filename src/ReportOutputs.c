@@ -838,11 +838,10 @@ void reporter_print_connection_report(struct ConnectionInfo *report) {
 	b += strlen(b);
     }
     if (!isUDP(report->common) && (report->common->socket > 0) && (isPrintMSS(report->common) || isEnhanced(report->common)))  {
-	int inMSS = getsock_tcp_mss(report->common->socket);
-	if (isPrintMSS(report->common) && (inMSS <= 0)) {
-	    printf(report_mss_unsupported, report->common->socket);
+	if (isPrintMSS(report->common) && (report->MSS <= 0)) {
+	    printf(report_mss_unsupported, report->MSS);
 	} else {
-	    snprintf(b, SNBUFFERSIZE-strlen(b), " (%s%d)", "MSS=", inMSS);
+	    snprintf(b, SNBUFFERSIZE-strlen(b), " (%s%d)", "MSS=", report->MSS);
 	    b += strlen(b);
 	}
     }
