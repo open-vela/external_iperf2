@@ -254,6 +254,7 @@ struct ConnectionInfo {
     int winsize;
     char peerversion[PEERVERBUFSIZE];
     struct MeanMinMaxStats connect_times;
+    int MSS;
 };
 
 struct ReportSettings {

@@ -567,6 +567,10 @@ struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, d
 
     struct ConnectionInfo * creport = (struct ConnectionInfo *)(reporthdr->this_report);
     common_copy(&creport->common, inSettings);
+    if (inSettings->mSock > 0)
+	creport->MSS = getsock_tcp_mss(inSettings->mSock);
+    else
+	creport->MSS = -1;
     // Fill out known fields for the connection report
     reporter_peerversion(creport, inSettings->peer_version_u, inSettings->peer_version_l);
     creport->connecttime = ct;
