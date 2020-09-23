@@ -936,62 +936,6 @@ static inline void reporter_transfer_protocol_missed_reports (struct TransferInf
 	    (*stats->output_handler)(&emptystats);
     }
 }
-#if 0
-// Actions required after an interval report has been outputted
-static inline void reporter_reset_transfer_stats(struct ReporterData *data) {
-    struct TransferInfo *stats = &data->info;
-    stats->lastOutofOrder = stats->cntOutofOrder;
-    if (stats->cntError < 0) {
-	stats->cntError = 0;
-    }
-    data->lastError = data->cntError;
-    data->lastDatagrams = ((stats->common.ThreadModem == kMode_Server) ? stats->PacketID : data->cntDatagrams);
-    data->lastTotal = data->Bytes.current;
-    /*
-     * Reset transfer stats now that both the individual and SUM reports
-     * have completed
-     */
-    if (stats->mUDP) {
-	stats->IPGcnt = 0;
-	stats->IPGsum = 0;
-	if (stats->mUDP == kMode_Server) {
-	    stats->l2counts.cnt = 0;
-	    stats->l2counts.unknown = 0;
-	    stats->l2counts.udpcsumerr = 0;
-	    stats->l2counts.lengtherr = 0;
-	}
-    }
-    if (stats->mEnhanced) {
-	if ((stats->mTCP == (char)kMode_Client) || (stats->mUDP == (char)kMode_Client)) {
-	    stats->sock_callstats.write.WriteCnt = 0;
-	    stats->sock_callstats.write.WriteErr = 0;
-#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-	    stats->sock_callstats.write.TCPretry = 0;
-	    stats->sock_callstats.write.up_to_date = 0;
-#endif
-	} else if (stats->mTCP == (char)kMode_Server) {
-	    int ix;
-	    stats->sock_callstats.read.cntRead = 0;
-	    for (ix = 0; ix < 8; ix++) {
-		stats->sock_callstats.read.bins[ix] = 0;
-	    }
-	}
-    // Reset the enhanced stats for the next report interval
-	if (stats->mUDP) {
-	    stats->transit.minTransit=stats->transit.lastTransit;
-	    stats->transit.maxTransit=stats->transit.lastTransit;
-	    stats->transit.sumTransit = stats->transit.lastTransit;
-	    stats->transit.cntTransit = 0;
-	    stats->transit.vdTransit = 0;
-	    stats->transit.meanTransit = 0;
-	    stats->transit.m2Transit = 0;
-	    stats->isochstats.framecnt = 0;
-	    stats->isochstats.framelostcnt = 0;
-	    stats->isochstats.slipcnt = 0;
-	}
-    }
-}
-#endif
 
 static inline void reporter_reset_transfer_stats_bidir (struct TransferInfo *stats) {
     stats->total.Bytes.prev = stats->total.Bytes.current;
@@ -1331,74 +1275,6 @@ void reporter_transfer_protocol_client_tcp (struct ReporterData *data, int final
 	reporter_reset_transfer_stats_client_tcp(stats);
 }
 
-#if 0
-void reporter_transfer_protocol_client_all_final(struct ReporterData *data) {
-    struct TransferInfo *stats = &data->info;
-    assert(stats->output_handler != NULL);
-
-#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-    if (isEnhanced(stats->common) && (stats->common->ThreadMode == kMode_Client) && (!stats->sock_callstats.write.up_to_date))
-        gettcpistats(stats, 1);
-#endif
-        stats->cntOutofOrder = stats->cntOutofOrder;
-        // assume most of the time out-of-order packets are not
-        // duplicate packets, so conditionally subtract them from the lost packets.
-        stats->cntError = stats->cntError;
-        stats->cntError -= stats->cntOutofOrder;
-        if ( stats->cntError < 0 ) {
-            stats->cntError = 0;
-        }
-        stats->cntDatagrams = ((stats->common.ThreadMode == kMode_Server) ? stats->PacketID - INITIAL_PACKETID : stats->cntDatagrams);
-        stats->cntBytes = stats->total.Bytes.current;
-        stats->iStart = 0;
-
-	if (stats->mUDP == kMode_Server) {
-	    stats->l2counts.cnt = stats->l2counts.tot_cnt;
-	    stats->l2counts.unknown = stats->l2counts.tot_unknown;
-	    stats->l2counts.udpcsumerr = stats->l2counts.tot_udpcsumerr;
-	    stats->l2counts.lengtherr = stats->l2counts.tot_lengtherr;
-	    stats->transit.minTransit = stats->transit.totminTransit;
-	    stats->transit.maxTransit = stats->transit.totmaxTransit;
-	    stats->transit.cntTransit = stats->transit.totcntTransit;
-	    stats->transit.sumTransit = stats->transit.totsumTransit;
-	    stats->transit.meanTransit = stats->transit.totmeanTransit;
-	    stats->transit.m2Transit = stats->transit.totm2Transit;
-	    stats->transit.vdTransit = stats->transit.totvdTransit;
-	}
-	if ((stats->mTCP == kMode_Client) || (stats->mUDP == kMode_Client)) {
-	    stats->sock_callstats.write.WriteErr = stats->sock_callstats.write.totWriteErr;
-	    stats->sock_callstats.write.WriteCnt = stats->sock_callstats.write.totWriteCnt;
-	    if (stats->mTCP == kMode_Client) {
-		stats->sock_callstats.write.TCPretry = stats->sock_callstats.write.totTCPretry;
-	    }
-	}
-	if (stats->mTCP == kMode_Server) {
-	    int ix;
-	    stats->sock_callstats.read.cntRead = stats->sock_callstats.read.totcntRead;
-	    for (ix = 0; ix < 8; ix++) {
-		stats->sock_callstats.read.bins[ix] = stats->sock_callstats.read.totbins[ix];
-	    }
-	    if (stats->clientStartTime.tv_sec > 0)
-		stats->tripTime = TimeDifference( stats->packetTime, stats->clientStartTime );
-	    else
-		stats->tripTime = 0;
-	}
-	if (stats->iEnd > 0) {
-	    stats->cntIPG = (int) (stats->cntDatagrams / stats->iEnd);
-	} else {
-	    stats->cntIPG = 0;
-	}
-	stats->IPGsum = 1;
-        stats->free = 1;
-	if (stats->mIsochronous) {
-	    stats->isochstats.framecnt = stats->isochstats.framecnt;
-	    stats->isochstats.framelostcnt = stats->isochstats.framelostcnt;
-	    stats->isochstats.slipcnt = stats->isochstats.slipcnt;
-	}
-        reporter_print( stats, TRANSFER_REPORT, 1 );
-}
-
-#endif
 /*
  * Handles summing of threads
  */
