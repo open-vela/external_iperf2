@@ -166,7 +166,8 @@ void Server::RunTCP (void) {
     Timestamp time1, time2;
     double tokens=0.000004;
 
-    InitTrafficLoop();
+    if (!InitTrafficLoop())
+	return;
     struct timeval prevsend = myReport->info.ts.startTime;
 
     int burst_nleft = 0;
@@ -363,7 +364,7 @@ inline void Server::SetReportStartTime (void) {
 #endif
 }
 
-void Server::InitTrafficLoop (void) {
+bool Server::InitTrafficLoop (void) {
     myJob = InitIndividualReport(mSettings);
     myReport = (struct ReporterData *)myJob->this_report;
     assert(myJob != NULL);
@@ -380,17 +381,31 @@ void Server::InitTrafficLoop (void) {
 	    exit(-1);
     }
     // Case of --trip-times and --reverse or --bidir, listener handles normal case
-    if (isTripTime(mSettings) && TimeZero(mSettings->triptime_start)) {
+    if (isUDP(mSettings) && (isBidir(mSettings) || isReverse(mSettings))) {
+	int n = recvn(mSettings->mSock, mBuf, (int) sizeof(struct client_udp_testhdr), MSG_PEEK);
+	if (n==0)
+	    return false;
+	if (isTripTime(mSettings)) {
+	    struct client_udp_testhdr *udp_pkt = (struct client_udp_testhdr *)mBuf;
+	    mSettings->triptime_start.tv_sec = ntohl(udp_pkt->start_fq.start_tv_sec);
+	    mSettings->triptime_start.tv_usec = ntohl(udp_pkt->start_fq.start_tv_usec);
+	}
+    } else if (isTripTime(mSettings) && TimeZero(mSettings->triptime_start)) {
 	struct TCP_burst_payload burst_info;
 	int n = 0;
 	if ((n = recvn(mSettings->mSock, (char *)&burst_info, sizeof(struct TCP_burst_payload), MSG_PEEK)) == sizeof(struct TCP_burst_payload)) {
 	    mSettings->triptime_start.tv_sec = ntohl(burst_info.start_tv_sec);
 	    mSettings->triptime_start.tv_usec = ntohl(burst_info.start_tv_usec);
-	    Timestamp now;
-	    if ((abs(now.getSecs() - mSettings->triptime_start.tv_sec)) > MAXDIFFTIMESTAMPSECS) {
-		unsetTripTime(mSettings);
-		fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
-	    }
+	}
+	if (n==0) {
+	    return false;
+	}
+    }
+    if (isTripTime(mSettings)) {
+	Timestamp now;
+	if ((abs(now.getSecs() - mSettings->triptime_start.tv_sec)) > MAXDIFFTIMESTAMPSECS) {
+	    unsetTripTime(mSettings);
+	    fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
 	}
     }
     SetReportStartTime();
@@ -432,6 +447,7 @@ void Server::InitTrafficLoop (void) {
 	reportstruct->packetTime = reportstruct->sentTime;
 	ReportPacket(myReport, reportstruct);
     }
+    return true;
 }
 
 inline int Server::ReadWithRxTimestamp (int *readerr) {
@@ -657,7 +673,8 @@ void Server::RunUDP (void) {
     int readerr = 0;
     bool lastpacket = 0;
 
-    InitTrafficLoop();
+    if (!InitTrafficLoop())
+	return;
     struct timeval prevsend = myReport->info.ts.startTime;
 
     // Exit loop on three conditions

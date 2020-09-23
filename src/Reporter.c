@@ -1344,7 +1344,20 @@ void reporter_transfer_protocol_bidir_tcp (struct TransferInfo *stats, int final
 }
 
 void reporter_transfer_protocol_bidir_udp (struct TransferInfo *stats, int final) {
-    assert(stats->output_handler != NULL);
+    if (!final || (final && (stats->cntBytes > 0) && !TimeZero(stats->ts.intervalTime))) {
+	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
+	if (final)
+	    reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
+	if (stats->output_handler)
+	    (*stats->output_handler)(stats);
+	stats->total.Bytes.prev = stats->total.Bytes.current;
+    }
+    if (final) {
+	stats->cntBytes = stats->total.Bytes.current;
+	reporter_set_timestamps_time(&stats->ts, TOTAL);
+	if (stats->output_handler)
+	    (*stats->output_handler)(stats);
+    }
 }
 
 // Conditional print based on time
