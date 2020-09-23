@@ -567,7 +567,7 @@ struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, d
 
     struct ConnectionInfo * creport = (struct ConnectionInfo *)(reporthdr->this_report);
     common_copy(&creport->common, inSettings);
-    if (inSettings->mSock > 0)
+    if (!isUDP(inSettings) && (inSettings->mSock > 0))
 	creport->MSS = getsock_tcp_mss(inSettings->mSock);
     else
 	creport->MSS = -1;
