@@ -10,7 +10,7 @@ Iperf 2 is a designed to be a multi-threaded program. It's also a hybrid of C an
 Iperf 3 is a code base and isn't compatible with iperf 2. This document doesn't discuss iperf 3.
 
 Threading overview
-
+------------------
 There are multiple threads being a listener thread, a reporter thread, and one or more traffic threads. The traffic threads are either a server or a client, or a server in the role of a client or a client in the role of as server per the --reverse option.
 
 Listener (src/Listener.cpp include/Listener.hpp):
@@ -62,24 +62,35 @@ o) rate limit the reads if -b is set
 o) post results into its packet ring
 
 Settings (src/Settings.cpp include/Settings.hpp):
-
+-------------------------------------------------
 The settings structure contains the user requested settings and there is one settings object per thread. The settings are read and parsed from the initial command line (using a version of gnu getopt) Each thread gets a settings object which is mostly ready prior to spawning the thread.
 
-Timestamps
+Reporter Jobq
+-------------
+The reporter thread receives work to do via its jobq. Threads enqueue work items. These work items take the form of a report. The reporter will dequeue the reports and take appropriate actions per the report type
 
+Timestamps
+----------
 This section descries the multiple timestamps used by iperf 2. The --trip-times options allows the user to indicate that the client and server clocks are synchronized.
 
 Reports
+-------
+A thread communicates to the user through reports. The reporter thread handles multiple report types which include
 
-Common settings are deep copies from the thread settings object. This help to decouple and encapsulate reporting from threads, e.g. a thread can terminate prior to a report finishing the thread posted.
+o Settings report
+o Connection report
+o Data report
+o Server relay report
+
+Each report has a common settings filed which are deep copies from the thread settings object. Each report having it's own copy allows the design to  decouple and encapsulate reporting from thread themsleves, e.g. a thread can terminate and memory be freed prior to the reporter outputing a report that thread posted.
 
 Data Report and packet rings
 
-The data report warrant its own section do to it complexity.  The core of the data report is a packet ring and statistics per that traffic thread. The packet ring allows the traffic thread to communicate read or write statistics to the reporter thread using shared memory and very limited syscalls or mutexes. The packet ring has producer and consumer pointer. The ring elements are report structs.
+The data report warrant its own section do to it complexity.  The core of the data report is a packet ring and statistics per that traffic thread. The packet ring allows the traffic thread to communicate read or write statistics to the reporter thread using shared memory and very limited syscalls or mutexes. The packet ring has producer and consumer pointer. The ring elements are report structs. Data reports remain on the reporter's jobq for the life of the traffic stream.
 
 Packet rings (src/packetring.c include/packetring.h)
 
-A packet ring is a circular buffer between a traffic thread and reporter thread. A traffic thread is a producer and the reporter thread is the consumer. There is one packet ring per each traffic thread. The one reporter thread services all the traffic threads' rings. A traffic thread posts packet, read or write information using a Reportstruct. This is the necessary and sufficient information such that the reporter thread can perform the threads performance accounting as well as display interval or final reports.
+A packet ring is a circular buffer between a traffic thread and reporter thread. A traffic thread is a producer and the reporter thread is the consumer. There is one packet ring per each traffic thread. The one reporter thread services all the traffic threads' rings. A traffic thread posts packet, read or write information using a reportstruct. This is the necessary and sufficient information such that the reporter thread can perform the traffi caccounting as well as display interval or final reports.
 
 Summing (src/list.cpp include/list.hpp)
 
@@ -87,17 +98,16 @@ Packet or read or write summing is done on a per client (host ip) basis. All tra
 
 Function vectors (src/Reports.c src/Reporter.c src/ReportOutputs.c)
 
-The implementation of the reporter uses function vectors to handle the various types of traffic reporting. It's done this way so there aren't any inline tests, i.e. the function pointers are initialized at report creation time.  These consist of
+The implementation of the reporter uses function vectors to handle the various types of traffic reporting. It's done this way so to minimize inline tests and optimize read/write or network i/o performance. The function pointers are initialized at thread and report creation time.  The function pointers consist of:
 
 *packet_handler() - this is used to account for tcp or udp write or read called for every read or write
-*transfer_protocol_handler() - used to ready the data before it's output handler is called,
-*transfer_protocol_handler() - used to ready the summation data before it's output handler is called
-*output_handler() - used to format output and print the output
-*transfer_interval_handler() - used to select between time based or write/frame/burst reporting
-
-Mutexes and Condition variables:
+*transfer_protocol_handler() - used to ready the data before it's output handler is called, called prior to the packet handler, calls sum and output handlers
+*transfer_protocol_sum_handler() - used to ready the summation data before it's output handler is called, caleld by tranfser_protocol handler
+*output_handler() - used to format output and print the output, called py transfer_protocol handers, null handlers are supported for silent output
+*transfer_interval_handler() - used to select between time based or write/frame/burst reporting, supports special type of sampling
 
 Startup (src/main.cpp src/Launch.cpp)
+-------------------------------------
 
 Thread creation:
 
@@ -111,6 +121,8 @@ Client startups
 
 Server startups
 
+Mutexes and Condition variables:
+
 A day in the life of a UDP packet
 
 Write the packet microsecond timestamp and sequence number into the payload
@@ -120,3 +132,54 @@ Traffic profiles and rate limiting.  The box mueller can be found in src/pdfs.c
 Debug support using configure --enable-thread-debug
 
 File system structure
+=====================
+
+Directories
+-----------
+src/  -- contains most of the C and C++ source code
+compat/ -- contains code used to help with portability
+include/ -- contains most of the header files
+m4/ -- contains special automake files
+doc/ -- contains documentation
+man/ -- contains the main page file
+/ = contains configure, autoconf and automake files
+flows/ -- contains python 3 code that can be used on top of iperf
+
+Src files (see src/Makefile.am)
+-------------------------------
+iperf_SOURCES = \
+		Client.cpp -- Client write routines, runs in a traffic thread
+		Extractor.c -- Support routine to pull payload data from a file if requested
+	        isochronous.cpp -- Isochronous timing ticks and counters
+		Launch.cpp  -- Code that runs when a new thread starts, figures out what type of thread
+		active_hosts.cpp -- Table that keeps active client hosts which are summed together
+		Listener.cpp -- server side ode that does the listen(), accepts new sockets, and spawns threads
+		Locale.c -- Code that has output formatting
+		PerfSocket.cpp -- Code that sets system socket settings
+		Reporter.c -- Code that runs the report thread which performs calculations and call output handlers
+		Reports.c -- Code that initialize reports that will be ouput by the reporter thread
+		ReportOutputs.c -- Code that formats report output
+		Server.cpp -- Server read routines, runs in a traffic threa
+		Settings.cpp -- Code the reads the command line and instantiates the initial thread object with settings
+		SocketAddr.c -- Code that compares ip/port addresses stored in system sockaddr structs
+		gnu_getopt.c -- Gnu get opt to read command line and options
+		gnu_getopt_long.c -- Gnu get opt support for long options
+	        histogram.c -- histogram objects including instantiation, insertion, printing, and deletion
+		main.cpp -- the main startup routine
+		service.c -- support file for Windows service
+		sockets.c -- code that helps with socket reads and writes where needed
+		stdio.c -- formatting code for bytes per human readable units
+		packet_ring.c -- code that instantiates the shared memory ring used between a traffic thread and the reporter thread
+		tcp_window_size.c -- code that sets the tcp window size
+		pdfs.c -- code that supports log normal distribution per a box mueller
+iperf_LDADD = $(LIBCOMPAT_LDADDS)
+
+
+
+
+Special test files per ./configure --enable-checkprograms
+---------------------------------------------------------
+o checkdelay -- used to test delay routines
+o checkisoch -- used to verify that isoch frames per seconds works
+o checkpdfs -- used to check that bytes give a log normal distributions per box mueller
+o igmp_querier - a very simple IGMP querier that only support IGMP v2
