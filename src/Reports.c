@@ -143,6 +143,9 @@ static void free_common_copy (struct ReportCommon *common) {
 static void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport* sumreport, int bidir) {
     if (bidir) {
 	if (isUDP(inSettings)) {
+	    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_udp;
+	    sumreport->info.output_handler = ((isSumOnly(inSettings) || (inSettings->mReportMode == kReport_CSV)) ? NULL : \
+					      (isEnhanced(inSettings) ? tcp_output_bidir_sum_enhanced : udp_output_bidir_sum));
 	} else {
 	    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
 	    sumreport->info.output_handler = ((isSumOnly(inSettings) || (inSettings->mReportMode == kReport_CSV)) ? NULL : \

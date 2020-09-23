@@ -288,6 +288,23 @@ void tcp_output_write_enhanced (struct TransferInfo *stats) {
 }
 
 //UDP output
+void udp_output_bidir_sum (struct TransferInfo *stats) {
+    HEADING_PRINT_COND(report_bw);
+    _print_stats_common(stats);
+    printf(report_bw_sum_bidir_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
+}
+
+void udp_output_bidir_read (struct TransferInfo *stats) {
+    HEADING_PRINT_COND(report_bw);
+    _print_stats_common(stats);
+    printf(report_bw_sum_bidir_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
+}
+void udp_output_bidir_write (struct TransferInfo *stats) {
+    HEADING_PRINT_COND(report_bw);
+    _print_stats_common(stats);
+    printf(report_bw_sum_bidir_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
+}
+
 void udp_output_read (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw_jitter_loss);
     _print_stats_common(stats);

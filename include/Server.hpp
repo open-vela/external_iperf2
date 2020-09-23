@@ -89,7 +89,7 @@ private:
     ReportStruct *reportstruct;
 
     void InitKernelTimeStamping(void);
-    void InitTrafficLoop(void);
+    bool InitTrafficLoop(void);
     inline void SetBidirReportStartTime(void);
     inline void SetReportStartTime();
     int ReadWithRxTimestamp(int *readerr);
