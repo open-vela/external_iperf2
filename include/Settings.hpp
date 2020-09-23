@@ -250,7 +250,6 @@ struct thread_Settings {
     int32_t peer_version_u;
     int32_t peer_version_l;
     double connecttime;
-    int header_bytes;
 };
 
 /*
