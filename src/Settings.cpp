@@ -1597,6 +1597,9 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	    }
 	}
 	if (flags & (HEADER_EXTEND | HEADER_VERSION2)) {
+	    if (!isBWSet(client)) {
+		hdr->extend.Rate = htonl(kDefault_UDPRate);
+	    }
 	    // Write flags to header so the listener can determine the tests requested
 	    hdr->extend.upperflags = htons(upperflags);
 	    hdr->extend.lowerflags = htons(lowerflags);
