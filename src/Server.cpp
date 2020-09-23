@@ -381,24 +381,23 @@ bool Server::InitTrafficLoop (void) {
 	    exit(-1);
     }
     // Case of --trip-times and --reverse or --bidir, listener handles normal case
-    if (isUDP(mSettings) && (isBidir(mSettings) || isReverse(mSettings))) {
-	int n = recvn(mSettings->mSock, mBuf, (int) sizeof(struct client_udp_testhdr), MSG_PEEK);
-	if (n==0)
-	    return false;
-	if (isTripTime(mSettings)) {
+    if (isTripTime(mSettings) && TimeZero(mSettings->triptime_start)) {
+	if (isUDP(mSettings)) {
+	    int n = recvn(mSettings->mSock, mBuf, (int) sizeof(struct client_udp_testhdr), MSG_PEEK);
+	    if (n==0)
+		return false;
 	    struct client_udp_testhdr *udp_pkt = (struct client_udp_testhdr *)mBuf;
 	    mSettings->triptime_start.tv_sec = ntohl(udp_pkt->start_fq.start_tv_sec);
 	    mSettings->triptime_start.tv_usec = ntohl(udp_pkt->start_fq.start_tv_usec);
-	}
-    } else if (isTripTime(mSettings) && TimeZero(mSettings->triptime_start)) {
-	struct TCP_burst_payload burst_info;
-	int n = 0;
-	if ((n = recvn(mSettings->mSock, (char *)&burst_info, sizeof(struct TCP_burst_payload), MSG_PEEK)) == sizeof(struct TCP_burst_payload)) {
-	    mSettings->triptime_start.tv_sec = ntohl(burst_info.start_tv_sec);
-	    mSettings->triptime_start.tv_usec = ntohl(burst_info.start_tv_usec);
-	}
-	if (n==0) {
-	    return false;
+	} else if (isServerReverse(mSettings)) {
+	    struct client_tcp_testhdr *tcp_pkt = (client_tcp_testhdr *)mBuf;
+	    int n = recvn(mSettings->mSock, mBuf, (int) sizeof(struct client_tcp_testhdr), MSG_PEEK);
+	    if (n==0)  {
+		return false;
+	    }
+	    mSettings->triptime_start.tv_sec = ntohl(tcp_pkt->start_fq.start_tv_sec);
+	    mSettings->triptime_start.tv_usec = ntohl(tcp_pkt->start_fq.start_tv_usec);
+	    mSettings->header_bytes = n;
 	}
     }
     if (isTripTime(mSettings)) {
