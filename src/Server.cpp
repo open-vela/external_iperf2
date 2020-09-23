@@ -389,7 +389,8 @@ bool Server::InitTrafficLoop (void) {
 	    struct client_udp_testhdr *udp_pkt = (struct client_udp_testhdr *)mBuf;
 	    mSettings->triptime_start.tv_sec = ntohl(udp_pkt->start_fq.start_tv_sec);
 	    mSettings->triptime_start.tv_usec = ntohl(udp_pkt->start_fq.start_tv_usec);
-	} else if (isServerReverse(mSettings)) {
+	    mSettings->header_bytes = 0;
+	} else {
 	    struct client_tcp_testhdr *tcp_pkt = (client_tcp_testhdr *)mBuf;
 	    int n = recvn(mSettings->mSock, mBuf, (int) sizeof(struct client_tcp_testhdr), MSG_PEEK);
 	    if (n==0)  {
