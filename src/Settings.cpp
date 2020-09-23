@@ -1366,8 +1366,9 @@ void Settings_ReadClientSettingsIsoch (struct thread_Settings **client, struct c
 }
 
 void Settings_ReadClientSettingsV1 (struct thread_Settings **client, struct client_hdr_v1 *hdr) {
-    if (!isTripTime((*client)) || !isIsoch((*client));
+    if (!isTripTime((*client)) && !isIsochronous((*client))) {
 	setCompat((*client)); // Disable test headers for this reversed client
+    }
     (*client)->mTID = thread_zeroid();
     (*client)->mPort = (unsigned short) ntohl(hdr->mPort);
     (*client)->mThreads = 1;
