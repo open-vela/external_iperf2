@@ -1,27 +1,28 @@
-2.0.14 change set (as of September 30th, 2020)
+2.0.14 change set (as of September 22nd, 2020)
 ----------------------------------------
 o support for full duplex traffic using --bidir
 o support for reverse traffic using --reverse
 o support for TCP connect only tests with --connect-only
 o support --isochronous both UDP or TCP traffic to simulate video streams
-o support for --trip-times indicating the client and server clocks are synchronized to an accuracy sufficient, note consider the use of precision time protocol as well as ask your data center to provide access to a GPS disciplined reference clock/oscillator 
+o support for --trip-times indicating the client and server clocks are synchronized to an accuracy sufficient, note consider the use of precision time protocol as well as ask your data center to provide access to a GPS disciplined reference time source 
 o output TCP connect times (3WHS) in connect reports
 o rate-limited options of -b and --fq-rate supported for unidirectional, bidirectional and reverse traffic
 o support for destination ip increments with -P and --incr-dstip
 o reporter thread designed to automatically cause packet reports to aggregate - mitigating and hopefully removing thread thrashing
 o support for frame or burst based reporting or sampling vs time based via -i [f|F]
 o support for UDP traffic only from client to server with --no-udp-fin
-o support for write to read latencies (TCP) with --trip-times
+o support for write to read latencies (UDP and TCP) with --trip-times
 o support for large numbers of traffic threads via -P (tested to thousands)
 o support for sum only outputs with --sum-only
 o support for little's law calculations in --trip-time output
 o support for --txstart-time <epoch-time> to schedule client start, timestamp support microseconds, e.g. unix 'date +%s'
 o support for --txdelay-time to insert delay between TCP three way handshake (3WHS) and data transfer
 o support for --no-connect-sync which disables transmit traffic start synchronization when -P is used, defaults to synchronized
-o option of --bidir implementation uses a barrier and client side to synchronize full duplex traffic
-o No limits to group sum reports, i.e. all clients will get it's own sum report
+o option of --bidir implementation uses a barrier on the client side to synchronize full duplex traffic
+o No limits to group sum reports, i.e. all clients will get its own sum report per a server
 o improved time-stamping including end to end or client and server based timestamps with --trip-times
-o improve messaging for --linux-congestion or -Z
+o improvee messaging for --linux-congestion or -Z
+o improved settings messaging
 o re-implemented -U for single UDP server with minimal threading interactions
 o re-implemented -1 or --singleclient where server will serialize traffic runs
 o major code refactoring (see doc/Design.txt) for maintainability, extensibility, performance, scaling, memory usage

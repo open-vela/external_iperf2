@@ -875,7 +875,7 @@ int Listener::apply_client_settings (thread_Settings *server) {
 	DWORD timeout = (double) sorcvtimer / 1e3;
     }
 #else
-    struct timeval timeout = {.tv_sec = 2, .tv_usec = 0};
+    struct timeval timeout = {2, 0};
     if (isServerModeTime(server)) {
 	timeout.tv_sec = server->mAmount / 100;
 	timeout.tv_usec = (server->mAmount % 100) * 10000;
