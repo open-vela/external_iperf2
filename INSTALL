@@ -73,3 +73,10 @@ Other configure and compile options
       ./configure --disable-multicast
       ./configure --disable-threads
       ./configure --enable-debuginfo
+---
+
+dnf installs needed for build:
+
+       dnf install gcc
+       dnf install gcc-c++
+       dnf install automake
