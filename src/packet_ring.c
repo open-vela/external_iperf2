@@ -80,8 +80,8 @@ struct PacketRing * packetring_init (int count, struct Condition *awake_consumer
 #ifdef HAVE_THREAD_DEBUG
     Mutex_Lock(&packetringdebug_mutex);
     totalpacketringcount++;
-    thread_debug("Init %d element packet ring=%p producer=%p consumer=%p total rings=%d", count, \
-		 (void *)pr, (void *) pr->awake_producer, (void *) pr->awake_consumer, totalpacketringcount);
+    thread_debug("Init %d element packet ring=%p producer=%p consumer=%p total rings=%d enable=%d", count, \
+		 (void *)pr, (void *) pr->awake_producer, (void *) pr->awake_consumer, totalpacketringcount, pr->mutex_enable);
     Mutex_Unlock(&packetringdebug_mutex);
 #endif
     return (pr);
