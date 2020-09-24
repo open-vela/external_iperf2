@@ -57,7 +57,6 @@ Mutex packetringdebug_mutex;
 
 struct PacketRing * packetring_init (int count, struct Condition *awake_consumer, struct Condition *awake_producer) {
     assert(awake_consumer != NULL);
-    assert(awake_producer != NULL);
     struct PacketRing *pr = NULL;
     if ((pr = (struct PacketRing *) calloc(1, sizeof(struct PacketRing)))) {
 	pr->data = (struct ReportStruct *) calloc(count, sizeof(struct ReportStruct));
@@ -70,7 +69,7 @@ struct PacketRing * packetring_init (int count, struct Condition *awake_consumer
     pr->consumer = 0;
     pr->maxcount = count;
     pr->awake_producer = awake_producer;
-    pr->awake_producer = awake_consumer;
+    pr->awake_consumer = awake_consumer;
     if (!awake_producer)
 	pr->mutex_enable=0;
     else
