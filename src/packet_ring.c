@@ -56,8 +56,8 @@ Mutex packetringdebug_mutex;
 #endif
 
 struct PacketRing * packetring_init (int count, struct Condition *awake_consumer, struct Condition *awake_producer) {
-    assert(awake_consumer);
-    assert(awake_producer);
+    assert(awake_consumer != NULL);
+    assert(awake_producer != NULL);
     struct PacketRing *pr = NULL;
     if ((pr = (struct PacketRing *) calloc(1, sizeof(struct PacketRing)))) {
 	pr->data = (struct ReportStruct *) calloc(count, sizeof(struct ReportStruct));
@@ -93,10 +93,10 @@ inline void packetring_enqueue (struct PacketRing *pr, struct ReportStruct *meta
 	   ((pr->producer + 1) == pr->consumer)) {
 	// Signal the consumer thread to process a full queue
 	if (pr->mutex_enable) {
-	    assert(pr->awake_consumer);
+	    assert(pr->awake_consumer != NULL);
 	    Condition_Signal(pr->awake_consumer);
 	    // Wait for the consumer to create some queue space
-	    assert(pr->awake_producer);
+	    assert(pr->awake_producer != NULL);
 	    Condition_Lock((*(pr->awake_producer)));
 	    pr->awaitcounter++;
 #ifdef HAVE_THREAD_DEBUG_PERF
