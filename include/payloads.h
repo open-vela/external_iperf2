@@ -175,8 +175,8 @@ struct client_hdrext {
     uint32_t version_l;
     uint16_t reserved;
     uint16_t tos;
-    int32_t Rate;
-    int32_t UDPRateUnits;
+    uint32_t lRate;
+    uint32_t uRate;
     int32_t Realtime;
 };
 
