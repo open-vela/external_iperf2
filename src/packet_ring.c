@@ -90,8 +90,10 @@ inline void packetring_enqueue (struct PacketRing *pr, struct ReportStruct *meta
 	   ((pr->producer + 1) == pr->consumer)) {
 	// Signal the consumer thread to process a full queue
 	if (pr->mutex_enable) {
+	    assert(pr->awake_consumer);
 	    Condition_Signal(pr->awake_consumer);
 	    // Wait for the consumer to create some queue space
+	    assert(pr->awake_producer);
 	    Condition_Lock((*(pr->awake_producer)));
 	    pr->awaitcounter++;
 #ifdef HAVE_THREAD_DEBUG_PERF
@@ -140,6 +142,7 @@ inline struct ReportStruct *packetring_dequeue (struct PacketRing *pr) {
 #ifdef HAVE_THREAD_DEBUG
 	    // thread_debug( "Consumer signal packet ring %p empty per %p", (void *)pr, (void *)&pr->awake_producer);
 #endif
+	    assert(pr->awake_producer);
 	    Condition_Signal(pr->awake_producer);
 	}
     }
