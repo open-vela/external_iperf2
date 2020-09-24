@@ -438,12 +438,14 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 		ireport->info.output_handler = tcp_output_basic_csv;
 	    } else if (isSumOnly(inSettings)) {
 		ireport->info.output_handler = NULL;
-	    } else if (isTripTime(inSettings))
+	    } else if (isTripTime(inSettings)) {
 		ireport->info.output_handler = tcp_output_read_enhanced_triptime;
-	    else if (isEnhanced(inSettings)) {
+	    } else if (isEnhanced(inSettings)) {
 		ireport->info.output_handler = tcp_output_read_enhanced;
-	    } else {
+	    } else if (!isBidir(inSettings)) {
 		ireport->info.output_handler = tcp_output_read;
+	    } else {
+		ireport->info.output_handler = NULL ;
 	    }
 	}
 	break;
