@@ -1437,7 +1437,6 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 		reversed_thread->mMode = kTest_Normal;
 	} else if (flags & (HEADER_EXTEND| HEADER_VERSION2)) {
 	    reversed_thread->mUDPRate = (uint64_t) ntohl(hdr->extend.lRate) | ((uint64_t)((ntohl(hdr->extend.uRate) & 0xFFFFFF00) >> 8) << 32);
-	    printf("**** updrate = %ld\n", reversed_thread->mUDPRate);
 	    upperflags = ntohs(hdr->extend.upperflags);
 	    if ((upperflags & HEADER_UNITS_PPS) == HEADER_UNITS_PPS) {
 		reversed_thread->mUDPRateUnits = kRate_PPS;
@@ -1595,7 +1594,7 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	if (isBWSet(client)) {
 	    flags |= (HEADER_EXTEND | HEADER_VERSION2);
 	    hdr->extend.lRate = htonl((uint32_t)(client->mUDPRate & 0xFFFFFFFF));
-	    hdr->extend.uRate = htonl((uint32_t)((uint64_t)(client->mUDPRate & 0xFFFFFFFF00000000) >> 40));
+	    hdr->extend.uRate = htonl((uint32_t)(client->mUDPRate >> 32) << 8);
 	}
 	if (flags & (HEADER_EXTEND | HEADER_VERSION2)) {
 	    if (!isBWSet(client)) {
