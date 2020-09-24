@@ -184,8 +184,8 @@ void packetring_free (struct PacketRing *pr) {
 #ifdef HAVE_THREAD_DEBUG
 	    Mutex_Lock(&packetringdebug_mutex);
 	    totalpacketringcount--;
-	    thread_debug("Free packet ring=%p producer=%p (consumer=%p) total rings = %d", \
-			 (void *)pr, (void *) pr->awake_producer, (void *) pr->awake_consumer, totalpacketringcount);
+	    thread_debug("Free packet ring=%p producer=%p (consumer=%p) awaits = %d total rings = %d", \
+			 (void *)pr, (void *) pr->awake_producer, (void *) pr->awake_consumer, pr->awaitcounter, totalpacketringcount);
 	    Mutex_Unlock(&packetringdebug_mutex);
 #endif
 	    free(pr->data);
