@@ -1436,7 +1436,8 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 	    else
 		reversed_thread->mMode = kTest_Normal;
 	} else if (flags & (HEADER_EXTEND| HEADER_VERSION2)) {
-	    reversed_thread->mUDPRate = ntohl(hdr->extend.Rate);
+	    reversed_thread->mUDPRate = (uint64_t) ntohl(hdr->extend.lRate) | ((uint64_t)((ntohl(hdr->extend.uRate) & 0xFFFFFF00) >> 8) << 32);
+	    printf("**** updrate = %ld\n", reversed_thread->mUDPRate);
 	    upperflags = ntohs(hdr->extend.upperflags);
 	    if ((upperflags & HEADER_UNITS_PPS) == HEADER_UNITS_PPS) {
 		reversed_thread->mUDPRateUnits = kRate_PPS;
@@ -1469,7 +1470,7 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 	    else
 		reversed_thread->mMode = kTest_Normal;
 	} else if (flags & (HEADER_EXTEND | HEADER_VERSION2)) {
-	    reversed_thread->mUDPRate = ntohl(hdr->extend.Rate);
+	    reversed_thread->mUDPRate = (uint64_t) ntohl(hdr->extend.lRate) | ((uint64_t)((ntohl(hdr->extend.uRate) & 0xFFFFFF00) >> 8) << 32);
 	    upperflags = ntohs(hdr->extend.upperflags);
 	    if (flags & HEADER_VERSION2) {
 		reversed_thread->mTOS = ntohs(hdr->extend.tos);
@@ -1593,14 +1594,13 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	}
 	if (isBWSet(client)) {
 	    flags |= (HEADER_EXTEND | HEADER_VERSION2);
-	    hdr->extend.Rate = htonl(client->mUDPRate);
-	    if (client->mUDPRateUnits == kRate_PPS) {
-		upperflags |= HEADER_UNITS_PPS;
-	    }
+	    hdr->extend.lRate = htonl(client->mUDPRate & 0xFFFFFFFF);
+	    hdr->extend.uRate = htonl((client->mUDPRate & 0xFFFFFFFF00000000) >> 8);
 	}
 	if (flags & (HEADER_EXTEND | HEADER_VERSION2)) {
 	    if (!isBWSet(client)) {
-		hdr->extend.Rate = htonl(kDefault_UDPRate);
+		hdr->extend.lRate = htonl(kDefault_UDPRate);
+		hdr->extend.uRate = 0x0;
 	    }
 	    // Write flags to header so the listener can determine the tests requested
 	    hdr->extend.upperflags = htons(upperflags);
@@ -1661,7 +1661,8 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	}
 	if (isBWSet(client)) {
 	    flags |= (HEADER_EXTEND | HEADER_VERSION2);
-	    hdr->extend.Rate = htonl(client->mUDPRate);
+	    hdr->extend.uRate = htonl(client->mUDPRate & 0xFFFFFFFF);
+	    hdr->extend.lRate = htonl((client->mUDPRate & 0xFFFFFFFF00000000) >> 8);
 	}
 	if (isPeerVerDetect(client)) {
 	    flags |= HEADER_EXTEND;
