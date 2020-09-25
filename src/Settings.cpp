@@ -1436,7 +1436,10 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 	    else
 		reversed_thread->mMode = kTest_Normal;
 	} else if (flags & (HEADER_EXTEND| HEADER_VERSION2)) {
-	    reversed_thread->mUDPRate = (uint64_t) ntohl(hdr->extend.lRate) | ((uint64_t)((ntohl(hdr->extend.uRate) & 0xFFFFFF00) >> 8) << 32);
+	    reversed_thread->mUDPRate = ntohl(hdr->extend.lRate);
+#ifdef HAVE_INT64_T
+	    reversed_thread->mUDPRate |= ((uint64_t)(ntohl(hdr->extend.uRate) >> 8) << 32);
+#endif
 	    upperflags = ntohs(hdr->extend.upperflags);
 	    if ((upperflags & HEADER_UNITS_PPS) == HEADER_UNITS_PPS) {
 		reversed_thread->mUDPRateUnits = kRate_PPS;
@@ -1469,7 +1472,10 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 	    else
 		reversed_thread->mMode = kTest_Normal;
 	} else if (flags & (HEADER_EXTEND | HEADER_VERSION2)) {
-	    reversed_thread->mUDPRate = (uint64_t) ntohl(hdr->extend.lRate) | ((uint64_t)((ntohl(hdr->extend.uRate) & 0xFFFFFF00) >> 8) << 32);
+	    reversed_thread->mUDPRate = ntohl(hdr->extend.lRate);
+#ifdef HAVE_INT64_T
+	    reversed_thread->mUDPRate |= ((uint64_t)(ntohl(hdr->extend.uRate) >> 8) << 32);
+#endif
 	    upperflags = ntohs(hdr->extend.upperflags);
 	    if (flags & HEADER_VERSION2) {
 		reversed_thread->mTOS = ntohs(hdr->extend.tos);
@@ -1593,8 +1599,10 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	}
 	if (isBWSet(client)) {
 	    flags |= (HEADER_EXTEND | HEADER_VERSION2);
-	    hdr->extend.lRate = htonl((uint32_t)(client->mUDPRate & 0xFFFFFFFF));
-	    hdr->extend.uRate = htonl((uint32_t)(client->mUDPRate >> 32) << 8);
+	    hdr->extend.lRate = htonl((uint32_t)(client->mUDPRate));
+#ifdef HAVE_INT64_T
+	    hdr->extend.uRate = htonl(((uint32_t)(client->mUDPRate >> 32)) << 8);
+#endif
 	}
 	if (flags & (HEADER_EXTEND | HEADER_VERSION2)) {
 	    if (!isBWSet(client)) {
@@ -1660,8 +1668,10 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	}
 	if (isBWSet(client)) {
 	    flags |= (HEADER_EXTEND | HEADER_VERSION2);
-	    hdr->extend.uRate = htonl(client->mUDPRate & 0xFFFFFFFF);
-	    hdr->extend.lRate = htonl((client->mUDPRate & 0xFFFFFFFF00000000) >> 8);
+	    hdr->extend.uRate = htonl((uint32_t)client->mUDPRate);
+#ifdef HAVE_INT64_T
+	    hdr->extend.uRate = htonl(((uint32_t)(client->mUDPRate >> 32)) << 8);
+#endif
 	}
 	if (isPeerVerDetect(client)) {
 	    flags |= HEADER_EXTEND;
