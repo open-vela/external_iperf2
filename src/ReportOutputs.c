@@ -803,13 +803,6 @@ void reporter_print_connection_report(struct ConnectionInfo *report) {
     outbufferext[0]='\0';
     outbufferext2[0]='\0';
     char *b = &outbuffer[0];
-    if ((report->common->winsize_requested > 0) && (report->winsize != report->common->winsize_requested)) {
-	byte_snprintf(outbufferext, sizeof(outbufferext), report->winsize, 'A');
-	byte_snprintf(outbufferext2, sizeof(outbufferext2), report->common->winsize_requested, 'A');
-	int len = snprintf(NULL, 0, " (WARN: winsize=%s req=%s)", outbufferext, outbufferext2);
-	snprintf(b, len, " (WARN: winsize=%s req=%s)", outbufferext, outbufferext2);
-    }
-    b += strlen(b);
     if (isIsochronous(report->common)) {
 	snprintf(b, SNBUFFERSIZE-strlen(b), " (isoch)");
 	b += strlen(b);
@@ -845,13 +838,17 @@ void reporter_print_connection_report(struct ConnectionInfo *report) {
 	    b += strlen(b);
 	}
     }
-    if (report->peerversion[0] != '\0') {
-	snprintf(b, SNBUFFERSIZE-strlen(b), "%s", report->peerversion);
-	b += strlen(b);
+    if (isEnhanced(report->common) || isPeerVerDetect(report->common)) {
+	if (report->peerversion[0] != '\0') {
+	    snprintf(b, SNBUFFERSIZE-strlen(b), "%s", report->peerversion);
+	    b += strlen(b);
+	}
     }
-    if (report->connecttime > 0) {
-	snprintf(b, SNBUFFERSIZE-strlen(b), " (ct=%4.2f ms)", report->connecttime);;
-	b += strlen(b);
+    if (isEnhanced(report->common) || isConnectOnly(report->common)) {
+	if (report->connecttime > 0) {
+	    snprintf(b, SNBUFFERSIZE-strlen(b), " (ct=%4.2f ms)", report->connecttime);;
+	    b += strlen(b);
+	}
     }
     if (report->txholdbacktime > 0) {
 	snprintf(b, SNBUFFERSIZE-strlen(b), " (ht=%4.2f s)", report->txholdbacktime);;
