@@ -427,7 +427,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	    } else if (isBidir(inSettings)) {
 		ireport->info.output_handler =  udp_output_read;
 	    } else if (isEnhanced(inSettings)) {
-		ireport->info.output_handler = udp_output_read_enhanced;
+		ireport->info.output_handler = udp_output_read_enhanced_triptime;
 	    } else {
 		ireport->info.output_handler = udp_output_read;
 	    }
