@@ -817,9 +817,9 @@ inline void reporter_handle_packet_server_udp (struct ReporterData *data, struct
 
 void reporter_handle_packet_client (struct ReporterData *data, struct ReportStruct *packet) {
     struct TransferInfo *stats = &data->info;
-    stats->total.Bytes.current += packet->packetLen;
     stats->ts.packetTime = packet->packetTime;
     if (!packet->emptyreport) {
+	stats->total.Bytes.current += packet->packetLen;
         if (packet->errwrite && (packet->errwrite != WriteErrNoAccount)) {
 	    stats->sock_callstats.write.WriteErr++;
 	    stats->sock_callstats.write.totWriteErr++;
