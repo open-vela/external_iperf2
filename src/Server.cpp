@@ -95,9 +95,8 @@ Server::Server (thread_Settings *inSettings) {
     }
 #endif
     // initialize buffer, length checking done by the Listener
-    mBuf = new char[MBUFALLOCSIZE]; // defined in payloads.h
+    mBuf = new char[(mSettings->mBufLen > MBUFALLOCSIZE) ? mSettings->mBufLen : MBUFALLOCSIZE]; // defined in payloads.h
     FAIL_errno(mBuf == NULL, "No memory for buffer\n", mSettings);
-    mSettings->mBufLen = MBUFALLOCSIZE;
     if (mSettings->mBufLen < (int) sizeof(UDP_datagram)) {
 	fprintf(stderr, warn_buffer_too_small, mSettings->mBufLen);
     }
