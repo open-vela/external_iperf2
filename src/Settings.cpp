@@ -1060,6 +1060,25 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
 	    if (mExtSettings->mBurstIPG < 0.0) {
 		fprintf(stderr, "ERROR: option --ipg must be a postive value\n");
 	    }
+	    {
+		double delay_target;
+		if (isIPG(mExtSettings)) {
+		    delay_target = mExtSettings->mBurstIPG * 1000000;  // convert from milliseconds to nanoseconds
+		} else {
+		    // compute delay target in units of nanoseconds
+		    if (mExtSettings->mUDPRateUnits == kRate_BW) {
+			// compute delay for bandwidth restriction, constrained to [0,max] seconds
+			delay_target = (mExtSettings->mBufLen * 8e9) / mExtSettings->mUDPRate;
+		    } else {
+			delay_target = 1e9 / mExtSettings->mUDPRate;
+		    }
+		}
+		if (delay_target < 0  ||
+		    delay_target > MAXIPGSECS * 1e9) {
+		    fprintf(stderr, "ERROR: IPG delay target of %.0f secs too large - bounded to a max of %d secs\n", (delay_target / 1e9), MAXIPGSECS);
+		    bail = true;
+		}
+	    }
 	} else {
 	    if (isIPG(mExtSettings)) {
 		fprintf(stderr, "ERROR: option --ipg requires -u UDP\n");
@@ -1069,7 +1088,24 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
 		fprintf(stderr, "ERROR: option --no-udp-fin requires -u UDP\n");
 		bail = true;
 	    }
-
+	    if (isTxHoldback(mExtSettings)) {
+		Timestamp now;
+		if (mExtSettings->txholdback_timer.tv_sec > MAXDIFFTXDELAY) {
+		    fprintf(stdout,"ERROR: Fail beacuse --txdelay-time is not within %d seconds of now\n", MAXDIFFTXDELAY);
+		    bail = true;
+		}
+		if (isConnectOnly(mExtSettings)) {
+		    fprintf(stdout,"ERROR: Fail beacuse --txdelay-time and --connect-only cannot be applied together\n");
+		    bail = true;			;
+		}
+	    }
+	}
+	if (isTxStartTime(mExtSettings)) {
+	    Timestamp now;
+	    if ((mExtSettings->txstart_epoch.tv_sec- now.getSecs()) > MAXDIFFTXSTART) {
+		fprintf(stdout,"ERROR: Fail beacuse --txstart-time is not within %d seconds of now\n", MAXDIFFTXSTART);
+		bail = true;
+	    }
 	}
 	if (isRxHistogram(mExtSettings)) {
 	    fprintf(stderr, "ERROR: option of --histograms is not supported on the client\n");
