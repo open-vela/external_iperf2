@@ -510,7 +510,7 @@ struct server_hdr {
 #define SIZEOF_UDPHDRMSG_EXT (sizeof(struct client_udp_testhdr))
 #define SIZEOF_TCPHDRMSG_V1 (sizeof(struct client_hdr_v1))
 #define SIZEOF_TCPHDRMSG_EXT (sizeof(struct client_tcp_testhdr))
-#define MBUFALLOCSIZE (((int) sizeof(struct client_udp_testhdr) > mSettings->mBufLen) ? (int) sizeof(struct client_udp_testhdr) : mSettings->mBufLen)
+#define MINMBUFALLOCSIZE ((int) sizeof(struct client_udp_testhdr))
 #ifdef __cplusplus
 } /* end extern "C" */
 #endif

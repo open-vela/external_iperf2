@@ -102,9 +102,8 @@ Listener::Listener (thread_Settings *inSettings) {
      */
     mSettings = inSettings;
     // alloc and initialize the buffer (mBuf) used for test messages in the payload
-    mBuf = new char[MBUFALLOCSIZE]; // defined in payloads.h
+    mBuf = new char[(mSettings->mBufLen > MINMBUFALLOCSIZE) ? mSettings->mBufLen : MINMBUFALLOCSIZE]; // defined in payloads.h
     FAIL_errno(mBuf == NULL, "No memory for buffer\n", mSettings);
-    mSettings->mBufLen = MBUFALLOCSIZE;
     // Open the listen socket
     my_listen();
 } // end Listener
