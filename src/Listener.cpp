@@ -308,7 +308,8 @@ void Listener::Run (void) {
 		// read client header for reverse settings
 		Settings_GenerateClientSettings(server, &listener_client_settings, mBuf);
 		if (listener_client_settings) {
-		    Iperf_push_host(&listener_client_settings->peer, listener_client_settings);
+		    if (isBidir(listener_client_settings) || isReverse(listener_client_settings))
+			Iperf_push_host(&listener_client_settings->peer, listener_client_settings);
 		    if (isBidir(server)) {
 			server->mBidirReport = InitSumReport(server, server->mSock, 1);
 			listener_client_settings->mBidirReport = server->mBidirReport;

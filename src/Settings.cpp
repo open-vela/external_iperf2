@@ -1410,10 +1410,10 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
     if (isBidir(server) || (flags & HEADER_VERSION1)) {
 	Settings_Copy(server, client, 0);
 	reversed_thread = *client;
-	unsetTxStartTime(reversed_thread);
-        unsetTxHoldback(reversed_thread);
-	if (isBidir(reversed_thread)) {
+	if (isBidir(server) && !(flags & HEADER_VERSION1)) {
 	    setBidir(reversed_thread);
+	} else {
+	    unsetBidir(reversed_thread);
 	}
     } else if (isServerReverse(server)) {
 	reversed_thread = server;
@@ -1466,10 +1466,12 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) mBuf;
 	Settings_ReadClientSettingsV1(&reversed_thread, &hdr->base);
 	if (flags & HEADER_VERSION1) {
-	    if (flags & RUN_NOW)
+	    if (flags & RUN_NOW) {
 		reversed_thread->mMode = kTest_DualTest;
-	    else
+	    } else {
 		reversed_thread->mMode = kTest_Normal;
+		reversed_thread->mSumReport = NULL;
+	    }
 	} else if (flags & (HEADER_EXTEND | HEADER_VERSION2)) {
 	    reversed_thread->mUDPRate = ntohl(hdr->extend.lRate);
 #ifdef HAVE_INT64_T
@@ -1493,6 +1495,24 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 #endif
 	    }
 	}
+    }
+    unsetTxStartTime(reversed_thread);
+    unsetTxHoldback(reversed_thread);
+    setNoSettReport(reversed_thread);
+    setNoConnectSync(reversed_thread);
+    // for legacy -d and -r need so set the reversed threads mMost
+    if (flags & HEADER_VERSION1) {
+	reversed_thread->mHost = new char[REPORT_ADDRLEN];
+	if (((sockaddr*)&server->peer)->sa_family == AF_INET) {
+	    inet_ntop(AF_INET, &((sockaddr_in*)&server->peer)->sin_addr,
+		      reversed_thread->mHost, REPORT_ADDRLEN);
+	}
+#ifdef HAVE_IPV6
+	else {
+	    inet_ntop(AF_INET6, &((sockaddr_in6*)&server->peer)->sin6_addr,
+		      reversed_thread->mHost, REPORT_ADDRLEN);
+	}
+#endif
     }
 }
 

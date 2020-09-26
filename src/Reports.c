@@ -338,10 +338,10 @@ void FreeReport (struct ReportHeader *reporthdr) {
 
 void IncrSumReportRefCounter (struct SumReport *sumreport) {
     assert(sumreport);
-    Mutex_Lock(&sumreport->reference.lock);
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Sum multiheader %p ref=%d->%d", (void *)sumreport, sumreport->reference.count, (sumreport->reference.count + 1));
 #endif
+    Mutex_Lock(&sumreport->reference.lock);
     sumreport->reference.count++;
     if (sumreport->reference.count > sumreport->reference.maxcount)
 	sumreport->reference.maxcount = sumreport->reference.count;
