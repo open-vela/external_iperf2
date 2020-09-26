@@ -76,7 +76,7 @@ const int    kBytes_to_Bits = 8;
 
 Client::Client (thread_Settings *inSettings) {
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Client in constructor (%x/%x)", inSettings->flags, inSettings->flags_extend);
+    thread_debug("Client in constructor (%x/%x) %p", inSettings->flags, inSettings->flags_extend, (void *)inSettings->mSumReport);
 #endif
 
     mSettings = inSettings;
@@ -220,7 +220,7 @@ int Client::StartSynch (void) {
     thread_debug("Client start sync enterred");
 #endif
 
-    myJob = InitIndividualReport(mSettings);;
+    myJob = InitIndividualReport(mSettings);
     myReport = (struct ReporterData *)myJob->this_report;
     myReport->info.common->socket=mySocket;
     myReport->info.transferID=mySocket;
