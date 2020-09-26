@@ -258,8 +258,8 @@ int Client::StartSynch (void) {
 	    }
 	}
     } else if (isTxHoldback(mSettings) && !isConnectOnly(mSettings)) {
-	if (mSettings->txholdback_timer.tv_sec > (2 * MAXDIFFTXSTART)) {
-	    fprintf(stdout,"WARN: ignore --txdelay-time because delay larger than %d seconds\n", (2 * MAXDIFFTIMESTAMPSECS));
+	if (mSettings->txholdback_timer.tv_sec > MAXDIFFTXDELAY) {
+	    fprintf(stdout,"WARN: ignore --txdelay-time because delay larger than %d seconds\n", MAXDIFFTXDELAY);
 	} else {
 #ifdef HAVE_CLOCK_NANOSLEEP
 	    timespec tmp;
@@ -711,9 +711,9 @@ void Client::RunUDP (void) {
 	    delay_target = 1e9 / mSettings->mUDPRate;
 	}
 	if (delay_target < 0  ||
-	    delay_target > 1.0 * kSecs_to_nsecs) {
+	    delay_target > MAXIPGSECS * kSecs_to_nsecs) {
 	    fprintf(stderr, warn_delay_large, delay_target / kSecs_to_nsecs);
-	    delay_target = 1.0 * kSecs_to_nsecs;
+	    delay_target = MAXIPGSECS * kSecs_to_nsecs;
 	}
     }
     // Set this to > 0 so first loop iteration will delay the IPG

@@ -81,8 +81,16 @@ extern "C" {
 #endif
 
 #define SLOPSECS 2
+// maximum  difference allowed between the tx (client) start time and the
+// the first receive time (units seconds, requires --trip-times on client)
 #define MAXDIFFTIMESTAMPSECS 600
+// maximum difference in seconds to bound --txstart-time
 #define MAXDIFFTXSTART 3600
+// maximum difference in seconds to bound --txdelay-time,
+// if this is too large and w/o keep-alives the connect may drop
+#define MAXDIFFTXDELAY 60
+// maximum inter packet gap (or write delay) for UDP packets
+#define MAXIPGSECS 60
 #define CSVPEERLIMIT ((REPORT_ADDRLEN * 2) + 40)
 
 // server/client mode
