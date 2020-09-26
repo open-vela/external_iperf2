@@ -244,7 +244,6 @@ int Client::StartSynch (void) {
 	    int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &tmp, NULL);
 	    if (rc) {
 		fprintf(stderr, "txstart failed clock_nanosleep()=%d\n", rc);
-		fflush(stderr);
 	    }
 #else
 	    now.setnow();
