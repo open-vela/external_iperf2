@@ -97,7 +97,7 @@ Client::Client (thread_Settings *inSettings) {
 	fprintf(stderr, "%s", warn_compat_and_peer_exchange);
 	unsetPeerVerDetect(mSettings);
     }
-    mBuf = new char[(mSettings->mBufLen > MBUFALLOCSIZE) ? mSettings->mBufLen : MBUFALLOCSIZE]; // defined in payloads.h
+    mBuf = new char[(mSettings->mBufLen > MINMBUFALLOCSIZE) ? mSettings->mBufLen : MINMBUFALLOCSIZE]; // defined in payloads.h
     FAIL_errno(mBuf == NULL, "No memory for buffer\n", mSettings);
     pattern(mBuf, mSettings->mBufLen);
     if (isFileInput(mSettings)) {
