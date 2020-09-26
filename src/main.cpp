@@ -238,7 +238,6 @@ int main(int argc, char **argv) {
 	if (isDaemon(ext_gSettings)) {
 	    fprintf(stderr, "Running Iperf Server as a daemon\n");
 	    // Start the server as a daemon
-	    fflush(stderr);
 	    // redirect stdin, stdout and sterr to /dev/null (see dameon and no close flag)
 	    if (daemon(1, 0) < 0) {
 	        perror("daemon");
