@@ -931,7 +931,6 @@ static inline void reporter_transfer_protocol_missed_reports (struct TransferInf
 	emptystats.ts.iStart = stats->ts.iStart;
 	emptystats.ts.iEnd = stats->ts.iEnd;
 	emptystats.common = stats->common;
-	emptystats.header_printed = 1;
 	if (stats->output_handler)
 	    (*stats->output_handler)(&emptystats);
     }
