@@ -313,7 +313,6 @@ struct TransferInfo {
     struct ReportCommon *common;
     struct ReportTimeStamps ts;
     void (*output_handler) (struct TransferInfo *stats);
-    bool header_printed;
     int transferID;
     int groupID;
     int threadcnt;
