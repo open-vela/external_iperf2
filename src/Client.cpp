@@ -231,52 +231,44 @@ int Client::StartSynch (void) {
     // check for an epoch based start time
     now.setnow();
     if (isTxStartTime(mSettings)) {
-	if ((mSettings->txstart_epoch.tv_sec- now.getSecs()) > MAXDIFFTXSTART) {
-	    fprintf(stdout,"WARN: ignore --txstart-time because start time not within %d seconds of now\n", MAXDIFFTXSTART);
+	if (isIsochronous(mSettings)) {
+	    Timestamp tmp;
+	    tmp.set(mSettings->txstart_epoch.tv_sec, mSettings->txstart_epoch.tv_usec);
+	    framecounter = new Isochronous::FrameCounter(mSettings->mFPS, tmp);
 	} else {
-	    if (isIsochronous(mSettings)) {
-		Timestamp tmp;
-		tmp.set(mSettings->txstart_epoch.tv_sec, mSettings->txstart_epoch.tv_usec);
-		framecounter = new Isochronous::FrameCounter(mSettings->mFPS, tmp);
-	    } else {
-		// RJM move to compat/clock_nanonsleep.c
-#ifdef HAVE_CLOCK_NANOSLEEP
-		timespec tmp;
-		tmp.tv_sec = mSettings->txstart_epoch.tv_sec;
-		tmp.tv_nsec = mSettings->txstart_epoch.tv_usec * 1000;
-		int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &tmp, NULL);
-		if (rc) {
-		    fprintf(stderr, "txstart failed clock_nanosleep()=%d\n", rc);
-		    fflush(stderr);
-		}
-#else
-		now.setnow();
-		Timestamp tmp;
-		tmp.set(mSettings->txstart_epoch.tv_sec, mSettings->txstart_epoch.tv_usec);
-		delay_loop(tmp.subUsec(now));
-#endif
-	    }
-	}
-    } else if (isTxHoldback(mSettings) && !isConnectOnly(mSettings)) {
-	if (mSettings->txholdback_timer.tv_sec > MAXDIFFTXDELAY) {
-	    fprintf(stdout,"WARN: ignore --txdelay-time because delay larger than %d seconds\n", MAXDIFFTXDELAY);
-	} else {
+	    // RJM move to compat/clock_nanonsleep.c
 #ifdef HAVE_CLOCK_NANOSLEEP
 	    timespec tmp;
-	    tmp.tv_sec = mSettings->txholdback_timer.tv_sec;
-	    tmp.tv_nsec = mSettings->txholdback_timer.tv_usec * 1000;
-	    // See if this a delay between connect and data
-	    int rc = clock_nanosleep(CLOCK_MONOTONIC, 0, &tmp, NULL);
+	    tmp.tv_sec = mSettings->txstart_epoch.tv_sec;
+	    tmp.tv_nsec = mSettings->txstart_epoch.tv_usec * 1000;
+	    int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &tmp, NULL);
 	    if (rc) {
-		fprintf(stderr, "txholdback failed clock_nanosleep()=%d\n", rc);
+		fprintf(stderr, "txstart failed clock_nanosleep()=%d\n", rc);
+		fflush(stderr);
 	    }
 #else
 	    now.setnow();
 	    Timestamp tmp;
-	    tmp.set(mSettings->txholdback_timer.tv_sec, mSettings->txholdback_timer.tv_usec);
+	    tmp.set(mSettings->txstart_epoch.tv_sec, mSettings->txstart_epoch.tv_usec);
 	    delay_loop(tmp.subUsec(now));
 #endif
 	}
+    } else if (isTxHoldback(mSettings)) {
+#ifdef HAVE_CLOCK_NANOSLEEP
+	timespec tmp;
+	tmp.tv_sec = mSettings->txholdback_timer.tv_sec;
+	tmp.tv_nsec = mSettings->txholdback_timer.tv_usec * 1000;
+	// See if this a delay between connect and data
+	int rc = clock_nanosleep(CLOCK_MONOTONIC, 0, &tmp, NULL);
+	if (rc) {
+	    fprintf(stderr, "txholdback failed clock_nanosleep()=%d\n", rc);
+	}
+#else
+	now.setnow();
+	Timestamp tmp;
+	tmp.set(mSettings->txholdback_timer.tv_sec, mSettings->txholdback_timer.tv_usec);
+	delay_loop(tmp.subUsec(now));
+#endif
     }
     int setbidirflag = 0;
     if (isBidir(mSettings) && !isServerReverse(mSettings)) {
@@ -709,11 +701,6 @@ void Client::RunUDP (void) {
 							   / mSettings->mUDPRate));
 	} else {
 	    delay_target = 1e9 / mSettings->mUDPRate;
-	}
-	if (delay_target < 0  ||
-	    delay_target > MAXIPGSECS * kSecs_to_nsecs) {
-	    fprintf(stderr, warn_delay_large, delay_target / kSecs_to_nsecs);
-	    delay_target = MAXIPGSECS * kSecs_to_nsecs;
 	}
     }
     // Set this to > 0 so first loop iteration will delay the IPG
