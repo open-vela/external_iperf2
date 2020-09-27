@@ -1124,7 +1124,7 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
             if (mExtSettings->mMode != kTest_Normal)
 		one_only++;
 	    if (one_only > 1) {
-		fprintf(stderr, "ERROR: options of --full-duplex, -reverse, -d and -r are mutually exclusive\n");
+		fprintf(stderr, "ERROR: options of --full-duplex, --reverse, -d and -r are mutually exclusive\n");
 		bail = true;
 	    }
 	}
