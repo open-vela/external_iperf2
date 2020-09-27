@@ -133,7 +133,7 @@ Server::Server (thread_Settings *inSettings) {
  * ------------------------------------------------------------------- */
 Server::~Server (void) {
 #if HAVE_THREAD_DEBUG
-    thread_debug("Server destructor sock=%d bidir=%s", mySocket, (isBidir(mSettings) ? "true" : "false"));
+    thread_debug("Server destructor sock=%d fullduplex=%s", mySocket, (isFullDuplex(mSettings) ? "true" : "false"));
 #endif
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
     if (myDropSocket != INVALID_SOCKET) {
@@ -309,18 +309,18 @@ void Server::InitKernelTimeStamping (void) {
 // Set the report start times and next report times, options
 // are now, the accept time or the first write time
 //
-inline void Server::SetBidirReportStartTime (void) {
+inline void Server::SetFullDuplexReportStartTime (void) {
     assert(myReport->FullDuplexReport != NULL);
-    struct TransferInfo *bidirstats = &myReport->FullDuplexReport->info;
-    assert(bidirstats != NULL);
-    if (TimeZero(bidirstats->ts.startTime)) {
-	bidirstats->ts.startTime = myReport->info.ts.startTime;
+    struct TransferInfo *fullduplexstats = &myReport->FullDuplexReport->info;
+    assert(fullduplexstats != NULL);
+    if (TimeZero(fullduplexstats->ts.startTime)) {
+	fullduplexstats->ts.startTime = myReport->info.ts.startTime;
 	if (isModeTime(mSettings)) {
-	    bidirstats->ts.nextTime = myReport->info.ts.nextTime;
+	    fullduplexstats->ts.nextTime = myReport->info.ts.nextTime;
 	}
     }
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Server bidir report start=%ld.%ld next=%ld.%ld", bidirstats->ts.startTime.tv_sec, bidirstats->ts.startTime.tv_usec, bidirstats->ts.nextTime.tv_sec, bidirstats->ts.nextTime.tv_usec);
+    thread_debug("Server fullduplex report start=%ld.%ld next=%ld.%ld", fullduplexstats->ts.startTime.tv_sec, fullduplexstats->ts.startTime.tv_usec, fullduplexstats->ts.nextTime.tv_sec, fullduplexstats->ts.nextTime.tv_usec);
 #endif
 }
 inline void Server::SetReportStartTime (void) {
@@ -379,13 +379,13 @@ bool Server::InitTrafficLoop (void) {
     reportstruct->l2len = 0;
     reportstruct->l2errors = 0x0;
 
-    int setbidirflag = 0;
-    if (isBidir(mSettings) && !isServerReverse(mSettings)) {
-	assert(mSettings->mBidirReport != NULL);
-	if ((setbidirflag = bidir_start_barrier(&mSettings->mBidirReport->bidir_barrier)) < 0)
+    int setfullduplexflag = 0;
+    if (isFullDuplex(mSettings) && !isServerReverse(mSettings)) {
+	assert(mSettings->mFullDuplexReport != NULL);
+	if ((setfullduplexflag = fullduplex_start_barrier(&mSettings->mFullDuplexReport->fullduplex_barrier)) < 0)
 	    exit(-1);
     }
-    // Case of --trip-times and --reverse or --bidir, listener handles normal case
+    // Case of --trip-times and --reverse or --fullduplex, listener handles normal case
     if (isTripTime(mSettings) && TimeZero(mSettings->triptime_start)) {
 	int n = 0;
 	uint32_t flags = 0;
@@ -435,11 +435,11 @@ bool Server::InitTrafficLoop (void) {
 	}
     }
     SetReportStartTime();
-    if (setbidirflag)
-	SetBidirReportStartTime();
+    if (setfullduplexflag)
+	SetFullDuplexReportStartTime();
 
-    if (isServerModeTime(mSettings) || (isModeTime(mSettings) && (isServerReverse(mSettings) || isBidir(mSettings) || isReverse(mSettings)))) {
-	if (isServerReverse(mSettings) || isBidir(mSettings) || isReverse(mSettings))
+    if (isServerModeTime(mSettings) || (isModeTime(mSettings) && (isServerReverse(mSettings) || isFullDuplex(mSettings) || isReverse(mSettings)))) {
+	if (isServerReverse(mSettings) || isFullDuplex(mSettings) || isReverse(mSettings))
 	   mSettings->mAmount += (SLOPSECS * 100);  // add 2 sec for slop on reverse, units are 10 ms
 #ifdef HAVE_SETITIMER
         int err;

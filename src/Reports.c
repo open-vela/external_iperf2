@@ -140,16 +140,16 @@ static void free_common_copy (struct ReportCommon *common) {
     free(common);
 }
 
-static void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport* sumreport, int bidir) {
-    if (bidir) {
+static void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport* sumreport, int fullduplex) {
+    if (fullduplex) {
 	if (isUDP(inSettings)) {
-	    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_udp;
+	    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_fullduplex_udp;
 	    sumreport->info.output_handler = ((isSumOnly(inSettings) || (inSettings->mReportMode == kReport_CSV)) ? NULL : \
-					      (isEnhanced(inSettings) ? tcp_output_bidir_sum_enhanced : udp_output_bidir_sum));
+					      (isEnhanced(inSettings) ? tcp_output_fullduplex_sum_enhanced : udp_output_fullduplex_sum));
 	} else {
-	    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_bidir_tcp;
+	    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_fullduplex_tcp;
 	    sumreport->info.output_handler = ((isSumOnly(inSettings) || (inSettings->mReportMode == kReport_CSV)) ? NULL : \
-					      (isEnhanced(inSettings) ? tcp_output_bidir_sum_enhanced : tcp_output_bidir_sum));
+					      (isEnhanced(inSettings) ? tcp_output_fullduplex_sum_enhanced : tcp_output_fullduplex_sum));
 	}
     } else {
 	switch (inSettings->mThreadMode) {
@@ -187,7 +187,7 @@ static void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport
 
 }
 
-struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, int bidir) {
+struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, int fullduplex) {
     struct SumReport *sumreport = (struct SumReport *) calloc(1, sizeof(struct SumReport));
     if (sumreport == NULL) {
 	FAIL(1, "Out of Memory!!\n", inSettings);
@@ -207,14 +207,14 @@ struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, in
 	sumreport->info.ts.intervalTime.tv_sec = (long) (inSettings->mInterval / rMillion);
 	sumreport->info.ts.intervalTime.tv_usec = (long) (inSettings->mInterval % rMillion);
     }
-    SetSumHandlers(inSettings, sumreport, bidir);
-    if (bidir) {
+    SetSumHandlers(inSettings, sumreport, fullduplex);
+    if (fullduplex) {
 	if (!isServerReverse(inSettings)) {
-	    sumreport->bidir_barrier.count = 0;
-	    Condition_Initialize(&sumreport->bidir_barrier.await);
-	    sumreport->bidir_barrier.timeout = (isModeTime(inSettings) ? ((int)(inSettings->mAmount / 100) + 1) : 2);
-	    if (sumreport->bidir_barrier.timeout < MINBARRIERTIMEOUT)
-		sumreport->bidir_barrier.timeout = MINBARRIERTIMEOUT;
+	    sumreport->fullduplex_barrier.count = 0;
+	    Condition_Initialize(&sumreport->fullduplex_barrier.await);
+	    sumreport->fullduplex_barrier.timeout = (isModeTime(inSettings) ? ((int)(inSettings->mAmount / 100) + 1) : 2);
+	    if (sumreport->fullduplex_barrier.timeout < MINBARRIERTIMEOUT)
+		sumreport->fullduplex_barrier.timeout = MINBARRIERTIMEOUT;
 	} else {
 	    if (isTripTime(inSettings)) {
 		sumreport->info.ts.startTime = inSettings->triptime_start;
@@ -389,15 +389,15 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	IncrSumReportRefCounter(inSettings->mSumReport);
 	ireport->GroupSumReport = inSettings->mSumReport;
     }
-    if (isBidir(inSettings)) {
-	assert(inSettings->mBidirReport != NULL);
-	IncrSumReportRefCounter(inSettings->mBidirReport);
-	ireport->FullDuplexReport = inSettings->mBidirReport;
+    if (isFullDuplex(inSettings)) {
+	assert(inSettings->mFullDuplexReport != NULL);
+	IncrSumReportRefCounter(inSettings->mFullDuplexReport);
+	ireport->FullDuplexReport = inSettings->mFullDuplexReport;
     }
     // Copy common settings into the transfer report section
     common_copy(&ireport->info.common, inSettings);
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Job report %p uses multireport %p and bidirreport is %p (socket=%d)", (void *)reporthdr->this_report, (void *)inSettings->mSumReport, (void *)inSettings->mBidirReport, inSettings->mSock);
+    thread_debug("Job report %p uses multireport %p and fullduplex report is %p (socket=%d)", (void *)reporthdr->this_report, (void *)inSettings->mSumReport, (void *)inSettings->mFullDuplexReport, inSettings->mSock);
 #endif
     // Create a new packet ring which is used to communicate
     // packet stats from the traffic thread to the reporter
@@ -424,7 +424,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 		    ireport->info.output_handler = udp_output_read_enhanced_triptime_isoch;
 		else
 		    ireport->info.output_handler = udp_output_read_enhanced_triptime;
-	    } else if (isBidir(inSettings)) {
+	    } else if (isFullDuplex(inSettings)) {
 		ireport->info.output_handler =  udp_output_read;
 	    } else if (isEnhanced(inSettings)) {
 		ireport->info.output_handler = udp_output_read_enhanced_triptime;
@@ -442,7 +442,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 		ireport->info.output_handler = tcp_output_read_enhanced_triptime;
 	    } else if (isEnhanced(inSettings)) {
 		ireport->info.output_handler = tcp_output_read_enhanced;
-	    } else if (!isBidir(inSettings)) {
+	    } else if (!isFullDuplex(inSettings)) {
 		ireport->info.output_handler = tcp_output_read;
 	    } else {
 		ireport->info.output_handler = NULL ;
@@ -470,7 +470,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 		ireport->info.output_handler = NULL;
 	    } else if (isEnhanced(inSettings) || isIsochronous(inSettings)) {
 		ireport->info.output_handler = tcp_output_write_enhanced;
-	    } else if (!isEnhanced(inSettings) && isBidir(inSettings)) {
+	    } else if (!isEnhanced(inSettings) && isFullDuplex(inSettings)) {
 		ireport->info.output_handler = NULL;
 	    } else {
 		ireport->info.output_handler = tcp_output_write;

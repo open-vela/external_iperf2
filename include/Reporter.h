@@ -192,7 +192,7 @@ enum ReportType {
 };
 
 enum ReportSubType {
-    BIDIRSUM_REPORT = 1,
+    FULLDUPLEXSUM_REPORT = 1,
     HOSTSUM_REPORT,
     TOTALSUM_REPORT
 };
@@ -345,7 +345,7 @@ struct SumReport {
     int threads;
     struct TransferInfo info;
     void (*transfer_protocol_sum_handler) (struct TransferInfo *stats, int final);
-    struct BarrierMutex bidir_barrier;
+    struct BarrierMutex fullduplex_barrier;
 };
 
 struct ReporterData {
@@ -384,7 +384,7 @@ typedef void (* report_settings)( struct ReporterData* );
 typedef void (* report_statistics)( struct TransferInfo* );
 typedef void (* report_serverstatistics)( struct ConnectionInfo *, struct TransferInfo* );
 
-struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, int bidir);
+struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, int fullduplex);
 struct ReportHeader* InitIndividualReport(struct thread_Settings *inSettings);
 struct ReportHeader* InitConnectionReport(struct thread_Settings *inSettings, double ct);
 struct ConnectionInfo* InitConnectOnlyReport(struct thread_Settings *inSettings);
@@ -440,8 +440,8 @@ void reporter_transfer_protocol_sum_client_tcp(struct TransferInfo *stats, int f
 void reporter_transfer_protocol_sum_server_tcp(struct TransferInfo *stats, int final);
 void reporter_transfer_protocol_sum_client_udp(struct TransferInfo *stats, int final);
 void reporter_transfer_protocol_sum_server_udp(struct TransferInfo *stats, int final);
-void reporter_transfer_protocol_bidir_tcp(struct TransferInfo *stats, int final);
-void reporter_transfer_protocol_bidir_udp(struct TransferInfo *stats, int final);
+void reporter_transfer_protocol_fullduplex_tcp(struct TransferInfo *stats, int final);
+void reporter_transfer_protocol_fullduplex_udp(struct TransferInfo *stats, int final);
 
 
 // Reporter print routines
@@ -460,13 +460,13 @@ void tcp_output_sumcnt_write(struct TransferInfo *stats);
 void tcp_output_write_enhanced (struct TransferInfo *stats);
 void tcp_output_sum_write_enhanced (struct TransferInfo *stats);
 void tcp_output_sumcnt_write_enhanced (struct TransferInfo *stats);
-// TCP bidir
-void tcp_output_bidir_write(struct TransferInfo *stats);
-void tcp_output_bidir_write_enhanced(struct TransferInfo *stats);
-void tcp_output_bidir_read(struct TransferInfo *stats);
-void tcp_output_bidir_read_enhanced(struct TransferInfo *stats);
-void tcp_output_bidir_sum(struct TransferInfo *stats);
-void tcp_output_bidir_sum_enhanced(struct TransferInfo *stats);
+// TCP fullduplex
+void tcp_output_fullduplex_write(struct TransferInfo *stats);
+void tcp_output_fullduplex_write_enhanced(struct TransferInfo *stats);
+void tcp_output_fullduplex_read(struct TransferInfo *stats);
+void tcp_output_fullduplex_read_enhanced(struct TransferInfo *stats);
+void tcp_output_fullduplex_sum(struct TransferInfo *stats);
+void tcp_output_fullduplex_sum_enhanced(struct TransferInfo *stats);
 
 // UDP server
 void udp_output_read(struct TransferInfo *stats);
@@ -485,7 +485,7 @@ void udp_output_write_enhanced_isoch(struct TransferInfo *stats);
 void udp_output_sum_write_enhanced (struct TransferInfo *stats);
 void udp_output_sumcnt_write(struct TransferInfo *stats);
 void udp_output_sumcnt_write_enhanced (struct TransferInfo *stats);
-void udp_output_bidir_sum(struct TransferInfo *stats);
+void udp_output_fullduplex_sum(struct TransferInfo *stats);
     
 // CSV output
 void udp_output_basic_csv(struct TransferInfo *stats);

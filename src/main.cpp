@@ -257,7 +257,7 @@ int main(int argc, char **argv) {
 	Settings_Copy(ext_gSettings, &into, 1);
 	into->mThreadMode = ReporterThreadMode;
 	into->mSumReport = NULL;
-	into->mBidirReport = NULL;
+	into->mFullDuplexReport = NULL;
 	// Have the reporter launch the client or listener
 	into->runNow = ext_gSettings;
 	// Start all the threads that are ready to go

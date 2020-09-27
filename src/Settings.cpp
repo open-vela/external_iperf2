@@ -73,7 +73,7 @@
 #include "payloads.h"
 
 static int reversetest = 0;
-static int bidirtest = 0;
+static int fullduplextest = 0;
 static int rxhistogram = 0;
 static int l2checks = 0;
 static int incrdstip = 0;
@@ -165,7 +165,7 @@ const struct option long_options[] =
 {"no-udp-fin", no_argument, &noudpfin, 1},
 {"connect-only", optional_argument, &connectonly, 1},
 {"no-connect-sync", no_argument, &noconnectsync, 1},
-{"bidir", no_argument, &bidirtest, 1},
+{"full-duplex", no_argument, &fullduplextest, 1},
 {"ipg", required_argument, &burstipg, 1},
 {"isochronous", optional_argument, &isochronous, 1},
 {"sum-only", no_argument, &sumonly, 1},
@@ -296,8 +296,8 @@ void Settings_Copy(struct thread_Settings *from, struct thread_Settings **into, 
     memset(*into, 0, sizeof(struct thread_Settings));
     memcpy(*into, from, sizeof(struct thread_Settings));
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Copy thread settings (malloc) from/to=%p/%p report/multi/bidir %p/%p/%p", \
-		 (void *)from, (void *)*into, (void *)(*into)->reporthdr, (void *)(*into)->mSumReport, (void *)(*into)->mBidirReport);
+    thread_debug("Copy thread settings (malloc) from/to=%p/%p report/multi/fullduplex %p/%p/%p", \
+		 (void *)from, (void *)*into, (void *)(*into)->reporthdr, (void *)(*into)->mSumReport, (void *)(*into)->mFullDuplexReport);
 #endif
     // Some settings don't need to be copied and will confuse things. Don't copy them unless copyall is set
     if (copyall) {
@@ -362,7 +362,7 @@ void Settings_Copy(struct thread_Settings *from, struct thread_Settings **into, 
 
     (*into)->txstart_epoch = from->txstart_epoch;
     (*into)->mSumReport = from->mSumReport;
-    (*into)->mBidirReport = from->mBidirReport;
+    (*into)->mFullDuplexReport = from->mFullDuplexReport;
 
     // Zero out certain entries
     (*into)->mTID = thread_zeroid();
@@ -906,9 +906,9 @@ void Settings_Interpret(char option, const char *optarg, struct thread_Settings 
 		reversetest = 0;
 		setReverse(mExtSettings);
 	    }
-	    if (bidirtest) {
-		bidirtest = 0;
-		setBidir(mExtSettings);
+	    if (fullduplextest) {
+		fullduplextest = 0;
+		setFullDuplex(mExtSettings);
 	    }
 	    if (fqrate) {
 #if defined(HAVE_DECL_SO_MAX_PACING_RATE)
@@ -1011,7 +1011,7 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
 	}
     }
     // compat mode doesn't support these test settings
-    int compat_nosupport = (isReverse(mExtSettings) | isBidir(mExtSettings) | isTripTime(mExtSettings) | isVaryLoad(mExtSettings) \
+    int compat_nosupport = (isReverse(mExtSettings) | isFullDuplex(mExtSettings) | isTripTime(mExtSettings) | isVaryLoad(mExtSettings) \
 			    | isRxHistogram(mExtSettings) |  isIsochronous(mExtSettings) \
 			    | isEnhanced(mExtSettings) | (mExtSettings->mMode != kTest_Normal));
     if (isCompat(mExtSettings) && compat_nosupport) {
@@ -1023,7 +1023,7 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
     if (!isBWSet(mExtSettings) && isUDP(mExtSettings)) {
 	mExtSettings->mUDPRate = kDefault_UDPRate;
     }
-    if (isTripTime(mExtSettings) && (isReverse(mExtSettings) || isBidir(mExtSettings))) {
+    if (isTripTime(mExtSettings) && (isReverse(mExtSettings) || isFullDuplex(mExtSettings))) {
 	setEnhanced(mExtSettings);
     }
     // Warnings
@@ -1033,7 +1033,7 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
 	    setModeInfinite(mExtSettings);
 	    fprintf(stderr, "WARNING: client will send traffic forever or until an external signal (e.g. SIGINT or SIGTERM) occurs to stop it\n");
 	}
-	if (isBidir(mExtSettings) && isCongestionControl(mExtSettings)) {
+	if (isFullDuplex(mExtSettings) && isCongestionControl(mExtSettings)) {
 	    fprintf(stderr, "WARNING: tcp congestion control will only be applied on transmit traffic, use -Z on the server\n");
 	}
     }
@@ -1115,9 +1115,18 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
 	    fprintf(stderr, "ERROR: tcp congestion control -Z and --reverse cannot be applied together\n");
 	    bail = true;
 	}
-	if (isBidir(mExtSettings) && isReverse(mExtSettings)) {
-	    fprintf(stderr, "ERROR: options of --bidir and --reverse cannot be applied together\n");
-	    bail = true;
+	{
+	    int one_only = 0;
+	    if (isFullDuplex(mExtSettings))
+		one_only++;
+	    if (isReverse(mExtSettings))
+		one_only++;
+            if (mExtSettings->mMode != kTest_Normal)
+		one_only++;
+	    if (one_only > 1) {
+		fprintf(stderr, "ERROR: options of --full-duplex, -reverse, -d and -r are mutually exclusive\n");
+		bail = true;
+	    }
 	}
 	if (isBWSet(mExtSettings) && isIsochronous(mExtSettings)) {
 	    fprintf(stderr, "ERROR: options of --b and --isochronous cannot be applied together\n");
@@ -1152,8 +1161,8 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
 	    fprintf(stderr, "ERROR: option of --isochronous is not suppported on the server\n");
 	    bail = true;
 	}
-	if (isBidir(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of --bidir is not suppported on the server\n");
+	if (isFullDuplex(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of --full-duplex is not suppported on the server\n");
 	    bail = true;
 	}
 	if (isReverse(mExtSettings)) {
@@ -1443,13 +1452,13 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
     if (flags & HEADER_VERSION1)
 	thread_debug("header set for a version 1 test");
 #endif
-    if (isBidir(server) || (flags & HEADER_VERSION1)) {
+    if (isFullDuplex(server) || (flags & HEADER_VERSION1)) {
 	Settings_Copy(server, client, 0);
 	reversed_thread = *client;
-	if (isBidir(server) && !(flags & HEADER_VERSION1)) {
-	    setBidir(reversed_thread);
+	if (isFullDuplex(server) && !(flags & HEADER_VERSION1)) {
+	    setFullDuplex(reversed_thread);
 	} else {
-	    unsetBidir(reversed_thread);
+	    unsetFullDuplex(reversed_thread);
 	}
     } else if (isServerReverse(server)) {
 	reversed_thread = server;
@@ -1461,7 +1470,7 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 
     if (isUDP(server)) { // UDP test information passed in every packet per being stateless
 	struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) mBuf;
-	if (isBidir(reversed_thread)) {
+	if (isFullDuplex(reversed_thread)) {
 	    setNoUDPfin(reversed_thread);
 	}
 	Settings_ReadClientSettingsV1(&reversed_thread, &hdr->base);
@@ -1599,9 +1608,9 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	flags |= (isUDP(client) ? (HEADER_VERSION2 | HEADER_UDPTESTS) : HEADER_VERSION2);
         upperflags |= HEADER_REVERSE;
     }
-    if (isBidir(client)) {
+    if (isFullDuplex(client)) {
 	flags |= (isUDP(client) ? (HEADER_VERSION2 | HEADER_UDPTESTS) : HEADER_VERSION2);
-        upperflags |= HEADER_BIDIR;
+        upperflags |= HEADER_FULLDUPLEX;
     }
     // Now setup UDP and TCP specific passed settings from client to server
     if (isUDP(client)) { // UDP test information passed in every packet per being stateless
@@ -1621,7 +1630,7 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	if (isIsochronous(client)) {
 	    flags |= (HEADER_UDPTESTS | HEADER_EXTEND) ;
 	    upperflags |= HEADER_ISOCH;
-	    if (isBidir(client) || isReverse(client)) {
+	    if (isFullDuplex(client) || isReverse(client)) {
 		flags |= HEADER_VERSION2;
 		upperflags |= HEADER_ISOCH_SETTINGS;
 		hdr->isoch_settings.FPSl = htonl((long)(client->mFPS));
@@ -1708,7 +1717,7 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	if (isIsochronous(client)) {
 	    flags |= HEADER_VERSION2;
 	    upperflags |= HEADER_ISOCH;
-	    if (isBidir(client) || isReverse(client)) {
+	    if (isFullDuplex(client) || isReverse(client)) {
 		upperflags |= HEADER_ISOCH_SETTINGS;
 		hdr->isoch_settings.FPSl = htonl(client->mFPS);
 		hdr->isoch_settings.FPSu = htonl(((long)(client->mFPS) - (long)client->mFPS * rMillion));

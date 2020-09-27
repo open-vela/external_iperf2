@@ -122,9 +122,9 @@ Client::Client (thread_Settings *inSettings) {
  * ------------------------------------------------------------------- */
 Client::~Client () {
 #if HAVE_THREAD_DEBUG
-    thread_debug("Client destructor sock=%d report=%p server-reverse=%s bidir=%s", \
+    thread_debug("Client destructor sock=%d report=%p server-reverse=%s fullduplex=%s", \
 		 mySocket, (void *) mSettings->reporthdr, \
-		 (isServerReverse(mSettings) ? "true" : "false"), (isBidir(mSettings) ? "true" : "false"));
+		 (isServerReverse(mSettings) ? "true" : "false"), (isFullDuplex(mSettings) ? "true" : "false"));
 #endif
     DELETE_ARRAY(mBuf);
     DELETE_PTR(framecounter);
@@ -269,15 +269,15 @@ int Client::StartSynch (void) {
 	delay_loop(tmp.subUsec(now));
 #endif
     }
-    int setbidirflag = 0;
-    if (isBidir(mSettings) && !isServerReverse(mSettings)) {
-	assert(mSettings->mBidirReport != NULL);
-	if ((setbidirflag = bidir_start_barrier(&mSettings->mBidirReport->bidir_barrier)) < 0)
+    int setfullduplexflag = 0;
+    if (isFullDuplex(mSettings) && !isServerReverse(mSettings)) {
+	assert(mSettings->mFullDuplexReport != NULL);
+	if ((setfullduplexflag = fullduplex_start_barrier(&mSettings->mFullDuplexReport->fullduplex_barrier)) < 0)
 	    return -1;
     }
     SetReportStartTime();
-    if (setbidirflag)
-	SetBidirReportStartTime();
+    if (setfullduplexflag)
+	SetFullDuplexReportStartTime();
     // Full duplex sockets need to be syncronized
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Client start sync exited");
@@ -285,18 +285,18 @@ int Client::StartSynch (void) {
     return 0;
 }
 
-inline void Client::SetBidirReportStartTime (void) {
+inline void Client::SetFullDuplexReportStartTime (void) {
     assert(myReport->FullDuplexReport != NULL);
-    struct TransferInfo *bidirstats = &myReport->FullDuplexReport->info;
-    assert(bidirstats != NULL);
-    if (TimeZero(bidirstats->ts.startTime)) {
-	bidirstats->ts.startTime = myReport->info.ts.startTime;
+    struct TransferInfo *fullduplexstats = &myReport->FullDuplexReport->info;
+    assert(fullduplexstats != NULL);
+    if (TimeZero(fullduplexstats->ts.startTime)) {
+	fullduplexstats->ts.startTime = myReport->info.ts.startTime;
 	if (isModeTime(mSettings)) {
-	    bidirstats->ts.nextTime = myReport->info.ts.nextTime;
+	    fullduplexstats->ts.nextTime = myReport->info.ts.nextTime;
 	}
     }
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Client bidir report start=%ld.%ld next=%ld.%ld", bidirstats->ts.startTime.tv_sec, bidirstats->ts.startTime.tv_usec, bidirstats->ts.nextTime.tv_sec, bidirstats->ts.nextTime.tv_usec);
+    thread_debug("Client fullduplex report start=%ld.%ld next=%ld.%ld", fullduplexstats->ts.startTime.tv_sec, fullduplexstats->ts.startTime.tv_usec, fullduplexstats->ts.nextTime.tv_sec, fullduplexstats->ts.nextTime.tv_usec);
 #endif
 }
 
@@ -321,7 +321,7 @@ inline void Client::SetReportStartTime (void) {
 		sumstats->ts.nextTime = myReport->info.ts.nextTime;
 	    }
 #ifdef HAVE_THREAD_DEBUG
-	    thread_debug("Client bidir report start=%ld.%ld next=%ld.%ld", sumstats->ts.startTime.tv_sec, sumstats->ts.startTime.tv_usec, sumstats->ts.nextTime.tv_sec, sumstats->ts.nextTime.tv_usec);
+	    thread_debug("Client fullduplex report start=%ld.%ld next=%ld.%ld", sumstats->ts.startTime.tv_sec, sumstats->ts.startTime.tv_usec, sumstats->ts.nextTime.tv_sec, sumstats->ts.nextTime.tv_usec);
 #endif
 	}
 	Mutex_Unlock(&myReport->GroupSumReport->reference.lock);
@@ -1052,7 +1052,7 @@ void Client::FinishTrafficActions (void) {
 	    thread_debug("Client calls shutdown() SHUTW_WR on tcp socket %d", mySocket);
 #endif
 	    WARN_errno(rc == SOCKET_ERROR, "shutdown");
-	    if (!rc && !isBidir(mSettings))
+	    if (!rc && !isFullDuplex(mSettings))
 		AwaitServerCloseEvent();
 	}
 	if (one_report) {
