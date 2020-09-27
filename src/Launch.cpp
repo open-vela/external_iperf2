@@ -62,26 +62,26 @@
 #include "PerfSocket.hpp"
 #include "active_hosts.h"
 
-static int bidir_startstop_barrier (struct BarrierMutex *barrier) {
+static int fullduplex_startstop_barrier (struct BarrierMutex *barrier) {
     int rc = 0;
     assert(barrier != NULL);
     Condition_Lock(barrier->await);
     ++barrier->count;
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("BiDir barrier incr to %d %p ", barrier->count, (void *)&barrier->await, rc);
+    thread_debug("Fullduplex barrier incr to %d %p ", barrier->count, (void *)&barrier->await, rc);
 #endif
     if (barrier->count == 2) {
 	rc = 1;
 	// last one wake's up everyone else'
 #ifdef HAVE_THREAD_DEBUG
-	thread_debug("BiDir startstop broadcast on condition %p ", (void *)&barrier->await, rc);
+	thread_debug("Fullduplex startstop broadcast on condition %p ", (void *)&barrier->await, rc);
 #endif
 	Condition_Broadcast(&barrier->await);
     } else {
 	int timeout = barrier->timeout;
 	while ((barrier->count != 2) && (timeout > 0)) {
 #ifdef HAVE_THREAD_DEBUG
-	    thread_debug("BiDir startstop barrier wait  %p %d/2 (%d)", (void *)&barrier->await, barrier->count, timeout);
+	    thread_debug("Fullduplex startstop barrier wait  %p %d/2 (%d)", (void *)&barrier->await, barrier->count, timeout);
 #endif
 	    Condition_TimedWait(&barrier->await, 1);
 	    timeout--;
@@ -96,17 +96,17 @@ static int bidir_startstop_barrier (struct BarrierMutex *barrier) {
     Condition_Unlock(barrier->await);
     return rc;
 }
-int bidir_start_barrier (struct BarrierMutex *barrier) {
-    int rc=bidir_startstop_barrier(barrier);
+int fullduplex_start_barrier (struct BarrierMutex *barrier) {
+    int rc=fullduplex_startstop_barrier(barrier);
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("BiDir start barrier done on condition %p rc=%d", (void *)&barrier->await, rc);
+    thread_debug("Fullduplex start barrier done on condition %p rc=%d", (void *)&barrier->await, rc);
 #endif
     return rc;
 }
-int bidir_stop_barrier (struct BarrierMutex *barrier) {
-    int rc = bidir_startstop_barrier(barrier);
+int fullduplex_stop_barrier (struct BarrierMutex *barrier) {
+    int rc = fullduplex_startstop_barrier(barrier);
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("BiDir stop barrier done on condition %p rc=%d", (void *)&barrier->await, rc);
+    thread_debug("Fullduplex stop barrier done on condition %p rc=%d", (void *)&barrier->await, rc);
 #endif
     return rc;
 }
@@ -209,14 +209,14 @@ static void clientside_client_reverse (struct thread_Settings *thread, Client *t
     }
 }
 
-static void clientside_client_bidir (struct thread_Settings *thread, Client *theClient) {
+static void clientside_client_fullduplex (struct thread_Settings *thread, Client *theClient) {
     struct thread_Settings *reverse_client = NULL;
-    thread->mBidirReport = InitSumReport(thread, -1, 1);
+    thread->mFullDuplexReport = InitSumReport(thread, -1, 1);
     Settings_Copy(thread, &reverse_client, 0);
     assert(reverse_client != NULL);
     theClient->my_connect();
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Client spawn thread bidir (sock=%d)", thread->mSock);
+    thread_debug("Client spawn thread fullduplex (sock=%d)", thread->mSock);
 #endif
     if ((thread->mThreads > 1) && !isNoConnectSync(thread))
 	// When -P > 1 then all threads finish connect before starting traffic
@@ -226,8 +226,8 @@ static void clientside_client_bidir (struct thread_Settings *thread, Client *the
 	    Iperf_push_host(&thread->peer, thread);
 	    Iperf_push_host(&reverse_client->peer, reverse_client);
 	}
-	thread->mBidirReport->info.common->socket = thread->mSock;
-	thread->mBidirReport->info.transferID = thread->mSock;
+	thread->mFullDuplexReport->info.common->socket = thread->mSock;
+	thread->mFullDuplexReport->info.transferID = thread->mSock;
 	FAIL((!reverse_client || !(thread->mSock > 0)), "Reverse test failed to start per thread settings or socket problem",  thread);
 	reverse_client->mSumReport = thread->mSumReport;
 	reverse_client->mSock = thread->mSock; // use the same socket for both directions
@@ -254,9 +254,9 @@ static void serverside_client_reverse (struct thread_Settings *thread, Client *t
     }
 }
 
-static void serverside_client_bidir(struct thread_Settings *thread, Client *theClient) {
+static void serverside_client_fullduplex(struct thread_Settings *thread, Client *theClient) {
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Listener spawn client bidir thread (sock=%d)", thread->mSock);
+    thread_debug("Listener spawn client fullduplex thread (sock=%d)", thread->mSock);
 #endif
     if (theClient->StartSynch() != -1) {
 	if (isTripTime(thread) || isIsochronous(thread))
@@ -274,9 +274,9 @@ static void serverside_client_bidir(struct thread_Settings *thread, Client *theC
  * o) Normal
  * o) Dual (-d or -r) (legacy)
  * o) Reverse (Client side) (client acts like server)
- * o) Bidir (Client side) client starts server
+ * o) FullDuplex (Client side) client starts server
  * o) ServerReverse (Server side) (listener starts a client)
- * o) Bidir (Server side) (listener starts server & client)
+ * o) FullDuplex (Server side) (listener starts server & client)
  * o) WriteAck
  *
  * Note: This runs in client thread context
@@ -301,22 +301,22 @@ void client_spawn (struct thread_Settings *thread) {
 	theClient->ConnectPeriodic();
     } else if (!isServerReverse(thread)) {
 	// These are the client side spawning of clients
-	if (!isReverse(thread) && !isBidir(thread)) {
+	if (!isReverse(thread) && !isFullDuplex(thread)) {
 	    clientside_client_basic(thread, theClient);
-	} else if (isReverse(thread) && !isBidir(thread)) {
+	} else if (isReverse(thread) && !isFullDuplex(thread)) {
 	    clientside_client_reverse(thread, theClient);
-	} else if (isBidir(thread)) {
-	    clientside_client_bidir(thread, theClient);
+	} else if (isFullDuplex(thread)) {
+	    clientside_client_fullduplex(thread, theClient);
 	} else {
 	    fprintf(stdout, "Program error in client side client_spawn");
 	    _exit(0);
 	}
     } else {
 	// These are the server or listener side spawning of clients
-	if (!isBidir(thread)) {
+	if (!isFullDuplex(thread)) {
 	    serverside_client_reverse(thread, theClient);
-	} else if (isBidir(thread)) {
-	    serverside_client_bidir(thread, theClient);
+	} else if (isFullDuplex(thread)) {
+	    serverside_client_fullduplex(thread, theClient);
 	} else {
 	    fprintf(stdout, "Program error in server side client_spawn");
 	    _exit(0);

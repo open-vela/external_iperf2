@@ -107,17 +107,17 @@ const char usage_long2[] = "\
 Client specific:\n\
   -c, --client    <host>   run in client mode, connecting to <host>\n\
   -d, --dualtest           Do a bidirectional test simultaneously (multiple sockets)\n\
-      --bidir              run bidirectional test over same socket (full duplex mode)\n\
+      --fullduplex         run fullduplexectional test over same socket (full duplex mode)\n\
       --ipg                set the the interpacket gap (milliseconds) for packets within an isochronous frame\n\
       --isochronous <frames-per-second>:<mean>,<stddev> send traffic in bursts (frames - emulate video traffic)\n\
       --incr-dstip         Increment the destination ip with parallel (-P) traffic threads\n\
   -n, --num       #[kmgKMG]    number of bytes to transmit (instead of -t)\n\
-  -r, --tradeoff           Do a bidirectional test individually\n\
+  -r, --tradeoff           Do a fullduplexectional test individually\n\
   -t, --time      #        time in seconds to transmit for (default 10 secs)\n\
   -B, --bind [<ip> | <ip:port>] bind ip (and optional port) from which to source traffic\n\
   -F, --fileinput <name>   input the data to be transmitted from a file\n\
   -I, --stdin              input the data to be transmitted from stdin\n\
-  -L, --listenport #       port to receive bidirectional tests back on\n\
+  -L, --listenport #       port to receive fullduplexectional tests back on\n\
   -P, --parallel  #        number of parallel client threads to run\n"
 #ifndef WIN32
 "  -R, --reverse            reverse the test (client receives, server sends)\n"
@@ -398,12 +398,12 @@ const char report_frame_tcp_enhanced_header[] =
 "[ ID] Interval(f-transit)" IPERFFTimeSpace "Transfer     Bandwidth    FrameID\n";
 
 /* -------------------------------------------------------------------
- * Bidir reports
+ * Fullduplex reports
  * ------------------------------------------------------------------- */
-const char report_bw_sum_bidir_format[] =
+const char report_bw_sum_fullduplex_format[] =
 "[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec\n";
 
-const char report_bw_sum_bidir_enhanced_format[] =
+const char report_bw_sum_fullduplex_enhanced_format[] =
 "[FD%d] " IPERFTimeFrmt " sec  %ss  %ss/sec\n";
 
 /* -------------------------------------------------------------------

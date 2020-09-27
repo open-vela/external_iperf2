@@ -302,18 +302,18 @@ void Listener::Run (void) {
 	    // offsets per TCP or UDP. Basically, TCP starts at byte 0 but UDP
 	    // has to skip over the UDP seq no, etc.
 	    //
-            if (isBidir(server) || isServerReverse(server) || (server->mMode != kTest_Normal)) {
+            if (isFullDuplex(server) || isServerReverse(server) || (server->mMode != kTest_Normal)) {
 		thread_Settings *listener_client_settings = NULL;
 		// read client header for reverse settings
 		Settings_GenerateClientSettings(server, &listener_client_settings, mBuf);
 		if (listener_client_settings) {
-		    if (isBidir(listener_client_settings) || isReverse(listener_client_settings))
+		    if (isFullDuplex(listener_client_settings) || isReverse(listener_client_settings))
 			Iperf_push_host(&listener_client_settings->peer, listener_client_settings);
-		    if (isBidir(server)) {
-			server->mBidirReport = InitSumReport(server, server->mSock, 1);
-			listener_client_settings->mBidirReport = server->mBidirReport;
+		    if (isFullDuplex(server)) {
+			server->mFullDuplexReport = InitSumReport(server, server->mSock, 1);
+			listener_client_settings->mFullDuplexReport = server->mFullDuplexReport;
 #if HAVE_THREAD_DEBUG
-			thread_debug("BiDir report client=%p/%p server=%p/%p", (void *) listener_client_settings, (void *) listener_client_settings->mBidirReport, (void *) server, (void *) server->mBidirReport);
+			thread_debug("BiDir report client=%p/%p server=%p/%p", (void *) listener_client_settings, (void *) listener_client_settings->mFullDuplexReport, (void *) server, (void *) server->mFullDuplexReport);
 #endif
 			server->runNow =  listener_client_settings;
 		    } else if (server->mMode != kTest_Normal) {
@@ -933,8 +933,8 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		}
 	    }
 	    if (flags & HEADER_VERSION2) {
-		if (upperflags & HEADER_BIDIR) {
-		    setBidir(server);
+		if (upperflags & HEADER_FULLDUPLEX) {
+		    setFullDuplex(server);
 		    setServerReverse(server);
 		}
 		if (upperflags & HEADER_REVERSE)  {
@@ -999,8 +999,8 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		    setIsochronous(server);
 		}
 		if (flags & HEADER_VERSION2) {
-		    if (upperflags & HEADER_BIDIR) {
-			setBidir(server);
+		    if (upperflags & HEADER_FULLDUPLEX) {
+			setFullDuplex(server);
 			setServerReverse(server);
 		    }
 		    if (upperflags & HEADER_REVERSE) {

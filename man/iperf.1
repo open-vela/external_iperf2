@@ -102,9 +102,6 @@ set the server to process only one client at a time
 .BR -b ", " --bandwidth " \fIn\fR[kmgKMG]"
 set target read rate to \fIn\fR bits/sec. TCP only for the server.
 .TP
-.BR "    --bidir"
-run a full duplex test, i.e. traffic in both transmit and receive directions using the same socket
-.TP
 .BR -s ", " --server " "
 run in server mode
 .TP
@@ -145,10 +142,13 @@ run in client mode, connecting to \fIhost\fR  where the optional %dev will SO_BI
 only perform a TCP connect without any data transfer - useful to measure TCP connect() times
 .TP
 .BR -d ", " --dualtest " "
-Do a bidirectional test simultaneously using legacy techniques. Suggest to use --bidir instead
+Do a bidirectional test simultanous test usint two unidirectional sockets
 .TP
 .BR "    --fq-rate n[kmgKMG]"
 Set a rate to be used with fair-queueing based socket-level pacing, in bytes or bits per second. Only available on platforms supporting the SO_MAX_PACING_RATE socket option. (Note: Here the suffixes indicate bytes/sec or bits/sec per use of uppercase or lowercase, respectively)
+.TP
+.BR "    --full-duplex"
+run a full duplex test, i.e. traffic in both transmit and receive directions using the \fBsame socket\fR
 .TP
 .BR "    --incr-dstip"
 increment the destination ip address when using the parallel (-P) option
@@ -620,7 +620,7 @@ on the client also supports variable offered loads through the <mean>,<standard 
 -b 100m,10m. The distribution used is log normal. Similar for the isochronous
 option. The -b on the server rate limits the reads. Socket based pacing is also
 supported using the --fq-rate long option. This will work with the --reverse
-and --bidir options as well.
+and --full-duplex options as well.
 .P
 .B Synchronized clocks:
 The --trip-times option indicates that the client's and server's clocks are synchronized to a common reference.
@@ -653,17 +653,17 @@ receive those packets on any interface,
 Finally, the device specifier is required for v6 link-local,
 e.g. -c [v6addr]%<dev> -V, to select the output interface.
 .P
-.B Reverse and bidirectional traffic:
-The \fB--reverse\fR (-R) and \fB--bidir\fR options can be confusing when compared to the
-legacy options of \fB-r\fR and \fB-d\fR. \fB It's suggested to use --reverse\fR if you
-want to test through a NAT firewall (or -R on non-windows systems). This applies
-role reversal of the test after opening the full duplex socket. The latter
-two of -d and -r remain supported for legacy support and compatibility reasons.
-These open new sockets in the opposite direction vs treat the originating socket
-as full duplex. Firewall piercing is typically required to use -d and -r
-if a NAT gateway is in the path. That's part of the reason it's
-highly encouraged to use the newer --reverse and --bidir and deprecate
-the use of the -r and -d options.
+.B Reverse, full-duplex, dualtest (-d) and tradeoff (-r):
+The \fB--reverse\fR (-R) and \fB--full-duplex\fR options can be confusing when compared to the
+older options of \fB--dualtest (-d)\fR and \fB--tradeoff (-r)\fR. The newer options of \fB--reverse\fR and \fB--full-duplex\fR only
+open one socket and read and write to the \fBsame socket descriptor\fR, i.e. use the socket in full duplex mode.  The older -d and -r open
+second sockets in the opposite direction and do not use a socket in full duplex mode. Note that full duplex applies to the socket
+and not to the network devices and that full duplex sockets are supported by the
+operating systems regardless if an underlying network supports full duplex transmission and reception.
+It's \fBsuggested to use --reverse\fR if you
+want to \fBtest through a NAT firewall\fR (or -R on non-windows systems). This applies
+role reversal of the test after opening the full duplex socket.  (Note: Firewall piercing may be required to use -d and -r
+if a NAT gateway is in the path.)
 .P
 Also, the --reverse -b <rate> setting behaves differently for TCP and UDP. For
 TCP it will rate limit the read side, i.e. the iperf client
