@@ -714,8 +714,10 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
     }
     if (isEnhanced(report->common)) {
 	byte_snprintf(outbuffer, sizeof(outbuffer), report->common->BufLen, toupper((int)report->common->Format));
+	byte_snprintf(outbufferext, sizeof(outbufferext), report->common->BufLen / 8, 'A');
 	outbuffer[(sizeof(outbuffer)-1)] = '\0';
-	printf("%s: %s\n", server_read_size, outbuffer);
+	outbufferext[(sizeof(outbufferext)-1)] = '\0';
+	printf("%s: %s (Dist bin width=%s)\n", server_read_size, outbuffer, outbufferext);
     }
     if (isCongestionControl(report->common) && report->common->Congestion) {
 	fprintf(stdout, "TCP congestion control set to %s\n", report->common->Congestion);
