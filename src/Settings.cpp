@@ -992,10 +992,11 @@ static char * isv4_port(char *v4addr) {
 //
 //  Since Settings_Interpret() will set all the *individual* options and flags
 //  then the below code (per the example UDP, v4 or v6, and not -l) can set final
-//  values, e.g. a correct default mBufLen.
+//  values, e.g. a correct default mBufLen. Other examples that need this are multicast
+//  socket or not,-B local bind port parsing, and when to use the default UDP offered load
 //
-//  Other things that need this are multicast socket or not,
-//  -B local bind port parsing, and when to use the default UDP offered load
+//  Also apply the bail out or exit conditions if the user requested mutually exclusive
+//  or incompatabile options
 void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
     char *results;
     // Handle default read/write sizes based on v4, v6, UDP or TCP
@@ -1010,15 +1011,6 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
 	    mExtSettings->mBufLen = kDefault_TCPBufLen;
 	}
     }
-    // compat mode doesn't support these test settings
-    int compat_nosupport = (isReverse(mExtSettings) | isFullDuplex(mExtSettings) | isTripTime(mExtSettings) | isVaryLoad(mExtSettings) \
-			    | isRxHistogram(mExtSettings) |  isIsochronous(mExtSettings) \
-			    | isEnhanced(mExtSettings) | (mExtSettings->mMode != kTest_Normal));
-    if (isCompat(mExtSettings) && compat_nosupport) {
-	fprintf(stderr, "ERROR: compatability mode requested with settings not supported\n");
-	exit(1);
-    }
-
     // Handle default UDP offered load (TCP will be max, i.e. no read() or write() rate limiting)
     if (!isBWSet(mExtSettings) && isUDP(mExtSettings)) {
 	mExtSettings->mUDPRate = kDefault_UDPRate;
@@ -1039,6 +1031,14 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
     }
     // Bail outs
     bool bail = false;
+    // compat mode doesn't support these test settings
+    int compat_nosupport = (isReverse(mExtSettings) | isFullDuplex(mExtSettings) | isTripTime(mExtSettings) | isVaryLoad(mExtSettings) \
+			    | isRxHistogram(mExtSettings) |  isIsochronous(mExtSettings) \
+			    | isEnhanced(mExtSettings) | (mExtSettings->mMode != kTest_Normal));
+    if (isCompat(mExtSettings) && compat_nosupport) {
+	fprintf(stderr, "ERROR: compatability mode not supported with the requested with options\n");
+	bail = true;
+    }
     if (mExtSettings->mThreadMode == kMode_Client) {
 	if (isSumOnly(mExtSettings) && !(mExtSettings->mThreads > 1)) {
 	    fprintf(stderr, "ERROR: option of --sum-only requires -P greater than 1\n");
