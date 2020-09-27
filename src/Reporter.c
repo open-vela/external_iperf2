@@ -1035,7 +1035,7 @@ void reporter_transfer_protocol_server_udp (struct ReporterData *data, int final
 	sumstats->total.Bytes.current += stats->cntBytes;
 	if (sumstats->IPGsum < stats->IPGsum)
 	    sumstats->IPGsum = stats->IPGsum;
-	sumstats->total.IPG.current += stats->total.IPG.current;
+	sumstats->total.IPG.current += stats->cntIPG;
     }
     if (bidirstats) {
 	bidirstats->total.Bytes.current += stats->cntBytes;
@@ -1132,8 +1132,10 @@ void reporter_transfer_protocol_sum_client_udp (struct TransferInfo *stats, int 
 	stats->cntDatagrams = stats->total.Datagrams.current;
 	stats->cntBytes = stats->total.Bytes.current;
 	stats->IPGsum = TimeDifference(stats->ts.packetTime, stats->ts.startTime);
+	stats->cntIPG = stats->total.IPG.current;
     } else {
 	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
+	stats->cntIPG = stats->total.IPG.current - stats->total.IPG.prev;
     }
     if (stats->output_handler)
 	(*stats->output_handler)(stats);
@@ -1151,6 +1153,7 @@ void reporter_transfer_protocol_client_udp (struct ReporterData *data, int final
     struct TransferInfo *bidirstats = (data->FullDuplexReport != NULL) ? &data->FullDuplexReport->info : NULL;
     stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
     stats->cntDatagrams = stats->total.Datagrams.current - stats->total.Datagrams.prev;
+    stats->cntIPG = stats->total.IPG.current - stats->total.IPG.prev;
     if (sumstats) {
 	sumstats->total.Bytes.current += stats->cntBytes;
 	sumstats->sock_callstats.write.WriteErr += stats->sock_callstats.write.WriteErr;
