@@ -491,14 +491,14 @@ void udp_output_sum_read_enhanced(struct TransferInfo *stats) {
 	    (stats->cntIPG ? (stats->cntIPG / stats->IPGsum) : 0.0));
 }
 void udp_output_sum_write_enhanced(struct TransferInfo *stats) {
-    HEADING_PRINT_COND(report_bw_write_enhanced);
+    HEADING_PRINT_COND(report_bw_pps_enhanced);
     _print_stats_common(stats);
     printf(report_sum_bw_pps_enhanced_format,
 	    stats->ts.iStart, stats->ts.iEnd,
 	    outbuffer, outbufferext,
 	    stats->sock_callstats.write.WriteCnt,
 	    stats->sock_callstats.write.WriteErr,
-	    (stats->cntIPG ? (stats->cntIPG / stats->IPGsum) : 0.0));
+	   ((stats->cntIPG && (stats->IPGsum > 0.0)) ? (stats->cntIPG / stats->IPGsum) : 0.0));
 }
 void tcp_output_sum_read(struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw);
