@@ -129,39 +129,39 @@ static inline void set_llawbuf(double lambda, double meantransit) {
 }
 
 //TCP Output
-void tcp_output_bidir_sum (struct TransferInfo *stats) {
+void tcp_output_fullduplex_sum (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw);
     _print_stats_common(stats);
-    printf(report_bw_sum_bidir_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
+    printf(report_bw_sum_fullduplex_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
 }
 
-void tcp_output_bidir_sum_enhanced (struct TransferInfo *stats) {
+void tcp_output_fullduplex_sum_enhanced (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw);
     _print_stats_common(stats);
-    printf(report_bw_sum_bidir_enhanced_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
+    printf(report_bw_sum_fullduplex_enhanced_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
 }
 
-void tcp_output_bidir_read (struct TransferInfo *stats) {
+void tcp_output_fullduplex_read (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw);
     _print_stats_common(stats);
-    printf(report_bw_sum_bidir_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
+    printf(report_bw_sum_fullduplex_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
 }
 
-void tcp_output_bidir_read_enhanced (struct TransferInfo *stats) {
+void tcp_output_fullduplex_read_enhanced (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw);
     _print_stats_common(stats);
-    printf(report_bw_sum_bidir_enhanced_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
+    printf(report_bw_sum_fullduplex_enhanced_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
 }
-void tcp_output_bidir_write (struct TransferInfo *stats) {
+void tcp_output_fullduplex_write (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw);
     _print_stats_common(stats);
-    printf(report_bw_sum_bidir_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
+    printf(report_bw_sum_fullduplex_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
 }
 
-void tcp_output_bidir_write_enhanced (struct TransferInfo *stats) {
+void tcp_output_fullduplex_write_enhanced (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw);
     _print_stats_common(stats);
-    printf(report_bw_sum_bidir_enhanced_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
+    printf(report_bw_sum_fullduplex_enhanced_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
 }
 
 void tcp_output_read (struct TransferInfo *stats) {
@@ -288,21 +288,21 @@ void tcp_output_write_enhanced (struct TransferInfo *stats) {
 }
 
 //UDP output
-void udp_output_bidir_sum (struct TransferInfo *stats) {
+void udp_output_fullduplex_sum (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw);
     _print_stats_common(stats);
-    printf(report_bw_sum_bidir_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
+    printf(report_bw_sum_fullduplex_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
 }
 
-void udp_output_bidir_read (struct TransferInfo *stats) {
+void udp_output_fullduplex_read (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw);
     _print_stats_common(stats);
-    printf(report_bw_sum_bidir_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
+    printf(report_bw_sum_fullduplex_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
 }
-void udp_output_bidir_write (struct TransferInfo *stats) {
+void udp_output_fullduplex_write (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw);
     _print_stats_common(stats);
-    printf(report_bw_sum_bidir_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
+    printf(report_bw_sum_fullduplex_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
 }
 
 void udp_output_read (struct TransferInfo *stats) {
@@ -809,8 +809,8 @@ void reporter_print_connection_report(struct ConnectionInfo *report) {
 	snprintf(b, SNBUFFERSIZE-strlen(b), " (isoch)");
 	b += strlen(b);
     }
-    if (isBidir(report->common)) {
-	snprintf(b, SNBUFFERSIZE-strlen(b), " (bidir)");
+    if (isFullDuplex(report->common)) {
+	snprintf(b, SNBUFFERSIZE-strlen(b), " (full-duplex)");
 	b += strlen(b);
     } else if (isServerReverse(report->common) || isReverse(report->common)) {
 	snprintf(b, SNBUFFERSIZE-strlen(b), " (reverse)");

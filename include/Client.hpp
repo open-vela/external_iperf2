@@ -99,7 +99,7 @@ private:
     inline void WriteTcpTxHdr(struct ReportStruct *, int, int);
     void InitTrafficLoop(void);
     void SetReportStartTime(void);
-    inline void SetBidirReportStartTime(void);
+    inline void SetFullDuplexReportStartTime(void);
     void FinishTrafficActions(void);
     void AwaitServerFinPacket(void);
     bool InProgress(void);
