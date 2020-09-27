@@ -697,8 +697,23 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
 	if (isEnhanced(report->common) && !SockAddr_isMulticast(&report->local)) {
 	    if (report->common->Ifrname)
 		printf(bind_address_iface, report->common->Localhost, report->common->Ifrname);
-	    else
-		printf(bind_address, report->common->Localhost);
+	    else {
+		char *host_ip = (char *) malloc(REPORT_ADDRLEN);
+		if (host_ip != NULL) {
+		    if (((struct sockaddr*)(&report->common->local))->sa_family == AF_INET) {
+			inet_ntop(AF_INET, &((struct sockaddr_in*)(&report->common->local))->sin_addr,
+				  host_ip, REPORT_ADDRLEN);
+		    }
+#ifdef HAVE_IPV6
+		    else {
+			inet_ntop(AF_INET6, &((struct sockaddr_in6*)(&report->common->local))->sin6_addr,
+				  host_ip, REPORT_ADDRLEN);
+		    }
+#endif
+		    printf(bind_address, host_ip);
+		    free(host_ip);
+		}
+	    }
 	}
 	if (SockAddr_isMulticast(&report->local)) {
 	    if(!report->common->SSMMulticastStr)
