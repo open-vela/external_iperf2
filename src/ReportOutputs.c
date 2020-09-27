@@ -775,8 +775,8 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
     if (isIPG(report->common) && !isIsochronous(report->common)) {
 	byte_snprintf(outbuffer, sizeof(outbuffer), report->common->FQPacingRate, 'a');
 	outbuffer[(sizeof(outbuffer)-1)] = '\0';
-        fprintf(stdout, "IPG set to %0.4f milliseconds (%d pps), UDP payload len %d bytes\n", \
-		report->common->pktIPG, (int)(round)(1000.0 / report->common->pktIPG), report->common->BufLen);
+        fprintf(stdout, "IPG set to %0.6f seconds (%0.3f pps), UDP payload len %d bytes\n", \
+		report->common->pktIPG, (1.0 / report->common->pktIPG), report->common->BufLen);
     }
     output_window_size(report);
     printf("\n");
