@@ -524,6 +524,7 @@ int reporter_process_transfer_report (struct ReporterData *this_ireport) {
 		if (DecrSumReportRefCounter(this_ireport->GroupSumReport) == 0) {
 		    if ((this_ireport->GroupSumReport->transfer_protocol_sum_handler) && \
 			(this_ireport->GroupSumReport->reference.maxcount > (fullduplexstats ? 2 : 1))) {
+			sumstats->sumflag = 1;
 			(*this_ireport->GroupSumReport->transfer_protocol_sum_handler)(&this_ireport->GroupSumReport->info, 1);
 		    }
 		    FreeSumReport(this_ireport->GroupSumReport);
