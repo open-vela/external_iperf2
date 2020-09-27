@@ -928,7 +928,7 @@ void Settings_Interpret(char option, const char *optarg, struct thread_Settings 
 		mExtSettings->mFPS = 60.0;
 		mExtSettings->mMean = 20000000.0;
 		mExtSettings->mVariance = 0.0;
-		mExtSettings->mBurstIPG = 0.005;
+		mExtSettings->mBurstIPG = 5e-6;
 		if (optarg) {
 		    mExtSettings->mIsochronousStr = new char[ strlen(optarg) + 1 ];
 		    strcpy(mExtSettings->mIsochronousStr, optarg);
@@ -1063,7 +1063,7 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
 	    {
 		double delay_target;
 		if (isIPG(mExtSettings)) {
-		    delay_target = mExtSettings->mBurstIPG * 1000000;  // convert from milliseconds to nanoseconds
+		    delay_target = mExtSettings->mBurstIPG * 1e9;  // convert from seconds to nanoseconds
 		} else {
 		    // compute delay target in units of nanoseconds
 		    if (mExtSettings->mUDPRateUnits == kRate_BW) {
@@ -1075,7 +1075,7 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
 		}
 		if (delay_target < 0  ||
 		    delay_target > MAXIPGSECS * 1e9) {
-		    fprintf(stderr, "ERROR: IPG delay target of %.0f secs too large - bounded to a max of %d secs\n", (delay_target / 1e9), MAXIPGSECS);
+		    fprintf(stderr, "ERROR: IPG delay target of %.1f secs too large (max value is %d secs)\n", (delay_target / 1e9), MAXIPGSECS);
 		    bail = true;
 		}
 	    }
