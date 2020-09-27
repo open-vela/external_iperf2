@@ -145,7 +145,7 @@ static void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport
 	if (isUDP(inSettings)) {
 	    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_fullduplex_udp;
 	    sumreport->info.output_handler = ((isSumOnly(inSettings) || (inSettings->mReportMode == kReport_CSV)) ? NULL : \
-					      (isEnhanced(inSettings) ? tcp_output_fullduplex_sum_enhanced : udp_output_fullduplex_sum));
+					      (isEnhanced(inSettings) ? udp_output_fullduplex_sum : udp_output_fullduplex_sum));
 	} else {
 	    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_fullduplex_tcp;
 	    sumreport->info.output_handler = ((isSumOnly(inSettings) || (inSettings->mReportMode == kReport_CSV)) ? NULL : \
@@ -419,17 +419,19 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	    ireport->transfer_protocol_handler = reporter_transfer_protocol_server_udp;
             if (inSettings->mReportMode == kReport_CSV) {
 		ireport->info.output_handler = udp_output_basic_csv;
+	    } else if (isSumOnly(inSettings)) {
+		ireport->info.output_handler = NULL;
 	    } else if (isTripTime(inSettings)) {
 		if (isIsochronous(inSettings))
 		    ireport->info.output_handler = udp_output_read_enhanced_triptime_isoch;
 		else
 		    ireport->info.output_handler = udp_output_read_enhanced_triptime;
-	    } else if (isFullDuplex(inSettings)) {
-		ireport->info.output_handler =  udp_output_read;
 	    } else if (isEnhanced(inSettings)) {
 		ireport->info.output_handler = udp_output_read_enhanced_triptime;
-	    } else {
+	    } else if (!isFullDuplex(inSettings)) {
 		ireport->info.output_handler = udp_output_read;
+	    } else {
+		ireport->info.output_handler =  NULL;
 	    }
 	} else {
 	    ireport->packet_handler = reporter_handle_packet_server_tcp;
@@ -455,12 +457,16 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	    ireport->transfer_protocol_handler = reporter_transfer_protocol_client_udp;
             if (inSettings->mReportMode == kReport_CSV) {
 		ireport->info.output_handler = udp_output_basic_csv;
+	    } else if (isSumOnly(inSettings)) {
+		ireport->info.output_handler = NULL;
 	    } else if (isIsochronous(inSettings)) {
 		ireport->info.output_handler = udp_output_write_enhanced_isoch;
 	    } else if (isEnhanced(inSettings)) {
 		ireport->info.output_handler = udp_output_write_enhanced;
+	    } else if (isFullDuplex(inSettings)) {
+		ireport->info.output_handler = NULL;
 	    } else {
-		ireport->info.output_handler = (isSumOnly(inSettings) ? NULL : udp_output_write);
+		ireport->info.output_handler = udp_output_write;
 	    }
 	} else {
 	    ireport->transfer_protocol_handler = reporter_transfer_protocol_client_tcp;
@@ -470,7 +476,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 		ireport->info.output_handler = NULL;
 	    } else if (isEnhanced(inSettings) || isIsochronous(inSettings)) {
 		ireport->info.output_handler = tcp_output_write_enhanced;
-	    } else if (!isEnhanced(inSettings) && isFullDuplex(inSettings)) {
+	    } else if (isFullDuplex(inSettings)) {
 		ireport->info.output_handler = NULL;
 	    } else {
 		ireport->info.output_handler = tcp_output_write;
