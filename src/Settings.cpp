@@ -1500,9 +1500,13 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 #if HAVE_DECL_SO_MAX_PACING_RATE
 		if (upperflags & HEADER_FQRATESET) {
 		    setFQPacing(reversed_thread);
-		    reversed_thread->mFQPacingRate = ntohl(hdr->start_fq.fqrate);
+		    reversed_thread->mFQPacingRate = ntohl(hdr->start_fq.fqratel);
+#ifdef HAVE_INT64_T
+		    reversed_thread->mFQPacingRate |= (ntohl(hdr->start_fq.fqrateu) << 32);
+#endif
 		    if (isFQPacing(reversed_thread)) {
-			int rc = setsockopt(reversed_thread->mSock, SOL_SOCKET, SO_MAX_PACING_RATE, &reversed_thread->mFQPacingRate, sizeof(reversed_thread->mFQPacingRate));
+			int rc = setsockopt(reversed_thread->mSock, SOL_SOCKET, SO_MAX_PACING_RATE, \
+					    &reversed_thread->mFQPacingRate, sizeof(reversed_thread->mFQPacingRate));
 			WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
 		    }
 		}
@@ -1534,8 +1538,12 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 		if (upperflags & HEADER_FQRATESET) {
 		    setFQPacing(reversed_thread);
 		    reversed_thread->mFQPacingRate = ntohl(hdr->start_fq.fqrate);
+#ifdef HAVE_INT64_T
+		    reversed_thread->mFQPacingRate |= (ntohl(hdr->start_fq.fqrateu) << 32);
+#endif
 		    if (isFQPacing(reversed_thread)) {
-			int rc = setsockopt(reversed_thread->mSock, SOL_SOCKET, SO_MAX_PACING_RATE, &reversed_thread->mFQPacingRate, sizeof(reversed_thread->mFQPacingRate));
+			int rc = setsockopt(reversed_thread->mSock, SOL_SOCKET, SO_MAX_PACING_RATE, \
+					    &reversed_thread->mFQPacingRate, sizeof(reversed_thread->mFQPacingRate));
 			WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
 		    }
 		}
@@ -1652,15 +1660,18 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	}
 	if (isTripTime(client) || isFQPacing(client)) {
 	    flags |= (HEADER_UDPTESTS | HEADER_VERSION2);
-	    if (isFQPacing(client)) {
-		upperflags |= HEADER_FQRATESET;
-	    }
 	    if (isTripTime(client)) {
 		upperflags |= HEADER_TRIPTIME;
+		hdr->start_fq.start_tv_sec = htonl(startTime.tv_sec);
+		hdr->start_fq.start_tv_usec = htonl(startTime.tv_usec);
 	    }
-	    hdr->start_fq.fqrate = htonl(client->mFQPacingRate);
-	    hdr->start_fq.start_tv_sec = htonl(startTime.tv_sec);
-	    hdr->start_fq.start_tv_usec = htonl(startTime.tv_usec);
+	    if (isFQPacing(client)) {
+		upperflags |= HEADER_FQRATESET;
+		hdr->start_fq.fqratel = htonl((uint32_t) client->mFQPacingRate);
+#ifdef HAVE_INT64_T
+		hdr->start_fq.fqrateu = htonl((uint32_t) (client->mFQPacingRate >> 32));
+#endif
+	    }
 	    len += sizeof(struct client_hdrext_starttime_fq);
 	}
 	if (isBWSet(client)) {
@@ -1705,15 +1716,18 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	// Set up trip time
 	if (isTripTime(client) || isFQPacing(client)) {
 	    flags |= HEADER_VERSION2;
-	    if (isFQPacing(client)) {
-		upperflags |= HEADER_FQRATESET;
-	    }
 	    if (isTripTime(client)) {
 		upperflags |= HEADER_TRIPTIME;
+		hdr->start_fq.start_tv_sec = htonl(startTime.tv_sec);
+		hdr->start_fq.start_tv_usec = htonl(startTime.tv_usec);
 	    }
-	    hdr->start_fq.fqrate = htonl(client->mFQPacingRate);
-	    hdr->start_fq.start_tv_sec = htonl(startTime.tv_sec);
-	    hdr->start_fq.start_tv_usec = htonl(startTime.tv_usec);
+	    if (isFQPacing(client)) {
+		upperflags |= HEADER_FQRATESET;
+		hdr->start_fq.fqratel = htonl((uint32_t) client->mFQPacingRate);
+#ifdef HAVE_INT64_T
+		hdr->start_fq.fqrateu = htonl((uint32_t) (client->mFQPacingRate >> 32));
+#endif
+	    }
 	    len += sizeof(struct client_hdrext_starttime_fq);
 	}
 	if (isIsochronous(client)) {
