@@ -246,7 +246,7 @@ struct thread_Settings {
     int l4payloadoffset;
     int recvflags; // used to set recv flags,e.g. MSG_TRUNC with L
     double mVariance; //vbr variance
-    unsigned int mFQPacingRate;
+    uintmax_t mFQPacingRate;
     struct timeval txholdback_timer;
     struct timeval txstart_epoch;
     struct timeval accept_time;
