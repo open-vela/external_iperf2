@@ -212,7 +212,8 @@ struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, in
 	if (!isServerReverse(inSettings)) {
 	    sumreport->fullduplex_barrier.count = 0;
 	    Condition_Initialize(&sumreport->fullduplex_barrier.await);
-	    sumreport->fullduplex_barrier.timeout = (isModeTime(inSettings) ? ((int)(inSettings->mAmount / 100) + 1) : 2);
+	    sumreport->fullduplex_barrier.timeout = ((isModeTime(inSettings) && isUDP(inSettings)) ? \
+						     ((int)(inSettings->mAmount / 100) + 1) : MINBARRIERTIMEOUT);
 	    if (sumreport->fullduplex_barrier.timeout < MINBARRIERTIMEOUT)
 		sumreport->fullduplex_barrier.timeout = MINBARRIERTIMEOUT;
 	} else {
