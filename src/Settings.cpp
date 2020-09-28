@@ -1212,19 +1212,24 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
 	    }
 	}
     }
-    // L2 settings
-    if (l2checks && isUDP(mExtSettings)) {
-	l2checks = 0;
-	// Client controls hash or not
-	if (mExtSettings->mThreadMode == kMode_Client) {
-	    setL2LengthCheck(mExtSettings);
-	} else {
+    if (isUDP(mExtSettings)) {
+	// L2 settings
+	if (l2checks && isUDP(mExtSettings)) {
+	    l2checks = 0;
+	    // Client controls hash or not
+	    if (mExtSettings->mThreadMode == kMode_Client) {
+		setL2LengthCheck(mExtSettings);
+	    } else {
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
-	    // Request server to do length checks
-	    setL2LengthCheck(mExtSettings);
+		// Request server to do length checks
+		setL2LengthCheck(mExtSettings);
 #else
-	    fprintf(stderr, "WARNING: option --l2checks not supported on this platform\n");
+		fprintf(stderr, "WARNING: option --l2checks not supported on this platform\n");
 #endif
+	    }
+	}
+	if (isFullDuplex(mExtSettings)) {
+	    setNoUDPfin(mExtSettings);
 	}
     }
     if (isIsochronous(mExtSettings) && mExtSettings->mIsochronousStr) {
@@ -1470,9 +1475,6 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 
     if (isUDP(server)) { // UDP test information passed in every packet per being stateless
 	struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) mBuf;
-	if (isFullDuplex(reversed_thread)) {
-	    setNoUDPfin(reversed_thread);
-	}
 	Settings_ReadClientSettingsV1(&reversed_thread, &hdr->base);
 	if (flags & HEADER_VERSION1) {
 	    if (flags & RUN_NOW)
