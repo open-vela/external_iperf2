@@ -1560,6 +1560,13 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 	int rc = setsockopt(reversed_thread->mSock, SOL_SOCKET, SO_MAX_PACING_RATE, \
 			    &reversed_thread->mFQPacingRate, sizeof(reversed_thread->mFQPacingRate));
 	WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
+  #ifdef HAVE_THREAD_DEBUG
+    #ifdef HAVE_INT64_T
+	thread_debug("Set socket %d pacing rate to %ld byte/sec", reversed_thread->mSock, reversed_thread->mFQPacingRate);
+    #else
+	thread_debug("Set socket %d pacing rate to %d byte/sec", reversed_thread->mSock, reversed_thread->mFQPacingRate);
+    #endif
+  #endif
     }
 #endif
 }
