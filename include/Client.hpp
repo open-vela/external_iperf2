@@ -87,6 +87,7 @@ public:
     // For things like dual tests a server needs to be started by the client,
     // The code in src/launch.cpp will invoke this
     int StartSynch(void);
+    void TxDelay(void);
     void ConnectPeriodic(void);
     void my_connect(void);
     bool isConnected(void);

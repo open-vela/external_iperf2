@@ -211,6 +211,26 @@ bool Client::isConnected (void) {
     return connected;
 }
 
+void Client::TxDelay (void) {
+    if (isTxHoldback(mSettings)) {
+#ifdef HAVE_CLOCK_NANOSLEEP
+	timespec tmp;
+	tmp.tv_sec = mSettings->txholdback_timer.tv_sec;
+	tmp.tv_nsec = mSettings->txholdback_timer.tv_usec * 1000;
+	// See if this a delay between connect and data
+	int rc = clock_nanosleep(CLOCK_MONOTONIC, 0, &tmp, NULL);
+	if (rc) {
+	    fprintf(stderr, "txholdback failed clock_nanosleep()=%d\n", rc);
+	}
+#else
+	now.setnow();
+	Timestamp tmp;
+	tmp.set(mSettings->txholdback_timer.tv_sec, mSettings->txholdback_timer.tv_usec);
+	delay_loop(tmp.subUsec(now));
+#endif
+    }
+}
+
 // There are multiple startup synchronizations, this code
 // handles them all. The caller decides to apply them
 // either before connect() or after connect() and before writes()
@@ -252,22 +272,6 @@ int Client::StartSynch (void) {
 	    delay_loop(tmp.subUsec(now));
 #endif
 	}
-    } else if (isTxHoldback(mSettings)) {
-#ifdef HAVE_CLOCK_NANOSLEEP
-	timespec tmp;
-	tmp.tv_sec = mSettings->txholdback_timer.tv_sec;
-	tmp.tv_nsec = mSettings->txholdback_timer.tv_usec * 1000;
-	// See if this a delay between connect and data
-	int rc = clock_nanosleep(CLOCK_MONOTONIC, 0, &tmp, NULL);
-	if (rc) {
-	    fprintf(stderr, "txholdback failed clock_nanosleep()=%d\n", rc);
-	}
-#else
-	now.setnow();
-	Timestamp tmp;
-	tmp.set(mSettings->txholdback_timer.tv_sec, mSettings->txholdback_timer.tv_usec);
-	delay_loop(tmp.subUsec(now));
-#endif
     }
     int setfullduplexflag = 0;
     if (isFullDuplex(mSettings) && !isServerReverse(mSettings)) {
