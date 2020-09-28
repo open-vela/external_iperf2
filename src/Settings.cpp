@@ -914,7 +914,7 @@ void Settings_Interpret(char option, const char *optarg, struct thread_Settings 
 #if defined(HAVE_DECL_SO_MAX_PACING_RATE)
 	        fqrate=0;
 		setFQPacing(mExtSettings);
-		mExtSettings->mFQPacingRate = (unsigned int) (bitorbyte_atoi(optarg) / 8);
+		mExtSettings->mFQPacingRate = (uintmax_t) (bitorbyte_atoi(optarg) / 8);
 #else
 		fprintf(stderr, "WARNING: The --fq-rate option is not supported\n");
 #endif
