@@ -1497,20 +1497,13 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 		if (isIsochronous(server)) {
 		    Settings_ReadClientSettingsIsoch(&reversed_thread, &hdr->isoch_settings);
 		}
-#if HAVE_DECL_SO_MAX_PACING_RATE
 		if (upperflags & HEADER_FQRATESET) {
 		    setFQPacing(reversed_thread);
 		    reversed_thread->mFQPacingRate = ntohl(hdr->start_fq.fqratel);
 #ifdef HAVE_INT64_T
-		    reversed_thread->mFQPacingRate |= (ntohl(hdr->start_fq.fqrateu) << 32);
+		    reversed_thread->mFQPacingRate |= ((uint64_t)(ntohl(hdr->start_fq.fqrateu)) << 32);
 #endif
-		    if (isFQPacing(reversed_thread)) {
-			int rc = setsockopt(reversed_thread->mSock, SOL_SOCKET, SO_MAX_PACING_RATE, \
-					    &reversed_thread->mFQPacingRate, sizeof(reversed_thread->mFQPacingRate));
-			WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
-		    }
 		}
-#endif
 	    }
 	}
     } else { //tcp first payload
@@ -1534,20 +1527,13 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 		if (isIsochronous(server)) {
 		    Settings_ReadClientSettingsIsoch(&reversed_thread, &hdr->isoch_settings);
 		}
-#if HAVE_DECL_SO_MAX_PACING_RATE
 		if (upperflags & HEADER_FQRATESET) {
 		    setFQPacing(reversed_thread);
-		    reversed_thread->mFQPacingRate = ntohl(hdr->start_fq.fqrate);
+		    reversed_thread->mFQPacingRate = ntohl(hdr->start_fq.fqratel);
 #ifdef HAVE_INT64_T
-		    reversed_thread->mFQPacingRate |= (ntohl(hdr->start_fq.fqrateu) << 32);
+		    reversed_thread->mFQPacingRate |= ((uint64_t)(ntohl(hdr->start_fq.fqrateu)) << 32);
 #endif
-		    if (isFQPacing(reversed_thread)) {
-			int rc = setsockopt(reversed_thread->mSock, SOL_SOCKET, SO_MAX_PACING_RATE, \
-					    &reversed_thread->mFQPacingRate, sizeof(reversed_thread->mFQPacingRate));
-			WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
-		    }
 		}
-#endif
 	    }
 	}
     }
@@ -1569,6 +1555,13 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 	}
 #endif
     }
+#if HAVE_DECL_SO_MAX_PACING_RATE
+    if (isFQPacing(reversed_thread)) {
+	int rc = setsockopt(reversed_thread->mSock, SOL_SOCKET, SO_MAX_PACING_RATE, \
+			    &reversed_thread->mFQPacingRate, sizeof(reversed_thread->mFQPacingRate));
+	WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
+    }
+#endif
 }
 
 int Settings_GenerateClientHdrV1(struct thread_Settings *client, struct client_hdr_v1 *hdr) {

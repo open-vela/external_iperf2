@@ -943,12 +943,6 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		    setNoUDPfin(server);
 		    unsetReport(server);
 		}
-#if HAVE_DECL_SO_MAX_PACING_RATE
-		if (upperflags & HEADER_FQRATESET) {
-		    setFQPacing(server);
-		    server->mFQPacingRate = ntohl(hdr->start_fq.fqrate);
-		}
-#endif
 		if (upperflags & HEADER_TRIPTIME) {
 		    server->triptime_start.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
 		    server->triptime_start.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
@@ -1007,14 +1001,6 @@ int Listener::apply_client_settings (thread_Settings *server) {
 			server->mThreadMode=kMode_Client;
 			setServerReverse(server);
 		    }
-#if HAVE_DECL_SO_MAX_PACING_RATE
-		    if (upperflags & HEADER_FQRATESET) {
-			setFQPacing(server);
-			server->mFQPacingRate = ntohl(hdr->start_fq.fqrate);
-			int rc = setsockopt(server->mSock, SOL_SOCKET, SO_MAX_PACING_RATE, &server->mFQPacingRate, sizeof(server->mFQPacingRate));
-			WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
-		    }
-#endif
 		}
 	    }
 	}
