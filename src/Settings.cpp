@@ -1364,7 +1364,7 @@ void Settings_GenerateListenerSettings(struct thread_Settings *client, struct th
     if (!isCompat(client) && \
          (client->mMode == kTest_DualTest || client->mMode == kTest_TradeOff)) {
 	Settings_Copy(client, listener, 0);
-	setCompat((*listener));
+	// setCompat((*listener));  RJM, fix me
         unsetDaemon((*listener));
         if (client->mListenPort != 0) {
             (*listener)->mPort   = client->mListenPort;
@@ -1545,7 +1545,7 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
     unsetTxHoldback(reversed_thread);
     setNoSettReport(reversed_thread);
     setNoConnectSync(reversed_thread);
-    // for legacy -d and -r need so set the reversed threads mMost
+    // for legacy -d and -r need so set the reversed threads mHost
     if (flags & HEADER_VERSION1) {
 	reversed_thread->mHost = new char[REPORT_ADDRLEN];
 	if (((sockaddr*)&server->peer)->sa_family == AF_INET) {
