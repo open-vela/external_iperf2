@@ -159,7 +159,7 @@ static void clientside_client_basic (struct thread_Settings *thread, Client *the
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Client spawn thread basic (sock=%d)", thread->mSock);
 #endif
-    if ((thread->mThreads > 1) && !isNoConnectSync(thread))
+    if ((thread->mThreads > 1) && !isNoConnectSync(thread) && !isCompat(thread))
 	// When -P > 1 then all threads finish connect before starting traffic
 	theClient->BarrierClient(thread->connects_done);
     if (theClient->isConnected()) {
@@ -169,6 +169,8 @@ static void clientside_client_basic (struct thread_Settings *thread, Client *the
 	if (!isCompat(thread)) {
 	    theClient->SendFirstPayload();
 	}
+	if (isTxHoldback(thread))
+	    theClient->TxDelay();
 	theClient->Run();
     }
 }
