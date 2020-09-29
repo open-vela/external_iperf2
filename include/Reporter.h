@@ -384,6 +384,7 @@ typedef void (* report_settings)( struct ReporterData* );
 typedef void (* report_statistics)( struct TransferInfo* );
 typedef void (* report_serverstatistics)( struct ConnectionInfo *, struct TransferInfo* );
 
+void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport* sumreport, int fullduplex);
 struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, int fullduplex);
 struct ReportHeader* InitIndividualReport(struct thread_Settings *inSettings);
 struct ReportHeader* InitConnectionReport(struct thread_Settings *inSettings, double ct);

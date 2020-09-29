@@ -140,7 +140,7 @@ static void free_common_copy (struct ReportCommon *common) {
     free(common);
 }
 
-static void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport* sumreport, int fullduplex) {
+void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport* sumreport, int fullduplex) {
     if (fullduplex) {
 	if (isUDP(inSettings)) {
 	    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_fullduplex_udp;
