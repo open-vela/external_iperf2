@@ -929,10 +929,6 @@ static inline void reporter_transfer_protocol_missed_reports (struct TransferInf
     }
 }
 
-static inline void reporter_reset_transfer_stats_fullduplex (struct TransferInfo *stats) {
-    stats->total.Bytes.prev = stats->total.Bytes.current;
-}
-
 static inline void reporter_reset_transfer_stats_client_tcp (struct TransferInfo *stats) {
     stats->total.Bytes.prev = stats->total.Bytes.current;
     stats->sock_callstats.write.WriteCnt = 0;
@@ -959,6 +955,7 @@ static inline void reporter_reset_transfer_stats_client_udp (struct TransferInfo
     if (stats->cntDatagrams)
 	stats->IPGsum = 0;
 }
+
 static inline void reporter_reset_transfer_stats_server_tcp (struct TransferInfo *stats) {
     int ix;
     stats->total.Bytes.prev = stats->total.Bytes.current;
@@ -1356,6 +1353,10 @@ void reporter_transfer_protocol_fullduplex_udp (struct TransferInfo *stats, int 
 	if (stats->output_handler)
 	    (*stats->output_handler)(stats);
 	stats->total.Bytes.prev = stats->total.Bytes.current;
+	stats->total.IPG.prev = stats->total.IPG.current;
+	stats->total.Datagrams.prev = stats->total.Datagrams.current;
+	if (stats->cntDatagrams)
+	    stats->IPGsum = 0.0;
     }
     if (final) {
 	stats->cntBytes = stats->total.Bytes.current;
