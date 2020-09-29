@@ -237,6 +237,8 @@ extern const char report_udp_fullduplex_header[];
 
 extern const char report_udp_fullduplex_format[];
 
+extern const char report_udp_fullduplex_sum_format[];
+
 extern const char report_udp_fullduplex_enhanced_format[];
 
 
