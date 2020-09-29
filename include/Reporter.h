@@ -487,7 +487,6 @@ void udp_output_sumcnt_write(struct TransferInfo *stats);
 void udp_output_sumcnt_write_enhanced (struct TransferInfo *stats);
 // UDP full duplex
 void udp_output_fullduplex_sum(struct TransferInfo *stats);
-void udp_output_fullduplex_sum_enhanced(struct TransferInfo *stats);
     
 // CSV output
 void udp_output_basic_csv(struct TransferInfo *stats);
