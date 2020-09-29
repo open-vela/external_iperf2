@@ -1032,6 +1032,10 @@ void reporter_transfer_protocol_server_udp (struct ReporterData *data, int final
     }
     if (fullduplexstats) {
 	fullduplexstats->total.Bytes.current += stats->cntBytes;
+	fullduplexstats->total.IPG.current += stats->cntIPG;
+	fullduplexstats->total.Datagrams.current += (stats->total.Datagrams.current - stats->total.Datagrams.prev);
+	if (fullduplexstats->IPGsum < stats->IPGsum)
+	    fullduplexstats->IPGsum = stats->IPGsum;
     }
     if (final) {
 	if ((stats->cntBytes > 0) && !TimeZero(stats->ts.intervalTime)) {
@@ -1161,6 +1165,10 @@ void reporter_transfer_protocol_client_udp (struct ReporterData *data, int final
     }
     if (fullduplexstats) {
 	fullduplexstats->total.Bytes.current += stats->cntBytes;
+	fullduplexstats->total.IPG.current += stats->cntIPG;
+	sumstats->total.Datagrams.current += stats->cntDatagrams;
+	if (fullduplexstats->IPGsum < stats->IPGsum)
+	    fullduplexstats->IPGsum = stats->IPGsum;
     }
     if (final) {
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
