@@ -315,6 +315,11 @@ void Listener::Run (void) {
 #if HAVE_THREAD_DEBUG
 			thread_debug("BiDir report client=%p/%p server=%p/%p", (void *) listener_client_settings, (void *) listener_client_settings->mFullDuplexReport, (void *) server, (void *) server->mFullDuplexReport);
 #endif
+			// Reset the sum output routine for the server sum report
+			// now that it's know to be full duplex. This wasn't known
+			// during accept()
+			assert(server->mSumReport != NULL);
+			SetSumHandlers(server, server->mSumReport, 0);
 			server->runNow =  listener_client_settings;
 		    } else if (server->mMode != kTest_Normal) {
 			client_init(listener_client_settings);
