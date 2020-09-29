@@ -1349,6 +1349,8 @@ void reporter_transfer_protocol_fullduplex_tcp (struct TransferInfo *stats, int 
 void reporter_transfer_protocol_fullduplex_udp (struct TransferInfo *stats, int final) {
     if (!final || (final && (stats->cntBytes > 0) && !TimeZero(stats->ts.intervalTime))) {
 	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
+	stats->cntDatagrams = stats->total.Datagrams.current - stats->total.Datagrams.prev;
+	stats->cntIPG = stats->total.IPG.current - stats->total.IPG.prev;
 	if (final)
 	    reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
 	if (stats->output_handler)
@@ -1357,6 +1359,9 @@ void reporter_transfer_protocol_fullduplex_udp (struct TransferInfo *stats, int 
     }
     if (final) {
 	stats->cntBytes = stats->total.Bytes.current;
+	stats->cntBytes = stats->total.Bytes.current;
+	stats->cntDatagrams = stats->total.Datagrams.current ;
+	stats->cntIPG = stats->total.IPG.current;
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
 	if (stats->output_handler)
 	    (*stats->output_handler)(stats);
