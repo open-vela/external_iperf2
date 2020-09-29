@@ -1363,6 +1363,7 @@ void reporter_transfer_protocol_fullduplex_udp (struct TransferInfo *stats, int 
 	stats->cntBytes = stats->total.Bytes.current;
 	stats->cntDatagrams = stats->total.Datagrams.current ;
 	stats->cntIPG = stats->total.IPG.current;
+	stats->IPGsum = TimeDifference(stats->ts.packetTime, stats->ts.startTime);	
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
 	if (stats->output_handler)
 	    (*stats->output_handler)(stats);
