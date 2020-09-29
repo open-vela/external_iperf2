@@ -415,6 +415,9 @@ const char report_udp_fullduplex_format[] =
 const char report_udp_fullduplex_enhanced_format[] =
 "[FD%d] " IPERFTimeFrmt " sec  %ss  %ss/sec %5" PRIdMAX "%8.0f pps\n";
 
+const char report_udp_fullduplex_sum_format[] =
+"[SUM] " IPERFTimeFrmt " sec  %ss  %ss/sec %5" PRIdMAX "%8.0f pps\n";
+
 /* -------------------------------------------------------------------
  * Misc reports
  * ------------------------------------------------------------------- */
