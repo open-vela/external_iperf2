@@ -73,7 +73,7 @@ static int HEADING_FLAG(report_bw_jitter_loss_enhanced_isoch) = 0;
 static int HEADING_FLAG(report_frame_jitter_loss_enhanced) = 0;
 static int HEADING_FLAG(report_frame_tcp_enhanced) = 0;
 static int HEADING_FLAG(report_bw_write_sumcnt_enhanced) = 0;
-static int HEADING_FLAG(report_bw_datagrams_pps) = 0;
+static int HEADING_FLAG(report_udp_fullduplex) = 0;
 
 void reporter_default_heading_flags (int flag) {
     HEADING_FLAG(report_bw) = flag;
@@ -91,7 +91,7 @@ void reporter_default_heading_flags (int flag) {
     HEADING_FLAG(report_frame_jitter_loss_enhanced) = flag;
     HEADING_FLAG(report_frame_tcp_enhanced) = flag;
     HEADING_FLAG(report_bw_write_sumcnt_enhanced) = flag;
-    HEADING_FLAG(report_bw_datagrams_pps) = flag;
+    HEADING_FLAG(report_udp_fullduplex) = flag;
 }
 
 static inline void _print_stats_common (struct TransferInfo *stats) {
@@ -131,36 +131,13 @@ static inline void set_llawbuf(double lambda, double meantransit) {
 }
 
 //TCP Output
-void tcp_output_fullduplex_sum (struct TransferInfo *stats) {
+void tcp_output_fullduplex (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw);
     _print_stats_common(stats);
     printf(report_bw_sum_fullduplex_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
 }
 
-void tcp_output_fullduplex_sum_enhanced (struct TransferInfo *stats) {
-    HEADING_PRINT_COND(report_bw);
-    _print_stats_common(stats);
-    printf(report_bw_sum_fullduplex_enhanced_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
-}
-
-void tcp_output_fullduplex_read (struct TransferInfo *stats) {
-    HEADING_PRINT_COND(report_bw);
-    _print_stats_common(stats);
-    printf(report_bw_sum_fullduplex_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
-}
-
-void tcp_output_fullduplex_read_enhanced (struct TransferInfo *stats) {
-    HEADING_PRINT_COND(report_bw);
-    _print_stats_common(stats);
-    printf(report_bw_sum_fullduplex_enhanced_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
-}
-void tcp_output_fullduplex_write (struct TransferInfo *stats) {
-    HEADING_PRINT_COND(report_bw);
-    _print_stats_common(stats);
-    printf(report_bw_sum_fullduplex_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
-}
-
-void tcp_output_fullduplex_write_enhanced (struct TransferInfo *stats) {
+void tcp_output_fullduplex_enhanced (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw);
     _print_stats_common(stats);
     printf(report_bw_sum_fullduplex_enhanced_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
@@ -290,23 +267,20 @@ void tcp_output_write_enhanced (struct TransferInfo *stats) {
 }
 
 //UDP output
-void udp_output_fullduplex_sum (struct TransferInfo *stats) {
-    HEADING_PRINT_COND(report_bw_datagrams_pps);
+void udp_output_fullduplex (struct TransferInfo *stats) {
+    HEADING_PRINT_COND(report_udp_fullduplex);
     _print_stats_common(stats);
-    printf(report_bw_datagrams_pps_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext, \
+    printf(report_udp_fullduplex_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext, \
 	   stats->cntDatagrams, (stats->cntIPG && (stats->IPGsum > 0.0) ? (stats->cntIPG / stats->IPGsum) : 0.0));
 }
 
-void udp_output_fullduplex_read (struct TransferInfo *stats) {
-    HEADING_PRINT_COND(report_bw);
+void udp_output_fullduplex_enhanced (struct TransferInfo *stats) {
+    HEADING_PRINT_COND(report_udp_fullduplex);
     _print_stats_common(stats);
-    printf(report_bw_sum_fullduplex_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
+    printf(report_udp_fullduplex_enhanced_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext, \
+	   stats->cntDatagrams, (stats->cntIPG && (stats->IPGsum > 0.0) ? (stats->cntIPG / stats->IPGsum) : 0.0));
 }
-void udp_output_fullduplex_write (struct TransferInfo *stats) {
-    HEADING_PRINT_COND(report_bw);
-    _print_stats_common(stats);
-    printf(report_bw_sum_fullduplex_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
-}
+
 
 void udp_output_read (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw_jitter_loss);

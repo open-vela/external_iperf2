@@ -379,12 +379,6 @@ const char report_sumcnt_bw_jitter_loss_enhanced_format[] =
 const char report_bw_jitter_loss_suppress_enhanced_format[] =
 "[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%) -/-/-/- ms %4.0f pps\n";
 
-const char report_bw_datagrams_pps_header[] =
-"[ ID] Interval       Transfer     Bandwidth    Datagrams   PPS\n";
-
-const char report_bw_datagrams_pps_format[] =
-"[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec %5" PRIdMAX "%8.0f pps\n";
-
 /*
  * Frame interval reports
  */
@@ -411,6 +405,15 @@ const char report_bw_sum_fullduplex_format[] =
 
 const char report_bw_sum_fullduplex_enhanced_format[] =
 "[FD%d] " IPERFTimeFrmt " sec  %ss  %ss/sec\n";
+
+const char report_udp_fullduplex_header[] =
+"[ ID] Interval       Transfer     Bandwidth    Datagrams   PPS\n";
+
+const char report_udp_fullduplex_format[] =
+"[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec %5" PRIdMAX "%8.0f pps\n";
+
+const char report_udp_fullduplex_enhanced_format[] =
+"[FD%d] " IPERFTimeFrmt " sec  %ss  %ss/sec %5" PRIdMAX "%8.0f pps\n";
 
 /* -------------------------------------------------------------------
  * Misc reports

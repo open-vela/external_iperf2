@@ -465,8 +465,8 @@ void tcp_output_fullduplex_write(struct TransferInfo *stats);
 void tcp_output_fullduplex_write_enhanced(struct TransferInfo *stats);
 void tcp_output_fullduplex_read(struct TransferInfo *stats);
 void tcp_output_fullduplex_read_enhanced(struct TransferInfo *stats);
-void tcp_output_fullduplex_sum(struct TransferInfo *stats);
-void tcp_output_fullduplex_sum_enhanced(struct TransferInfo *stats);
+void tcp_output_fullduplex(struct TransferInfo *stats);
+void tcp_output_fullduplex_enhanced(struct TransferInfo *stats);
 
 // UDP server
 void udp_output_read(struct TransferInfo *stats);
@@ -486,8 +486,9 @@ void udp_output_sum_write_enhanced (struct TransferInfo *stats);
 void udp_output_sumcnt_write(struct TransferInfo *stats);
 void udp_output_sumcnt_write_enhanced (struct TransferInfo *stats);
 // UDP full duplex
-void udp_output_fullduplex_sum(struct TransferInfo *stats);
-    
+void udp_output_fullduplex(struct TransferInfo *stats);
+void udp_output_fullduplex_enhanced(struct TransferInfo *stats);
+
 // CSV output
 void udp_output_basic_csv(struct TransferInfo *stats);
 void tcp_output_basic_csv(struct TransferInfo *stats);
