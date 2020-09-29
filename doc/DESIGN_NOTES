@@ -5,13 +5,15 @@ Code at rev 2.0.14
 
 This document helps to describe the iperf 2 design. It's quite complicated. It's hoped this overview will help someone to understand the code. As with any open source software, the authoritative information comes from reading the code itself.
 
-Iperf 2 is a designed to be a multi-threaded program. It's also a hybrid of C and C++ code that evolved from 1.7 to 2.0.5 where it stalled. A new group from Broadcom with a WiFi focus took over the code base starting at 2.0.5 and we are now up to 2.0.14. The only link between the groups been the code itself.
+Iperf 2 is a designed to be a multi-threaded program. It's also a hybrid of C and C++ code that evolved from 1.7 to 2.0.5 where it stalled. A new group from Broadcom with a WiFi focus took over the code base starting at 2.0.5 and we are now up to 2.0.14. The only link between the groups has been the code itself.
 
-Iperf 3 is a code base and isn't compatible with iperf 2. This document doesn't discuss iperf 3.
+Iperf 3 is a simpler design and simpler code base and isn't compatible with iperf 2. The primary differences are that iperf 2 is multithreaded, supports multicast, and has end/end latency features. Iperf 3 has SCTP support and support for JSON outpu. This document doesn't discuss iperf 3. 
 
 Threading overview
 ------------------
-There are multiple threads being a listener thread, a reporter thread, and one or more traffic threads. The traffic threads are either a server or a client, or a server in the role of a client or a client in the role of as server per the --reverse option.
+The idea behind the threading is to have very lean traffic threads that are decoupled from user i/o. The goal with iperf is to stress network i/o and this threading separation allows for that.  User i/o and calculations are done by a dedicated thread, i.e. the reporter thread.
+
+There are multiple threads being a listener thread, a reporter thread, and one or more traffic threads. The traffic threads are either a server or a client, or a server in the role of a client or a client in the role of as server per the --reverse option. The traffic threads scale with the -P option.
 
 Listener (src/Listener.cpp include/Listener.hpp):
 
@@ -85,19 +87,20 @@ o Server relay report
 Each report has a common settings filed which are deep copies from the thread settings object. Each report having it's own copy allows the design to  decouple and encapsulate reporting from thread themsleves, e.g. a thread can terminate and memory be freed prior to the reporter outputing a report that thread posted.
 
 Data Report and packet rings
+----------------------------
 
-The data report warrant its own section do to it complexity.  The core of the data report is a packet ring and statistics per that traffic thread. The packet ring allows the traffic thread to communicate read or write statistics to the reporter thread using shared memory and very limited syscalls or mutexes. The packet ring has producer and consumer pointer. The ring elements are report structs. Data reports remain on the reporter's jobq for the life of the traffic stream.
+The data report warrant its own section do to it complexity.  The core of the data report is a packet ring and statistics per that traffic thread. The packet ring allows the traffic thread to communicate read or write statistics to the reporter thread using shared memory and very limited syscalls or mutexes. The packet ring has producer and consumer pointer that can be updated in an atomic matter on multicore systems. The ring elements pointer to are reportstructs.  Data reports remain on the reporter's jobq for the life of the traffic stream.
 
 Packet rings (src/packetring.c include/packetring.h)
-
-A packet ring is a circular buffer between a traffic thread and reporter thread. A traffic thread is a producer and the reporter thread is the consumer. There is one packet ring per each traffic thread. The one reporter thread services all the traffic threads' rings. A traffic thread posts packet, read or write information using a reportstruct. This is the necessary and sufficient information such that the reporter thread can perform the traffi caccounting as well as display interval or final reports.
+----------------------------------------------------
+A packet ring is a circular buffer between a traffic thread and reporter thread. A traffic thread is a producer and the reporter thread is the consumer. There is one packet ring per each traffic thread. The one reporter thread services all the traffic threads' rings. A traffic thread posts packet or read or write information to the packet ring. This is the necessary and sufficient information such that the reporter thread can perform the traffic accounting as well as display interval or final reports base upon timestamps held within the ring's elements.
 
 Summing (src/list.cpp include/list.hpp)
-
+---------------------------------------
 Packet or read or write summing is done on a per client (host ip) basis. All traffic from a specific client will be summed. The active client list is kept in a linked list. A new client will trigger a new sum report.
 
 Function vectors (src/Reports.c src/Reporter.c src/ReportOutputs.c)
-
+-------------------------------------------------------------------
 The implementation of the reporter uses function vectors to handle the various types of traffic reporting. It's done this way so to minimize inline tests and optimize read/write or network i/o performance. The function pointers are initialized at thread and report creation time.  The function pointers consist of:
 
 *packet_handler() - this is used to account for tcp or udp write or read called for every read or write
