@@ -819,6 +819,8 @@ void write_UDP_AckFIN (struct TransferInfo *stats) {
 	    }
 	    rc = read(stats->common->socket, ackPacket, ackpacket_length);
 	    WARN_errno(rc < 0, "read");
+	    if (rc < 0)
+		break;
 	    if (rc > 0) {
 #ifdef HAVE_THREAD_DEBUG
 		thread_debug("UDP server thinks server stats packet lost, will retransmit and try again", rc);

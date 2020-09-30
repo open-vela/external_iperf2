@@ -393,7 +393,7 @@ struct ReportHeader *InitSettingsReport(struct thread_Settings *inSettings);
 struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings, struct server_hdr *server);
 void PostReport(struct ReportHeader *reporthdr);
 void ReportPacket(struct ReporterData *reporthdr, struct ReportStruct *packet);
-void EndJob(struct ReportHeader *reporthdr,  struct ReportStruct *packet);
+int EndJob(struct ReportHeader *reporthdr,  struct ReportStruct *packet);
 void FreeReport(struct ReportHeader *reporthdr);
 void FreeSumReport (struct SumReport *sumreport);
 void FreeConnectionReport(struct ConnectionInfo *reporthdr);

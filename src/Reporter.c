@@ -155,13 +155,14 @@ void ReportPacket (struct ReporterData* data, struct ReportStruct *packet) {
  * thread to print a final report and to remove the data report from its jobq.
  * It also handles the freeing reports and other closing actions
  */
-void EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
+int EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
     assert(reporthdr!=NULL);
     assert(finalpacket!=NULL);
     struct ReporterData *report = (struct ReporterData *) reporthdr->this_report;
     struct ReportStruct packet;
     struct TransferInfo *stats = &report->info;
     memset(&packet, 0, sizeof(struct ReportStruct));
+    int do_close = 1;
     /*
      * Using PacketID of -1 ends reporting
      * It pushes a "special packet" through
@@ -200,14 +201,6 @@ void EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
 	}
 	Condition_Unlock((*(report->packetring->awake_producer)));
     }
-    if (isUDP(stats->common) && (stats->common->ThreadMode == kMode_Server) && \
-	!isMulticast(stats->common) && !isNoUDPfin(stats->common)) {
-	    // send a UDP acknowledgement back except when:
-	    // 1) we're NOT receiving multicast
-	    // 2) the user requested no final exchange
-	    // 3) this is a full duplex test
-	    write_UDP_AckFIN(stats);
-    }
     if (report->FullDuplexReport && isFullDuplex(report->FullDuplexReport->info.common)) {
 	if (fullduplex_stop_barrier(&report->FullDuplexReport->fullduplex_barrier)) {
 	    struct Condition *tmp = &report->FullDuplexReport->fullduplex_barrier.await;
@@ -218,15 +211,11 @@ void EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
 	    int rc = close(report->FullDuplexReport->info.common->socket);
 	    WARN_errno( rc == SOCKET_ERROR, "full duplex close" );
 	    FreeSumReport(report->FullDuplexReport);
+	} else {
+	    do_close = 0;
 	}
-    } else {
-#if HAVE_THREAD_DEBUG
-	thread_debug("TCP/UDP close sock=%d", stats->common->socket);
-#endif
-	int rc = close(stats->common->socket);
-	WARN_errno(rc == SOCKET_ERROR, "end report close");
     }
-    FreeReport(reporthdr);
+    return do_close;
 }
 
 //  This is used to determine the packet/cpu load into the reporter thread
