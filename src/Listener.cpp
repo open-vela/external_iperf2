@@ -142,6 +142,10 @@ void Listener::Run (void) {
     if (mSettings->clientListener) {
 	SockAddr_remoteAddr(mSettings);
     }
+    if (!isUDP(mSettings)) {
+	// TCP needs just one listen
+	my_listen(); // This will set ListenSocket to a new sock fd
+    }
     bool mMode_Time = isServerModeTime(mSettings) && !isDaemon(mSettings);
     if (mMode_Time) {
 	mEndTime.setnow();
@@ -176,7 +180,10 @@ void Listener::Run (void) {
 #endif
 	    continue;
 	}
-	my_listen(); // This will set ListenSocket to a new sock fd
+	if (isUDP(mSettings)) {
+	    // UDP needs a new listen per every new socket
+	    my_listen(); // This will set ListenSocket to a new sock fd
+	}
 	// Use a select() with a timeout if -t is set
 	if (mMode_Time) {
 	    // Hang a select w/timeout on the listener socket
