@@ -81,7 +81,6 @@ void SockAddr_remoteAddr(struct thread_Settings *inSettings) {
             ((struct sockaddr*)&inSettings->peer)->sa_family = AF_INET;
         }
     }
-
     if (SockAddr_isIPv6(&inSettings->peer)) {
         inSettings->size_peer = sizeof(struct sockaddr_in6);
     } else {

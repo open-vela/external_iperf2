@@ -724,14 +724,11 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
     if (isCongestionControl(report->common) && report->common->Congestion) {
 	fprintf(stdout, "TCP congestion control set to %s\n", report->common->Congestion);
     }
-    if (isSingleUDP(report->common)) {
-	fprintf(stdout, "UDP set to single-server, minimized-threading mode (use lower case -u for optimal threading)\n");
-    }
     if (isSingleClient(report->common)) {
-	fprintf(stdout, "Server set to single client traffic mode (serialize traffic tests)\n");
+	fprintf(stdout, "Server set to single client traffic mode per -U (serialize traffic tests)\n");
     }
-    if (isSingleClient(report->common)) {
-	fprintf(stdout, "Server set to single client traffic mode (serialize traffic tests)\n");
+    if (isMulticast(report->common)) {
+	fprintf(stdout, "Server set to single client traffic mode (per multicast receive)\n");
     }
     if (isRxHistogram(report->common)) {
 	fprintf(stdout, "Enabled rx-histograms bin-width=%0.3f ms, bins=%d (clients must use --trip-times)\n", \
