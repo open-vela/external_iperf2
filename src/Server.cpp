@@ -85,6 +85,7 @@ Server::Server (thread_Settings *inSettings) {
     reportstruct = &scratchpad;
     memset(&scratchpad, 0, sizeof(struct ReportStruct));
     mySocket = inSettings->mSock;
+    peerclose = false;
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
     myDropSocket = inSettings->mSockDrop;
     if (isL2LengthCheck(mSettings)) {
@@ -146,7 +147,7 @@ Server::~Server (void) {
 }
 
 inline bool Server::InProgress (void) {
-    if (sInterupted ||
+    if (sInterupted || peerclose ||
 	((isServerModeTime(mSettings) || (isModeTime(mSettings) && isReverse(mSettings))) && mEndTime.before(reportstruct->packetTime)))
 	return false;
     return true;
@@ -469,7 +470,7 @@ bool Server::InitTrafficLoop (void) {
     return true;
 }
 
-inline int Server::ReadWithRxTimestamp (int *readerr) {
+inline int Server::ReadWithRxTimestamp (void) {
     long currLen;
     int tsdone = 0;
 
@@ -490,19 +491,18 @@ inline int Server::ReadWithRxTimestamp (int *readerr) {
     if (currLen <=0) {
 	// Socket read timeout or read error
 	reportstruct->emptyreport=1;
-	// End loop on 0 read or socket error
-	// except for socket read timeout
-	if (currLen == 0 ||
+	if (currLen == 0) {
+	    peerclose = true;
+	} else if
 #ifdef WIN32
 	    (WSAGetLastError() != WSAEWOULDBLOCK)
 #else
 	    (errno != EAGAIN && errno != EWOULDBLOCK)
 #endif
-	   ) {
+        {
 	    WARN_errno(currLen, "recvmsg");
-	    *readerr = 1;
+	    currLen= 0;
 	}
-	currLen= 0;
     }
 
     if (!tsdone) {
@@ -711,8 +711,8 @@ void Server::RunUDP (void) {
 	reportstruct->packetLen=0;
 	// read the next packet with timestamp
 	// will also set empty report or not
-	rxlen=ReadWithRxTimestamp(&readerr);
-	if (!readerr && (rxlen > 0)) {
+	rxlen=ReadWithRxTimestamp();
+	if (!peerclose && (rxlen > 0)) {
 	    reportstruct->emptyreport = 0;
 	    reportstruct->packetLen = rxlen;
 	    if (isL2LengthCheck(mSettings)) {

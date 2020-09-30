@@ -1165,7 +1165,7 @@ void reporter_transfer_protocol_client_udp (struct ReporterData *data, int final
     if (fullduplexstats) {
 	fullduplexstats->total.Bytes.current += stats->cntBytes;
 	fullduplexstats->total.IPG.current += stats->cntIPG;
-	sumstats->total.Datagrams.current += stats->cntDatagrams;
+	fullduplexstats->total.Datagrams.current += stats->cntDatagrams;
 	if (fullduplexstats->IPGsum < stats->IPGsum)
 	    fullduplexstats->IPGsum = stats->IPGsum;
     }

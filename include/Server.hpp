@@ -92,7 +92,7 @@ private:
     bool InitTrafficLoop(void);
     inline void SetFullDuplexReportStartTime(void);
     inline void SetReportStartTime();
-    int ReadWithRxTimestamp(int *readerr);
+    int ReadWithRxTimestamp(void);
     bool ReadPacketID(void);
     void L2_processing(void);
     int L2_quintuple_filter(void);
@@ -100,6 +100,7 @@ private:
     bool InProgress(void);
     int SkipFirstPayload(void);
     Timestamp connect_done;
+    bool peerclose;
 #if WIN32
     SOCKET mySocket;
     SOCKET myDropSocket;
