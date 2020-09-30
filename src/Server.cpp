@@ -287,7 +287,7 @@ void Server::RunTCP (void) {
 	thread_debug("tcp close sock=%d", mySocket);
 #endif
 	int rc = close(mySocket);
-	WARN_errno(rc == SOCKET_ERROR, "end report close");
+	WARN_errno(rc == SOCKET_ERROR, "tcp server close");
     }
     Iperf_remove_host(&mSettings->peer);
     FreeReport(myJob);
@@ -762,7 +762,7 @@ void Server::RunUDP (void) {
 	thread_debug("udp close sock=%d", mySocket);
 #endif
 	int rc = close(mySocket);
-	WARN_errno(rc == SOCKET_ERROR, "sock close");
+	WARN_errno(rc == SOCKET_ERROR, "udp server close");
     }
     Iperf_remove_host(&mSettings->peer);
     FreeReport(myJob);

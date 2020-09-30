@@ -1108,7 +1108,7 @@ void Client::FinishTrafficActions (void) {
 	thread_debug("UDP client close sock=%d", mySocket);
 #endif
 	int rc = close(mySocket);
-	WARN_errno(rc == SOCKET_ERROR, "end report close");
+	WARN_errno(rc == SOCKET_ERROR, "client close");
     }
     Iperf_remove_host(&mSettings->peer);
     FreeReport(myJob);
