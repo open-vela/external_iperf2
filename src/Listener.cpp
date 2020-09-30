@@ -104,8 +104,6 @@ Listener::Listener (thread_Settings *inSettings) {
     // alloc and initialize the buffer (mBuf) used for test messages in the payload
     mBuf = new char[(mSettings->mBufLen > MINMBUFALLOCSIZE) ? mSettings->mBufLen : MINMBUFALLOCSIZE]; // defined in payloads.h
     FAIL_errno(mBuf == NULL, "No memory for buffer\n", mSettings);
-    // Open the listen socket
-    my_listen();
 } // end Listener
 
 /* -------------------------------------------------------------------
@@ -163,7 +161,9 @@ void Listener::Run (void) {
 	    break;
 	}
 	// Serialize in the event the -1 option or --singleclient is set
-	if (isSingleClient(mSettings) && mCount && (thread_numtrafficthreads() > 0)) {
+	int tc;
+	if ((isSingleClient(mSettings) ||  isMulticast(mSettings)) && \
+	    mCount && (tc = (thread_numtrafficthreads()) > 0)) {
 	    // Start with a delay in the event some traffic
 	    // threads are pending to be scheduled and haven't
 	    // had a chance to update the traffic thread count.
@@ -172,8 +172,9 @@ void Listener::Run (void) {
 	    // really should be good enough unless the os scheduler sucks
 	    delay_loop(SINGLECLIENTDELAY_DURATION);
 #ifdef HAVE_THREAD_DEBUG
-	    thread_debug("Listener single client loop");
+	    thread_debug("Listener single client loop mc/t/mcast/sc %d/%d/%d/%d",mCount, tc, isMulticast(mSettings), isSingleClient(mSettings));
 #endif
+	    continue;
 	}
 	// Use a select() with a timeout if -t is set
 	if (mMode_Time) {
@@ -487,18 +488,23 @@ void Listener::my_multicast_join(void) {
 	    int rc = setsockopt(ListenSocket, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, \
 				 (char*) &mreq, sizeof(mreq));
 	    WARN_errno(rc == SOCKET_ERROR, "multicast v6 join");
+	    int mc_all = 0;
+	    rc = setsockopt(ListenSocket, IPPROTO_IP, IP_MULTICAST_ALL, (void*) &mc_all, sizeof(mc_all));
+	    WARN_errno(rc == SOCKET_ERROR, "ip_multicast_all");
 #else
 	    fprintf(stderr, "Unfortunately, IPv6 multicast is not supported on this platform\n");
 #endif
 	}
     } else {
+	int mc_all = 0;
+	int rc;
+	rc = setsockopt(ListenSocket, IPPROTO_IP, IP_MULTICAST_ALL, (void*) &mc_all, sizeof(mc_all));
+	WARN_errno(rc == SOCKET_ERROR, "ip_multicast_all");
 #ifdef HAVE_SSM_MULTICAST
 	// Here it's either an SSM S,G multicast join or a *,G with an interface specifier
 	// Use the newer socket options when these are specified
 	socklen_t socklen = sizeof(struct sockaddr_storage);
 	int iface=0;
-	int rc;
-
 #ifdef HAVE_NET_IF_H
 	/* Set the interface or any */
 	if (mSettings->mIfrname) {
@@ -538,7 +544,7 @@ void Listener::my_multicast_join(void) {
 		rc = -1;
 #if HAVE_DECL_MCAST_JOIN_SOURCE_GROUP
 		rc = setsockopt(ListenSocket,IPPROTO_IPV6,MCAST_JOIN_SOURCE_GROUP, &group_source_req,
-			    sizeof(group_source_req));
+				sizeof(group_source_req));
 #endif
 		FAIL_errno(rc == SOCKET_ERROR, "mcast v6 join source group",mSettings);
 	    } else {
@@ -647,6 +653,7 @@ void Listener::my_multicast_join(void) {
 		FAIL_errno(rc == SOCKET_ERROR, "mcast join group",mSettings);
 	    }
 	}
+
 #else
 	fprintf(stderr, "Unfortunately, SSM is not supported on this platform\n");
 	exit(-1);
@@ -776,6 +783,7 @@ bool Listener::L2_setup (thread_Settings *server, int sockfd) {
 int Listener::udp_accept (thread_Settings *server) {
     assert(server != NULL);
     int rc;
+    my_listen(); // This will set ListenSocket to a new sock fd
     assert(ListenSocket > 0);
     // Start with a thread_rest - this allows the server thread
     // a shot at processing the
@@ -798,6 +806,10 @@ int Listener::udp_accept (thread_Settings *server) {
     if (!(rc < 0) && !sInterupted) {
 	// Handle connection for UDP sockets
 	int gid = Iperf_push_host_port_conditional(&server->peer, server);
+#if HAVE_THREAD_DEBUG
+	if (gid < 0)
+	    thread_debug("rcvfrom peer: drop duplicate");
+#endif
 	if (gid > 0) {
 	    // We have a new UDP flow (based upon key of quintuple)
 	    // so let's hand off this socket
@@ -815,7 +827,6 @@ int Listener::udp_accept (thread_Settings *server) {
 	    server->size_local = sizeof(iperf_sockaddr);
 	    getsockname(server->mSock, (sockaddr*) &server->local, &server->size_local);
 	    SockAddr_Ifrname(server);
-	    my_listen(); // This will set ListenSocket to a new sock fd
 	}
     }
     return server->mSock;
