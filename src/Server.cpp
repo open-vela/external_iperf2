@@ -282,8 +282,15 @@ void Server::RunTCP (void) {
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
     reportstruct->packetLen = 0;
-    EndJob(myJob, reportstruct);
+    if (EndJob(myJob, reportstruct)) {
+#if HAVE_THREAD_DEBUG
+	thread_debug("tcp close sock=%d", mySocket);
+#endif
+	int rc = close(mySocket);
+	WARN_errno(rc == SOCKET_ERROR, "end report close");
+    }
     Iperf_remove_host(&mSettings->peer);
+    FreeReport(myJob);
 }
 
 void Server::InitKernelTimeStamping (void) {
@@ -742,7 +749,22 @@ void Server::RunUDP (void) {
 	}
     }
     disarm_itimer();
-    EndJob(myJob, reportstruct);
+    int do_close = EndJob(myJob, reportstruct);
+    if (!isMulticast(mSettings) && !isNoUDPfin(mSettings)) {
+	// send a UDP acknowledgement back except when:
+	// 1) we're NOT receiving multicast
+	// 2) the user requested no final exchange
+	// 3) this is a full duplex test
+	write_UDP_AckFIN(&myReport->info);
+    }
+    if (do_close) {
+#if HAVE_THREAD_DEBUG
+	thread_debug("udp close sock=%d", mySocket);
+#endif
+	int rc = close(mySocket);
+	WARN_errno(rc == SOCKET_ERROR, "sock close");
+    }
     Iperf_remove_host(&mSettings->peer);
+    FreeReport(myJob);
 }
 // end Recv
