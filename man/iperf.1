@@ -106,7 +106,7 @@ set target read rate to \fIn\fR bits/sec. TCP only for the server.
 run in server mode
 .TP
 .BR "    --histograms[="\fIbinwidth\fR[u],\fIbincount\fR,[\fIlowerci\fR],[\fIupperci\fR] "]"
-enable latency histograms for packets with -u (UDP) or for bursts and frames with --trip-times or --isochronous, bin width (default 1 millisecond, append u for microseconds,) bincount is total bins (default 1000), ci is confidence interval between 0-100% (default lower 5%, upper 95%, 3 stdev 99.7%)
+enable latency histograms for udp packets (-u), for tcp writes (with --trip-times), or for either udp or tcp with --isochronous clients. The binning can be modified. Bin widths (default 1 millisecond, append u for microseconds,) bincount is total bins (default 1000), ci is confidence interval between 0-100% (default lower 5%, upper 95%, 3 stdev 99.7%)
 .TP
 .BR -B ", " --bind " \fIip\fR | \fIip\fR%\fIdevice\fR"
 bind src ip addr and optional src device for receiving
