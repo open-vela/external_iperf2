@@ -8075,6 +8075,17 @@ fi
 cat >>confdefs.h <<_ACEOF
 #define HAVE_DECL_IPV6_TCLASS $ac_have_decl
 _ACEOF
+ac_fn_c_check_decl "$LINENO" "IP_MULTICAST_ALL" "ac_cv_have_decl_IP_MULTICAST_ALL" "$in_h
+"
+if test "x$ac_cv_have_decl_IP_MULTICAST_ALL" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_IP_MULTICAST_ALL $ac_have_decl
+_ACEOF
 ac_fn_c_check_decl "$LINENO" "MCAST_JOIN_GROUP" "ac_cv_have_decl_MCAST_JOIN_GROUP" "$in_h
 "
 if test "x$ac_cv_have_decl_MCAST_JOIN_GROUP" = xyes; then :

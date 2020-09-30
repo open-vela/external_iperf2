@@ -57,6 +57,10 @@
    to 0 if you don't. */
 #undef HAVE_DECL_IP_ADD_SOURCE_MEMBERSHIP
 
+/* Define to 1 if you have the declaration of `IP_MULTICAST_ALL', and to 0 if
+   you don't. */
+#undef HAVE_DECL_IP_MULTICAST_ALL
+
 /* Define to 1 if you have the declaration of `MCAST_JOIN_GROUP', and to 0 if
    you don't. */
 #undef HAVE_DECL_MCAST_JOIN_GROUP
