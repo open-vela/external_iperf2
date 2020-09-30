@@ -1093,7 +1093,7 @@ void Client::FinishTrafficActions (void) {
 	}
 	reportstruct->packetLen = 0;
     }
-    EndJob(myJob, reportstruct);
+    int do_close = EndJob(myJob, reportstruct);
     if (isUDP(mSettings)) {
 	if (!(isMulticast(mSettings) || isNoUDPfin(mSettings))) {
 	    /*
@@ -1102,6 +1102,8 @@ void Client::FinishTrafficActions (void) {
 	     */
 	    AwaitServerFinPacket();
 	}
+    }
+    if (do_close) {
 #if HAVE_THREAD_DEBUG
 	thread_debug("UDP client close sock=%d", mySocket);
 #endif
@@ -1109,6 +1111,7 @@ void Client::FinishTrafficActions (void) {
 	WARN_errno(rc == SOCKET_ERROR, "end report close");
     }
     Iperf_remove_host(&mSettings->peer);
+    FreeReport(myJob);
 }
 
 /* -------------------------------------------------------------------
