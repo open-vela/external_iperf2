@@ -504,7 +504,7 @@ inline int Server::ReadWithRxTimestamp (void) {
 #ifdef WIN32
 	    (WSAGetLastError() != WSAEWOULDBLOCK)
 #else
-	    (errno != EAGAIN && errno != EWOULDBLOCK)
+	    ((errno != EAGAIN) && (errno != EWOULDBLOCK) && (errno != ECONNREFUSED))
 #endif
         {
 	    WARN_errno(currLen, "recvmsg");
