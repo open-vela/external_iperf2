@@ -424,6 +424,9 @@ void Listener::my_listen (void) {
 	if (SockAddr_isMulticast(&mSettings->local)) {
 #ifdef HAVE_MULTICAST
 	    my_multicast_join();
+	    int mc_all = 0;
+	    rc = setsockopt(ListenSocket, IPPROTO_IP, IP_MULTICAST_ALL, (void*) &mc_all, sizeof(mc_all));
+	    WARN_errno(rc == SOCKET_ERROR, "ip_multicast_all");
 #else
 	    fprintf(stderr, "Multicast not supported");
 #endif // HAVE_MULTICAST
@@ -489,18 +492,12 @@ void Listener::my_multicast_join(void) {
 	    int rc = setsockopt(ListenSocket, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, \
 				 (char*) &mreq, sizeof(mreq));
 	    WARN_errno(rc == SOCKET_ERROR, "multicast v6 join");
-	    int mc_all = 0;
-	    rc = setsockopt(ListenSocket, IPPROTO_IP, IP_MULTICAST_ALL, (void*) &mc_all, sizeof(mc_all));
-	    WARN_errno(rc == SOCKET_ERROR, "ip_multicast_all");
 #else
 	    fprintf(stderr, "Unfortunately, IPv6 multicast is not supported on this platform\n");
 #endif
 	}
     } else {
-	int mc_all = 0;
 	int rc;
-	rc = setsockopt(ListenSocket, IPPROTO_IP, IP_MULTICAST_ALL, (void*) &mc_all, sizeof(mc_all));
-	WARN_errno(rc == SOCKET_ERROR, "ip_multicast_all");
 #ifdef HAVE_SSM_MULTICAST
 	// Here it's either an SSM S,G multicast join or a *,G with an interface specifier
 	// Use the newer socket options when these are specified
