@@ -1119,6 +1119,7 @@ void reporter_transfer_protocol_sum_client_udp (struct TransferInfo *stats, int 
     } else {
 	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
 	stats->cntIPG = stats->total.IPG.current - stats->total.IPG.prev;
+	stats->cntDatagrams = stats->total.Datagrams.current - stats->total.Datagrams.prev;
     }
     if (stats->output_handler)
 	(*stats->output_handler)(stats);
