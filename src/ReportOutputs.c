@@ -339,6 +339,9 @@ void udp_output_read_enhanced_triptime (struct TransferInfo *stats) {
 	       llaw_buf,
 	       (meantransit > 0.0) ? (NETPOWERCONSTANT * ((double)stats->cntBytes) / (double) (stats->ts.iEnd - stats->ts.iStart) / meantransit) : 0);
     }
+    if (stats->latency_histogram) {
+	histogram_print(stats->latency_histogram, stats->ts.iStart, stats->ts.iEnd);
+    }
     _output_outoforder(stats);
 }
 void udp_output_read_enhanced_triptime_isoch (struct TransferInfo *stats) {

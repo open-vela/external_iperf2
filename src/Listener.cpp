@@ -960,8 +960,6 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		    }
 		}
 	    }
-	    if (flags & (HEADER_EXTEND | HEADER_VERSION2)) {
-	    }
 	}
     } else {
 	n = recvn(server->mSock, mBuf, sizeof(uint32_t), MSG_PEEK);
