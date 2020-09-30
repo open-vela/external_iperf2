@@ -422,7 +422,7 @@ void reporter_spawn (struct thread_Settings *thread) {
 #ifdef HAVE_THREAD_DEBUG
     if (sInterupted)
         reporter_jobq_dump();
-    thread_debug("Reporter thread finished");
+    thread_debug("Reporter thread finished user/traffic %d%/%d", thread_userthreads(), thread_numtrafficthreads());
 #endif
 }
 
