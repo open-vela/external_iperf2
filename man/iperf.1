@@ -694,6 +694,9 @@ divided by an undesirable property. Also note, one must use -i
 interval with TCP to get this as that's what sets the RTT sampling
 rate. The metric is scaled to assist with human readability.
 .P
+.B Multicast:
+Iperf 2 supports multicast with a couple of caveats. First, multicast streams cannot take advantage of the -P option. The server will serialize multicast streams. Also, it's highly encouraged to use a -t on a server that will be used for multicast clients. That is because the single end of traffic packet sent from client to server may get lost and there are no redundant end of traffic packets.  Setting -t on the server will kill the server thread in the event this packet is indeed lost.
+.P
 .B Fast Sampling:
 Use
 .B ./configure --enable-fastsampling
