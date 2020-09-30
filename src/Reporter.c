@@ -160,7 +160,9 @@ int EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
     assert(finalpacket!=NULL);
     struct ReporterData *report = (struct ReporterData *) reporthdr->this_report;
     struct ReportStruct packet;
+#if defined(HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS) | defined(HAVE_THREAD_DEBUG)
     struct TransferInfo *stats = &report->info;
+#endif
     memset(&packet, 0, sizeof(struct ReportStruct));
     int do_close = 1;
     /*

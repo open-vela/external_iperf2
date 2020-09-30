@@ -440,8 +440,8 @@ void Listener::my_listen (void) {
 	    fprintf(stderr, "Multicast not supported");
 #endif // HAVE_MULTICAST
 	}
-    }
 #endif
+    }
 } // end my_listen()
 
 /* -------------------------------------------------------------------
@@ -479,7 +479,7 @@ void Listener::my_listen (void) {
  * net.ipv4.conf.eth0.force_igmp_version = 0
  *
  * ------------------------------------------------------------------- */
-void Listener::my_multicast_join(void) {
+void Listener::my_multicast_join (void) {
     // This is the older mulitcast join code.  Both SSM and binding the
     // an interface requires the newer socket options.  Using the older
     // code here will maintain compatiblity with previous iperf versions
@@ -890,9 +890,10 @@ int Listener::apply_client_settings (thread_Settings *server) {
 
 #ifdef WIN32
     int sorcvtimer = 2000;
+    DWORD timeout;
     if (isServerModeTime(server)) {
 	// Windows SO_RCVTIMEO uses ms
-	DWORD timeout = (double) sorcvtimer / 1e3;
+	timeout = (double) sorcvtimer / 1e3;
     }
 #else
     struct timeval timeout = {2, 0};
