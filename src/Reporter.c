@@ -208,8 +208,6 @@ int EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
 #if HAVE_THREAD_DEBUG
 	    thread_debug("Socket fullduplex close sock=%d", stats->common->socket);
 #endif
-	    int rc = close(report->FullDuplexReport->info.common->socket);
-	    WARN_errno( rc == SOCKET_ERROR, "full duplex close" );
 	    FreeSumReport(report->FullDuplexReport);
 	} else {
 	    do_close = 0;
