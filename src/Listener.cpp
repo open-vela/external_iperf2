@@ -176,6 +176,7 @@ void Listener::Run (void) {
 #endif
 	    continue;
 	}
+	my_listen(); // This will set ListenSocket to a new sock fd
 	// Use a select() with a timeout if -t is set
 	if (mMode_Time) {
 	    // Hang a select w/timeout on the listener socket
@@ -783,7 +784,6 @@ bool Listener::L2_setup (thread_Settings *server, int sockfd) {
 int Listener::udp_accept (thread_Settings *server) {
     assert(server != NULL);
     int rc;
-    my_listen(); // This will set ListenSocket to a new sock fd
     assert(ListenSocket > 0);
     // Start with a thread_rest - this allows the server thread
     // a shot at processing the
