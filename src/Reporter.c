@@ -1023,9 +1023,9 @@ void reporter_transfer_protocol_server_udp (struct ReporterData *data, int final
 	sumstats->total.Lost.current += stats->total.Lost.current - stats->total.Lost.prev;
 	sumstats->total.Datagrams.current += stats->PacketID - stats->total.Datagrams.prev;
 	sumstats->total.Bytes.current += stats->cntBytes;
+	sumstats->total.IPG.current += stats->cntIPG;
 	if (sumstats->IPGsum < stats->IPGsum)
 	    sumstats->IPGsum = stats->IPGsum;
-	sumstats->total.IPG.current += stats->cntIPG;
     }
     if (fullduplexstats) {
 	fullduplexstats->total.Bytes.current += stats->cntBytes;
@@ -1100,6 +1100,7 @@ void reporter_transfer_protocol_sum_server_udp (struct TransferInfo *stats, int 
 	    stats->cntDatagrams = stats->total.Datagrams.current;
 	    stats->cntBytes = stats->total.Bytes.current;
 	    stats->IPGsum = TimeDifference(stats->ts.packetTime, stats->ts.startTime);
+	    stats->cntIPG = stats->total.IPG.current;
 	} else {
 	    stats->cntOutofOrder = stats->total.OutofOrder.current - stats->total.OutofOrder.prev;
 	    // assume most of the  time out-of-order packets are not
@@ -1110,6 +1111,7 @@ void reporter_transfer_protocol_sum_server_udp (struct TransferInfo *stats, int 
 		stats->cntError = 0;
 	    stats->cntDatagrams = stats->total.Datagrams.current - stats->total.Datagrams.prev;
 	    stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
+	    stats->cntIPG = stats->total.IPG.current - stats->total.IPG.prev;
 	}
 	if (stats->output_handler)
 	    (*stats->output_handler)(stats);
@@ -1363,7 +1365,7 @@ void reporter_transfer_protocol_fullduplex_udp (struct TransferInfo *stats, int 
 	stats->cntBytes = stats->total.Bytes.current;
 	stats->cntDatagrams = stats->total.Datagrams.current ;
 	stats->cntIPG = stats->total.IPG.current;
-	stats->IPGsum = TimeDifference(stats->ts.packetTime, stats->ts.startTime);	
+	stats->IPGsum = TimeDifference(stats->ts.packetTime, stats->ts.startTime);
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
 	if (stats->output_handler)
 	    (*stats->output_handler)(stats);
