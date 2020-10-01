@@ -990,7 +990,6 @@ int Listener::apply_client_settings (thread_Settings *server) {
 	flags = ntohl(hdr->base.flags);
 	// figure out the length of the test header
 	if ((peeklen = Settings_ClientHdrPeekLen(flags)) > 0) {
-	    peeklen = Settings_ClientHdrPeekLen(flags);
 	    // read the test settings passed to the server by the client
 	    n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK);
 	    FAIL_errno((n < peeklen), "read tcp test info", server);
