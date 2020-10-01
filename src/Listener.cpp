@@ -431,7 +431,7 @@ void Listener::my_listen (void) {
 	if (SockAddr_isMulticast(&mSettings->local)) {
 #ifdef HAVE_MULTICAST
 	    my_multicast_join();
-#ifdef HAVE_DECL_IP_MULTICAST_ALL
+#if HAVE_DECL_IP_MULTICAST_ALL
 	    int mc_all = 0;
 	    rc = setsockopt(ListenSocket, IPPROTO_IP, IP_MULTICAST_ALL, (void*) &mc_all, sizeof(mc_all));
 	    WARN_errno(rc == SOCKET_ERROR, "ip_multicast_all");
