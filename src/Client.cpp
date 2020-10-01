@@ -1230,7 +1230,8 @@ void Client::SendFirstPayload (void) {
 	if (len > 0) {
 	    reportstruct->packetLen = send(mySocket, mBuf, len, MSG_DONTWAIT);
 	    WARN_errno(reportstruct->packetLen < 0, "send_hdr");
-	    ReportPacket(myReport, reportstruct);
+	    if (reportstruct->packetLen > 0)
+		ReportPacket(myReport, reportstruct);
 	} else {
 	    WARN_errno(1, "send first invalid len");
 	}
