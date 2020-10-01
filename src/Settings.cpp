@@ -1777,11 +1777,13 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
     return (len);
 }
 
-int Settings_ClientHdrPeekLen(uint32_t flags) {
+int Settings_ClientHdrPeekLen (uint32_t flags) {
     //* determine peek length
     int peeklen = 0;
     if (flags & HEADER_LEN_BIT) {
 	peeklen = (flags & 0xFFFE) >> 1;
+	if (peeklen <= 0)
+	    fprintf(stderr, "WARN: header length bit set and length invalid\n");
     } else {
 	peeklen = 0;
 	if (flags & HEADER_VERSION1) {

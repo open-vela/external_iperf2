@@ -416,6 +416,7 @@ bool Server::InitTrafficLoop (void) {
 	} else {
 	    n = recvn(mSettings->mSock, mBuf, sizeof(uint32_t), MSG_PEEK);
 	    if (n == 0) {
+		fprintf(stderr, "WARN: zero read on header flags\n");
 		//peer closed the socket, with no writes e.g. a connect-only test
 		return -1;
 	    }
@@ -424,7 +425,6 @@ bool Server::InitTrafficLoop (void) {
 	    flags = ntohl(tcp_pkt->base.flags);
 	    // figure out the length of the test header
 	    if ((peeklen = Settings_ClientHdrPeekLen(flags)) > 0) {
-		peeklen = Settings_ClientHdrPeekLen(flags);
 		// read the test settings passed to the mSettings by the client
 		n = recvn(mSettings->mSock, mBuf, peeklen, 0);
 		FAIL_errno((n < peeklen), "read tcp test info", mSettings);
