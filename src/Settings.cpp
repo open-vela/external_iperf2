@@ -1748,7 +1748,7 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	}
 	if (isBWSet(client)) {
 	    flags |= (HEADER_EXTEND | HEADER_VERSION2);
-	    hdr->extend.uRate = htonl((uint32_t)client->mUDPRate);
+	    hdr->extend.lRate = htonl((uint32_t)client->mUDPRate);
 #ifdef HAVE_INT64_T
 	    hdr->extend.uRate = htonl(((uint32_t)(client->mUDPRate >> 32)) << 8);
 #endif
