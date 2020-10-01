@@ -1026,7 +1026,7 @@ int Listener::apply_client_settings (thread_Settings *server) {
 	}
     }
     // Handle case that requires an ack back to the client
-    if (!isUDP(server) && (flags & HEADER_EXTEND)) {
+    if (!isUDP(server) && !(flags & HEADER_VERSION2) && (flags & HEADER_EXTEND)) {
 	client_test_ack(server);
     }
     return rc;
