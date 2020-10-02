@@ -1620,15 +1620,15 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
     uint16_t len = 0;
     uint32_t flags = 0;
 
-    flags = HEADER_SEQNO64B; // use 64 bit by default
+    flags = (HEADER_SEQNO64B | HEADER_VERSION2); // use 64 bit by default
 
     // flags common to both TCP and UDP
     if (isReverse(client)) {
-	flags |= (isUDP(client) ? (HEADER_VERSION2 | HEADER_UDPTESTS) : HEADER_VERSION2);
+	flags |= HEADER_UDPTESTS;
         upperflags |= HEADER_REVERSE;
     }
     if (isFullDuplex(client)) {
-	flags |= (isUDP(client) ? (HEADER_VERSION2 | HEADER_UDPTESTS) : HEADER_VERSION2);
+	flags |= HEADER_UDPTESTS;
         upperflags |= HEADER_FULLDUPLEX;
     }
     // Now setup UDP and TCP specific passed settings from client to server
