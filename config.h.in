@@ -69,6 +69,10 @@
    to 0 if you don't. */
 #undef HAVE_DECL_MCAST_JOIN_SOURCE_GROUP
 
+/* Define to 1 if you have the declaration of `MSG_DONTWAIT', and to 0 if you
+   don't. */
+#undef HAVE_DECL_MSG_DONTWAIT
+
 /* Define to 1 if you have the declaration of `pthread_cancel', and to 0 if
    you don't. */
 #undef HAVE_DECL_PTHREAD_CANCEL
