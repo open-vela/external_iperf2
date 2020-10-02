@@ -170,6 +170,8 @@ struct client_hdrext_isoch_settings {
 };
 
 struct client_hdrext {
+    int32_t type;
+    int32_t length;
     int16_t upperflags;
     int16_t lowerflags;
     uint32_t version_u;
