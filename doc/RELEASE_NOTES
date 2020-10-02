@@ -1,3 +1,5 @@
+See doc/DESIGN_NOTES for some description around the software design
+
 2.0.14 change set (as of September 22nd, 2020)
 ----------------------------------------
 o support for full duplex traffic using --full-duplex
