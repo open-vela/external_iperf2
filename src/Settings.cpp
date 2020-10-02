@@ -1801,10 +1801,10 @@ int Settings_ClientHdrPeekLen (uint32_t flags) {
 	    fprintf(stderr, "WARN: header length bit set and length invalid\n");
     } else {
 	peeklen = 0;
-	if (flags & HEADER_VERSION1) {
+	if (flags & (HEADER_VERSION1 | HEADER_EXTEND)) {
 	    peeklen = sizeof(struct client_hdr_v1);
 	}
-	if (flags & HEADER_VERSION2) {
+	if (flags & (HEADER_VERSION2 | HEADER_EXTEND)) {
 	    peeklen += sizeof(struct client_hdrext);
 	}
     }
