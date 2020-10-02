@@ -200,7 +200,7 @@ void Client::my_connect (void) {
 	PostReport(tmp);
     }
     // Post the connect report unless peer version exchange is set
-    if (connected && isConnectionReport(mSettings) && !isSumOnly(mSettings))
+    if (connected && isConnectionReport(mSettings) && !isSumOnly(mSettings) && !isPeerVerDetect(mSettings))
 	PostReport(InitConnectionReport(mSettings, connecttime));
 } // end Connect
 
@@ -1202,7 +1202,7 @@ void Client::AwaitServerCloseEvent (void) {
 
 void Client::SendFirstPayload (void) {
     if (!isCompat(mSettings) && !isConnectOnly(mSettings)) {
-	int len = 0;
+	int pktlen = 0;
 	if (myReport && !TimeZero(myReport->info.ts.startTime)) {
 	    reportstruct->packetTime = myReport->info.ts.startTime;
 	} else {
@@ -1210,68 +1210,42 @@ void Client::SendFirstPayload (void) {
 	    reportstruct->packetTime.tv_sec = now.getSecs();
 	    reportstruct->packetTime.tv_usec = now.getUsecs();
 	}
-        if (isUDP(mSettings)) {
-	    len = Settings_GenerateClientHdr(mSettings, (void *) mBuf, reportstruct->packetTime);
-	    if (len > 0) {
+	pktlen = Settings_GenerateClientHdr(mSettings, (void *) mBuf, reportstruct->packetTime);
+	if (pktlen > 0) {
+	    if (isUDP(mSettings)) {
 		struct client_udp_testhdr *tmphdr = (struct client_udp_testhdr *) mBuf;
 		WritePacketID(reportstruct->packetID++);
 		tmphdr->seqno_ts.tv_sec  = htonl(reportstruct->packetTime.tv_sec);
 		tmphdr->seqno_ts.tv_usec = htonl(reportstruct->packetTime.tv_usec);
-		udp_payload_minimum = len;
+		udp_payload_minimum = pktlen;
 	    }
-	} else {
-	    len = Settings_GenerateClientHdr(mSettings, (void *) mBuf, reportstruct->packetTime);
-	    if (len > 0) {
-		if (isPeerVerDetect(mSettings) && !isServerReverse(mSettings)) {
-		    PeerXchange(len);
+	    reportstruct->packetLen = send(mySocket, mBuf, pktlen, MSG_DONTWAIT);
+	    WARN_errno(reportstruct->packetLen < 0, "send_hdr");
+	    if (reportstruct->packetLen > 0) {
+		ReportPacket(myReport, reportstruct);
+		if (!isUDP(mSettings) && isPeerVerDetect(mSettings) && !isServerReverse(mSettings)) {
+		    PeerXchange();
 		}
 	    }
-	}
-	if (len > 0) {
-	    reportstruct->packetLen = send(mySocket, mBuf, len, MSG_DONTWAIT);
-	    WARN_errno(reportstruct->packetLen < 0, "send_hdr");
-	    if (reportstruct->packetLen > 0)
-		ReportPacket(myReport, reportstruct);
 	} else {
-	    WARN_errno(1, "send first invalid len");
+	    WARN_errno(1, "send first fail");
 	}
     }
 }
 
-void Client::PeerXchange (int len) {
-    int currLen = 0;
-    // Run compatability detection and test info exchange for tests that require it
-    int optflag;
-#ifdef TCP_NODELAY
-    // Disable Nagle to reduce latency of this intial message
-    optflag=1;
-    if (setsockopt(mySocket, IPPROTO_TCP, TCP_NODELAY, (char *)&optflag, sizeof(int)) < 0)
-	WARN_errno(0, "tcpnodelay");
-#endif
-    currLen = send(mySocket, mBuf, len, 0);
-    if (currLen < 0) {
-	WARN_errno(currLen < 0, "send_hdr_v2");
-    } else {
-	int n;
-	client_hdr_ack ack;
-	int sotimer = 2000000; // 2 seconds
-	SetSocketOptionsReceiveTimeout(mSettings, sotimer);
-	/*
-	 * Hang read and see if this is a header ack message
-	 */
-	if ((n = recvn(mySocket, (char *)&ack, sizeof(client_hdr_ack), 0)) == sizeof(client_hdr_ack)) {
-	    if (ntohl(ack.typelen.type) == CLIENTHDRACK && ntohl(ack.typelen.length) == sizeof(client_hdr_ack)) {
-		mSettings->peer_version_u = ntohl(ack.version_u);
-		mSettings->peer_version_l = ntohl(ack.version_l);
-	    }
-	} else {
-	    WARN_errno(1, "recvack");
+void Client::PeerXchange (void) {
+    int n;
+    client_hdr_ack ack;
+    /*
+     * Hang read and see if this is a header ack message
+     */
+    if ((n = recvn(mySocket, (char *)&ack, sizeof(client_hdr_ack), 0)) == sizeof(client_hdr_ack)) {
+	if (ntohl(ack.typelen.type) == CLIENTHDRACK && ntohl(ack.typelen.length) == sizeof(client_hdr_ack)) {
+	    mSettings->peer_version_u = ntohl(ack.version_u);
+	    mSettings->peer_version_l = ntohl(ack.version_l);
 	}
-    }
-    optflag = 0;
-    // Re-enable Nagle
-    if (setsockopt(mySocket, IPPROTO_TCP, TCP_NODELAY, (char *)&optflag, sizeof(int)) < 0) {
-	WARN_errno(0, "tcpnodelay");
+    } else {
+	WARN_errno(1, "recvack");
     }
 }
 

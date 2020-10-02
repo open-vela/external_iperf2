@@ -123,7 +123,7 @@ private:
     // UDP plain
     void RunUDP(void);
     // client connect
-    void PeerXchange(int len);
+    void PeerXchange(void);
 
     thread_Settings *mSettings;
 #if WIN32
