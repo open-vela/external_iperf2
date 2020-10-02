@@ -1026,7 +1026,12 @@ int Listener::apply_client_settings (thread_Settings *server) {
 	}
     }
     // Handle case that requires an ack back to the client
-    if (!isUDP(server) && !(flags & HEADER_VERSION2) && (flags & HEADER_EXTEND)) {
+    // Signaled by not UDP (only supported by TCP)
+    // and either 2.0.13 flags or the newer 2.0.14 flag of
+    // V2PEERDETECT
+    if (!isUDP(server) && \
+	((!(flags & HEADER_VERSION2) && (flags & HEADER_EXTEND)) || \
+	 (flags & HEADER_V2PEERDETECT))) {
 	client_test_ack(server);
     }
     return rc;
