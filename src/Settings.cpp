@@ -1045,6 +1045,10 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
 	    bail = true;
 	}
         if (isUDP(mExtSettings)) {
+	    if (isPeerVerDetect(mExtSettings)) {
+		fprintf(stderr, "ERROR: option of -X or --peer-detect not supported with -u UDP\n");
+		bail = true;
+	    }
 	    if (isConnectOnly(mExtSettings)) {
 		fprintf(stderr, "ERROR: option of --connect-only not supported with -u UDP\n");
 		bail = true;
@@ -1181,6 +1185,11 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
 	    fprintf(stderr, "ERROR: option of --no-udp-fin is not suppported on the server\n");
 	    bail = true;
 	}
+	if (isPeerVerDetect(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of -X or --peer-detect not supported on the server\n");
+	    bail = true;
+	}
+
     }
     if (bail)
 	exit(1);
@@ -1754,7 +1763,7 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 #endif
 	}
 	if (isPeerVerDetect(client)) {
-	    flags |= HEADER_EXTEND;
+	    flags |= (HEADER_EXTEND | HEADER_V2PEERDETECT);
 	}
 	if (flags & (HEADER_EXTEND | HEADER_VERSION2)) {
 	    // Write flags to header so the listener can determine the tests requested
