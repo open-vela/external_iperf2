@@ -1005,7 +1005,6 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		server->mTOS = ntohs(hdr->extend.tos);
 		server->peer_version_u = ntohl(hdr->extend.version_u);
 		server->peer_version_l = ntohl(hdr->extend.version_l);
-		printf("**** set peer\n");
 		if (upperflags & HEADER_TRIPTIME) {
 		    setTripTime(server);
 		    setEnhanced(server);
