@@ -5,7 +5,7 @@ Code at rev 2.0.14
 
 This document helps to describe the iperf 2 design. It's quite complicated. It's
 hoped this overview will help someone to understand the code. As with any open
-source software, the authoritative information comes from reading the code
+source software, the authoritative information comes from reading the source code
 itself.
 
 Iperf 2 is a designed to be a multi-threaded program. It's also a hybrid of C
@@ -14,15 +14,15 @@ Broadcom with a WiFi focus took over the code base starting at 2.0.5 and we are
 now up to 2.0.14. The only link between the groups has been the code itself.
 
 Iperf 3 is a simpler design and simpler code base and isn't compatible with
-iperf 2. The primary differences are that iperf 2 is multithreaded, supports
+iperf 2. The primary differences are that iperf 2 is multi-threaded, supports
 multicast, and has end/end latency features. Iperf 3 has SCTP support and
-support for JSON outpu. This document doesn't discuss iperf 3.
+support for JSON output. This document doesn't discuss iperf 3 beyond this.
 
 Threading overview
 ------------------
 The idea behind the threading is to have very lean traffic threads that are
 decoupled from user i/o. The goal with iperf is to stress network i/o and this
-threading separation allows for that.  User i/o and calculations are done by a
+threading separation allows for that. User i/o and calculations are done by a
 dedicated thread, i.e. the reporter thread.
 
 There are multiple threads being a listener thread, a reporter thread, and one
@@ -33,7 +33,7 @@ a server in the role of a client or a client in the role of as server per the
 Listener (src/Listener.cpp include/Listener.hpp):
 
 The listener thread runs on the server side when a user issues a -s for server,
-it actually starts the listener thread and not a server thread. The goals off
+it actually starts the listener thread and not a server thread. The goals of
 the listener thread are
 
 o) open the listen socket with is set with -p or defaults to 5001
@@ -65,7 +65,7 @@ o) server relay reports (server report send back to the client for display)
 
 The reporter thread and traffic threads communicate with one another using a
 circular buffer or packet ring.  The reporter thread also has job queue where
-threads can post reports to be displayed.
+threads can post reports to be displayed to the user.
 
 o) Perform traffic accounting for individual traffic threads
 o) Perform traffic sum accounting
@@ -73,16 +73,18 @@ o) Output all reports - Settings, connections, and data
 
 Traffic (Clients and Servers):
 
-The traffic threads perform the reads and writes on a socket. It posts the
+The traffic threads perform the reads and writes on a socket. These post the
 results, e.g. byte counts, of those reads and writes with timestamps to the
 reporter thread. These threads are decoupled this way to try to keep the tool as
 a network i/o - i.e. the primary focus of traffic threads are network i/o which
-are the performance being reported. There are two types of traffic threads being
-a client and a server.  There can be multiple or parallel traffic threads using
-the -P option. There is one packet ring for every traffic thread. The traffic
-threads post their results into this ring which the reporter will process. The
-traffic threads are the producer and the reporter thread is the consumer. This
-ring is designed to minimize mutex and shared memory contention.
+are the performance being reported.
+
+There are two types of traffic threads being a client and a server.  There can
+be multiple or parallel traffic threads using the -P option. There is one
+packet ring for every traffic thread. The traffic threads post their results
+into this ring which the reporter will process. The traffic threads are the
+producer and the reporter thread is the consumer. This ring is designed to
+minimize mutex and shared memory contention.
 
 The goals of the traffic threads, starting with the client
 
@@ -112,9 +114,43 @@ reports and take appropriate actions per the report type
 
 Timestamps
 ----------
-This section descries the multiple timestamps used by iperf 2. The --trip-times
-options allows the user to indicate that the client and server clocks are
-synchronized.
+
+The accuracy of timestamps is critical to a networking performance.  Also, knowing
+exactly when a timestamp is taken is helpful.This section descries the multiple
+timestamps used by iperf 2.
+
+There are two higher level clocks being the clock on the client and the clock
+on the server. The iperf 2.0.13 versions of iperf only used timestamps from
+the same clock which simplified things but also give incomplete information.
+The complete information requires a common shared clock. During iperf 2.0.13+
+development an oven controlled GPS disciplined oscillator was made available
+to the devices under test. Precision Time Protocol (PTP) was used to
+distribute that reference or the PTP grand master.
+
+The timestamps taken by iperf are
+
+o) write timestamp - taken just prior to the system write call
+o) kernel receive timestamp - taken by the kernel when a driver hands a packet
+   to in on receive
+o) read timestamp - taken when a read or groups of reads have completed
+
+Other timestamps include the accept timestamp and post connect timestamps.
+
+The --trip-times options allows the user to indicate that the client and
+server clocks are synchronized. Synchronizing the real-time
+clocks on both the client and the server opens up the latency features.
+Latency is equally important to throughput with respect to characterizing
+a network's performance.
+
+Most timestamps try to use clock_gettime vs the older gettimeofday for performance
+reasons. This is also a real-time clock and is monotonic.
+
+The resolution of timestamps are typically in microseconds.
+
+A delay time is used to manage the -b offered load requested.
+
+The isochronous traffic doesn't use timestamps to schedule the transmissions
+but rather clock_nanosleep. This is preferred.
 
 Reports
 -------
@@ -127,37 +163,41 @@ o Data report
 o Server relay report
 
 Each report has a common settings filed which are deep copies from the thread
-settings object. Each report having it's own copy allows the design to  decouple
-and encapsulate reporting from thread themsleves, e.g. a thread can terminate
-and memory be freed prior to the reporter outputing a report that thread posted.
+settings object. Each report having its own copy allows the design to decouple
+and encapsulate reporting from thread themselves, e.g. a thread can terminate
+and memory can be freed prior to the reporter outputting the report.
 
 Data Report and packet rings
 ----------------------------
-
-The data report warrant its own section do to it complexity.  The core of the
+The data report warrants its own section do to its complexity.  The core of the
 data report is a packet ring and statistics per that traffic thread. The packet
-ring allows the traffic thread to communicate read or write statistics to the
-reporter thread using shared memory and very limited syscalls or mutexes. The
-packet ring has producer and consumer pointer that can be updated in an atomic
-matter on multicore systems. The ring elements pointer to are reportstructs.
+ring allows the traffic thread to communicate read or write statistics and
+timestamps to the reporter thread using shared memory and very limited
+syscalls or mutexes. The packet ring has producer and consumer pointer
+that can be updated in an atomic manner on multi-core systems. The ring
+elements pointers are to reportstructs.
+
 Data reports remain on the reporter's jobq for the life of the traffic stream.
 
 Packet rings (src/packetring.c include/packetring.h)
 ----------------------------------------------------
 A packet ring is a circular buffer between a traffic thread and reporter thread.
-A traffic thread is a producer and the reporter thread is the consumer. There is
-one packet ring per each traffic thread. The one reporter thread services all
-the traffic threads' rings. A traffic thread posts packet or read or write
-information to the packet ring. This is the necessary and sufficient information
-such that the reporter thread can perform the traffic accounting as well as
-display interval or final reports base upon timestamps held within the ring's
-elements.
+The NUM_REPORT_STRUCTS sizes this shared memory. A traffic thread is a producer
+and the reporter thread is the consumer.
+
+There is one packet ring per each traffic thread. The one reporter thread
+services all the traffic threads' rings. A traffic thread posts packet or
+read or write information to its packet ring. This is the necessary and
+sufficient information such that the reporter thread can perform the traffic
+accounting as well as display interval or final reports base upon timestamps
+held within the ring's elements.
 
 Summing (src/list.cpp include/list.hpp)
 ---------------------------------------
 Packet or read or write summing is done on a per client (host ip) basis. All
 traffic from a specific client will be summed. The active client list is kept in
 a linked list. A new client will trigger a new sum report.
+
 
 Function vectors (src/Reports.c src/Reporter.c src/ReportOutputs.c)
 -------------------------------------------------------------------
@@ -172,9 +212,9 @@ for every read or write
 *transfer_protocol_handler() - used to ready the data before it's output handler
 is called, called prior to the packet handler, calls sum and output handlers
 *transfer_protocol_sum_handler() - used to ready the summation data before it's
-output handler is called, caleld by tranfser_protocol handler
-*output_handler() - used to format output and print the output, called py
-transfer_protocol handers, null handlers are supported for silent output
+output handler is called, called by tranfser_protocol handler
+*output_handler() - used to format output and print the output, called by
+transfer_protocol handlers, null handlers are supported for silent output
 *transfer_interval_handler() - used to select between time based or
 write/frame/burst reporting, supports special type of sampling
 
@@ -185,12 +225,12 @@ Thread creation:
 
 There are three primary aspects of startup. The code is in main.cpp, Launch.cpp
 and Listener.cpp. The primary purpose of this code is to determine settings and
-instantiate thread ojbects with those settings.  The thread objects are then
-strated by the running operating system thead create callls per thread_start()
+instantiate thread objects with those settings.  The thread objects are then
+started by the running operating system thread create calls per thread_start()
 found in compat/Thread.c  Thee main function there is thread_run_wrapper which
 spawns a thread type.
 
-The run main.cpp is to read user settings, instantiate a setttings thread objec,
+The run main.cpp is to read user settings, instantiate a settings thread object,
 and, for a client, initiate their threads, while for a server, initiate the
 listener thread. On the server side, the listener thread will instantiate server
 and client threads.
@@ -245,7 +285,7 @@ iperf_SOURCES = \
 		Reports.c -- Code that initialize reports that will be ouput by
 			     the reporter thread
 		ReportOutputs.c -- Code that formats report output
-		Server.cpp -- Server read routines, runs in a traffic threa
+		Server.cpp -- Server read routines, runs in a traffic thread
 		Settings.cpp -- Code the reads the command line and instantiates
 				the initial thread object with settings
 		SocketAddr.c -- Code that compares ip/port addresses stored in
