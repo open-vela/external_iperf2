@@ -31,7 +31,7 @@ a server in the role of a client or a client in the role of as server per the
 --reverse option. The traffic threads scale with the -P option.
 
 Listener (src/Listener.cpp include/Listener.hpp):
-
+-------------------------------------------------
 The listener thread runs on the server side when a user issues a -s for server,
 it actually starts the listener thread and not a server thread. The goals of
 the listener thread are
@@ -50,7 +50,7 @@ o) Instantiate a server object
 o) Spawn a server thread which will receive traffic from a client
 
 Reporter (src/Reporter.c include/Reporter.h):
-
+---------------------------------------------
 There is one reporter thread for a client and one for a server (excluding full
 duplex traffic where the reporter handles both a client and a server.) The goal
 of the reporter thread is to decouple user i/o from traffic. This allows the
@@ -72,7 +72,7 @@ o) Perform traffic sum accounting
 o) Output all reports - Settings, connections, and data
 
 Traffic (Clients and Servers):
-
+------------------------------
 The traffic threads perform the reads and writes on a socket. These post the
 results, e.g. byte counts, of those reads and writes with timestamps to the
 reporter thread. These threads are decoupled this way to try to keep the tool as
@@ -114,10 +114,9 @@ reports and take appropriate actions per the report type
 
 Timestamps
 ----------
-
-The accuracy of timestamps is critical to a networking performance.  Also, knowing
-exactly when a timestamp is taken is helpful.This section descries the multiple
-timestamps used by iperf 2.
+The accuracy of timestamps is critical to a networking performance tool.
+Also, knowing exactly when a timestamp is taken is helpful. This section
+describes the multiple timestamps used by iperf 2.
 
 There are two higher level clocks being the clock on the client and the clock
 on the server. The iperf 2.0.13 versions of iperf only used timestamps from
@@ -150,7 +149,7 @@ The resolution of timestamps are typically in microseconds.
 A delay time is used to manage the -b offered load requested.
 
 The isochronous traffic doesn't use timestamps to schedule the transmissions
-but rather clock_nanosleep. This is preferred.
+but rather uses clock_nanosleep. This is preferred.
 
 Reports
 -------
@@ -209,18 +208,24 @@ of:
 
 *packet_handler() - this is used to account for tcp or udp write or read called
 for every read or write
-*transfer_protocol_handler() - used to ready the data before it's output handler
-is called, called prior to the packet handler, calls sum and output handlers
+
+*transfer_protocol_handler() - used to ready the data before its output handler
+is invoked. It's called prior to the packet processing as a dequeued packet
+with a timestamp crossing a sample boundary is the event to trigger the output
+report. It calls sum and output handlers.
+
 *transfer_protocol_sum_handler() - used to ready the summation data before it's
 output handler is called, called by tranfser_protocol handler
+
 *output_handler() - used to format output and print the output, called by
-transfer_protocol handlers, null handlers are supported for silent output
+transfer_protocol handlers, null handlers are supported for silent or no
+output, e.g. --sum-only
+
 *transfer_interval_handler() - used to select between time based or
 write/frame/burst reporting, supports special type of sampling
 
 Startup (src/main.cpp src/Launch.cpp)
 -------------------------------------
-
 Thread creation:
 
 There are three primary aspects of startup. The code is in main.cpp, Launch.cpp
