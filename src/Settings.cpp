@@ -1620,7 +1620,7 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
     uint16_t len = 0;
     uint32_t flags = 0;
 
-    flags = (HEADER_SEQNO64B | HEADER_LEN_BIT); // use 64 bit by default
+    flags = HEADER_SEQNO64B; // use 64 bit by default
 
     // flags common to both TCP and UDP
     if (isReverse(client)) {
@@ -1717,7 +1717,10 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	if (isTripTime(client) || isFQPacing(client) || isIsochronous(client))
 	    len += sizeof (struct isoch_payload);
 
-	len += sizeof(struct UDP_datagram);
+	if (len > 0) {
+	    len += sizeof(struct UDP_datagram);
+	    flags |= HEADER_LEN_BIT;
+	}
 	hdr->base.flags = htonl(flags | ((len << 1) & 0xFFFE));
     } else { // TCP first write with test information
 	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) testhdr;
@@ -1780,6 +1783,9 @@ int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, st
 	}
 	if (flags & (HEADER_VERSION1 | HEADER_VERSION2)) {
 	    len += Settings_GenerateClientHdrV1(client, &hdr->base);
+	}
+	if (len > 0) {
+	    flags |= HEADER_LEN_BIT;
 	}
 	hdr->base.flags = htonl((flags | ((len << 1) & 0xFFFE)));
     }
