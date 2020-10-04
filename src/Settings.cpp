@@ -1036,7 +1036,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 			    | isRxHistogram(mExtSettings) |  isIsochronous(mExtSettings) \
 			    | isEnhanced(mExtSettings) | (mExtSettings->mMode != kTest_Normal));
     if (isCompat(mExtSettings) && compat_nosupport) {
-	fprintf(stderr, "ERROR: compatability mode not supported with the requested with options\n");
+	fprintf(stderr, "ERROR: compatibility mode not supported with the requested with options\n");
 	bail = true;
     }
     if (mExtSettings->mThreadMode == kMode_Client) {
@@ -1062,7 +1062,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		bail = true;
 	    }
 	    if (mExtSettings->mBurstIPG < 0.0) {
-		fprintf(stderr, "ERROR: option --ipg must be a postive value\n");
+		fprintf(stderr, "ERROR: option --ipg must be a positive value\n");
 	    }
 	    {
 		double delay_target;
@@ -1095,11 +1095,11 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    if (isTxHoldback(mExtSettings)) {
 		Timestamp now;
 		if (mExtSettings->txholdback_timer.tv_sec > MAXDIFFTXDELAY) {
-		    fprintf(stdout,"ERROR: Fail beacuse --txdelay-time is not within %d seconds of now\n", MAXDIFFTXDELAY);
+		    fprintf(stdout,"ERROR: Fail because --txdelay-time is not within %d seconds of now\n", MAXDIFFTXDELAY);
 		    bail = true;
 		}
 		if (isConnectOnly(mExtSettings)) {
-		    fprintf(stdout,"ERROR: Fail beacuse --txdelay-time and --connect-only cannot be applied together\n");
+		    fprintf(stdout,"ERROR: Fail because --txdelay-time and --connect-only cannot be applied together\n");
 		    bail = true;			;
 		}
 	    }
@@ -1107,7 +1107,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	if (isTxStartTime(mExtSettings)) {
 	    Timestamp now;
 	    if ((mExtSettings->txstart_epoch.tv_sec- now.getSecs()) > MAXDIFFTXSTART) {
-		fprintf(stdout,"ERROR: Fail beacuse --txstart-time is not within %d seconds of now\n", MAXDIFFTXSTART);
+		fprintf(stdout,"ERROR: Fail because --txstart-time is not within %d seconds of now\n", MAXDIFFTXSTART);
 		bail = true;
 	    }
 	}
@@ -1158,31 +1158,31 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    bail = true;
 	}
 	if (isIPG(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of --ipg is not suppported on the server\n");
+	    fprintf(stderr, "ERROR: option of --ipg is not supported on the server\n");
 	    bail = true;
 	}
 	if (isIsochronous(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of --isochronous is not suppported on the server\n");
+	    fprintf(stderr, "ERROR: option of --isochronous is not supported on the server\n");
 	    bail = true;
 	}
 	if (isFullDuplex(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of --full-duplex is not suppported on the server\n");
+	    fprintf(stderr, "ERROR: option of --full-duplex is not supported on the server\n");
 	    bail = true;
 	}
 	if (isReverse(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of --reverse is not suppported on the server\n");
+	    fprintf(stderr, "ERROR: option of --reverse is not supported on the server\n");
 	    bail = true;
 	}
 	if (isIncrDstIP(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of --incr-dstpip is not suppported on the server\n");
+	    fprintf(stderr, "ERROR: option of --incr-dstpip is not supported on the server\n");
 	    bail = true;
 	}
 	if (isFQPacing(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of --fq-rate is not suppported on the server\n");
+	    fprintf(stderr, "ERROR: option of --fq-rate is not supported on the server\n");
 	    bail = true;
 	}
 	if (isNoUDPfin(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of --no-udp-fin is not suppported on the server\n");
+	    fprintf(stderr, "ERROR: option of --no-udp-fin is not supported on the server\n");
 	    bail = true;
 	}
 	if (isPeerVerDetect(mExtSettings)) {
