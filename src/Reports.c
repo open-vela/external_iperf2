@@ -182,7 +182,8 @@ void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport* sumre
 		}
 	    } else {
 		sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_tcp;
-		sumreport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_write : tcp_output_sum_write);
+		sumreport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_write : \
+						  (isEnhanced(inSettings) ? tcp_output_sum_write_enhanced : tcp_output_sum_write));
 	    }
 	    break;
 	default:
