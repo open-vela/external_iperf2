@@ -236,11 +236,11 @@ const int  kDefault_UDPBufLen = 1470;      // -u  if set, read/write 1470 bytes
 const int  kDefault_UDPBufLenV6 = 1450;      // -u  if set, read/write 1470 bytes
 // v6: 1450 bytes UDP payload will fill one and only one ethernet datagram (IPv6 overhead is 40 bytes)
 const int kDefault_TCPBufLen = 128 * 1024; // TCP default read/write size
+
 /* -------------------------------------------------------------------
  * Initialize all settings to defaults.
  * ------------------------------------------------------------------- */
-
-void Settings_Initialize(struct thread_Settings *main) {
+void Settings_Initialize (struct thread_Settings *main) {
     // Everything defaults to zero or NULL with
     // this memset. Only need to set non-zero values
     // below.
@@ -291,7 +291,7 @@ void Settings_Initialize(struct thread_Settings *main) {
 
 } // end Settings
 
-void Settings_Copy(struct thread_Settings *from, struct thread_Settings **into, int copyall) {
+void Settings_Copy (struct thread_Settings *from, struct thread_Settings **into, int copyall) {
     *into = new struct thread_Settings;
     memset(*into, 0, sizeof(struct thread_Settings));
     memcpy(*into, from, sizeof(struct thread_Settings));
@@ -380,7 +380,7 @@ void Settings_Copy(struct thread_Settings *from, struct thread_Settings **into, 
  * Delete memory: Does not clean up open file pointers or ptr_parents
  * ------------------------------------------------------------------- */
 
-void Settings_Destroy(struct thread_Settings *mSettings) {
+void Settings_Destroy (struct thread_Settings *mSettings) {
 #if HAVE_THREAD_DEBUG
     thread_debug("Free thread settings=%p", mSettings);
 #endif
@@ -401,7 +401,7 @@ void Settings_Destroy(struct thread_Settings *mSettings) {
 /* -------------------------------------------------------------------
  * Parses settings from user's environment variables.
  * ------------------------------------------------------------------- */
-void Settings_ParseEnvironment(struct thread_Settings *mSettings) {
+void Settings_ParseEnvironment (struct thread_Settings *mSettings) {
     char *theVariable;
 
     int i = 0;
@@ -418,7 +418,7 @@ void Settings_ParseEnvironment(struct thread_Settings *mSettings) {
  * Parse settings from app's command line.
  * ------------------------------------------------------------------- */
 
-void Settings_ParseCommandLine(int argc, char **argv, struct thread_Settings *mSettings) {
+void Settings_ParseCommandLine (int argc, char **argv, struct thread_Settings *mSettings) {
     int option;
     gnu_opterr = 1; // Fail on an unrecognized command line option
     while ((option =
@@ -440,7 +440,7 @@ void Settings_ParseCommandLine(int argc, char **argv, struct thread_Settings *mS
  * or from environment variables.
  * ------------------------------------------------------------------- */
 
-void Settings_Interpret(char option, const char *optarg, struct thread_Settings *mExtSettings) {
+void Settings_Interpret (char option, const char *optarg, struct thread_Settings *mExtSettings) {
     char *results;
     switch (option) {
         case '1': // Single Client
@@ -954,7 +954,7 @@ void Settings_Interpret(char option, const char *optarg, struct thread_Settings 
     }
 } // end Interpret
 
-static void strip_v6_brackets(char *v6addr) {
+static void strip_v6_brackets (char *v6addr) {
     char * results;
     if (v6addr && (*v6addr ==  '[') && ((results = strtok(v6addr, "]")) != NULL)) {
 	int len = strlen(v6addr);
@@ -964,7 +964,7 @@ static void strip_v6_brackets(char *v6addr) {
     }
 }
 
-static char * isv6_bracketed_port(char *v6addr) {
+static char * isv6_bracketed_port (char *v6addr) {
     char *results = NULL;
     if (v6addr && (*v6addr ==  '[') && ((results = strtok(v6addr, "]")) != NULL)) {
 	strip_v6_brackets(v6addr);
@@ -974,7 +974,7 @@ static char * isv6_bracketed_port(char *v6addr) {
     }
     return NULL;
 }
-static char * isv4_port(char *v4addr) {
+static char * isv4_port (char *v4addr) {
     char *results = NULL;
     if (((results = strtok(v4addr, ":")) != NULL) && ((results = strtok(NULL, ":")) != NULL)) {
 	return results;
@@ -997,7 +997,7 @@ static char * isv4_port(char *v4addr) {
 //
 //  Also apply the bail out or exit conditions if the user requested mutually exclusive
 //  or incompatabile options
-void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
+void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
     char *results;
     // Handle default read/write sizes based on v4, v6, UDP or TCP
     if (!isBuflenSet(mExtSettings)) {
@@ -1348,7 +1348,7 @@ void Settings_ModalOptions(struct thread_Settings *mExtSettings) {
     }
 }
 
-void Settings_GetUpperCaseArg(const char *inarg, char *outarg) {
+void Settings_GetUpperCaseArg (const char *inarg, char *outarg) {
     int len = strlen(inarg);
     strcpy(outarg,inarg);
 
@@ -1357,7 +1357,7 @@ void Settings_GetUpperCaseArg(const char *inarg, char *outarg) {
         outarg[len-1]= outarg[len-1]+'A'-'a';
 }
 
-void Settings_GetLowerCaseArg(const char *inarg, char *outarg) {
+void Settings_GetLowerCaseArg (const char *inarg, char *outarg) {
     int len = strlen(inarg);
     strcpy(outarg,inarg);
 
@@ -1374,7 +1374,7 @@ void Settings_GetLowerCaseArg(const char *inarg, char *outarg) {
  * the struct thread_settings instance generated from the command line
  * for client side execution
  */
-void Settings_GenerateListenerSettings(struct thread_Settings *client, struct thread_Settings **listener) {
+void Settings_GenerateListenerSettings (struct thread_Settings *client, struct thread_Settings **listener) {
     if (!isCompat(client) && \
          (client->mMode == kTest_DualTest || client->mMode == kTest_TradeOff)) {
 	Settings_Copy(client, listener, 0);
@@ -1455,7 +1455,7 @@ void Settings_ReadClientSettingsV1 (struct thread_Settings **client, struct clie
  *
  * Note: mBuf should already be filled out per the Listener's apply_client_settings
  */
-void Settings_GenerateClientSettings(struct thread_Settings *server, struct thread_Settings **client, void *mBuf) {
+void Settings_GenerateClientSettings (struct thread_Settings *server, struct thread_Settings **client, void *mBuf) {
     assert(server != NULL);
     assert(mBuf != NULL);
     uint32_t flags = isUDP(server) ? ntohl(*(uint32_t *)((char *)mBuf + sizeof(struct UDP_datagram))) : ntohl(*(uint32_t *)mBuf);
@@ -1580,7 +1580,7 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 #endif
 }
 
-int Settings_GenerateClientHdrV1(struct thread_Settings *client, struct client_hdr_v1 *hdr) {
+int Settings_GenerateClientHdrV1 (struct thread_Settings *client, struct client_hdr_v1 *hdr) {
     if (isBuflenSet(client)) {
 	hdr->mBufLen = htonl(client->mBufLen);
     } else {
@@ -1612,7 +1612,7 @@ int Settings_GenerateClientHdrV1(struct thread_Settings *client, struct client_h
  *
  * Returns size of header in bytes
  */
-int Settings_GenerateClientHdr(struct thread_Settings *client, void *testhdr, struct timeval startTime) {
+int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, struct timeval startTime) {
     if (isCompat(client))
 	    return 0;
     uint16_t upperflags = 0;
