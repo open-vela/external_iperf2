@@ -510,7 +510,7 @@ void Settings_GetUpperCaseArg(const char *,char *);
 void Settings_GenerateListenerSettings(struct thread_Settings *client, struct thread_Settings **listener);
 
 // generate settings for speaker instance
- void Settings_GenerateClientSettings(struct thread_Settings *server, struct thread_Settings **client, void * mBuf);
+void Settings_GenerateClientSettings(struct thread_Settings *server, struct thread_Settings **client, void * mBuf);
 
 // generate client header for server
 int Settings_GenerateClientHdr(struct thread_Settings *client, void * hdr, struct timeval startTime);

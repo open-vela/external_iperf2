@@ -77,11 +77,11 @@
 #if HAVE_DECL_SO_BINDTODEVICE
 #include <net/if.h>
 #endif
+
 /* -------------------------------------------------------------------
  * Set socket options before the listen() or connect() calls.
  * These are optional performance tuning factors.
  * ------------------------------------------------------------------- */
-
 void SetSocketOptions (struct thread_Settings *inSettings) {
     // set the TCP window size (socket buffer sizes)
     // also the UDP buffer size

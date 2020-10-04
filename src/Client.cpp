@@ -440,7 +440,7 @@ void Client::Run (void) {
     // Peform common traffic setup
     InitTrafficLoop();
     /*
-     * UDP specific setup
+     * UDP
      */
     if (isUDP(mSettings)) {
 	if (isFileInput(mSettings)) {
@@ -450,8 +450,6 @@ void Client::Run (void) {
 	    Extractor_reduceReadSize(sizeof(struct UDP_datagram), mSettings);
 	    readAt += sizeof(struct UDP_datagram);
 	}
-    }
-    if (isUDP(mSettings)) {
 	// Launch the approprate UDP traffic loop
 	if (isIsochronous(mSettings)) {
 	    RunUDPIsochronous();
@@ -953,7 +951,6 @@ void Client::RunUDPIsochronous (void) {
 	}
     }
     FinishTrafficActions();
-    DELETE_PTR(framecounter);
 }
 // end RunUDPIsoch
 

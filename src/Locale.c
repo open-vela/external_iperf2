@@ -70,7 +70,7 @@ Usage: iperf [-s|-c host] [options]\n\
 \n\
 Client/Server:\n\
   -b, --bandwidth #[kmgKMG | pps]  bandwidth to send at in bits/sec or packets per second\n\
-  -e, --enhancedreports    use enhanced reporting giving more tcp/udp and traffic information\n\
+  -e, --enhanced    use enhanced reporting giving more tcp/udp and traffic information\n\
   -f, --format    [kmgKMG]   format to report: Kbits, Mbits, KBytes, MBytes\n\
   -i, --interval  #        seconds between periodic bandwidth reports\n\
   -l, --len       #[kmKM]    length of buffer in bytes to read or write (Defaults: TCP=128K, v4 UDP=1470, v6 UDP=1450)\n\
@@ -87,9 +87,13 @@ Client/Server:\n\
   -M, --mss       #        set TCP maximum segment size (MTU - 40 bytes)\n\
   -N, --nodelay            set TCP no delay, disabling Nagle's Algorithm\n\
   -S, --tos       #        set the socket's IP_TOS (byte) field\n\
+  -Z, --tcp-congestion <algo>  set TCP congestion control algorithm (Linux only)\n\
 \n\
 Server specific:\n\
   -s, --server             run in server mode\n\
+  -1, --singleclient       run one server at a time\n\
+  -b, --bandwidth #[kmgKMG]  bandwidth to read at in bits/sec or packets per second\n\
+      --histograms         enable latency histograms\n\
   -t, --time      #        time in seconds to listen for new connections as well as to receive traffic (default not set)\n\
       --udp-histogram #,#  enable UDP latency histogram(s) with bin width and count, e.g. 1,1000=1(ms),1000(bins)\n\
   -B, --bind <ip>[%<dev>]  bind to multicast address and optional device\n\
@@ -106,14 +110,21 @@ const char usage_long2[] = "\
 \n\
 Client specific:\n\
   -c, --client    <host>   run in client mode, connecting to <host>\n\
+      --connect-only       run a connect only test\n\
   -d, --dualtest           Do a bidirectional test simultaneously (multiple sockets)\n\
-      --fullduplex         run fullduplexectional test over same socket (full duplex mode)\n\
+      --fq-rate #[kmgKMG]  bandwidth to socket pacing\n\
+      --full-duplex        run full duplex test using same socket\n\
       --ipg                set the the interpacket gap (milliseconds) for packets within an isochronous frame\n\
       --isochronous <frames-per-second>:<mean>,<stddev> send traffic in bursts (frames - emulate video traffic)\n\
       --incr-dstip         Increment the destination ip with parallel (-P) traffic threads\n\
+      --no-connect-sync    No sychronization after connect when -P or parallel traffic threads\n\
+      --no-udp-fin         No final server to client stats at end of UDP test\n\
   -n, --num       #[kmgKMG]    number of bytes to transmit (instead of -t)\n\
   -r, --tradeoff           Do a fullduplexectional test individually\n\
   -t, --time      #        time in seconds to transmit for (default 10 secs)\n\
+      --trip-times         enable end to end measurements (requires client and server clock sync)\n\
+      --txdelay-time       time in seconds to hold back after connect and before first write\n\
+      --txstart-time       unix epoch time to schedule first write and start traffic\n\
   -B, --bind [<ip> | <ip:port>] bind ip (and optional port) from which to source traffic\n\
   -F, --fileinput <name>   input the data to be transmitted from a file\n\
   -I, --stdin              input the data to be transmitted from stdin\n\
@@ -125,10 +136,10 @@ Client specific:\n\
 "  -R                       Remove the windows service\n"
 "      --reverse            reverse the test (client receives, server sends)\n"
 #endif
-"  -T, --ttl       #        time-to-live, for multicast (default 1)\n\
+"  -S, --tos                IP DSCP or tos settings\n\
+  -T, --ttl       #        time-to-live, for multicast (default 1)\n\
   -V, --ipv6_domain        Set the domain to IPv6 (send packets over IPv6)\n\
   -X, --peer-detect        perform server version detection and version exchange\n\
-  -Z, --linux-congestion <algo>  set TCP congestion control algorithm (Linux only)\n\
 \n\
 Miscellaneous:\n\
   -x, --reportexclude [CDMSV]   exclude C(connection) D(data) M(multicast) S(settings) V(server) reports\n\
