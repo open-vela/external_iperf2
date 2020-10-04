@@ -599,7 +599,7 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
             setModeTime(mExtSettings);
             setServerModeTime(mExtSettings);
 	    if (atof(optarg) > 0.0)
-                mExtSettings->mAmount = (int) (atof(optarg) * 100.0);
+                mExtSettings->mAmount = (size_t) (atof(optarg) * 100.0);
 	    else
 	        infinitetime = 1;
             break;
