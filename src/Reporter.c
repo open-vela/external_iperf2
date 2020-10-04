@@ -1253,7 +1253,7 @@ void reporter_transfer_protocol_client_tcp (struct ReporterData *data, int final
 	    // print a partial interval report if enable and this a final
 	    reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
 	    (*stats->output_handler)(stats);
-	    reporter_reset_transfer_stats_server_tcp(stats);
+	    reporter_reset_transfer_stats_client_tcp(stats);
         }
 	stats->sock_callstats.write.WriteErr = stats->sock_callstats.write.totWriteErr;
 	stats->sock_callstats.write.WriteCnt = stats->sock_callstats.write.totWriteCnt;
