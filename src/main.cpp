@@ -130,7 +130,6 @@ int main(int argc, char **argv) {
     my_signal(SIGINT,  Sig_Interupt);
 #ifndef WIN32
     my_signal(SIGALRM,  Sig_Interupt);
-
     // Ignore broken pipes
     signal(SIGPIPE,SIG_IGN);
 #else
@@ -140,7 +139,6 @@ int main(int argc, char **argv) {
     WARN_errno(rc == SOCKET_ERROR, "WSAStartup");
     if (rc == SOCKET_ERROR)
 	return 0;
-
     // Tell windows we want to handle our own signals
     SetConsoleCtrlHandler(sig_dispatcher, true);
 #endif
@@ -153,6 +151,7 @@ int main(int argc, char **argv) {
     Mutex_Initialize(&packetringdebug_mutex);
     Mutex_Initialize(&thread_debug_mutex);
 #endif
+    
     // Initialize reporter thread mutex
     reporter_state.ready = 0;
     threads_start.ready = 0;
@@ -172,7 +171,6 @@ int main(int argc, char **argv) {
 
     // Allocate the "global" settings
     ext_gSettings = new thread_Settings;
-
     // Default reporting mode here to avoid unitialized warnings
     // this won't be the actual mode
     ThreadMode ReporterThreadMode = kMode_Reporter;
@@ -269,10 +267,8 @@ int main(int argc, char **argv) {
     // No need to make a reporter thread because we don't have threads
     thread_start(ext_gSettings);
 #endif
-
     // wait for other (client, server) threads to complete
     thread_joinall();
-
     // all done!
     return 0;
 } // end main
@@ -282,7 +278,7 @@ int main(int argc, char **argv) {
  * respond appropriately.. [static]
  * ------------------------------------------------------------------- */
 
-void Sig_Interupt(int inSigno) {
+void Sig_Interupt (int inSigno) {
 #ifdef HAVE_THREAD
     // We try to not allow a single interrupt handled by multiple threads
     // to completely kill the app so we save off the first thread ID
@@ -314,7 +310,7 @@ void Sig_Interupt(int inSigno) {
  * either by exit() or terminating main().
  * ------------------------------------------------------------------- */
 
-void cleanup(void) {
+void cleanup (void) {
 #ifdef WIN32
     // Shutdown Winsock
     WSACleanup();
@@ -419,7 +415,6 @@ VOID ServiceStart (DWORD dwArgc, LPTSTR *lpszArgv) {
     // wait for other (client, server) threads to complete
     thread_joinall();
 }
-
 
 //
 //  FUNCTION: ServiceStop

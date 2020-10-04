@@ -86,7 +86,6 @@ struct PacketRing * packetring_init (int count, struct Condition *awake_consumer
     return (pr);
 }
 
-
 inline void packetring_enqueue (struct PacketRing *pr, struct ReportStruct *metapacket) {
     while (((pr->producer == pr->maxcount) && (pr->consumer == 0)) || \
 	   ((pr->producer + 1) == pr->consumer)) {
