@@ -72,6 +72,7 @@ public:
 
 private:
     int mClients;
+    int mBufLen;
     char* mBuf; // used for UDP packet or TCP  messages
     struct ether_header *eth_hdr;
     struct iphdr *ip_hdr;

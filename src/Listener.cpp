@@ -102,7 +102,8 @@ Listener::Listener (thread_Settings *inSettings) {
      */
     mSettings = inSettings;
     // alloc and initialize the buffer (mBuf) used for test messages in the payload
-    mBuf = new char[(mSettings->mBufLen > MINMBUFALLOCSIZE) ? mSettings->mBufLen : MINMBUFALLOCSIZE]; // defined in payloads.h
+    mBufLen = (mSettings->mBufLen > MINMBUFALLOCSIZE) ? mSettings->mBufLen : MINMBUFALLOCSIZE;
+    mBuf = new char[mBufLen]; // defined in payloads.h
     FAIL_errno(mBuf == NULL, "No memory for buffer\n", mSettings);
 } // end Listener
 
@@ -800,7 +801,7 @@ int Listener::udp_accept (thread_Settings *server) {
     // The INVALID socket is used to keep the while loop going
     server->mSock = INVALID_SOCKET;
     // Hang a 0 byte read with MSG_PEEK to get the sock addr struct populated
-    rc = recvfrom(ListenSocket, NULL, 0, MSG_PEEK, \
+    rc = recvfrom(ListenSocket, mBuf, mBufLen, MSG_PEEK, \
 		  (struct sockaddr*) &server->peer, &server->size_peer);
 #if HAVE_THREAD_DEBUG
     {
@@ -811,11 +812,7 @@ int Listener::udp_accept (thread_Settings *server) {
 	thread_debug("rcvfrom peer: %s port %d len=%d", tmpaddr, port, rc);
     }
 #endif
-#ifdef WIN32
-    if (WSAGetLastError() != WSAEMSGSIZE)
-#else
-      FAIL_errno(rc == SOCKET_ERROR, "recvfrom", mSettings);
-#endif
+    FAIL_errno(rc == SOCKET_ERROR, "recvfrom", mSettings);
     if (!(rc < 0) && !sInterupted) {
 	// Handle connection for UDP sockets
 	int gid = Iperf_push_host_port_conditional(&server->peer, server);
@@ -917,72 +914,61 @@ int Listener::apply_client_settings (thread_Settings *server) {
     server->mMode = kTest_Normal;
 
     if (isUDP(server)) {
-	n = recvn(server->mSock, mBuf, sizeof(uint32_t) + sizeof(struct UDP_datagram), MSG_PEEK);
-	if (n == 0) {
-	    //peer closed the socket, with no writes e.g. a connect-only test
-	    return -1;
-	}
-	FAIL_errno(n != (sizeof(uint32_t) + sizeof(struct UDP_datagram)), "read udp flags", server);
 	struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) mBuf;
 	flags = ntohl(hdr->base.flags);
 	if (flags & HEADER_SEQNO64B) {
 	    setSeqNo64b(server);
 	}
 	// figure out the length of the test header
-	if ((peeklen = Settings_ClientHdrPeekLen(flags) + sizeof(struct UDP_datagram)) > 0) {
-	    // read the test settings passed to the server by the client
-	    n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK);
-	    FAIL_errno((n < peeklen), "read udp test hdr", server);
-	    if (flags & HEADER_VERSION1) {
-		if (flags & RUN_NOW)
-		    server->mMode = kTest_DualTest;
-		else
-		    server->mMode = kTest_TradeOff;
+	if (flags & HEADER_VERSION1) {
+	    if (flags & RUN_NOW)
+		server->mMode = kTest_DualTest;
+	    else
+		server->mMode = kTest_TradeOff;
+	}
+	if (flags & (HEADER_EXTEND | HEADER_VERSION2)) {
+	    upperflags = htons(hdr->extend.upperflags);
+	    server->mTOS = ntohs(hdr->extend.tos);
+	    server->peer_version_u = ntohl(hdr->extend.version_u);
+	    server->peer_version_l = ntohl(hdr->extend.version_l);
+	}
+	if (flags & HEADER_UDPTESTS) {
+	    // Handle stateless flags
+	    if (upperflags & HEADER_ISOCH) {
+		setIsochronous(server);
 	    }
-	    if (flags & (HEADER_EXTEND | HEADER_VERSION2)) {
-		upperflags = htons(hdr->extend.upperflags);
-		server->mTOS = ntohs(hdr->extend.tos);
-		server->peer_version_u = ntohl(hdr->extend.version_u);
-		server->peer_version_l = ntohl(hdr->extend.version_l);
+	    if (upperflags & HEADER_L2ETHPIPV6) {
+		setIPV6(server);
+	    } else {
+		unsetIPV6(server);
 	    }
-	    if (flags & HEADER_UDPTESTS) {
-		// Handle stateless flags
-		if (upperflags & HEADER_ISOCH) {
-		    setIsochronous(server);
-		}
-		if (upperflags & HEADER_L2ETHPIPV6) {
-		    setIPV6(server);
+	    if (upperflags & HEADER_L2LENCHECK) {
+		setL2LengthCheck(server);
+	    }
+	    if (upperflags & HEADER_NOUDPFIN) {
+		setNoUDPfin(server);
+	    }
+	}
+	if (flags & HEADER_VERSION2) {
+	    if (upperflags & HEADER_FULLDUPLEX) {
+		setFullDuplex(server);
+		setServerReverse(server);
+	    }
+	    if (upperflags & HEADER_REVERSE)  {
+		server->mThreadMode=kMode_Client;
+		setServerReverse(server);
+		setNoUDPfin(server);
+		unsetReport(server);
+	    }
+	    if (upperflags & HEADER_TRIPTIME) {
+		server->triptime_start.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
+		server->triptime_start.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
+		Timestamp now;
+		if ((abs(now.getSecs() - server->triptime_start.tv_sec)) > MAXDIFFTIMESTAMPSECS) {
+		    fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
 		} else {
-		    unsetIPV6(server);
-		}
-		if (upperflags & HEADER_L2LENCHECK) {
-		    setL2LengthCheck(server);
-		}
-		if (upperflags & HEADER_NOUDPFIN) {
-		    setNoUDPfin(server);
-		}
-	    }
-	    if (flags & HEADER_VERSION2) {
-		if (upperflags & HEADER_FULLDUPLEX) {
-		    setFullDuplex(server);
-		    setServerReverse(server);
-		}
-		if (upperflags & HEADER_REVERSE)  {
-		    server->mThreadMode=kMode_Client;
-		    setServerReverse(server);
-		    setNoUDPfin(server);
-		    unsetReport(server);
-		}
-		if (upperflags & HEADER_TRIPTIME) {
-		    server->triptime_start.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
-		    server->triptime_start.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
-		    Timestamp now;
-		    if ((abs(now.getSecs() - server->triptime_start.tv_sec)) > MAXDIFFTIMESTAMPSECS) {
-			fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
-		    } else {
-			setTripTime(server);
-			setEnhanced(server);
-		    }
+		    setTripTime(server);
+		    setEnhanced(server);
 		}
 	    }
 	}
