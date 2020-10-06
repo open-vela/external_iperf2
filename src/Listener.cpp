@@ -815,7 +815,7 @@ int Listener::udp_accept (thread_Settings *server) {
     if (WSAGetLastError() != WSAEMSGSIZE)
 #else
       FAIL_errno(rc == SOCKET_ERROR, "recvfrom", mSettings);
-#end
+#endif
     if (!(rc < 0) && !sInterupted) {
 	// Handle connection for UDP sockets
 	int gid = Iperf_push_host_port_conditional(&server->peer, server);
