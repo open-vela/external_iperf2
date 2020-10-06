@@ -319,16 +319,19 @@ void Listener::Run (void) {
 		    if (isFullDuplex(listener_client_settings) || isReverse(listener_client_settings))
 			Iperf_push_host(&listener_client_settings->peer, listener_client_settings);
 		    if (isFullDuplex(server)) {
+			assert(servver->mSumReport != NULL);
+			if (!server->mSumReport->sum_fd_set) {
+			    // Reset the sum output routine for the server sum report
+			    // now that it's know to be full duplex. This wasn't known
+			    // during accept()
+			    SetSumHandlers(server, server->mSumReport);
+			    server->mSumReport->sum_fd_set = 1;
+			}
 			server->mFullDuplexReport = InitSumReport(server, server->mSock, 1);
 			listener_client_settings->mFullDuplexReport = server->mFullDuplexReport;
 #if HAVE_THREAD_DEBUG
 			thread_debug("BiDir report client=%p/%p server=%p/%p", (void *) listener_client_settings, (void *) listener_client_settings->mFullDuplexReport, (void *) server, (void *) server->mFullDuplexReport);
 #endif
-			// Reset the sum output routine for the server sum report
-			// now that it's know to be full duplex. This wasn't known
-			// during accept()
-			assert(server->mSumReport != NULL);
-			SetSumHandlers(server, server->mSumReport, 0);
 			server->runNow =  listener_client_settings;
 		    } else if (server->mMode != kTest_Normal) {
 			client_init(listener_client_settings);
@@ -863,10 +866,10 @@ int Listener::my_accept (thread_Settings *server) {
 	    server->size_local = sizeof(iperf_sockaddr);
 	    getsockname(server->mSock, (sockaddr*) &server->local, &server->size_local);
 	    SockAddr_Ifrname(server);
-	    Iperf_push_host(&server->peer, server);
 	}
     }
     if (server->mSock > 0) {
+	Iperf_push_host(&server->peer, server);
 	Timestamp now;
 	server->accept_time.tv_sec = now.getSecs();
 	server->accept_time.tv_usec = now.getUsecs();

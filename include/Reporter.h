@@ -346,6 +346,7 @@ struct SumReport {
     struct TransferInfo info;
     void (*transfer_protocol_sum_handler) (struct TransferInfo *stats, int final);
     struct BarrierMutex fullduplex_barrier;
+    int sum_fd_set;
 };
 
 struct ReporterData {
@@ -384,7 +385,7 @@ typedef void (* report_settings)( struct ReporterData* );
 typedef void (* report_statistics)( struct TransferInfo* );
 typedef void (* report_serverstatistics)( struct ConnectionInfo *, struct TransferInfo* );
 
-void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport* sumreport, int fullduplex);
+void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport* sumreport);
 struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, int fullduplex);
 struct ReportHeader* InitIndividualReport(struct thread_Settings *inSettings);
 struct ReportHeader* InitConnectionReport(struct thread_Settings *inSettings, double ct);
@@ -462,10 +463,6 @@ void tcp_output_write_enhanced (struct TransferInfo *stats);
 void tcp_output_sum_write_enhanced (struct TransferInfo *stats);
 void tcp_output_sumcnt_write_enhanced (struct TransferInfo *stats);
 // TCP fullduplex
-void tcp_output_fullduplex_write(struct TransferInfo *stats);
-void tcp_output_fullduplex_write_enhanced(struct TransferInfo *stats);
-void tcp_output_fullduplex_read(struct TransferInfo *stats);
-void tcp_output_fullduplex_read_enhanced(struct TransferInfo *stats);
 void tcp_output_fullduplex(struct TransferInfo *stats);
 void tcp_output_fullduplex_enhanced(struct TransferInfo *stats);
 
@@ -475,7 +472,8 @@ void udp_output_read_enhanced(struct TransferInfo *stats);
 void udp_output_read_enhanced_triptime(struct TransferInfo *stats);
 void udp_output_read_enhanced_triptime_isoch(struct TransferInfo *stats);
 void udp_output_sum_read(struct TransferInfo *stats);
-void udp_output_sumcnt_read(struct TransferInfo *stats);
+void udp_output_sum_read_enhanced (struct TransferInfo *stats);
+void udp_output_sumcnt(struct TransferInfo *stats);
 void udp_output_sumcnt_read_enhanced (struct TransferInfo *stats);
 
 //UDP client
@@ -486,10 +484,12 @@ void udp_output_write_enhanced_isoch(struct TransferInfo *stats);
 void udp_output_sum_write_enhanced (struct TransferInfo *stats);
 void udp_output_sumcnt_write(struct TransferInfo *stats);
 void udp_output_sumcnt_write_enhanced (struct TransferInfo *stats);
+void udp_output_sumcnt_enhanced(struct TransferInfo *stats);
 // UDP full duplex
 void udp_output_fullduplex(struct TransferInfo *stats);
-void udp_output_fullduplex_sum(struct TransferInfo *stats);
 void udp_output_fullduplex_enhanced(struct TransferInfo *stats);
+void udp_output_fullduplex_sum(struct TransferInfo *stats);
+
 
 // CSV output
 void udp_output_basic_csv(struct TransferInfo *stats);

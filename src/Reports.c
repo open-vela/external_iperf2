@@ -140,63 +140,75 @@ static void free_common_copy (struct ReportCommon *common) {
     free(common);
 }
 
-void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport* sumreport, int fullduplex) {
-    if (fullduplex) {
-	if (isUDP(inSettings)) {
-	    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_fullduplex_udp;
-	    sumreport->info.output_handler = ((isSumOnly(inSettings) || (inSettings->mReportMode == kReport_CSV)) ? NULL : \
-					      (isEnhanced(inSettings) ? udp_output_fullduplex_enhanced : udp_output_fullduplex));
-	} else {
-	    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_fullduplex_tcp;
-	    sumreport->info.output_handler = ((isSumOnly(inSettings) || (inSettings->mReportMode == kReport_CSV)) ? NULL : \
-					      (isEnhanced(inSettings) ? tcp_output_fullduplex_enhanced : tcp_output_fullduplex));
-	}
+void SetFullDuplexHandlers (struct thread_Settings *inSettings, struct SumReport* sumreport) {
+    if (isUDP(inSettings)) {
+	sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_fullduplex_udp;
+	sumreport->info.output_handler = ((isSumOnly(inSettings) || (inSettings->mReportMode == kReport_CSV)) ? NULL : \
+					  (isEnhanced(inSettings) ? udp_output_fullduplex_enhanced : udp_output_fullduplex));
     } else {
-	switch (inSettings->mThreadMode) {
-	case kMode_Server :
-	    if (isUDP(inSettings)) {
-		sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_udp;
-		if (isFullDuplex(inSettings)) {
-		    sumreport->info.output_handler = udp_output_fullduplex_sum;
-		} else {
-		    sumreport->info.output_handler =  (isSumOnly(inSettings) ? udp_output_sumcnt_read : udp_output_sum_read);
-		}
+	sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_fullduplex_tcp;
+	sumreport->info.output_handler = ((isSumOnly(inSettings) || (inSettings->mReportMode == kReport_CSV)) ? NULL : \
+					  (isEnhanced(inSettings) ? tcp_output_fullduplex_enhanced : tcp_output_fullduplex));
+    }
+}
+
+void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport* sumreport) {
+    switch (inSettings->mThreadMode) {
+    case kMode_Server :
+	if (isUDP(inSettings)) {
+	    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_udp;
+	    if (isSumOnly(inSettings)) {
+		sumreport->info.output_handler = (isEnhanced(inSettings) \
+						  ? udp_output_sumcnt_enhanced : udp_output_sumcnt);
+	    } else if (isFullDuplex(inSettings)) {
+		sumreport->info.output_handler = udp_output_fullduplex_sum;
 	    } else {
-		if (isEnhanced(inSettings)) {
-		    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_tcp;
-		    sumreport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_read_enhanced : tcp_output_sum_read_enhanced);
-		} else {
-		    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_tcp;
-		    sumreport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_read : tcp_output_sum_read);
-		}
+		sumreport->info.output_handler =  (isEnhanced(inSettings) ? udp_output_sum_read_enhanced : udp_output_sum_read);
 	    }
-	    break;
-	case kMode_Client :
-	    if (isUDP(inSettings)) {
-		sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_udp;
-		if (isFullDuplex(inSettings)) {
-		    sumreport->info.output_handler = udp_output_fullduplex_sum;
-		} else {
-		    sumreport->info.output_handler =  (isSumOnly(inSettings) ? udp_output_sumcnt_write : \
-						       (isEnhanced(inSettings) ? udp_output_sum_write_enhanced : udp_output_sum_write));
-		}
+	} else {
+	    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_tcp;
+	    if (isSumOnly(inSettings)) {
+		sumreport->info.output_handler = ((isEnhanced(inSettings) && !isFullDuplex(inSettings)) ? \
+						  tcp_output_sumcnt_read_enhanced : tcp_output_sumcnt_read);
+	    } else if (isFullDuplex(inSettings)) {
+		sumreport->info.output_handler = tcp_output_sum_read;
 	    } else {
-		sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_tcp;
-		sumreport->info.output_handler = (isSumOnly(inSettings) ? tcp_output_sumcnt_write : \
-						  (isEnhanced(inSettings) ? tcp_output_sum_write_enhanced : tcp_output_sum_write));
+		sumreport->info.output_handler =  (isEnhanced(inSettings) ? tcp_output_sum_read_enhanced : tcp_output_sum_read);
 	    }
-	    break;
-	default:
-	    FAIL(1, "SetSumReport", inSettings);
 	}
+	break;
+    case kMode_Client :
+	if (isUDP(inSettings)) {
+	    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_udp;
+	    if (isSumOnly(inSettings)) {
+		sumreport->info.output_handler = ((isEnhanced(inSettings) && !isFullDuplex(inSettings)) ? \
+						  udp_output_sumcnt_write_enhanced : udp_output_sumcnt);
+	    } else if (isFullDuplex(inSettings)) {
+		sumreport->info.output_handler = udp_output_fullduplex_sum;
+	    } else {
+		sumreport->info.output_handler = (isEnhanced(inSettings) ? udp_output_sum_write_enhanced : udp_output_sum_write);
+	    }
+	} else {
+	    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_tcp;
+	    if (isSumOnly(inSettings)) {
+		sumreport->info.output_handler = ((isEnhanced(inSettings) && !isFullDuplex(inSettings)) ? \
+						  tcp_output_sumcnt_read_enhanced : tcp_output_sumcnt_read);
+	    } else if (isFullDuplex(inSettings)) {
+		sumreport->info.output_handler = udp_output_fullduplex_sum;
+	    } else {
+		sumreport->info.output_handler = (isEnhanced(inSettings) ? tcp_output_sum_write_enhanced : tcp_output_sum_write);
+	    }
+	}
+	break;
+    default:
+	FAIL(1, "SetSumReport", inSettings);
     }
     // overide output handlers when csv reporting set
     if (inSettings->mReportMode == kReport_CSV)
 	sumreport->info.output_handler = NULL;
-
 }
 
-struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, int fullduplex) {
+struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, int fullduplex_report) {
     struct SumReport *sumreport = (struct SumReport *) calloc(1, sizeof(struct SumReport));
     if (sumreport == NULL) {
 	FAIL(1, "Out of Memory!!\n", inSettings);
@@ -216,8 +228,8 @@ struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, in
 	sumreport->info.ts.intervalTime.tv_sec = (long) (inSettings->mInterval / rMillion);
 	sumreport->info.ts.intervalTime.tv_usec = (long) (inSettings->mInterval % rMillion);
     }
-    SetSumHandlers(inSettings, sumreport, fullduplex);
-    if (fullduplex) {
+    if (fullduplex_report) {
+	SetFullDuplexHandlers(inSettings, sumreport);
 	if (!isServerReverse(inSettings)) {
 	    sumreport->fullduplex_barrier.count = 0;
 	    Condition_Initialize(&sumreport->fullduplex_barrier.await);
@@ -234,6 +246,8 @@ struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, in
 	    sumreport->info.ts.nextTime = sumreport->info.ts.startTime;
 	    TimeAdd(sumreport->info.ts.nextTime, sumreport->info.ts.intervalTime);
 	}
+    } else {
+	SetSumHandlers(inSettings, sumreport);
     }
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Init sum report %p id=%d", (void *)sumreport, inID);
