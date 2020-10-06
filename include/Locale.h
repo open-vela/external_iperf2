@@ -139,12 +139,14 @@ extern const char client_fq_pacing[];
 
 extern const char report_bw_header[];
 
-extern const char report_bw_sumcnt_header[];
+extern const char report_sumcnt_bw_header[];
 
 extern const char report_bw_format[];
 
 extern const char report_sum_bw_format[];
+
 extern const char report_sumcnt_bw_format[];
+
 extern const char report_bw_read_format[];
 
 extern const char report_bw_jitter_loss_header[];
@@ -177,13 +179,15 @@ extern const char report_bw_read_enhanced_format[];
 
 extern const char report_sum_bw_read_enhanced_format[];
 
+extern const char report_sumcnt_bw_read_enhanced_header[];
+
 extern const char report_sumcnt_bw_read_enhanced_format[];
 
 extern const char report_triptime_enhanced_format[];
 
 extern const char report_bw_write_enhanced_header[];
 
-extern const char report_bw_write_sumcnt_enhanced_header[];
+extern const char report_sumcnt_bw_write_enhanced_header[];
 
 extern const char report_bw_write_enhanced_format[];
 
@@ -241,12 +245,17 @@ extern const char report_udp_fullduplex_sum_format[];
 
 extern const char report_udp_fullduplex_enhanced_format[];
 
+extern const char report_sumcnt_udp_fullduplex_header[];
+
+extern const char report_sumcnt_udp_fullduplex_format[];
 
 /* -------------------------------------------------------------------
  * Misc reports
  * ------------------------------------------------------------------- */
 
 extern const char report_outoforder[];
+
+extern const char report_sumcnt_outoforder[];
 
 extern const char report_l2statistics[];
 
