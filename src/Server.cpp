@@ -95,8 +95,8 @@ Server::Server (thread_Settings *inSettings) {
 	}
     }
 #endif
-    // initialize buffer, length checking done by the Listener
-    mBuf = new char[(mSettings->mBufLen > MINMBUFALLOCSIZE) ? mSettings->mBufLen : MINMBUFALLOCSIZE]; // defined in payloads.h
+    mBufLen = (mSettings->mBufLen > MINMBUFALLOCSIZE) ? mSettings->mBufLen : MINMBUFALLOCSIZE;
+    mBuf = new char[mBufLen];
     FAIL_errno(mBuf == NULL, "No memory for buffer\n", mSettings);
     if (mSettings->mBufLen < (int) sizeof(UDP_datagram)) {
 	fprintf(stderr, warn_buffer_too_small, mSettings->mBufLen);
@@ -399,18 +399,13 @@ bool Server::InitTrafficLoop (void) {
 	uint32_t flags = 0;
 	int peeklen = 0;
 	if (isUDP(mSettings)) {
-	    n = recvn(mSettings->mSock, mBuf, sizeof(uint32_t) + sizeof(struct UDP_datagram), MSG_PEEK);
+	    n = recvn(mSettings->mSock, mBuf, mBufLen, MSG_PEEK);
 	    if (n == 0) {
 		//peer closed the socket, with no writes e.g. a connect-only test
 		return -1;
 	    }
-	    FAIL_errno(n != (sizeof(uint32_t) + sizeof(struct UDP_datagram)), "read udp flags", mSettings);
 	    struct client_udp_testhdr *udp_pkt = (struct client_udp_testhdr *) mBuf;
 	    flags = ntohl(udp_pkt->base.flags);
-	    if ((peeklen = Settings_ClientHdrPeekLen(flags) + sizeof(struct UDP_datagram)) > 0) {
-		n = recvn(mSettings->mSock, mBuf, peeklen, MSG_PEEK);
-		FAIL_errno((n < peeklen), "read udp test hdr", mSettings);
-	    }
 	    mSettings->triptime_start.tv_sec = ntohl(udp_pkt->start_fq.start_tv_sec);
 	    mSettings->triptime_start.tv_usec = ntohl(udp_pkt->start_fq.start_tv_usec);
 	} else {
