@@ -811,7 +811,11 @@ int Listener::udp_accept (thread_Settings *server) {
 	thread_debug("rcvfrom peer: %s port %d len=%d", tmpaddr, port, rc);
     }
 #endif
-    FAIL_errno(rc == SOCKET_ERROR, "recvfrom", mSettings);
+#ifdef WIN32
+    if (WSAGetLastError() != WSAEMSGSIZE)
+#else
+      FAIL_errno(rc == SOCKET_ERROR, "recvfrom", mSettings);
+#end
     if (!(rc < 0) && !sInterupted) {
 	// Handle connection for UDP sockets
 	int gid = Iperf_push_host_port_conditional(&server->peer, server);
