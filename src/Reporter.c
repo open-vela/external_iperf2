@@ -1015,6 +1015,7 @@ void reporter_transfer_protocol_server_udp (struct ReporterData *data, int final
 	sumstats->total.IPG.current += stats->cntIPG;
 	if (sumstats->IPGsum < stats->IPGsum)
 	    sumstats->IPGsum = stats->IPGsum;
+	sumstats->threadcnt++;
     }
     if (fullduplexstats) {
 	fullduplexstats->total.Bytes.current += stats->cntBytes;
@@ -1101,11 +1102,13 @@ void reporter_transfer_protocol_sum_server_udp (struct TransferInfo *stats, int 
 	    stats->cntDatagrams = stats->total.Datagrams.current - stats->total.Datagrams.prev;
 	    stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
 	    stats->cntIPG = stats->total.IPG.current - stats->total.IPG.prev;
-	}
+        }
 	if (stats->output_handler)
 	    (*stats->output_handler)(stats);
-	if (!final)
+	if (!final) {
+	    stats->threadcnt = 0;
 	    reporter_reset_transfer_stats_server_udp(stats);
+	}
     }
 }
 void reporter_transfer_protocol_sum_client_udp (struct TransferInfo *stats, int final) {

@@ -261,6 +261,7 @@ const char report_sumcnt_bw_format[] =
 
 const char report_bw_jitter_loss_header[] =
 "[ ID] Interval       Transfer     Bandwidth        Jitter   Lost/Total Datagrams\n";
+
 const char report_bw_jitter_loss_format[] =
 "[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%)\n";
 
@@ -273,7 +274,7 @@ const char report_sumcnt_bw_jitter_loss_format[] =
 /* -------------------------------------------------------------------
  * Enhanced reports (per -e)
  * ------------------------------------------------------------------- */
-const char report_bw_sumcnt_header[] =
+const char report_sumcnt_bw_header[] =
 "[SUM-cnt] Interval       Transfer     Bandwidth\n";
 
 const char client_report_epoch_start[] =
@@ -300,6 +301,12 @@ const char report_bw_read_enhanced_header[] =
 const char report_bw_read_enhanced_format[] =
 "[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d=%d:%d:%d:%d:%d:%d:%d:%d\n";
 
+const char report_sumcnt_bw_read_enhanced_header[] =
+"[SUM-cnt] Interval" IPERFTimeSpace "Transfer    Bandwidth       Reads=Dist\n";
+
+const char report_sumcnt_bw_read_enhanced_format[] =
+"[SUM-%d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d=%d:%d:%d:%d:%d:%d:%d:%d\n";
+
 const char report_bw_read_enhanced_netpwr_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth    Burst Latency avg/min/max/stdev (cnt/size) inP NetPwr  Reads=Dist\n";
 
@@ -316,17 +323,14 @@ const char report_triptime_enhanced_format[] =
 const char report_bw_write_enhanced_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth       Write/Err  Rtry     Cwnd/RTT        NetPwr\n";
 
+const char report_sum_bw_write_enhanced_format[] =
+"[SUM] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d%10d\n";
+
 const char report_bw_write_enhanced_format[] =
 "[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %10d %8dK/%u us  %4.2f\n";
 
 const char report_bw_write_enhanced_nocwnd_format[] =
 "[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %10d       NA/%u us  %4.2f\n";
-
-const char report_sum_bw_write_enhanced_format[] =
-"[SUM] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d%10d\n";
-
-const char report_sumcnt_bw_write_enhanced_format[] =
-"[SUM-%d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d%10d\n";
 
 #else
 const char report_bw_write_enhanced_header[] =
@@ -338,13 +342,13 @@ const char report_bw_write_enhanced_format[] =
 const char report_sum_bw_write_enhanced_format[] =
 "[SUM] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d\n";
 
-const char report_sumcnt_bw_write_enhanced_format[] =
-"[SUM-%d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d\n";
-
 #endif
 
-const char report_bw_write_sumcnt_enhanced_header[] =
+const char report_sumcnt_bw_write_enhanced_header[] =
 "[SUM-cnt] Interval" IPERFTimeSpace "Transfer    Bandwidth       Write/Err  Rtry\n";
+
+const char report_sumcnt_bw_write_enhanced_format[] =
+"[SUM-%d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d\n";
 
 const char report_bw_pps_enhanced_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer     Bandwidth      Write/Err  PPS\n";
@@ -420,6 +424,12 @@ const char report_bw_sum_fullduplex_enhanced_format[] =
 const char report_udp_fullduplex_header[] =
 "[ ID] Interval       Transfer     Bandwidth    Datagrams   PPS\n";
 
+const char report_sumcnt_udp_fullduplex_header[] =
+"[SUM-cnt] Interval       Transfer     Bandwidth    Datagrams   PPS\n";
+
+const char report_sumcnt_udp_fullduplex_format[] =
+"[SUM-%d] " IPERFTimeFrmt " sec  %ss  %ss/sec %5" PRIdMAX "%8.0f pps\n";
+
 const char report_udp_fullduplex_format[] =
 "[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec %5" PRIdMAX "%8.0f pps\n";
 
@@ -434,6 +444,9 @@ const char report_udp_fullduplex_sum_format[] =
  * ------------------------------------------------------------------- */
 const char report_outoforder[] =
 "[%3d] " IPERFTimeFrmt " sec  %d datagrams received out-of-order\n";
+
+const char report_sumcnt_outoforder[] =
+"[SUM-%d] " IPERFTimeFrmt " sec  %d datagrams received out-of-order\n";
 
 const char report_l2statistics[] =
 "[%3d] " IPERFTimeFrmt " sec   L2 processing detected errors, total(length/checksum/unknown) = %" PRIdMAX "(%" PRIdMAX "/%" PRIdMAX "/%" PRIdMAX ")\n";
