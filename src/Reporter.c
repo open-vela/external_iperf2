@@ -1180,7 +1180,7 @@ void reporter_transfer_protocol_client_udp (struct ReporterData *data, int final
     if (stats->output_handler) {
 	(*stats->output_handler)(stats);
 	if (final)
-	    printf(report_datagrams, stats->transferID, stats->total.Datagrams.current);
+	    printf(report_datagrams, stats->common->transferIDStr, stats->total.Datagrams.current);
     }
     reporter_reset_transfer_stats_client_udp(stats);
 }

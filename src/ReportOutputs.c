@@ -113,12 +113,12 @@ static inline void _print_stats_common (struct TransferInfo *stats) {
 static inline void _output_outoforder(struct TransferInfo *stats) {
     if (stats->cntOutofOrder > 0) {
 	printf(report_outoforder,
-	       stats->transferID, stats->ts.iStart,
+	       stats->common->transferIDStr, stats->ts.iStart,
 	       stats->ts.iEnd, stats->cntOutofOrder);
     }
     if (stats->l2counts.cnt) {
 	printf(report_l2statistics,
-	       stats->transferID, stats->ts.iStart,
+	       stats->common->transferIDStr, stats->ts.iStart,
 	       stats->ts.iEnd, stats->l2counts.cnt, stats->l2counts.lengtherr,
 	       stats->l2counts.udpcsumerr, stats->l2counts.unknown);
     }
@@ -138,26 +138,32 @@ static inline void set_llawbuf(double lambda, double meantransit) {
 void tcp_output_fullduplex (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw);
     _print_stats_common(stats);
-    printf(report_bw_sum_fullduplex_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
+    printf(report_bw_sum_fullduplex_format, stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
+}
+
+void tcp_output_fullduplex_sum (struct TransferInfo *stats) {
+    HEADING_PRINT_COND(report_bw);
+    _print_stats_common(stats);
+    printf(report_sum_bw_format, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
 }
 
 void tcp_output_fullduplex_enhanced (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw);
     _print_stats_common(stats);
-    printf(report_bw_sum_fullduplex_enhanced_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
+    printf(report_bw_sum_fullduplex_enhanced_format, stats->common->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
 }
 
 void tcp_output_read (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw);
     _print_stats_common(stats);
-    printf(report_bw_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
+    printf(report_bw_format, stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext);
 }
 //TCP read or server output
 void tcp_output_read_enhanced (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw_read_enhanced);
     _print_stats_common(stats);
     printf(report_bw_read_enhanced_format,
-	   stats->transferID, stats->ts.iStart, stats->ts.iEnd,
+	   stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext,
 	   stats->sock_callstats.read.cntRead,
 	   stats->sock_callstats.read.bins[0],
@@ -177,7 +183,7 @@ void tcp_output_read_enhanced_triptime (struct TransferInfo *stats) {
     _print_stats_common(stats);
     if (stats->cntBytes) {
 	printf(report_bw_read_enhanced_netpwr_format,
-	       stats->transferID, stats->ts.iStart, stats->ts.iEnd,
+	       stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
 	       outbuffer, outbufferext,
 	       (meantransit * 1e3),
 	       stats->transit.minTransit*1e3,
@@ -198,7 +204,7 @@ void tcp_output_read_enhanced_triptime (struct TransferInfo *stats) {
 	       stats->sock_callstats.read.bins[7]);
     } else {
 	printf(report_bw_read_enhanced_format,
-	       stats->transferID, stats->ts.iStart, stats->ts.iEnd,
+	       stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
 	       outbuffer, outbufferext,
 	       (meantransit * 1e3),
 	       stats->transit.minTransit*1e3,
@@ -227,7 +233,7 @@ void tcp_output_read_enhanced_triptime (struct TransferInfo *stats) {
 void tcp_output_write (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw);
     _print_stats_common(stats);
-    printf(report_bw_format, stats->transferID,
+    printf(report_bw_format, stats->common->transferIDStr,
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext);
 }
@@ -237,7 +243,7 @@ void tcp_output_write_enhanced (struct TransferInfo *stats) {
     _print_stats_common(stats);
 #ifndef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
     printf(report_bw_write_enhanced_format,
-	   stats->transferID, stats->ts.iStart, stats->ts.iEnd,
+	   stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext,
 	   stats->sock_callstats.write.WriteCnt,
 	   stats->sock_callstats.write.WriteErr,
@@ -249,7 +255,7 @@ void tcp_output_write_enhanced (struct TransferInfo *stats) {
     }
     if (stats->sock_callstats.write.cwnd > 0) {
 	printf(report_bw_write_enhanced_format,
-	       stats->transferID, stats->ts.iStart, stats->ts.iEnd,
+	       stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
 	       outbuffer, outbufferext,
 	       stats->sock_callstats.write.WriteCnt,
 	       stats->sock_callstats.write.WriteErr,
@@ -259,7 +265,7 @@ void tcp_output_write_enhanced (struct TransferInfo *stats) {
 	       netpower);
     } else {
 	printf(report_bw_write_enhanced_nocwnd_format,
-	       stats->transferID, stats->ts.iStart, stats->ts.iEnd,
+	       stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
 	       outbuffer, outbufferext,
 	       stats->sock_callstats.write.WriteCnt,
 	       stats->sock_callstats.write.WriteErr,
@@ -274,14 +280,14 @@ void tcp_output_write_enhanced (struct TransferInfo *stats) {
 void udp_output_fullduplex (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_udp_fullduplex);
     _print_stats_common(stats);
-    printf(report_udp_fullduplex_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext, \
+    printf(report_udp_fullduplex_format, stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext, \
 	   stats->cntDatagrams, (stats->cntIPG && (stats->IPGsum > 0.0) ? (stats->cntIPG / stats->IPGsum) : 0.0));
 }
 
 void udp_output_fullduplex_enhanced (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_udp_fullduplex);
     _print_stats_common(stats);
-    printf(report_udp_fullduplex_enhanced_format, stats->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext, \
+    printf(report_udp_fullduplex_enhanced_format, stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext, \
 	   stats->cntDatagrams, (stats->cntIPG && (stats->IPGsum > 0.0) ? (stats->cntIPG / stats->IPGsum) : 0.0));
 }
 
@@ -296,7 +302,7 @@ void udp_output_fullduplex_sum (struct TransferInfo *stats) {
 void udp_output_read (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw_jitter_loss);
     _print_stats_common(stats);
-    printf(report_bw_jitter_loss_format, stats->transferID,
+    printf(report_bw_jitter_loss_format, stats->common->transferIDStr,
 	    stats->ts.iStart, stats->ts.iEnd,
 	    outbuffer, outbufferext,
 	    stats->jitter*1000.0, stats->cntError, stats->cntDatagrams,
@@ -307,7 +313,7 @@ void udp_output_read (struct TransferInfo *stats) {
 void udp_output_read_enhanced (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw_jitter_loss_pps);
     _print_stats_common(stats);
-    printf(report_bw_jitter_loss_pps_format, stats->transferID,
+    printf(report_bw_jitter_loss_pps_format, stats->common->transferIDStr,
 	    stats->ts.iStart, stats->ts.iEnd,
 	    outbuffer, outbufferext,
 	    stats->jitter*1000.0, stats->cntError, stats->cntDatagrams,
@@ -320,7 +326,7 @@ void udp_output_read_enhanced_triptime (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw_jitter_loss_enhanced);
     _print_stats_common(stats);
     if (!stats->cntIPG) {
-	printf(report_bw_jitter_loss_suppress_enhanced_format, stats->transferID,
+	printf(report_bw_jitter_loss_suppress_enhanced_format, stats->common->transferIDStr,
 	       stats->ts.iStart, stats->ts.iEnd,
 	       outbuffer, outbufferext,
 	       0.0, stats->cntError,
@@ -330,7 +336,7 @@ void udp_output_read_enhanced_triptime (struct TransferInfo *stats) {
 	double meantransit = (stats->transit.cntTransit > 0) ? (stats->transit.sumTransit / stats->transit.cntTransit) : 0;
 	double lambda = (stats->IPGsum > 0.0) ? ((double)stats->cntBytes / stats->IPGsum) : 0.0;
 	set_llawbuf(lambda, meantransit);
-	printf(report_bw_jitter_loss_enhanced_format, stats->transferID,
+	printf(report_bw_jitter_loss_enhanced_format, stats->common->transferIDStr,
 	       stats->ts.iStart, stats->ts.iEnd,
 	       outbuffer, outbufferext,
 	       stats->jitter*1000.0, stats->cntError, stats->cntDatagrams,
@@ -352,7 +358,7 @@ void udp_output_read_enhanced_triptime_isoch (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw_jitter_loss_enhanced_isoch);
     _print_stats_common(stats);
     if (!stats->cntIPG) {
-	printf(report_bw_jitter_loss_suppress_enhanced_format, stats->transferID,
+	printf(report_bw_jitter_loss_suppress_enhanced_format, stats->common->transferIDStr,
 	       stats->ts.iStart, stats->ts.iEnd,
 	       outbuffer, outbufferext,
 	       0.0, stats->cntError,
@@ -365,7 +371,7 @@ void udp_output_read_enhanced_triptime_isoch (struct TransferInfo *stats) {
 	// latency output
 	if ((stats->transit.minTransit > UNREALISTIC_LATENCYMINMAX) ||
 	    (stats->transit.minTransit < UNREALISTIC_LATENCYMINMIN)) {
-	    printf(report_bw_jitter_loss_suppress_enhanced_format, stats->transferID,
+	    printf(report_bw_jitter_loss_suppress_enhanced_format, stats->common->transferIDStr,
 		   stats->ts.iStart, stats->ts.iEnd,
 		   outbuffer, outbufferext,
 		   stats->jitter*1000.0, stats->cntError, stats->cntDatagrams,
@@ -375,7 +381,7 @@ void udp_output_read_enhanced_triptime_isoch (struct TransferInfo *stats) {
 	    double meantransit = (stats->transit.sumTransit / stats->transit.cntTransit);
 	    double lambda = (stats->IPGsum > 0.0) ? ((double)stats->cntBytes / stats->IPGsum) : 0.0;
 	    set_llawbuf(lambda, meantransit);
-	    printf(report_bw_jitter_loss_enhanced_isoch_format, stats->transferID,
+	    printf(report_bw_jitter_loss_enhanced_isoch_format, stats->common->transferIDStr,
 		   stats->ts.iStart, stats->ts.iEnd,
 		   outbuffer, outbufferext,
 		   stats->jitter*1e3, stats->cntError, stats->cntDatagrams,
@@ -401,7 +407,7 @@ void udp_output_read_enhanced_triptime_isoch (struct TransferInfo *stats) {
 void udp_output_write (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw);
     _print_stats_common(stats);
-    printf(report_bw_format, stats->transferID,
+    printf(report_bw_format, stats->common->transferIDStr,
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext);
 }
@@ -409,7 +415,7 @@ void udp_output_write (struct TransferInfo *stats) {
 void udp_output_write_enhanced (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw_pps_enhanced);
     _print_stats_common(stats);
-    printf(report_bw_pps_enhanced_format, stats->transferID,
+    printf(report_bw_pps_enhanced_format, stats->common->transferIDStr,
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext,
 	   stats->sock_callstats.write.WriteCnt,
@@ -419,7 +425,7 @@ void udp_output_write_enhanced (struct TransferInfo *stats) {
 void udp_output_write_enhanced_isoch (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw_pps_enhanced_isoch);
     _print_stats_common(stats);
-    printf(report_bw_pps_enhanced_isoch_format, stats->transferID,
+    printf(report_bw_pps_enhanced_isoch_format, stats->common->transferIDStr,
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext,
 	   stats->sock_callstats.write.WriteCnt,
@@ -458,7 +464,7 @@ void udp_output_sumcnt (struct TransferInfo *stats) {
 		   stats->ts.iEnd, stats->cntOutofOrder);
 	} else {
 	    printf(report_outoforder,
-		   stats->transferID, stats->ts.iStart,
+		   stats->common->transferIDStr, stats->ts.iStart,
 		   stats->ts.iEnd, stats->cntOutofOrder);
 	}
     }
@@ -476,7 +482,7 @@ void udp_output_sumcnt_enhanced (struct TransferInfo *stats) {
 		   stats->ts.iEnd, stats->cntOutofOrder);
 	} else {
 	    printf(report_outoforder,
-		   stats->transferID, stats->ts.iStart,
+		   stats->common->transferIDStr, stats->ts.iStart,
 		   stats->ts.iEnd, stats->cntOutofOrder);
 	}
     }
@@ -693,7 +699,7 @@ void udp_output_basic_csv (struct TransferInfo *stats) {
     printf(reportCSV_bw_jitter_loss_format,
 	   __timestring,
 	    stats->csv_peer,
-	    stats->transferID,
+	    stats->common->transferID,
 	    stats->ts.iStart,
 	    stats->ts.iEnd,
 	    stats->cntBytes,
@@ -715,7 +721,7 @@ void tcp_output_basic_csv (struct TransferInfo *stats) {
     printf(reportCSV_bw_format,
 	   __timestring,
 	   stats->csv_peer,
-	   stats->transferID,
+	   stats->common->transferID,
 	   stats->ts.iStart,
 	   stats->ts.iEnd,
 	   stats->cntBytes,
@@ -934,13 +940,13 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 #endif
 #ifdef HAVE_IPV6
     if (isEnhanced(report->common) && report->common->Ifrname && (strlen(report->common->Ifrname) < SNBUFFERSIZE-strlen(b))) {
-	printf(report_peer_dev, report->common->socket, local_addr, report->common->Ifrname, \
+	printf(report_peer_dev, report->common->transferID, local_addr, report->common->Ifrname, \
 	       (local->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)local)->sin_port) : \
 		ntohs(((struct sockaddr_in6*)local)->sin6_port)), \
 	       remote_addr, (peer->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)peer)->sin_port) : \
 			     ntohs(((struct sockaddr_in6*)peer)->sin6_port)), outbuffer);
     } else {
-	printf(report_peer, report->common->socket, local_addr, \
+	printf(report_peer, report->common->transferID, local_addr, \
 	       (local->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)local)->sin_port) : \
 		ntohs(((struct sockaddr_in6*)local)->sin6_port)), \
 	       remote_addr, (peer->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)peer)->sin_port) : \
@@ -948,12 +954,12 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
     }
 #else
     if (isEnhanced(report->common) && report->common->Ifrname  && (strlen(report->common->Ifrname) < SNBUFFERSIZE-strlen(b))) {
-	printf(report_peer_dev, report->common->socket, local_addr, report->common->Ifrname, \
+	printf(report_peer_dev, report->common->transferID, local_addr, report->common->Ifrname, \
 	       local_addr, (local->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)local)->sin_port) : 0), \
 	       remote_addr, (peer->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)peer)->sin_port) :  0), \
 	       outbuffer);
     } else {
-	printf(report_peer, report->common->socket, \
+	printf(report_peer, report->common->transferID, \
 	       local_addr, (local->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)local)->sin_port) : 0), \
 	       remote_addr, (peer->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)peer)->sin_port) :  0), \
 	       outbuffer);
@@ -971,12 +977,12 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 	ts = *localtime(&t1.tv_sec);
 	char now_timebuf[80];
 	strftime(now_timebuf, sizeof(now_timebuf), "%Y-%m-%d %H:%M:%S (%Z)", &ts);
-	printf(client_report_epoch_start_current, report->common->socket, start_timebuf, report->epochStartTime.tv_sec, report->epochStartTime.tv_usec, now_timebuf);
+	printf(client_report_epoch_start_current, report->common->transferID, start_timebuf, report->epochStartTime.tv_sec, report->epochStartTime.tv_usec, now_timebuf);
 #else
 	// Format time, "ddd yyyy-mm-dd hh:mm:ss zzz"
 	ts = *localtime(&report->epochStartTime.tv_sec);
 	strftime(start_timebuf, sizeof(start_timebuf), "%Y-%m-%d %H:%M:%S (%Z)", &ts);
-	printf(client_report_epoch_start, report->common->socket, start_timebuf, report->epochStartTime.tv_sec, report->epochStartTime.tv_usec);
+	printf(client_report_epoch_start, report->common->transferID, start_timebuf, report->epochStartTime.tv_sec, report->epochStartTime.tv_usec);
 #endif
 	fflush(stdout);
     }
@@ -1024,6 +1030,6 @@ void reporter_peerversion (struct ConnectionInfo *report, uint32_t upper, uint32
 }
 
 void reporter_print_server_relay_report (struct ServerRelay *report) {
-    printf(server_reporting, report->info.transferID);
+    printf(server_reporting, report->info.common->transferID);
     udp_output_read(&report->info);
 }

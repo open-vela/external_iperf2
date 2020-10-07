@@ -81,6 +81,8 @@ extern "C" {
 
 extern struct Condition ReportCond;
 extern struct Condition ReportsPending;
+extern int groupID;
+extern Mutex transferid_mutex;
 
 /*
  *
@@ -236,6 +238,8 @@ struct ReportCommon {
     char* Ifrnametx;
     char* SSMMulticastStr;
     char* Congestion;
+    char* transferIDStr;
+    int transferID;
 #if WIN32
     SOCKET socket;
 #else
@@ -313,7 +317,6 @@ struct TransferInfo {
     struct ReportCommon *common;
     struct ReportTimeStamps ts;
     void (*output_handler) (struct TransferInfo *stats);
-    int transferID;
     int groupID;
     int threadcnt;
     int sumflag;
@@ -465,6 +468,7 @@ void tcp_output_sumcnt_write_enhanced (struct TransferInfo *stats);
 // TCP fullduplex
 void tcp_output_fullduplex(struct TransferInfo *stats);
 void tcp_output_fullduplex_enhanced(struct TransferInfo *stats);
+void tcp_output_fullduplex_sum (struct TransferInfo *stats);
 
 // UDP server
 void udp_output_read(struct TransferInfo *stats);
@@ -508,6 +512,8 @@ void write_UDP_AckFIN(struct TransferInfo *stats);
 
 int reporter_process_transfer_report (struct ReporterData *this_ireport);
 int reporter_process_report (struct ReportHeader *reporthdr);
+
+int setTransferID(struct thread_Settings *inSettings, int role_reversal);
 
 #ifdef __cplusplus
 } /* end extern "C" */

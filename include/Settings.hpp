@@ -156,6 +156,7 @@ struct thread_Settings {
     char*  mSSMMulticastStr;        // --ssm-host
     char*  mIsochronousStr;         // --isochronous
     char*  mRxHistogramStr;         // --histograms (packets)
+    char*  mTransferIDStr;          //
     FILE*  Extractor_file;
     struct ReportHeader* reporthdr;
     struct SumReport* mSumReport;
@@ -165,6 +166,7 @@ struct thread_Settings {
     // int's
     int mThreads;                   // -P
     int mTOS;                       // -S
+    int mTransferID;
 #if WIN32
     SOCKET mSock;
 #else

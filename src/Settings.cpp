@@ -91,8 +91,6 @@ static int noudpfin = 0;
 static int numreportstructs = 0;
 static int sumonly = 0;
 
-extern Mutex groupCond;
-
 void Settings_Interpret(char option, const char *optarg, struct thread_Settings *mExtSettings);
 // apply compound settings after the command line has been fully parsed
 void Settings_ModalOptions(struct thread_Settings *mExtSettings);
@@ -353,6 +351,7 @@ void Settings_Copy (struct thread_Settings *from, struct thread_Settings **into,
 	(*into)->mIfrnametx = NULL;
 	(*into)->mIsochronousStr = NULL;
 	(*into)->mCongestion = NULL;
+	(*into)->mTransferIDStr = NULL;
 	// apply the server side congestion setting to reverse clients
 	if (from->mIsochronousStr != NULL) {
 	    (*into)->mIsochronousStr = new char[ strlen(from->mIsochronousStr) + 1];

@@ -224,8 +224,9 @@ void Listener::Run (void) {
 	    Settings_Destroy(server);
 	    continue;
 	}
+
 #ifdef HAVE_THREAD_DEBUG
-	thread_debug("Listener thread accepted server sock=%d", server->mSock);
+	thread_debug("Listener thread accepted server sock=%d transferID", server->mSock, server->mTransferID);
 #endif
 	// Decrement the -P counter, commonly usd to kill the listener
 	// after one test, i.e. -s -P 1
@@ -259,6 +260,7 @@ void Listener::Run (void) {
 	    Settings_Destroy(server);
 	    continue;
 	}
+	setTransferID(server, 0);
 	// isCompat is a version 1.7 test, basically it indicates there is nothing
 	// in the first messages so don't try to process them. Later iperf versions use
 	// the first message to convey test request and test settings information.  This flag
@@ -300,6 +302,7 @@ void Listener::Run (void) {
 		    continue;
 		}
 	    }
+
 	    if (isConnectionReport(server) && !isSumOnly(server)) {
 		PostReport(InitConnectionReport(server, 0));
 	    }
@@ -317,6 +320,7 @@ void Listener::Run (void) {
 		// read client header for reverse settings
 		Settings_GenerateClientSettings(server, &listener_client_settings, mBuf);
 		if (listener_client_settings) {
+		    setTransferID(listener_client_settings, 1);
 		    if (isFullDuplex(listener_client_settings) || isReverse(listener_client_settings))
 			Iperf_push_host(&listener_client_settings->peer, listener_client_settings);
 		    if (isFullDuplex(server)) {

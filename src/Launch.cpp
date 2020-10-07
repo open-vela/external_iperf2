@@ -155,6 +155,7 @@ void server_spawn(struct thread_Settings *thread) {
 }
 
 static void clientside_client_basic (struct thread_Settings *thread, Client *theClient) {
+    setTransferID(thread, 0);
     theClient->my_connect();
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Client spawn thread basic (sock=%d)", thread->mSock);
@@ -176,6 +177,7 @@ static void clientside_client_basic (struct thread_Settings *thread, Client *the
 }
 
 static void clientside_client_reverse (struct thread_Settings *thread, Client *theClient) {
+    setTransferID(thread, 0);
     theClient->my_connect();
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Client spawn thread reverse (sock=%d)", thread->mSock);
@@ -187,6 +189,7 @@ static void clientside_client_reverse (struct thread_Settings *thread, Client *t
 	struct thread_Settings *reverse_client = NULL;
 	Settings_Copy(thread, &reverse_client, 0);
 	FAIL((!reverse_client || !(thread->mSock > 0)), "Reverse test failed to start per thread settings or socket problem",  thread);
+	setTransferID(reverse_client, 1);
 	theClient->StartSynch();
 	theClient->SendFirstPayload();
 	reverse_client->mSock = thread->mSock; // use the same socket for both directions
@@ -213,9 +216,11 @@ static void clientside_client_reverse (struct thread_Settings *thread, Client *t
 
 static void clientside_client_fullduplex (struct thread_Settings *thread, Client *theClient) {
     struct thread_Settings *reverse_client = NULL;
+    setTransferID(thread, 0);
     thread->mFullDuplexReport = InitSumReport(thread, -1, 1);
     Settings_Copy(thread, &reverse_client, 0);
     assert(reverse_client != NULL);
+    setTransferID(reverse_client, 1);
     theClient->my_connect();
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Client spawn thread fullduplex (sock=%d)", thread->mSock);
@@ -229,7 +234,6 @@ static void clientside_client_fullduplex (struct thread_Settings *thread, Client
 	    Iperf_push_host(&reverse_client->peer, reverse_client);
 	}
 	thread->mFullDuplexReport->info.common->socket = thread->mSock;
-	thread->mFullDuplexReport->info.transferID = thread->mSock;
 	FAIL((!reverse_client || !(thread->mSock > 0)), "Reverse test failed to start per thread settings or socket problem",  thread);
 	reverse_client->mSumReport = thread->mSumReport;
 	reverse_client->mSock = thread->mSock; // use the same socket for both directions
@@ -291,6 +295,7 @@ void client_spawn (struct thread_Settings *thread) {
     thread_setscheduler(thread);
 #endif
     // start up the client
+    setTransferID(thread, 0);
     theClient = new Client(thread);
     // let the reporter thread go first in the case of -P greater than 1
     Condition_Lock(reporter_state.await);
