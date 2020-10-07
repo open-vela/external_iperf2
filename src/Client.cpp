@@ -242,7 +242,6 @@ int Client::StartSynch (void) {
     myJob = InitIndividualReport(mSettings);
     myReport = (struct ReporterData *)myJob->this_report;
     myReport->info.common->socket=mySocket;
-    myReport->info.transferID=mySocket;
 
     // Perform delays, usually between connect() and data xfer though before connect
     // Two delays are supported:

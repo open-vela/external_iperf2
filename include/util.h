@@ -61,6 +61,8 @@
 extern "C" {
 #endif
 
+extern int sInterupted;
+
 /* -------------------------------------------------------------------
  * set/getsockopt wrappers for SO_RCVBUF and SO_SNDBUF; TCP_MAXSEG
  * socket.c

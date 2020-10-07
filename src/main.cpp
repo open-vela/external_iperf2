@@ -69,6 +69,7 @@
 #include "Listener.hpp"
 #include "active_hosts.h"
 #include "util.h"
+#include "Reporter.h"
 
 #ifdef WIN32
 #include "service.h"
@@ -90,7 +91,7 @@ extern "C" {
     // as identifier for SUM reports
     int groupID = 0;
     // Mutex to protect access to the above ID
-    Mutex groupCond;
+    Mutex transferid_mutex;
     // Condition used to signal the reporter thread
     // when a packet ring is full.  Shouldn't really
     // be needed but is "belts and suspeners"
@@ -151,7 +152,8 @@ int main(int argc, char **argv) {
     Mutex_Initialize(&packetringdebug_mutex);
     Mutex_Initialize(&thread_debug_mutex);
 #endif
-    
+    Mutex_Initialize(&transferid_mutex);
+
     // Initialize reporter thread mutex
     reporter_state.ready = 0;
     threads_start.ready = 0;
@@ -328,6 +330,7 @@ void cleanup (void) {
     Mutex_Destroy(&packetringdebug_mutex);
     Mutex_Destroy(&thread_debug_mutex);
 #endif
+    Mutex_Destroy(&transferid_mutex);
     // shutdown the thread subsystem
     thread_destroy();
 } // end cleanup
