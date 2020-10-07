@@ -58,6 +58,7 @@
 #include "Locale.h"
 #include "active_hosts.h"
 #include "payloads.h"
+static int transferid_counter = 0;
 
 static inline void my_str_copy(char **dst, char *src) {
     if (src) {
@@ -87,6 +88,7 @@ static void common_copy (struct ReportCommon **common, struct thread_Settings *i
     my_str_copy(&(*common)->Ifrnametx, inSettings->mIfrnametx);
     my_str_copy(&(*common)->SSMMulticastStr, inSettings->mSSMMulticastStr);
     my_str_copy(&(*common)->Congestion, inSettings->mCongestion);
+    my_str_copy(&(*common)->transferIDStr, inSettings->mTransferIDStr);
     // copy some relevant settings
     (*common)->flags = inSettings->flags;
     (*common)->flags_extend = inSettings->flags_extend;
@@ -104,6 +106,7 @@ static void common_copy (struct ReportCommon **common, struct thread_Settings *i
     (*common)->UDPRate = inSettings->mUDPRate;
     (*common)->UDPRateUnits = inSettings->mUDPRateUnits;
     (*common)->socket = inSettings->mSock;
+    (*common)->transferID = inSettings->mTransferID;
     (*common)->threads = inSettings->mThreads;
     (*common)->winsize_requested = inSettings->mTCPWin;
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
@@ -137,7 +140,44 @@ static void free_common_copy (struct ReportCommon *common) {
 	free(common->SSMMulticastStr);
     if (common->Congestion)
 	free(common->Congestion);
+    if (common->transferIDStr)
+	free(common->transferIDStr);
     free(common);
+}
+
+// This will set the transfer id and id string
+// on the setting object. If the current id is zero
+// this will get the next one. Otherwise it will use
+// the value.
+int setTransferID (struct thread_Settings *inSettings, int role_reversal) {
+    if (!inSettings->mTransferID) {
+	Mutex_Lock(&transferid_mutex);
+	inSettings->mTransferID = ++transferid_counter;
+	Mutex_Unlock(&transferid_mutex);
+    }
+    int len = 0;
+    if (inSettings->mTransferIDStr)
+	free(inSettings->mTransferIDStr);
+    if (role_reversal)  {
+	if (inSettings->mTransferID < 10)
+	    len = snprintf(NULL, 0, "[ *%d] ", inSettings->mTransferID);
+	else
+	    len = snprintf(NULL, 0, "[*%d] ", inSettings->mTransferID);
+    } else {
+	len = snprintf(NULL, 0, "[%3d] ", inSettings->mTransferID);
+    }
+    len++;  // Trailing null byte + extra
+    inSettings->mTransferIDStr = (char *) calloc(1, len);
+    if (role_reversal)  {
+	if (inSettings->mTransferID < 10)
+	    len = snprintf(inSettings->mTransferIDStr, len, "[ *%d] ", inSettings->mTransferID);
+	else
+	    len = snprintf(inSettings->mTransferIDStr, len, "[*%d] ", inSettings->mTransferID);
+    } else {
+	len = snprintf(inSettings->mTransferIDStr, len, "[%3d] ", inSettings->mTransferID);
+    }
+    inSettings->mTransferIDStr[len] = '\0';
+    return inSettings->mTransferID;
 }
 
 void SetFullDuplexHandlers (struct thread_Settings *inSettings, struct SumReport* sumreport) {
@@ -194,7 +234,7 @@ void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport* sumre
 		sumreport->info.output_handler = ((isEnhanced(inSettings) && !isFullDuplex(inSettings)) ? \
 						  tcp_output_sumcnt_read_enhanced : tcp_output_sumcnt_read);
 	    } else if (isFullDuplex(inSettings)) {
-		sumreport->info.output_handler = udp_output_fullduplex_sum;
+		sumreport->info.output_handler = tcp_output_fullduplex_sum;
 	    } else {
 		sumreport->info.output_handler = (isEnhanced(inSettings) ? tcp_output_sum_write_enhanced : tcp_output_sum_write);
 	    }
@@ -219,7 +259,6 @@ struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, in
     sumreport->threads = 0;
     common_copy(&sumreport->info.common, inSettings);
     sumreport->info.groupID = inID;
-    sumreport->info.transferID = inSettings->mSock;
     sumreport->info.threadcnt = 0;
     // Only initialize the interval time here
     // The startTime and nextTime for summing reports will be set by
@@ -523,7 +562,6 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
     thread_debug("Init data report %p using packetring=%p cond=%p", \
 		 (void *)ireport, (void *)(ireport->packetring), (void *)(ireport->packetring->awake_producer));
 #endif
-    ireport->info.transferID = inSettings->mSock;
 
     switch (inSettings->mIntervalMode) {
     case kInterval_Time :
@@ -551,14 +589,14 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	    char name[] = "T8";
 	    ireport->info.latency_histogram =  histogram_init(inSettings->mRXbins,inSettings->mRXbinsize,0,\
 							      pow(10,inSettings->mRXunits), \
-							      inSettings->mRXci_lower, inSettings->mRXci_upper, ireport->info.transferID, name);
+							      inSettings->mRXci_lower, inSettings->mRXci_upper, ireport->info.common->transferID, name);
 	}
 	if (isRxHistogram(inSettings) && (isIsochronous(inSettings) || (!isUDP(inSettings) && isTripTime(inSettings)))) {
 	    char name[] = "F8";
 	    // make sure frame bin size min is 100 microsecond
 	    ireport->info.framelatency_histogram =  histogram_init(inSettings->mRXbins,inSettings->mRXbinsize,0, \
 								   pow(10,inSettings->mRXunits), inSettings->mRXci_lower, \
-								   inSettings->mRXci_upper, ireport->info.transferID, name);
+								   inSettings->mRXci_upper, ireport->info.common->transferID, name);
 	}
     }
     return reporthdr;
@@ -689,7 +727,7 @@ struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings
     struct ServerRelay *sr_report = (struct ServerRelay *)reporthdr->this_report;
     common_copy(&sr_report->info.common, inSettings);
     struct TransferInfo *stats = (struct TransferInfo *)&sr_report->info;
-    stats->transferID = inSettings->mSock;
+    stats->common->transferID = inSettings->mTransferID;
 
     stats->jitter = ntohl(server->base.jitter1);
     stats->jitter += ntohl(server->base.jitter2) / (double)rMillion;
