@@ -553,7 +553,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 							      pow(10,inSettings->mRXunits), \
 							      inSettings->mRXci_lower, inSettings->mRXci_upper, ireport->info.transferID, name);
 	}
-	if (isRxHistogram(inSettings) && isIsochronous(inSettings) && isTripTime(inSettings)) {
+	if (isRxHistogram(inSettings) && (isIsochronous(inSettings) || (!isUDP(inSettings) && isTripTime(inSettings)))) {
 	    char name[] = "F8";
 	    // make sure frame bin size min is 100 microsecond
 	    ireport->info.framelatency_histogram =  histogram_init(inSettings->mRXbins,inSettings->mRXbinsize,0, \
