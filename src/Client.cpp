@@ -707,12 +707,6 @@ void Client::RunUDP (void) {
     currLen = 1;
     double variance = mSettings->mVariance;
 
-    if (isCompat(mSettings)) {
-	// zero out flags for compatability mode
-        uint32_t *flags = (uint32_t *)(mBuf + sizeof(struct UDP_datagram));
-	*flags = htonl(0x0);
-    }
-
     while (InProgress()) {
         // Test case: drop 17 packets and send 2 out-of-order:
         // sequence 51, 52, 70, 53, 54, 71, 72
