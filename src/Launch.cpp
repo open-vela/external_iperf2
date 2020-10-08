@@ -248,20 +248,9 @@ static void clientside_client_fullduplex (struct thread_Settings *thread, Client
     }
 }
 
-static void serverside_client_reverse (struct thread_Settings *thread, Client *theClient) {
+static void serverside_client (struct thread_Settings *thread, Client *theClient) {
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Listener spawn client reverse thread (sock=%d)", thread->mSock);
-#endif
-    if (theClient->StartSynch() != -1) {
-	if (isTripTime(thread) || isIsochronous(thread))
-	    theClient->SendFirstPayload();
-	theClient->Run();
-    }
-}
-
-static void serverside_client_fullduplex(struct thread_Settings *thread, Client *theClient) {
-#ifdef HAVE_THREAD_DEBUG
-    thread_debug("Listener spawn client fullduplex thread (sock=%d)", thread->mSock);
+    thread_debug("Listener spawn client thread (sock=%d)", thread->mSock);
 #endif
     if (theClient->StartSynch() != -1) {
 	if (isTripTime(thread) || isIsochronous(thread))
@@ -319,14 +308,7 @@ void client_spawn (struct thread_Settings *thread) {
 	}
     } else {
 	// These are the server or listener side spawning of clients
-	if (!isFullDuplex(thread)) {
-	    serverside_client_reverse(thread, theClient);
-	} else if (isFullDuplex(thread)) {
-	    serverside_client_fullduplex(thread, theClient);
-	} else {
-	    fprintf(stdout, "Program error in server side client_spawn");
-	    _exit(0);
-	}
+	serverside_client(thread, theClient);
     }
     // Call the client's destructor
     DELETE_PTR(theClient);
