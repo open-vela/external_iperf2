@@ -923,8 +923,7 @@ int Listener::apply_client_settings (thread_Settings *server) {
 	if (flags & HEADER_SEQNO64B) {
 	    setSeqNo64b(server);
 	}
-	// figure out the length of the test header
-	if (flags & HEADER_VERSION1) {
+	if ((flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2)) {
 	    if (flags & RUN_NOW)
 		server->mMode = kTest_DualTest;
 	    else
@@ -952,6 +951,12 @@ int Listener::apply_client_settings (thread_Settings *server) {
 	    if (upperflags & HEADER_NOUDPFIN) {
 		setNoUDPfin(server);
 	    }
+	}
+	if (flags & HEADER_VERSION1) {
+	    if (flags & RUN_NOW)
+		server->mMode = kTest_DualTest;
+	    else
+		server->mMode = kTest_TradeOff;
 	}
 	if (flags & HEADER_VERSION2) {
 	    if (upperflags & HEADER_FULLDUPLEX) {
@@ -991,7 +996,7 @@ int Listener::apply_client_settings (thread_Settings *server) {
 	    n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK);
 	    FAIL_errno((n < peeklen), "read tcp test info", server);
 	    struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) mBuf;
-	    if (flags & HEADER_VERSION1) {
+	    if ((flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2)) {
 		if (flags & RUN_NOW)
 		    server->mMode = kTest_DualTest;
 		else

@@ -1377,7 +1377,7 @@ void Settings_GenerateListenerSettings (struct thread_Settings *client, struct t
     if (!isCompat(client) && \
          (client->mMode == kTest_DualTest || client->mMode == kTest_TradeOff)) {
 	Settings_Copy(client, listener, 0);
-	// setCompat((*listener));  RJM, fix me
+	setCompat((*listener));  // RJM, fix me
         unsetDaemon((*listener));
         if (client->mListenPort != 0) {
             (*listener)->mPort   = client->mListenPort;
@@ -1619,7 +1619,6 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
     uint16_t len = 0;
     uint32_t flags = 0;
 
-    flags = (HEADER_SEQNO64B | HEADER_VERSION2); // use 64 bit by default
 
     // flags common to both TCP and UDP
     if (isReverse(client)) {
@@ -1634,6 +1633,7 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
     if (isUDP(client)) { // UDP test information passed in every packet per being stateless
 	struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) testhdr;
 	memset(hdr, 0, sizeof(struct client_udp_testhdr));
+	flags |= HEADER_SEQNO64B; // use 64 bit by default
 	/*
 	 * set the default offset where underlying "inline" subsystems can write into the udp payload
 	 */
