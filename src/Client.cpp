@@ -1197,7 +1197,7 @@ void Client::AwaitServerCloseEvent (void) {
 }
 
 void Client::SendFirstPayload (void) {
-    if (!isCompat(mSettings) && !isConnectOnly(mSettings)) {
+    if (!isConnectOnly(mSettings)) {
 	int pktlen = 0;
 	if (myReport && !TimeZero(myReport->info.ts.startTime)) {
 	    reportstruct->packetTime = myReport->info.ts.startTime;
@@ -1216,9 +1216,9 @@ void Client::SendFirstPayload (void) {
 		udp_payload_minimum = pktlen;
 	    }
 #if HAVE_DECL_MSG_DONTWAIT
-	    reportstruct->packetLen = send(mySocket, mBuf, pktlen, MSG_DONTWAIT);
+	    reportstruct->packetLen = send(mySocket, mBuf, (pktlen > mSettings->mBufLen) ? pktlen : mSettings->mBufLen, MSG_DONTWAIT);
 #else
-	    reportstruct->packetLen = send(mySocket, mBuf, pktlen, 0);
+	    reportstruct->packetLen = send(mySocket, mBuf, (pktlen > mSettings->mBufLen) ? pktlen : mSettings->mBufLen, 0);
 #endif
 	    WARN_errno(reportstruct->packetLen < 0, "send_hdr");
 	    if (reportstruct->packetLen > 0) {

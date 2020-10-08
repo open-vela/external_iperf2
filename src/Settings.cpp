@@ -1796,6 +1796,7 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	// zero out flags for compatability mode
 	uint32_t *flags = (isUDP(client) ? ((uint32_t *)((char *)testhdr + sizeof(struct UDP_datagram))) : (uint32_t *)testhdr);
 	*flags = htonl(0x0);
+	len = sizeof(uint32_t);
     }
     return (len);
 }
