@@ -347,6 +347,7 @@ void Listener::Run (void) {
 			    server->runNext = listener_client_settings;
 #endif
 			} else {
+			    printf("***** setting trade off thread\n");
 			    server->runNext =  listener_client_settings;
 			}
 		    }
@@ -923,6 +924,9 @@ int Listener::apply_client_settings (thread_Settings *server) {
 	if (flags & HEADER_SEQNO64B) {
 	    setSeqNo64b(server);
 	}
+	if (!(flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2) && \
+	    !(flags & HEADER_EXTEND))
+	    return 0;
 	if ((flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2)) {
 	    if (flags & RUN_NOW)
 		server->mMode = kTest_DualTest;
@@ -984,6 +988,9 @@ int Listener::apply_client_settings (thread_Settings *server) {
 	FAIL_errno((n < (int) sizeof(uint32_t)), "read tcp flags", server);
 	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) mBuf;
 	flags = ntohl(hdr->base.flags);
+	if (!(flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2) && \
+	    !(flags & HEADER_EXTEND))
+	    return 0;
 	// figure out the length of the test header
 	if ((peeklen = Settings_ClientHdrPeekLen(flags)) > 0) {
 	    // read the test settings passed to the server by the client
