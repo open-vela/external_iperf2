@@ -952,12 +952,6 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		setNoUDPfin(server);
 	    }
 	}
-	if (flags & HEADER_VERSION1) {
-	    if (flags & RUN_NOW)
-		server->mMode = kTest_DualTest;
-	    else
-		server->mMode = kTest_TradeOff;
-	}
 	if (flags & HEADER_VERSION2) {
 	    if (upperflags & HEADER_FULLDUPLEX) {
 		setFullDuplex(server);

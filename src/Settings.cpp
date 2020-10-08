@@ -1461,11 +1461,13 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
     uint16_t upperflags = 0;
     thread_Settings *reversed_thread = NULL;
     *client = NULL;
+    bool v1test = (flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2);
+    printf("**** v1test = %d\n", v1test);
 #ifdef HAVE_THREAD_DEBUG
-    if (flags & HEADER_VERSION1)
+    if (v1test)
 	thread_debug("header set for a version 1 test");
 #endif
-    if (isFullDuplex(server) || (flags & HEADER_VERSION1)) {
+    if (isFullDuplex(server) || v1test) {
 	Settings_Copy(server, client, 0);
 	reversed_thread = *client;
 	if (isFullDuplex(server) && !(flags & HEADER_VERSION1)) {
@@ -1484,7 +1486,7 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
     if (isUDP(server)) { // UDP test information passed in every packet per being stateless
 	struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) mBuf;
 	Settings_ReadClientSettingsV1(&reversed_thread, &hdr->base);
-	if (flags & HEADER_VERSION1) {
+	if (v1test) {
 	    if (flags & RUN_NOW)
 		reversed_thread->mMode = kTest_DualTest;
 	    else
@@ -1517,7 +1519,7 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
     } else { //tcp first payload
 	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) mBuf;
 	Settings_ReadClientSettingsV1(&reversed_thread, &hdr->base);
-	if (flags & HEADER_VERSION1) {
+	if (v1test) {
 	    if (flags & RUN_NOW) {
 		reversed_thread->mMode = kTest_DualTest;
 	    } else {
@@ -1550,7 +1552,7 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
     setNoSettReport(reversed_thread);
     setNoConnectSync(reversed_thread);
     // for legacy -d and -r need so set the reversed threads mHost
-    if (flags & HEADER_VERSION1) {
+    if ((flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2)) {
 	reversed_thread->mHost = new char[REPORT_ADDRLEN];
 	if (((sockaddr*)&server->peer)->sa_family == AF_INET) {
 	    inet_ntop(AF_INET, &((sockaddr_in*)&server->peer)->sin_addr,
@@ -1619,7 +1621,6 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
     uint16_t len = 0;
     uint32_t flags = 0;
 
-
     // flags common to both TCP and UDP
     if (isReverse(client)) {
 	flags |= HEADER_UDPTESTS;
@@ -1683,7 +1684,7 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	    len += sizeof(struct client_hdrext_starttime_fq);
 	}
 	if (isBWSet(client)) {
-	    flags |= (HEADER_EXTEND | HEADER_VERSION2);
+	    flags |= HEADER_EXTEND;
 	    hdr->extend.lRate = htonl((uint32_t)(client->mUDPRate));
 #ifdef HAVE_INT64_T
 	    hdr->extend.uRate = htonl(((uint32_t)(client->mUDPRate >> 32)) << 8);
@@ -1758,7 +1759,7 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	    }
 	}
 	if (isBWSet(client)) {
-	    flags |= (HEADER_EXTEND | HEADER_VERSION2);
+	    flags |= HEADER_EXTEND;
 	    hdr->extend.lRate = htonl((uint32_t)client->mUDPRate);
 #ifdef HAVE_INT64_T
 	    hdr->extend.uRate = htonl(((uint32_t)(client->mUDPRate >> 32)) << 8);
