@@ -1462,7 +1462,6 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
     thread_Settings *reversed_thread = NULL;
     *client = NULL;
     bool v1test = (flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2);
-    printf("**** v1test = %d\n", v1test);
 #ifdef HAVE_THREAD_DEBUG
     if (v1test)
 	thread_debug("header set for a version 1 test");
@@ -1623,11 +1622,11 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 
     // flags common to both TCP and UDP
     if (isReverse(client)) {
-	flags |= HEADER_UDPTESTS;
+	flags |= HEADER_VERSION2;
         upperflags |= HEADER_REVERSE;
     }
     if (isFullDuplex(client)) {
-	flags |= HEADER_UDPTESTS;
+	flags |= HEADER_VERSION2;
         upperflags |= HEADER_FULLDUPLEX;
     }
     // Now setup UDP and TCP specific passed settings from client to server
@@ -1635,6 +1634,9 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) testhdr;
 	memset(hdr, 0, sizeof(struct client_udp_testhdr));
 	flags |= HEADER_SEQNO64B; // use 64 bit by default
+	if (isReverse(client) || isFullDuplex(client)) {
+	    flags |= HEADER_UDPTESTS;
+	}
 	/*
 	 * set the default offset where underlying "inline" subsystems can write into the udp payload
 	 */
