@@ -47,6 +47,7 @@ o) Upon a new connection install the peer's (client's) IP address into an active
 o) Instantiate a server thread and set it up settings
 o) Apply client initiated settings to the server thread
 o) Instantiate a server object
+o) Read test exchange header and instantiate client thread if needed
 o) Spawn a server thread which will receive traffic from a client
 
 Reporter (src/Reporter.c include/Reporter.h):
@@ -105,6 +106,25 @@ The settings structure contains the user requested settings and there is one
 settings object per thread. The settings are read and parsed from the initial
 command line (using a version of gnu getopt) Each thread gets a settings object
 which is mostly ready prior to spawning the thread.
+
+Test Header Exchange
+--------------------
+Some of the test settings require the client and server to exchange test
+information at the start. For TCP, this first bytes provide this information.
+UDP, being stateless and lossy, has test information in every packet. This way
+each packet can be the first packet from the server's perspective.
+
+This settings information is found in Settiongs_GenerateClientHdr which
+is sent by the client to the listener. The code in Setttings_GenerateClientSettings
+instantiates a reversed role client on the listener if needed.
+
+The header fields are messy because of the evolution from 1.7 which didn't have
+a header to later versions which do. The first byte has the bits which indicate
+the header types. Since 1.7 initalize the first by to decimal 3 or 0x03 as a byte,
+this gives 6 upper bits (0x04 to 0x80) that can be used to indicate header type. These are
+shown in include/payloads.h
+
+The -C or --compatibility option disables header exchanage.
 
 Reporter Jobq
 -------------
@@ -223,6 +243,9 @@ output, e.g. --sum-only
 
 *transfer_interval_handler() - used to select between time based or
 write/frame/burst reporting, supports special type of sampling
+
+These vectors are initialiazed after the thread settings object and
+as part of report instantiation.  Code is in src/Reports.c
 
 Startup (src/main.cpp src/Launch.cpp)
 -------------------------------------

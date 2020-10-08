@@ -1613,8 +1613,6 @@ int Settings_GenerateClientHdrV1 (struct thread_Settings *client, struct client_
  * Returns size of header in bytes
  */
 int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, struct timeval startTime) {
-    if (isCompat(client))
-	return 0;
     uint16_t upperflags = 0;
     uint16_t lowerflags = 0;
     uint16_t len = 0;
