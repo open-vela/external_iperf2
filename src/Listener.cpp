@@ -339,7 +339,6 @@ void Listener::Run (void) {
 #endif
 			server->runNow =  listener_client_settings;
 		    } else if (server->mMode != kTest_Normal) {
-			client_init(listener_client_settings);
 			if (listener_client_settings->mMode == kTest_DualTest) {
 #ifdef HAVE_THREAD
 			    server->runNow =  listener_client_settings;
