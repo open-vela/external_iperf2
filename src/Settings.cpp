@@ -1613,181 +1613,174 @@ int Settings_GenerateClientHdrV1 (struct thread_Settings *client, struct client_
  * Returns size of header in bytes
  */
 int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, struct timeval startTime) {
-    uint16_t upperflags = 0;
-    uint16_t lowerflags = 0;
     uint16_t len = 0;
-    uint32_t flags = 0;
+    if (!isCompat(client)) {
+	uint16_t upperflags = 0;
+	uint16_t lowerflags = 0;
+	uint32_t flags = 0;
 
-    // flags common to both TCP and UDP
-    if (isReverse(client)) {
-	flags |= HEADER_VERSION2;
-	upperflags |= HEADER_REVERSE;
-    }
-    if (isFullDuplex(client)) {
-	flags |= HEADER_VERSION2;
-	upperflags |= HEADER_FULLDUPLEX;
-    }
-    // Now setup UDP and TCP specific passed settings from client to server
-    if (isUDP(client)) { // UDP test information passed in every packet per being stateless
-	struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) testhdr;
-	memset(hdr, 0, sizeof(struct client_udp_testhdr));
-	flags |= HEADER_SEQNO64B; // use 64 bit by default
-	if (isReverse(client) || isFullDuplex(client)) {
-	    flags |= HEADER_UDPTESTS;
+	// flags common to both TCP and UDP
+	if (isReverse(client)) {
+	    upperflags |= HEADER_REVERSE;
 	}
-	/*
-	 * set the default offset where underlying "inline" subsystems can write into the udp payload
-	 */
-	if (isL2LengthCheck(client)) {
-	    flags |= (HEADER_UDPTESTS | HEADER_EXTEND);
-	    if (isL2LengthCheck(client)) {
-		upperflags |= HEADER_L2LENCHECK;
-		if (isIPV6(client))
-		    upperflags |= HEADER_L2ETHPIPV6;
-	    }
+	if (isFullDuplex(client)) {
+	    upperflags |= HEADER_FULLDUPLEX;
 	}
-	if (isIsochronous(client)) {
-	    flags |= (HEADER_UDPTESTS | HEADER_EXTEND) ;
-	    upperflags |= HEADER_ISOCH;
-	    if (isFullDuplex(client) || isReverse(client)) {
-		flags |= HEADER_VERSION2;
-		upperflags |= HEADER_ISOCH_SETTINGS;
-		hdr->isoch_settings.FPSl = htonl((long)(client->mFPS));
-		hdr->isoch_settings.FPSu = htonl(((client->mFPS - (long)(client->mFPS)) * rMillion));
-		hdr->isoch_settings.Meanl = htonl((long)(client->mMean));
-		hdr->isoch_settings.Meanu = htonl((((client->mMean) - (long)(client->mMean)) * rMillion));
-		hdr->isoch_settings.Variancel = htonl((long)(client->mVariance));
-		hdr->isoch_settings.Varianceu = htonl(((client->mVariance - (long)(client->mVariance)) * rMillion));
-		hdr->isoch_settings.BurstIPGl = htonl((long)(client->mBurstIPG));
-		hdr->isoch_settings.BurstIPGu = htonl(((client->mBurstIPG - (long)(client->mBurstIPG)) * rMillion));
-		len += sizeof(struct client_hdrext_isoch_settings);
-	    }
-	}
-	if (isNoUDPfin(client)) {
-	    flags |= (HEADER_UDPTESTS | HEADER_VERSION2);
-	    upperflags |= HEADER_NOUDPFIN;
-	}
-	if (isTripTime(client) || isFQPacing(client)) {
-	    flags |= (HEADER_UDPTESTS | HEADER_VERSION2);
-	    if (isTripTime(client)) {
-		upperflags |= HEADER_TRIPTIME;
-		hdr->start_fq.start_tv_sec = htonl(startTime.tv_sec);
-		hdr->start_fq.start_tv_usec = htonl(startTime.tv_usec);
-	    }
-	    if (isFQPacing(client)) {
-		upperflags |= HEADER_FQRATESET;
-		hdr->start_fq.fqratel = htonl((uint32_t) client->mFQPacingRate);
-#ifdef HAVE_INT64_T
-		hdr->start_fq.fqrateu = htonl((uint32_t) (client->mFQPacingRate >> 32));
-#endif
-	    }
-	    len += sizeof(struct client_hdrext_starttime_fq);
-	}
-	if (isBWSet(client)) {
+	// Now setup UDP and TCP specific passed settings from client to server
+	if (isUDP(client)) { // UDP test information passed in every packet per being stateless
+	    struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) testhdr;
+	    memset(hdr, 0, sizeof(struct client_udp_testhdr));
+	    flags |= HEADER_SEQNO64B; // use 64 bit by default
 	    flags |= HEADER_EXTEND;
-	    hdr->extend.lRate = htonl((uint32_t)(client->mUDPRate));
-#ifdef HAVE_INT64_T
-	    hdr->extend.uRate = htonl(((uint32_t)(client->mUDPRate >> 32)) << 8);
-#endif
-	}
-	if (flags & (HEADER_EXTEND | HEADER_VERSION2)) {
-	    if (!isBWSet(client)) {
-		hdr->extend.lRate = htonl(kDefault_UDPRate);
-		hdr->extend.uRate = 0x0;
-	    }
-	    // Write flags to header so the listener can determine the tests requested
-	    hdr->extend.upperflags = htons(upperflags);
-	    hdr->extend.lowerflags = htons(lowerflags);
 	    hdr->extend.version_u = htonl(IPERF_VERSION_MAJORHEX);
 	    hdr->extend.version_l = htonl(IPERF_VERSION_MINORHEX);
 	    hdr->extend.tos = htons(client->mTOS & 0xFF);
-	    len += sizeof(struct client_hdrext);
-	}
-	if (!(flags & HEADER_VERSION2) && (client->mMode != kTest_Normal)) {
-	    flags |= HEADER_VERSION1;
-	    if (client->mMode == kTest_DualTest)
-		flags |= RUN_NOW;
-	}
-	if (flags & (HEADER_VERSION1 | HEADER_VERSION2)) {
-	    len += Settings_GenerateClientHdrV1(client, &hdr->base);
-	}
-	// isoch payload is an enclave field between v 0.13 and v0.14
-	// so figure out if it's there now - UDP only
-	// will be filled in by the client write
-	if (isTripTime(client) || isFQPacing(client) || isIsochronous(client))
-	    len += sizeof (struct isoch_payload);
-
-	if (len > 0) {
-	    len += sizeof(struct UDP_datagram);
-	    flags |= HEADER_LEN_BIT;
-	}
-	hdr->base.flags = htonl(flags | ((len << 1) & 0xFFFE));
-    } else { // TCP first write with test information
-	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) testhdr;
-	memset(hdr, 0, sizeof(struct client_tcp_testhdr));
-	// Set up trip time
-	if (isTripTime(client) || isFQPacing(client)) {
-	    flags |= HEADER_VERSION2;
-	    if (isTripTime(client)) {
-		upperflags |= HEADER_TRIPTIME;
-		hdr->start_fq.start_tv_sec = htonl(startTime.tv_sec);
-		hdr->start_fq.start_tv_usec = htonl(startTime.tv_usec);
-	    }
-	    if (isFQPacing(client)) {
-		upperflags |= HEADER_FQRATESET;
-		hdr->start_fq.fqratel = htonl((uint32_t) client->mFQPacingRate);
-#ifdef HAVE_INT64_T
-		hdr->start_fq.fqrateu = htonl((uint32_t) (client->mFQPacingRate >> 32));
-#endif
-	    }
 	    len += sizeof(struct client_hdrext_starttime_fq);
-	}
-	if (isIsochronous(client)) {
-	    flags |= HEADER_VERSION2;
-	    upperflags |= HEADER_ISOCH;
-	    if (isFullDuplex(client) || isReverse(client)) {
-		upperflags |= HEADER_ISOCH_SETTINGS;
-		hdr->isoch_settings.FPSl = htonl(client->mFPS);
-		hdr->isoch_settings.FPSu = htonl(((long)(client->mFPS) - (long)client->mFPS * rMillion));
-		hdr->isoch_settings.Meanl = htonl(client->mMean);
-		hdr->isoch_settings.Meanu = htonl(((long)(client->mMean) - (long)client->mMean * rMillion));
-		hdr->isoch_settings.Variancel = htonl(client->mVariance);
-		hdr->isoch_settings.Varianceu = htonl(((long)(client->mVariance) - (long)client->mVariance * rMillion));
-		hdr->isoch_settings.BurstIPGl = htonl(client->mBurstIPG);
-		hdr->isoch_settings.BurstIPGu = htonl(((long)(client->mBurstIPG) - (long)client->mBurstIPG * rMillion));
-		len += sizeof(struct client_hdrext_isoch_settings);
-	    }
-	}
-	if (isBWSet(client)) {
-	    flags |= HEADER_EXTEND;
-	    hdr->extend.lRate = htonl((uint32_t)client->mUDPRate);
+	    if (isBWSet(client)) {
+		hdr->extend.lRate = htonl((uint32_t)(client->mUDPRate));
 #ifdef HAVE_INT64_T
-	    hdr->extend.uRate = htonl(((uint32_t)(client->mUDPRate >> 32)) << 8);
+		hdr->extend.uRate = htonl(((uint32_t)(client->mUDPRate >> 32)) << 8);
 #endif
-	}
-	if (isPeerVerDetect(client)) {
-	    flags |= (HEADER_EXTEND | HEADER_V2PEERDETECT);
-	}
-	if (flags & (HEADER_EXTEND | HEADER_VERSION2)) {
-	    // Write flags to header so the listener can determine the tests requested
-	    hdr->extend.upperflags = htons(upperflags);
-	    hdr->extend.lowerflags = htons(lowerflags);
+	    } else {
+		hdr->extend.lRate = htonl(kDefault_UDPRate);
+		hdr->extend.uRate = 0x0;
+	    }
+	    len += Settings_GenerateClientHdrV1(client, &hdr->base);
+	    if (client->mMode != kTest_Normal) {
+		flags |= HEADER_VERSION1;
+		if (client->mMode == kTest_DualTest)
+		    flags |= RUN_NOW;
+	    } else {
+		flags |= HEADER_VERSION2;
+		/*
+		 * set the default offset where underlying "inline" subsystems can write into the udp payload
+		 */
+		if (isL2LengthCheck(client)) {
+		    flags |= HEADER_UDPTESTS;
+		    if (isL2LengthCheck(client)) {
+			upperflags |= HEADER_L2LENCHECK;
+			if (isIPV6(client))
+			    upperflags |= HEADER_L2ETHPIPV6;
+		    }
+		}
+		if (isIsochronous(client)) {
+		    flags |= (HEADER_UDPTESTS | HEADER_EXTEND) ;
+		    upperflags |= HEADER_ISOCH;
+		    if (isFullDuplex(client) || isReverse(client)) {
+			flags |= HEADER_VERSION2;
+			upperflags |= HEADER_ISOCH_SETTINGS;
+			hdr->isoch_settings.FPSl = htonl((long)(client->mFPS));
+			hdr->isoch_settings.FPSu = htonl(((client->mFPS - (long)(client->mFPS)) * rMillion));
+			hdr->isoch_settings.Meanl = htonl((long)(client->mMean));
+			hdr->isoch_settings.Meanu = htonl((((client->mMean) - (long)(client->mMean)) * rMillion));
+			hdr->isoch_settings.Variancel = htonl((long)(client->mVariance));
+			hdr->isoch_settings.Varianceu = htonl(((client->mVariance - (long)(client->mVariance)) * rMillion));
+			hdr->isoch_settings.BurstIPGl = htonl((long)(client->mBurstIPG));
+			hdr->isoch_settings.BurstIPGu = htonl(((client->mBurstIPG - (long)(client->mBurstIPG)) * rMillion));
+			len += sizeof(struct client_hdrext_isoch_settings);
+		    }
+		}
+		if (isReverse(client) || isFullDuplex(client)) {
+		    flags |= HEADER_UDPTESTS;
+		}
+		if (isNoUDPfin(client)) {
+		    flags |= HEADER_UDPTESTS;
+		    upperflags |= HEADER_NOUDPFIN;
+		}
+		if (isTripTime(client) || isFQPacing(client)) {
+		    flags |= HEADER_UDPTESTS;
+		    if (isTripTime(client)) {
+			upperflags |= HEADER_TRIPTIME;
+			hdr->start_fq.start_tv_sec = htonl(startTime.tv_sec);
+			hdr->start_fq.start_tv_usec = htonl(startTime.tv_usec);
+		    }
+		    if (isFQPacing(client)) {
+			upperflags |= HEADER_FQRATESET;
+			hdr->start_fq.fqratel = htonl((uint32_t) client->mFQPacingRate);
+#ifdef HAVE_INT64_T
+			hdr->start_fq.fqrateu = htonl((uint32_t) (client->mFQPacingRate >> 32));
+#endif
+		    }
+		}
+		// Write flags to header so the listener can determine the tests requested
+		hdr->extend.upperflags = htons(upperflags);
+		hdr->extend.lowerflags = htons(lowerflags);
+
+		// isoch payload is an enclave field between v 0.13 and v0.14
+		// so figure out if it's there now - UDP only
+		// will be filled in by the client write
+		if (isTripTime(client) || isFQPacing(client) || isIsochronous(client))
+		    len += sizeof (struct isoch_payload);
+
+		if (len > 0) {
+		    len += sizeof(struct UDP_datagram);
+		    flags |= HEADER_LEN_BIT;
+		}
+		hdr->base.flags = htonl(flags | ((len << 1) & 0xFFFE));
+	    }
+	} else { // TCP first write with test information
+	    struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) testhdr;
+	    memset(hdr, 0, sizeof(struct client_tcp_testhdr));
+	    flags |= HEADER_EXTEND;
 	    hdr->extend.version_u = htonl(IPERF_VERSION_MAJORHEX);
 	    hdr->extend.version_l = htonl(IPERF_VERSION_MINORHEX);
-	    len += sizeof(struct client_hdrext);
-	}
-	if (!(flags & HEADER_VERSION2) && (client->mMode != kTest_Normal)) {
-	    flags |= HEADER_VERSION1;
-	    if (client->mMode == kTest_DualTest)
-		flags |= RUN_NOW;
-	}
-	if (flags & (HEADER_VERSION1 | HEADER_VERSION2)) {
+	    hdr->extend.tos = htons(client->mTOS & 0xFF);
+	    len += sizeof(struct client_hdrext_starttime_fq);
 	    len += Settings_GenerateClientHdrV1(client, &hdr->base);
+	    if (isBWSet(client)) {
+		hdr->extend.lRate = htonl((uint32_t)(client->mUDPRate));
+#ifdef HAVE_INT64_T
+		hdr->extend.uRate = htonl(((uint32_t)(client->mUDPRate >> 32)) << 8);
+#endif
+	    }
+	    if (client->mMode != kTest_Normal) {
+		flags |= HEADER_VERSION1;
+		if (client->mMode == kTest_DualTest)
+		    flags |= RUN_NOW;
+	    } else {
+		flags |= HEADER_VERSION2;
+		if (isPeerVerDetect(client)) {
+		    flags |= HEADER_V2PEERDETECT;
+		}
+		if (isTripTime(client) || isFQPacing(client)) {
+		    hdr->start_fq.start_tv_sec = htonl(startTime.tv_sec);
+		    hdr->start_fq.start_tv_usec = htonl(startTime.tv_usec);
+		    hdr->start_fq.fqratel = htonl((uint32_t) client->mFQPacingRate);
+#ifdef HAVE_INT64_T
+		    hdr->start_fq.fqrateu = htonl((uint32_t) (client->mFQPacingRate >> 32));
+#endif
+		    len += sizeof(struct client_hdrext_starttime_fq);
+		    // Set flags on
+		    if (isTripTime(client)) {
+			upperflags |= HEADER_TRIPTIME;
+		    }
+		    if (isFQPacing(client)) {
+			upperflags |= HEADER_FQRATESET;
+		    }
+		}
+		if (isIsochronous(client)) {
+		    upperflags |= HEADER_ISOCH;
+		    if (isFullDuplex(client) || isReverse(client)) {
+			upperflags |= HEADER_ISOCH_SETTINGS;
+			hdr->isoch_settings.FPSl = htonl(client->mFPS);
+			hdr->isoch_settings.FPSu = htonl(((long)(client->mFPS) - (long)client->mFPS * rMillion));
+			hdr->isoch_settings.Meanl = htonl(client->mMean);
+			hdr->isoch_settings.Meanu = htonl(((long)(client->mMean) - (long)client->mMean * rMillion));
+			hdr->isoch_settings.Variancel = htonl(client->mVariance);
+			hdr->isoch_settings.Varianceu = htonl(((long)(client->mVariance) - (long)client->mVariance * rMillion));
+			hdr->isoch_settings.BurstIPGl = htonl(client->mBurstIPG);
+			hdr->isoch_settings.BurstIPGu = htonl(((long)(client->mBurstIPG) - (long)client->mBurstIPG * rMillion));
+			len += sizeof(struct client_hdrext_isoch_settings);
+		    }
+		}
+		hdr->extend.upperflags = htons(upperflags);
+		hdr->extend.lowerflags = htons(lowerflags);
+	    }
+	    if (len > 0) {
+		flags |= HEADER_LEN_BIT;
+	    }
+	    hdr->base.flags = htonl((flags | ((len << 1) & 0xFFFE)));
 	}
-	if (len > 0) {
-	    flags |= HEADER_LEN_BIT;
-	}
-	hdr->base.flags = htonl((flags | ((len << 1) & 0xFFFE)));
     }
     return (len);
 }
