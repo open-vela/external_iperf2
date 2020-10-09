@@ -76,9 +76,8 @@ const int    kBytes_to_Bits = 8;
 
 Client::Client (thread_Settings *inSettings) {
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Client in constructor (%x/%x) %p", inSettings->flags, inSettings->flags_extend, (void *)inSettings->mSumReport);
+    thread_debug("Client constructor with thread %p sum=%p (sock=%d) (flags/eflags=%x/%x)", (void *) inSettings, (void *)inSettings->mSumReport, inSettings->flags, inSettings->flags_extend,);
 #endif
-
     mSettings = inSettings;
     mBuf = NULL;
     myJob = NULL;
