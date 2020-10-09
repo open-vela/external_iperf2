@@ -188,6 +188,7 @@ void Client::my_connect (void) {
 	connected = true;
     } else {
 	connecttime = -1;
+	connected = false;	
 	if (mySocket != INVALID_SOCKET) {
 	    int rc = close(mySocket);
 	    WARN_errno(rc == SOCKET_ERROR, "client connect close");
