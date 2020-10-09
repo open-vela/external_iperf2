@@ -50,7 +50,6 @@
  * A client thread initiates a connect to the server and handles
  * sending and receiving data, then closes the socket.
  * ------------------------------------------------------------------- */
-
 #include <time.h>
 #include "headers.h"
 #include "Client.hpp"
@@ -76,7 +75,7 @@ const int    kBytes_to_Bits = 8;
 
 Client::Client (thread_Settings *inSettings) {
 #ifdef HAVE_THREAD_DEBUG
-  thread_debug("Client constructor with thread %p sum=%p (sock=%d) (flags/eflags=%x/%x)", (void *) inSettings, (void *)inSettings->mSumReport, inSettings->flags, inSettings->flags_extend);
+  thread_debug("Client constructor with thread %p sum=%p (flags=%x)", (void *) inSettings, (void *)inSettings->mSumReport, inSettings->flags);
 #endif
     mSettings = inSettings;
     mBuf = NULL;
