@@ -347,7 +347,6 @@ void Listener::Run (void) {
 			    server->runNext = listener_client_settings;
 #endif
 			} else {
-			    printf("***** setting trade off thread\n");
 			    server->runNext =  listener_client_settings;
 			}
 		    }
