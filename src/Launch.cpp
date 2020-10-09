@@ -265,6 +265,8 @@ static void serverside_client_bidir (struct thread_Settings *thread, Client *the
     thread_debug("Listener spawn client thread (bidir sock=%d)", thread->mSock);
 #endif
     setTransferID(thread, 0);
+    unsetNoSettReport(thread);
+    setReport(thread);
     theClient->my_connect();
     if (theClient->isConnected()) {
 	if (thread->mThreads > 1)
@@ -327,8 +329,6 @@ void client_spawn (struct thread_Settings *thread) {
 	    // These are the server or listener side spawning of clients
 	    serverside_client_bidir(thread, theClient);
 	} else {
-	    unsetNoSettReport(thread);
-	    setReport(thread);
 	    serverside_client_fullduplex(thread, theClient);
 	}
     }
