@@ -1579,8 +1579,8 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
     #endif
   #endif
 	}
+#endif // MAX_PACING_RATE	
     }
-#endif // MAX_PACING_RATE
 }
 
 int Settings_GenerateClientHdrV1 (struct thread_Settings *client, struct client_hdr_v1 *hdr) {

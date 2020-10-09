@@ -262,7 +262,7 @@ static void serverside_client_fullduplex (struct thread_Settings *thread, Client
 
 static void serverside_client_bidir (struct thread_Settings *thread, Client *theClient) {
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Listener spawn client thread (fd sock=%d)", thread->mSock);
+    thread_debug("Listener spawn client thread (bidir sock=%d)", thread->mSock);
 #endif
     setTransferID(thread, 0);
     theClient->my_connect();
