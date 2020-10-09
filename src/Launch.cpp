@@ -248,13 +248,28 @@ static void clientside_client_fullduplex (struct thread_Settings *thread, Client
     }
 }
 
-static void serverside_client (struct thread_Settings *thread, Client *theClient) {
+static void serverside_client_fullduplex (struct thread_Settings *thread, Client *theClient) {
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Listener spawn client thread (sock=%d)", thread->mSock);
+    thread_debug("Listener spawn client thread (fd sock=%d)", thread->mSock);
 #endif
+    setTransferID(thread, 1);
     if (theClient->StartSynch() != -1) {
 	if (isTripTime(thread) || isIsochronous(thread))
 	    theClient->SendFirstPayload();
+	theClient->Run();
+    }
+}
+
+static void serverside_client_bidir (struct thread_Settings *thread, Client *theClient) {
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Listener spawn client thread (fd sock=%d)", thread->mSock);
+#endif
+    setTransferID(thread, 0);
+    theClient->my_connect();
+    if (theClient->isConnected()) {
+	if (thread->mThreads > 1)
+	    Iperf_push_host(&thread->peer, thread);
+	theClient->StartSynch();
 	theClient->Run();
     }
 }
@@ -307,8 +322,13 @@ void client_spawn (struct thread_Settings *thread) {
 	    _exit(0);
 	}
     } else {
-	// These are the server or listener side spawning of clients
-	serverside_client(thread, theClient);
+	if (thread->mMode != kTest_Normal) {
+	    setCompat(thread);
+	    // These are the server or listener side spawning of clients
+	    serverside_client_bidir(thread, theClient);
+	} else {
+	    serverside_client_fullduplex(thread, theClient);
+	}
     }
     // Call the client's destructor
     DELETE_PTR(theClient);
