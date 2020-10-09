@@ -1227,8 +1227,6 @@ void Client::SendFirstPayload (void) {
 		    PeerXchange();
 		}
 	    }
-	} else {
-	    WARN_errno(1, "send first fail");
 	}
     }
 }
