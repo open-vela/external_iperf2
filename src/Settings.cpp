@@ -1473,6 +1473,8 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
 	} else {
 	    unsetFullDuplex(reversed_thread);
 	}
+	if (v1test)
+	    setServerReverse(client);
     } else if (isServerReverse(server)) {
 	reversed_thread = server;
     } else {
