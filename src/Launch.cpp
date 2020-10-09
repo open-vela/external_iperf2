@@ -324,10 +324,10 @@ void client_spawn (struct thread_Settings *thread) {
     } else {
 	if (thread->mMode != kTest_Normal) {
 	    setCompat(thread);
-	    unsetNoSettReport(thread);	    
 	    // These are the server or listener side spawning of clients
 	    serverside_client_bidir(thread, theClient);
 	} else {
+	    unsetNoSettReport(thread);	    
 	    serverside_client_fullduplex(thread, theClient);
 	}
     }
