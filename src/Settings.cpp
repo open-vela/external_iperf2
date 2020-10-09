@@ -1473,8 +1473,6 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
 	} else {
 	    unsetFullDuplex(reversed_thread);
 	}
-	if (v1test)
-	    setServerReverse(reversed_thread);
     } else if (isServerReverse(server)) {
 	reversed_thread = server;
     } else {
@@ -1487,10 +1485,11 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
 	struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) mBuf;
 	Settings_ReadClientSettingsV1(&reversed_thread, &hdr->base);
 	if (v1test) {
+	    setServerReverse(reversed_thread);
 	    if (flags & RUN_NOW)
 		reversed_thread->mMode = kTest_DualTest;
 	    else
-		reversed_thread->mMode = kTest_Normal;
+		reversed_thread->mMode = kTest_TradeOff;
 	} else if (flags & (HEADER_EXTEND| HEADER_VERSION2)) {
 	    reversed_thread->mUDPRate = ntohl(hdr->extend.lRate);
 #ifdef HAVE_INT64_T
@@ -1520,10 +1519,11 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
 	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) mBuf;
 	Settings_ReadClientSettingsV1(&reversed_thread, &hdr->base);
 	if (v1test) {
+	    setServerReverse(reversed_thread);
 	    if (flags & RUN_NOW) {
 		reversed_thread->mMode = kTest_DualTest;
 	    } else {
-		reversed_thread->mMode = kTest_Normal;
+		reversed_thread->mMode = kTest_TradeOff;
 		reversed_thread->mSumReport = NULL;
 	    }
 	} else if (flags & (HEADER_EXTEND | HEADER_VERSION2)) {
@@ -1552,7 +1552,7 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
     setNoSettReport(reversed_thread);
     setNoConnectSync(reversed_thread);
     // for legacy -d and -r need so set the reversed threads mHost
-    if ((flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2)) {
+    if (v1test) {
 	reversed_thread->mHost = new char[REPORT_ADDRLEN];
 	if (((sockaddr*)&server->peer)->sa_family == AF_INET) {
 	    inet_ntop(AF_INET, &((sockaddr_in*)&server->peer)->sin_addr,
@@ -1564,21 +1564,23 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
 		      reversed_thread->mHost, REPORT_ADDRLEN);
 	}
 #endif
-    }
+    } else {
+	reversed_thread->mMode = kTest_Normal;
 #if HAVE_DECL_SO_MAX_PACING_RATE
-    if (isFQPacing(reversed_thread)) {
-	int rc = setsockopt(reversed_thread->mSock, SOL_SOCKET, SO_MAX_PACING_RATE, \
-			    &reversed_thread->mFQPacingRate, sizeof(reversed_thread->mFQPacingRate));
-	WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
+	if (isFQPacing(reversed_thread)) {
+	    int rc = setsockopt(reversed_thread->mSock, SOL_SOCKET, SO_MAX_PACING_RATE, \
+				&reversed_thread->mFQPacingRate, sizeof(reversed_thread->mFQPacingRate));
+	    WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
   #ifdef HAVE_THREAD_DEBUG
     #ifdef HAVE_INT64_T
-	thread_debug("Set socket %d pacing rate to %ld byte/sec", reversed_thread->mSock, reversed_thread->mFQPacingRate);
+	    thread_debug("Set socket %d pacing rate to %ld byte/sec", reversed_thread->mSock, reversed_thread->mFQPacingRate);
     #else
-	thread_debug("Set socket %d pacing rate to %d byte/sec", reversed_thread->mSock, reversed_thread->mFQPacingRate);
+	    thread_debug("Set socket %d pacing rate to %d byte/sec", reversed_thread->mSock, reversed_thread->mFQPacingRate);
     #endif
   #endif
+	}
     }
-#endif
+#endif // MAX_PACING_RATE
 }
 
 int Settings_GenerateClientHdrV1 (struct thread_Settings *client, struct client_hdr_v1 *hdr) {
