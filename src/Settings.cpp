@@ -1377,7 +1377,6 @@ void Settings_GenerateListenerSettings (struct thread_Settings *client, struct t
     if (!isCompat(client) && \
          (client->mMode == kTest_DualTest || client->mMode == kTest_TradeOff)) {
 	Settings_Copy(client, listener, 0);
-	setCompat((*listener));  // RJM, fix me
         unsetDaemon((*listener));
         if (client->mListenPort != 0) {
             (*listener)->mPort   = client->mListenPort;
