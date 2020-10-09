@@ -91,8 +91,8 @@ Client::Client (thread_Settings *inSettings) {
     reportstruct->packetID = 1;
     mySocket = isServerReverse(mSettings) ? mSettings->mSock : INVALID_SOCKET;
     connected = isServerReverse(mSettings);
-    if (!isServerReverse(mSettings))
-	SockAddr_remoteAddr(mSettings);
+    if (!(isServerReverse(mSettings) && isFullDuplex(mSettings)))
+	SockAddr_remoteAddr(mSettings); // Full duplex reverse uses the client's socket
     if (isCompat(mSettings) && isPeerVerDetect(mSettings)) {
 	fprintf(stderr, "%s", warn_compat_and_peer_exchange);
 	unsetPeerVerDetect(mSettings);
