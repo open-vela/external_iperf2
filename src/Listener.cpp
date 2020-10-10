@@ -302,7 +302,6 @@ void Listener::Run (void) {
 		    continue;
 		}
 	    }
-
 	    if (isConnectionReport(server) && !isSumOnly(server)) {
 		PostReport(InitConnectionReport(server, 0));
 	    }
@@ -315,7 +314,8 @@ void Listener::Run (void) {
 	    // offsets per TCP or UDP. Basically, TCP starts at byte 0 but UDP
 	    // has to skip over the UDP seq no, etc.
 	    //
-            if (isFullDuplex(server) || isServerReverse(server) || (server->mMode != kTest_Normal)) {
+            if (!isCompat(server) && \
+		(isFullDuplex(server) || isServerReverse(server) || (server->mMode != kTest_Normal))) {
 		thread_Settings *listener_client_settings = NULL;
 		// read client header for reverse settings
 		Settings_GenerateClientSettings(server, &listener_client_settings, mBuf);
