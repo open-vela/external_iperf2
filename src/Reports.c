@@ -183,12 +183,14 @@ int setTransferID (struct thread_Settings *inSettings, int role_reversal) {
 void SetFullDuplexHandlers (struct thread_Settings *inSettings, struct SumReport* sumreport) {
     if (isUDP(inSettings)) {
 	sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_fullduplex_udp;
-	sumreport->info.output_handler = ((isSumOnly(inSettings) || (inSettings->mReportMode == kReport_CSV)) ? NULL : \
-					  (isEnhanced(inSettings) ? udp_output_fullduplex_enhanced : udp_output_fullduplex));
+	sumreport->info.output_handler = ((inSettings->mReportMode == kReport_CSV) ? NULL : \
+					  (isEnhanced(inSettings) ? udp_output_fullduplex_enhanced : \
+					   (isSumOnly(inSettings) ? udp_output_fullduplex : NULL)));
     } else {
 	sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_fullduplex_tcp;
-	sumreport->info.output_handler = ((isSumOnly(inSettings) || (inSettings->mReportMode == kReport_CSV)) ? NULL : \
-					  (isEnhanced(inSettings) ? tcp_output_fullduplex_enhanced : tcp_output_fullduplex));
+	sumreport->info.output_handler = ((inSettings->mReportMode == kReport_CSV) ? NULL : \
+					  (isEnhanced(inSettings) ? tcp_output_fullduplex_enhanced :
+					   (isSumOnly(inSettings) ? tcp_output_fullduplex : NULL)));
     }
 }
 
@@ -491,10 +493,10 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 		    ireport->info.output_handler = udp_output_read_enhanced_triptime;
 	    } else if (isEnhanced(inSettings)) {
 		ireport->info.output_handler = udp_output_read_enhanced_triptime;
-	    } else if (!isFullDuplex(inSettings)) {
+	    } else if (isFullDuplex(inSettings)) {
 		ireport->info.output_handler = udp_output_read;
 	    } else {
-		ireport->info.output_handler =  NULL;
+		ireport->info.output_handler = udp_output_read;
 	    }
 	} else {
 	    ireport->packet_handler = reporter_handle_packet_server_tcp;
@@ -510,7 +512,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	    } else if (!isFullDuplex(inSettings)) {
 		ireport->info.output_handler = tcp_output_read;
 	    } else {
-		ireport->info.output_handler = NULL ;
+		ireport->info.output_handler = tcp_output_read;
 	    }
 	}
 	break;
@@ -527,7 +529,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	    } else if (isEnhanced(inSettings)) {
 		ireport->info.output_handler = udp_output_write_enhanced;
 	    } else if (isFullDuplex(inSettings)) {
-		ireport->info.output_handler = NULL;
+		ireport->info.output_handler = udp_output_write;
 	    } else {
 		ireport->info.output_handler = udp_output_write;
 	    }
@@ -540,7 +542,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	    } else if (isEnhanced(inSettings) || isIsochronous(inSettings)) {
 		ireport->info.output_handler = tcp_output_write_enhanced;
 	    } else if (isFullDuplex(inSettings)) {
-		ireport->info.output_handler = NULL;
+		ireport->info.output_handler = tcp_output_write;
 	    } else {
 		ireport->info.output_handler = tcp_output_write;
 	    }
