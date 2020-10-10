@@ -1374,10 +1374,10 @@ void Settings_GetLowerCaseArg (const char *inarg, char *outarg) {
  * for client side execution
  */
 void Settings_GenerateListenerSettings (struct thread_Settings *client, struct thread_Settings **listener) {
-    if (!isCompat(client) && \
-         (client->mMode == kTest_DualTest || client->mMode == kTest_TradeOff)) {
+    if ((client->mMode == kTest_DualTest) || (client->mMode == kTest_TradeOff)) {
 	Settings_Copy(client, listener, 0);
         unsetDaemon((*listener));
+        setCompat((*listener));
         if (client->mListenPort != 0) {
             (*listener)->mPort   = client->mListenPort;
         } else {
@@ -1399,10 +1399,14 @@ void Settings_GenerateListenerSettings (struct thread_Settings *client, struct t
             (*listener)->mLocalhost = new char[strlen(client->mLocalhost) + 1];
             strcpy((*listener)->mLocalhost, client->mLocalhost);
         }
-	if (isUDP((*listener))) {
-	    (*listener)->mBufLen = kDefault_UDPBufLen;
+	if (client->mBufLen <= 0) {
+	    if (isUDP((*listener))) {
+		(*listener)->mBufLen = kDefault_UDPBufLen;
+	    } else {
+		(*listener)->mBufLen = kDefault_TCPBufLen;
+	    }
 	} else {
-	    (*listener)->mBufLen = kDefault_TCPBufLen;
+	    (*listener)->mBufLen = client->mBufLen;
 	}
 	setReport((*listener));
     } else {
@@ -1576,7 +1580,7 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
     #endif
   #endif
 	}
-#endif // MAX_PACING_RATE	
+#endif // MAX_PACING_RATE
     }
 }
 
