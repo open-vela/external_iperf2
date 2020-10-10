@@ -367,6 +367,7 @@ void Settings_Copy (struct thread_Settings *from, struct thread_Settings **into,
     (*into)->mTID = thread_zeroid();
     (*into)->runNext = NULL;
     (*into)->runNow = NULL;
+    (*into)->mTransferID = 0;
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
     (*into)->mSockDrop = INVALID_SOCKET;
 #endif
