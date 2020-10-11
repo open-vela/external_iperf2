@@ -1655,6 +1655,7 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 		flags |= HEADER_VERSION1;
 		if (client->mMode == kTest_DualTest)
 		    flags |= RUN_NOW;
+		hdr->base.flags = htonl(flags);
 	    } else {
 		flags |= HEADER_VERSION2;
 		/*
