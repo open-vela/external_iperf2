@@ -541,7 +541,7 @@ inline int reporter_process_report (struct ReportHeader *reporthdr) {
     {
 	struct ConnectionInfo *creport = (struct ConnectionInfo *)reporthdr->this_report;
 	assert(creport!=NULL);
-	if (creport->common->ThreadMode == kMode_Client) {
+	if (isCompat(creport->common) && (creport->common->ThreadMode == kMode_Client)) {
 	    // Clients' connect times will be inputs to the overall connect stats
 	    reporter_update_connect_time(creport->connecttime);
 	}
@@ -1112,28 +1112,30 @@ void reporter_transfer_protocol_sum_server_udp (struct TransferInfo *stats, int 
     }
 }
 void reporter_transfer_protocol_sum_client_udp (struct TransferInfo *stats, int final) {
-    if (final) {
-	reporter_set_timestamps_time(&stats->ts, TOTAL);
-	stats->sock_callstats.write.WriteErr = stats->sock_callstats.write.totWriteErr;
-	stats->sock_callstats.write.WriteCnt = stats->sock_callstats.write.totWriteCnt;
-	stats->sock_callstats.write.TCPretry = stats->sock_callstats.write.totTCPretry;
-	stats->cntDatagrams = stats->total.Datagrams.current;
-	stats->cntBytes = stats->total.Bytes.current;
-	stats->IPGsum = TimeDifference(stats->ts.packetTime, stats->ts.startTime);
-	stats->cntIPG = stats->total.IPG.current;
-    } else {
-	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
-	stats->cntIPG = stats->total.IPG.current - stats->total.IPG.prev;
-	stats->cntDatagrams = stats->total.Datagrams.current - stats->total.Datagrams.prev;
-    }
-    if (stats->output_handler)
-	(*stats->output_handler)(stats);
+    if (stats->sumflag) {
+	if (final) {
+	    reporter_set_timestamps_time(&stats->ts, TOTAL);
+	    stats->sock_callstats.write.WriteErr = stats->sock_callstats.write.totWriteErr;
+	    stats->sock_callstats.write.WriteCnt = stats->sock_callstats.write.totWriteCnt;
+	    stats->sock_callstats.write.TCPretry = stats->sock_callstats.write.totTCPretry;
+	    stats->cntDatagrams = stats->total.Datagrams.current;
+	    stats->cntBytes = stats->total.Bytes.current;
+	    stats->IPGsum = TimeDifference(stats->ts.packetTime, stats->ts.startTime);
+	    stats->cntIPG = stats->total.IPG.current;
+	} else {
+	    stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
+	    stats->cntIPG = stats->total.IPG.current - stats->total.IPG.prev;
+	    stats->cntDatagrams = stats->total.Datagrams.current - stats->total.Datagrams.prev;
+	}
+	if (stats->output_handler)
+	    (*stats->output_handler)(stats);
 
-    if (!final) {
-	stats->threadcnt = 0;
-	reporter_reset_transfer_stats_client_udp(stats);
-    } else
-	printf(report_sumcnt_datagrams, stats->threadcnt, stats->total.Datagrams.current);
+	if (!final) {
+	    stats->threadcnt = 0;
+	    reporter_reset_transfer_stats_client_udp(stats);
+	} else
+	    printf(report_sumcnt_datagrams, stats->threadcnt, stats->total.Datagrams.current);
+    }
 }
 
 void reporter_transfer_protocol_client_udp (struct ReporterData *data, int final) {
@@ -1274,24 +1276,26 @@ void reporter_transfer_protocol_client_tcp (struct ReporterData *data, int final
  * Handles summing of threads
  */
 void reporter_transfer_protocol_sum_client_tcp (struct TransferInfo *stats, int final) {
-    if (!final || (final && (stats->cntBytes > 0) && !TimeZero(stats->ts.intervalTime))) {
-	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
-	if (final)
-	    reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
-	if (stats->output_handler)
-	    (*stats->output_handler)(stats);
-	if (!final)
-	    stats->threadcnt = 0;
-	reporter_reset_transfer_stats_client_tcp(stats);
-    }
-    if (final) {
-	stats->sock_callstats.write.WriteErr = stats->sock_callstats.write.totWriteErr;
-	stats->sock_callstats.write.WriteCnt = stats->sock_callstats.write.totWriteCnt;
-	stats->sock_callstats.write.TCPretry = stats->sock_callstats.write.totTCPretry;
-	stats->cntBytes = stats->total.Bytes.current;
-        reporter_set_timestamps_time(&stats->ts, TOTAL);
-	if (stats->output_handler)
-	    (*stats->output_handler)(stats);
+    if (stats->sumflag) {
+	if (!final || (final && (stats->cntBytes > 0) && !TimeZero(stats->ts.intervalTime))) {
+	    stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
+	    if (final)
+		reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
+	    if (stats->output_handler)
+		(*stats->output_handler)(stats);
+	    if (!final)
+		stats->threadcnt = 0;
+	    reporter_reset_transfer_stats_client_tcp(stats);
+	}
+	if (final) {
+	    stats->sock_callstats.write.WriteErr = stats->sock_callstats.write.totWriteErr;
+	    stats->sock_callstats.write.WriteCnt = stats->sock_callstats.write.totWriteCnt;
+	    stats->sock_callstats.write.TCPretry = stats->sock_callstats.write.totTCPretry;
+	    stats->cntBytes = stats->total.Bytes.current;
+	    reporter_set_timestamps_time(&stats->ts, TOTAL);
+	    if (stats->output_handler)
+		(*stats->output_handler)(stats);
+	}
     }
 }
 
@@ -1394,8 +1398,9 @@ int reporter_condprint_time_interval_report (struct ReporterData *data, struct R
 	if (sumstats) {
 	    if ((++data->GroupSumReport->threads) == data->GroupSumReport->reference.count)   {
 		data->GroupSumReport->threads = 0;
-		if (data->GroupSumReport->reference.count > (fullduplexstats ? 2 : 1))
+		if (data->GroupSumReport->reference.count > (fullduplexstats ? 2 : 1)) {
 		    sumstats->sumflag = 1;
+		}
 		reporter_set_timestamps_time(&sumstats->ts, INTERVAL);
 		assert(data->GroupSumReport->transfer_protocol_sum_handler != NULL);
 		(*data->GroupSumReport->transfer_protocol_sum_handler)(sumstats, 0);
