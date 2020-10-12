@@ -306,7 +306,7 @@ void Listener::Run (void) {
 		}
 	    }
 	    setTransferID(server, 0);
-	    if (isConnectionReport(server)) && isSumOnly(server)) {
+	    if (isConnectionReport(server) && isSumOnly(server)) {
 		PostReport(InitConnectionReport(server, 0));
 	    }
 	    // Read any more test settings and test values (not just the flags) and instantiate
