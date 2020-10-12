@@ -342,6 +342,7 @@ void Settings_Copy (struct thread_Settings *from, struct thread_Settings **into,
 	}
     } else {
 	(*into)->mHost = NULL;
+	(*into)->mSumReport = NULL;
 	(*into)->mOutputFileName = NULL;
 	(*into)->mLocalhost = NULL;
 	(*into)->mFileName = NULL;
@@ -1488,10 +1489,11 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
 	Settings_ReadClientSettingsV1(&reversed_thread, &hdr->base);
 	if (v1test) {
 	    setServerReverse(reversed_thread);
-	    if (flags & RUN_NOW)
+	    if (flags & RUN_NOW) {
 		reversed_thread->mMode = kTest_DualTest;
-	    else
+	    } else {
 		reversed_thread->mMode = kTest_TradeOff;
+	    }
 	} else if (flags & (HEADER_EXTEND| HEADER_VERSION2)) {
 	    reversed_thread->mUDPRate = ntohl(hdr->extend.lRate);
 #ifdef HAVE_INT64_T
@@ -1526,7 +1528,6 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
 		reversed_thread->mMode = kTest_DualTest;
 	    } else {
 		reversed_thread->mMode = kTest_TradeOff;
-		reversed_thread->mSumReport = NULL;
 	    }
 	} else if (flags & (HEADER_EXTEND | HEADER_VERSION2)) {
 	    reversed_thread->mUDPRate = ntohl(hdr->extend.lRate);
