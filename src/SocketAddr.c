@@ -67,7 +67,7 @@ extern "C" {
  * if that is what is desired.
  * ------------------------------------------------------------------- */
 
-void SockAddr_remoteAddr(struct thread_Settings *inSettings) {
+void SockAddr_remoteAddr (struct thread_Settings *inSettings) {
     SockAddr_zeroAddress(&inSettings->peer);
     if (inSettings->mHost != NULL) {
         SockAddr_setHostname(inSettings->mHost, &inSettings->peer, isIPV6(inSettings));
@@ -95,7 +95,7 @@ void SockAddr_remoteAddr(struct thread_Settings *inSettings) {
 }
 // end SocketAddr
 
-void SockAddr_localAddr(struct thread_Settings *inSettings) {
+void SockAddr_localAddr (struct thread_Settings *inSettings) {
     SockAddr_zeroAddress(&inSettings->local);
 
     if (inSettings->mLocalhost != NULL) {
@@ -176,7 +176,7 @@ void SockAddr_localAddr(struct thread_Settings *inSettings) {
  * Resolve the hostname address and fill it in.
  * ------------------------------------------------------------------- */
 
-void SockAddr_setHostname(const char* inHostname, iperf_sockaddr *inSockAddr, int isIPv6) {
+void SockAddr_setHostname (const char* inHostname, iperf_sockaddr *inSockAddr, int isIPv6) {
     // ..I think this works for both ipv6 & ipv4... we'll see
 #if defined(HAVE_IPV6)
     {
@@ -275,7 +275,7 @@ void SockAddr_setHostname(const char* inHostname, iperf_sockaddr *inSockAddr, in
 /* -------------------------------------------------------------------
  * Copy the IP address into the string.
  * ------------------------------------------------------------------- */
-void SockAddr_getHostAddress(iperf_sockaddr *inSockAddr, char* outAddress,
+void SockAddr_getHostAddress (iperf_sockaddr *inSockAddr, char* outAddress,
                                 size_t len) {
     if (((struct sockaddr*)inSockAddr)->sa_family == AF_INET) {
         inet_ntop(AF_INET, &(((struct sockaddr_in*) inSockAddr)->sin_addr),
@@ -294,7 +294,7 @@ void SockAddr_getHostAddress(iperf_sockaddr *inSockAddr, char* outAddress,
  * Set the address to any (generally all zeros).
  * ------------------------------------------------------------------- */
 
-void SockAddr_setAddressAny(iperf_sockaddr *inSockAddr) {
+void SockAddr_setAddressAny (iperf_sockaddr *inSockAddr) {
     if (((struct sockaddr*)inSockAddr)->sa_family == AF_INET)
         memset(&(((struct sockaddr_in*) inSockAddr)->sin_addr), 0,
                 sizeof(struct in_addr));
@@ -310,7 +310,7 @@ void SockAddr_setAddressAny(iperf_sockaddr *inSockAddr) {
  * Incr the address by value
  * ------------------------------------------------------------------- */
 
-void SockAddr_incrAddress(iperf_sockaddr *inSockAddr, int value) {
+void SockAddr_incrAddress (iperf_sockaddr *inSockAddr, int value) {
     if (((struct sockaddr*)inSockAddr)->sa_family == AF_INET)
 	((struct sockaddr_in *)inSockAddr)->sin_addr.s_addr += htonl(value);
 #if defined(HAVE_IPV6)
@@ -327,7 +327,7 @@ void SockAddr_incrAddress(iperf_sockaddr *inSockAddr, int value) {
  * Set the port to the given port. Handles the byte swapping.
  * ------------------------------------------------------------------- */
 
-void SockAddr_setPort(iperf_sockaddr *inSockAddr, unsigned short inPort) {
+void SockAddr_setPort (iperf_sockaddr *inSockAddr, unsigned short inPort) {
     if (((struct sockaddr*)inSockAddr)->sa_family == AF_INET)
         ((struct sockaddr_in*) inSockAddr)->sin_port = htons(inPort);
 #if defined(HAVE_IPV6)
@@ -342,7 +342,7 @@ void SockAddr_setPort(iperf_sockaddr *inSockAddr, unsigned short inPort) {
  * Set the port to zero, which lets the OS pick the port.
  * ------------------------------------------------------------------- */
 
-void SockAddr_setPortAny(iperf_sockaddr *inSockAddr) {
+void SockAddr_setPortAny (iperf_sockaddr *inSockAddr) {
     SockAddr_setPort(inSockAddr, 0);
 }
 // end setPortAny
@@ -351,7 +351,7 @@ void SockAddr_setPortAny(iperf_sockaddr *inSockAddr) {
  * Return the port. Handles the byte swapping.
  * ------------------------------------------------------------------- */
 
-unsigned short SockAddr_getPort(iperf_sockaddr *inSockAddr) {
+unsigned short SockAddr_getPort (iperf_sockaddr *inSockAddr) {
     if (((struct sockaddr*)inSockAddr)->sa_family == AF_INET)
         return ntohs(((struct sockaddr_in*) inSockAddr)->sin_port);
 #if defined(HAVE_IPV6)
@@ -367,7 +367,7 @@ unsigned short SockAddr_getPort(iperf_sockaddr *inSockAddr) {
  * Return the IPv4 Internet Address from the sockaddr_in structure
  * ------------------------------------------------------------------- */
 
-struct in_addr* SockAddr_get_in_addr(iperf_sockaddr *inSockAddr) {
+struct in_addr* SockAddr_get_in_addr (iperf_sockaddr *inSockAddr) {
     if (((struct sockaddr*)inSockAddr)->sa_family == AF_INET)
         return &(((struct sockaddr_in*) inSockAddr)->sin_addr);
 
@@ -379,7 +379,7 @@ struct in_addr* SockAddr_get_in_addr(iperf_sockaddr *inSockAddr) {
  * Return the IPv6 Internet Address from the sockaddr_in6 structure
  * ------------------------------------------------------------------- */
 #ifdef HAVE_IPV6
-struct in6_addr* SockAddr_get_in6_addr(iperf_sockaddr *inSockAddr) {
+struct in6_addr* SockAddr_get_in6_addr (iperf_sockaddr *inSockAddr) {
     if (((struct sockaddr*)inSockAddr)->sa_family == AF_INET6)
         return &(((struct sockaddr_in6*) inSockAddr)->sin6_addr);
 
@@ -393,8 +393,7 @@ struct in6_addr* SockAddr_get_in6_addr(iperf_sockaddr *inSockAddr) {
  * Return the size of the appropriate address structure.
  * ------------------------------------------------------------------- */
 
-Socklen_t SockAddr_get_sizeof_sockaddr(iperf_sockaddr *inSockAddr) {
-
+Socklen_t SockAddr_get_sizeof_sockaddr (iperf_sockaddr *inSockAddr) {
 #if defined(HAVE_IPV6)
     if (((struct sockaddr*)inSockAddr)->sa_family == AF_INET6) {
         return(sizeof(struct sockaddr_in6));
@@ -409,8 +408,7 @@ Socklen_t SockAddr_get_sizeof_sockaddr(iperf_sockaddr *inSockAddr) {
  * Return if IPv6 socket
  * ------------------------------------------------------------------- */
 
-int SockAddr_isIPv6(iperf_sockaddr *inSockAddr) {
-
+int SockAddr_isIPv6 (iperf_sockaddr *inSockAddr) {
 #if defined(HAVE_IPV6)
     if (((struct sockaddr*)inSockAddr)->sa_family == AF_INET6) {
         return 1;
@@ -424,8 +422,7 @@ int SockAddr_isIPv6(iperf_sockaddr *inSockAddr) {
  * Return true if the address is multicast ip address.
  * ------------------------------------------------------------------- */
 
-int SockAddr_isMulticast(iperf_sockaddr *inSockAddr) {
-
+int SockAddr_isMulticast (iperf_sockaddr *inSockAddr) {
 #if defined(HAVE_IPV6)
     if (((struct sockaddr*)inSockAddr)->sa_family == AF_INET6) {
         return(IN6_IS_ADDR_MULTICAST(&(((struct sockaddr_in6*) inSockAddr)->sin6_addr)));
@@ -459,23 +456,20 @@ int SockAddr_isLinklocal (iperf_sockaddr *inSockAddr) {
 /* -------------------------------------------------------------------
  * Zero out the address structure.
  * ------------------------------------------------------------------- */
-
-void SockAddr_zeroAddress(iperf_sockaddr *inSockAddr) {
+void SockAddr_zeroAddress (iperf_sockaddr *inSockAddr) {
     memset(inSockAddr, 0, sizeof(iperf_sockaddr));
 }
 
-int SockAddr_isZeroAddress(iperf_sockaddr *inSockAddr) {
+int SockAddr_isZeroAddress (iperf_sockaddr *inSockAddr) {
     iperf_sockaddr zeroSockAddr;
     memset(&zeroSockAddr, 0, sizeof(iperf_sockaddr));
     return(memcmp((void *)inSockAddr, (void *)&zeroSockAddr, sizeof(iperf_sockaddr)));
 }
 
-// zeroAddress
-
 /* -------------------------------------------------------------------
  * Compare two sockaddrs and return true if they are equal
  * ------------------------------------------------------------------- */
-int SockAddr_are_Equal(iperf_sockaddr *first, iperf_sockaddr *second) {
+int SockAddr_are_Equal (iperf_sockaddr *first, iperf_sockaddr *second) {
     if (((struct sockaddr*)first)->sa_family == AF_INET && ((struct sockaddr*)second)->sa_family == AF_INET) {
         // compare IPv4 adresses
         return(((long) ((struct sockaddr_in*)first)->sin_addr.s_addr == (long) ((struct sockaddr_in*)second)->sin_addr.s_addr)
@@ -495,7 +489,7 @@ int SockAddr_are_Equal(iperf_sockaddr *first, iperf_sockaddr *second) {
 /* -------------------------------------------------------------------
  * Compare two sockaddrs and return true if the hosts are equal
  * ------------------------------------------------------------------- */
-int SockAddr_Hostare_Equal(iperf_sockaddr* first, iperf_sockaddr *second) {
+int SockAddr_Hostare_Equal (iperf_sockaddr* first, iperf_sockaddr *second) {
     if (((struct sockaddr*)first)->sa_family == AF_INET && ((struct sockaddr*)second)->sa_family == AF_INET) {
         // compare IPv4 adresses
         return((long) ((struct sockaddr_in*)first)->sin_addr.s_addr ==
@@ -521,7 +515,7 @@ int SockAddr_Hostare_Equal(iperf_sockaddr* first, iperf_sockaddr *second) {
  * Store (and cache) the results in the thread settings structure
  * Return 0 if set, -1 if not
  * ------------------------------------------------------------------- */
-int SockAddr_Ifrname(struct thread_Settings *inSettings) {
+int SockAddr_Ifrname (struct thread_Settings *inSettings) {
 #ifdef HAVE_IFADDRS_H
     if (inSettings->mIfrname == NULL) {
 	struct sockaddr_storage myaddr;
