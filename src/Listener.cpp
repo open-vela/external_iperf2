@@ -185,8 +185,8 @@ void Listener::Run (void) {
 	    // UDP needs a new listen per every new socket
 	    my_listen(); // This will set ListenSocket to a new sock fd
 	}
-	// Use a select() with a timeout if -t is set
-	if (mMode_Time) {
+	// Use a select() with a timeout if -t is set or if this is a v1 -r or -d test
+	if ((mMode_Time) || isCompat(mSettings)) {
 	    // Hang a select w/timeout on the listener socket
 	    struct timeval timeout;
 	    timeout.tv_sec = mSettings->mAmount / 100;
@@ -339,11 +339,9 @@ void Listener::Run (void) {
 #endif
 			server->runNow =  listener_client_settings;
 		    } else if (server->mMode != kTest_Normal) {
-			Iperf_push_host(&listener_client_settings->peer, listener_client_settings);
 #if HAVE_THREAD_DEBUG
 			thread_debug("V1 test (-d or -r) sum report client=%p/%p server=%p/%p", (void *) listener_client_settings, (void *) listener_client_settings->mFullDuplexReport, (void *) server, (void *) server->mFullDuplexReport);
 #endif
-
 			if (listener_client_settings->mMode == kTest_DualTest) {
 #ifdef HAVE_THREAD
 			    server->runNow =  listener_client_settings;

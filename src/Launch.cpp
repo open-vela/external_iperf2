@@ -264,13 +264,12 @@ static void serverside_client_bidir (struct thread_Settings *thread, Client *the
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Listener spawn client thread (bidir sock=%d)", thread->mSock);
 #endif
-    setTransferID(thread, 0);
+    setTransferID(thread, 1);
     unsetNoSettReport(thread);
     setReport(thread);
     theClient->my_connect();
     if (theClient->isConnected()) {
-	if (thread->mThreads > 1)
-	    Iperf_push_host(&thread->peer, thread);
+	Iperf_push_host(&thread->peer, thread);
 	theClient->StartSynch();
 	theClient->Run();
     }
