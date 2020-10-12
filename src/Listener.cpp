@@ -202,7 +202,11 @@ void Listener::Run (void) {
 #ifdef HAVE_THREAD_DEBUG
 		thread_debug("Listener select timeout");
 #endif
-		continue;
+		if (isCompat(mSettings)) {
+		    fprintf(stderr, "ERROR: expected reverse connect did not occur\n");
+		    break;
+		} else
+		    continue;
 	    }
 	} else if (!setsock_blocking(mSettings->mSock, 1)) {
 	    WARN(1, "Failed setting socket to blocking mode");
