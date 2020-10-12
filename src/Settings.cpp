@@ -1375,6 +1375,7 @@ void Settings_GetLowerCaseArg (const char *inarg, char *outarg) {
  * the struct thread_settings instance generated from the command line
  * for client side execution
  */
+#define DUALTIMER_MS 300
 void Settings_GenerateListenerSettings (struct thread_Settings *client, struct thread_Settings **listener) {
     if ((client->mMode == kTest_DualTest) || (client->mMode == kTest_TradeOff)) {
 	Settings_Copy(client, listener, 0);
@@ -1386,12 +1387,12 @@ void Settings_GenerateListenerSettings (struct thread_Settings *client, struct t
             (*listener)->mPort   = client->mPort;
         }
 	if (client->mMode == kTest_TradeOff) {
-	    (*listener)->mAmount   = client->mAmount + 200;
+	    (*listener)->mAmount   = client->mAmount + DUALTIMER_MS;
 	} else if (client->mMode == kTest_DualTest) {
 	    (*listener)->mAmount   = client->mAmount / 2;
 	}
-	if ((client->mMode != kTest_Normal) && ((*listener)->mAmount  < 200)) {
-	    (*listener)->mAmount   = 200;
+	if ((client->mMode != kTest_Normal) && ((*listener)->mAmount  < DUALTIMER_MS)) {
+	    (*listener)->mAmount   = DUALTIMER_MS;
 	}
         (*listener)->mFileName   = NULL;
         (*listener)->mHost       = NULL;
