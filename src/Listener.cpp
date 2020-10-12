@@ -264,7 +264,6 @@ void Listener::Run (void) {
 	    Settings_Destroy(server);
 	    continue;
 	}
-	setTransferID(server, 0);
 	// isCompat is a version 1.7 test, basically it indicates there is nothing
 	// in the first messages so don't try to process them. Later iperf versions use
 	// the first message to convey test request and test settings information.  This flag
@@ -306,7 +305,8 @@ void Listener::Run (void) {
 		    continue;
 		}
 	    }
-	    if (isConnectionReport(server) && !isSumOnly(server)) {
+	    setTransferID(server, 0);
+	    if (isConnectionReport(server)) && isSumOnly(server)) {
 		PostReport(InitConnectionReport(server, 0));
 	    }
 	    // Read any more test settings and test values (not just the flags) and instantiate
