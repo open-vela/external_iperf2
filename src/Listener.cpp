@@ -358,6 +358,8 @@ void Listener::Run (void) {
 		    }
 		}
 	    }
+	} else {
+	    setTransferID(server, 1);
 	}
 	// Now start the server side traffic threads
 	thread_start_all(server);
