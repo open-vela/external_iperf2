@@ -335,10 +335,15 @@ void Listener::Run (void) {
 			server->mFullDuplexReport = InitSumReport(server, server->mSock, 1);
 			listener_client_settings->mFullDuplexReport = server->mFullDuplexReport;
 #if HAVE_THREAD_DEBUG
-			thread_debug("BiDir report client=%p/%p server=%p/%p", (void *) listener_client_settings, (void *) listener_client_settings->mFullDuplexReport, (void *) server, (void *) server->mFullDuplexReport);
+			thread_debug("FullDuplex report client=%p/%p server=%p/%p", (void *) listener_client_settings, (void *) listener_client_settings->mFullDuplexReport, (void *) server, (void *) server->mFullDuplexReport);
 #endif
 			server->runNow =  listener_client_settings;
 		    } else if (server->mMode != kTest_Normal) {
+			Iperf_push_host(&listener_client_settings->peer, listener_client_settings);
+#if HAVE_THREAD_DEBUG
+			thread_debug("V1 test (-d or -r) sum report client=%p/%p server=%p/%p", (void *) listener_client_settings, (void *) listener_client_settings->mFullDuplexReport, (void *) server, (void *) server->mFullDuplexReport);
+#endif
+
 			if (listener_client_settings->mMode == kTest_DualTest) {
 #ifdef HAVE_THREAD
 			    server->runNow =  listener_client_settings;
