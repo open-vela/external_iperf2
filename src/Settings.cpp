@@ -293,8 +293,9 @@ void Settings_Copy (struct thread_Settings *from, struct thread_Settings **into,
     *into = new struct thread_Settings;
     memset(*into, 0, sizeof(struct thread_Settings));
     memcpy(*into, from, sizeof(struct thread_Settings));
+    (*into)->mSumReport = NULL;
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Copy thread settings (malloc) from/to=%p/%p report/multi/fullduplex %p/%p/%p", \
+    thread_debug("Copy thread settings (malloc) from/to=%p/%p report/sum/fullduplex %p/%p/%p", \
 		 (void *)from, (void *)*into, (void *)(*into)->reporthdr, (void *)(*into)->mSumReport, (void *)(*into)->mFullDuplexReport);
 #endif
     // Some settings don't need to be copied and will confuse things. Don't copy them unless copyall is set
@@ -342,7 +343,6 @@ void Settings_Copy (struct thread_Settings *from, struct thread_Settings **into,
 	}
     } else {
 	(*into)->mHost = NULL;
-	(*into)->mSumReport = NULL;
 	(*into)->mOutputFileName = NULL;
 	(*into)->mLocalhost = NULL;
 	(*into)->mFileName = NULL;
@@ -1385,8 +1385,14 @@ void Settings_GenerateListenerSettings (struct thread_Settings *client, struct t
         } else {
             (*listener)->mPort   = client->mPort;
         }
-	if (client->mMode == kTest_TradeOff)
-	    (*listener)->mAmount   = (2 * client->mAmount) + 200;
+	if (client->mMode == kTest_TradeOff) {
+	    (*listener)->mAmount   = client->mAmount + 200;
+	} else if (client->mMode == kTest_DualTest) {
+	    (*listener)->mAmount   = client->mAmount / 2;
+	}
+	if ((client->mMode != kTest_Normal) && ((*listener)->mAmount  < 200)) {
+	    (*listener)->mAmount   = 200;
+	}
         (*listener)->mFileName   = NULL;
         (*listener)->mHost       = NULL;
         (*listener)->mLocalhost  = NULL;
