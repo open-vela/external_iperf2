@@ -727,7 +727,7 @@ void Server::RunUDP (void) {
 	    }
 	    if (!(reportstruct->l2errors & L2UNKNOWN)) {
 		// ReadPacketID returns true if this is the last UDP packet sent by the client
-		// aslo sets the packet rx time in the reportstruct
+		// also sets the packet rx time in the reportstruct
 		reportstruct->prevSentTime = prevsend;
 		lastpacket = ReadPacketID();
 		prevsend = reportstruct->sentTime;
