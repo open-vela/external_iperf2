@@ -269,97 +269,93 @@ void Listener::Run (void) {
 	// the first message to convey test request and test settings information.  This flag
 	// is also used for threads that are children so-to-speak, e.g. a -d or -r client,
 	// which cannot have test flags otherwise there would be "test setup recursion"
-	if (!isCompat(mSettings)) {
-	    // Time to read the very first packet received (per UDP) or the test flags (TCP)
-	    // to get the client's requested test information.
-	    // Note 1: It's important to know that this will also populate mBuf with
-	    // enough information for the listener to perform test info exchange later in the code
-	    // Note 2: The mBuf read is a peek so the server's traffic thread started later
-	    // will also process the first message from an accounting perspective.
-	    // This is required for accurate traffic statistics
-	    if (apply_client_settings(server) <= 0) {
-		if (isConnectionReport(server) && !isSumOnly(server)) {
-		    PostReport(InitConnectionReport(server, 0));
-	        }
+	// Time to read the very first packet received (per UDP) or the test flags (TCP)
+	// to get the client's requested test information.
+	// Note 1: It's important to know that this will also populate mBuf with
+	// enough information for the listener to perform test info exchange later in the code
+	// Note 2: The mBuf read is a peek so the server's traffic thread started later
+	// will also process the first message from an accounting perspective.
+	// This is required for accurate traffic statistics
+	if (!isCompat(mSettings) && (apply_client_settings(server) <= 0)) {
+	    if (isConnectionReport(server) && !isSumOnly(server)) {
+		PostReport(InitConnectionReport(server, 0));
+	    }
+	    Iperf_remove_host(&server->peer);
+	    if (DecrSumReportRefCounter(server->mSumReport) <= 0) {
+		FreeSumReport(server->mSumReport);
+	    }
+	    if (!isUDP(server))
+		close(server->mSock);
+	    assert(server != mSettings);
+	    Settings_Destroy(server);
+	    continue;
+	}
+	// server settings flags should now be set per the client's first message exchange
+	// so the server setting's flags per the client can now be checked
+	if (isUDP(server) && !isCompat(mSettings)  && (isL2LengthCheck(mSettings) || isL2LengthCheck(server))) {
+	    if (!L2_setup(server, server->mSock)) {
+		// Requested L2 testing but L2 setup failed
 		Iperf_remove_host(&server->peer);
 		if (DecrSumReportRefCounter(server->mSumReport) <= 0) {
 		    FreeSumReport(server->mSumReport);
 		}
-		if (!isUDP(server))
-		    close(server->mSock);
 		assert(server != mSettings);
 		Settings_Destroy(server);
 		continue;
 	    }
-	    // server settings flags should now be set per the client's first message exchange
-	    // so the server setting's flags per the client can now be checked
-	    if (isUDP(server) && (isL2LengthCheck(mSettings) || isL2LengthCheck(server))) {
-		if (!L2_setup(server, server->mSock)) {
-		    // Requested L2 testing but L2 setup failed
-		    Iperf_remove_host(&server->peer);
-		    if (DecrSumReportRefCounter(server->mSumReport) <= 0) {
-			FreeSumReport(server->mSumReport);
+	}
+	setTransferID(server, isCompat(mSettings));
+	if (isConnectionReport(server) && isSumOnly(server)) {
+	    PostReport(InitConnectionReport(server, 0));
+	}
+	// Read any more test settings and test values (not just the flags) and instantiate
+	// any settings objects for client threads (e.g. bidir or full duplex)
+	// This will set the listener_client_settings to NULL if
+	// there is no need for the Listener to start a client
+	//
+	// Note: the packet payload pointer for this information has different
+	// offsets per TCP or UDP. Basically, TCP starts at byte 0 but UDP
+	// has to skip over the UDP seq no, etc.
+	//
+	if (!isCompat(server) && !isCompat(mSettings) && \
+	    (isFullDuplex(server) || isServerReverse(server) || (server->mMode != kTest_Normal))) {
+	    thread_Settings *listener_client_settings = NULL;
+	    // read client header for reverse settings
+	    Settings_GenerateClientSettings(server, &listener_client_settings, mBuf);
+	    if (listener_client_settings) {
+		setTransferID(listener_client_settings, 1);
+		if (isFullDuplex(listener_client_settings) || isReverse(listener_client_settings))
+		    Iperf_push_host(&listener_client_settings->peer, listener_client_settings);
+		if (isFullDuplex(server)) {
+		    assert(server->mSumReport != NULL);
+		    if (!server->mSumReport->sum_fd_set) {
+			// Reset the sum output routine for the server sum report
+			// now that it's know to be full duplex. This wasn't known
+			// during accept()
+			SetSumHandlers(server, server->mSumReport);
+			server->mSumReport->sum_fd_set = 1;
 		    }
-		    assert(server != mSettings);
-		    Settings_Destroy(server);
-		    continue;
-		}
-	    }
-	    setTransferID(server, 0);
-	    if (isConnectionReport(server) && isSumOnly(server)) {
-		PostReport(InitConnectionReport(server, 0));
-	    }
-	    // Read any more test settings and test values (not just the flags) and instantiate
-	    // any settings objects for client threads (e.g. bidir or full duplex)
-	    // This will set the listener_client_settings to NULL if
-	    // there is no need for the Listener to start a client
-	    //
-	    // Note: the packet payload pointer for this information has different
-	    // offsets per TCP or UDP. Basically, TCP starts at byte 0 but UDP
-	    // has to skip over the UDP seq no, etc.
-	    //
-            if (!isCompat(server) && \
-		(isFullDuplex(server) || isServerReverse(server) || (server->mMode != kTest_Normal))) {
-		thread_Settings *listener_client_settings = NULL;
-		// read client header for reverse settings
-		Settings_GenerateClientSettings(server, &listener_client_settings, mBuf);
-		if (listener_client_settings) {
-		    setTransferID(listener_client_settings, 1);
-		    if (isFullDuplex(listener_client_settings) || isReverse(listener_client_settings))
-			Iperf_push_host(&listener_client_settings->peer, listener_client_settings);
-		    if (isFullDuplex(server)) {
-			assert(server->mSumReport != NULL);
-			if (!server->mSumReport->sum_fd_set) {
-			    // Reset the sum output routine for the server sum report
-			    // now that it's know to be full duplex. This wasn't known
-			    // during accept()
-			    SetSumHandlers(server, server->mSumReport);
-			    server->mSumReport->sum_fd_set = 1;
-			}
-			server->mFullDuplexReport = InitSumReport(server, server->mSock, 1);
-			listener_client_settings->mFullDuplexReport = server->mFullDuplexReport;
+		    server->mFullDuplexReport = InitSumReport(server, server->mSock, 1);
+		    listener_client_settings->mFullDuplexReport = server->mFullDuplexReport;
 #if HAVE_THREAD_DEBUG
-			thread_debug("FullDuplex report client=%p/%p server=%p/%p", (void *) listener_client_settings, (void *) listener_client_settings->mFullDuplexReport, (void *) server, (void *) server->mFullDuplexReport);
+		    thread_debug("FullDuplex report client=%p/%p server=%p/%p", (void *) listener_client_settings, (void *) listener_client_settings->mFullDuplexReport, (void *) server, (void *) server->mFullDuplexReport);
 #endif
-			server->runNow =  listener_client_settings;
-		    } else if (server->mMode != kTest_Normal) {
+		    server->runNow =  listener_client_settings;
+		} else if (server->mMode != kTest_Normal) {
 #if HAVE_THREAD_DEBUG
-			thread_debug("V1 test (-d or -r) sum report client=%p/%p server=%p/%p", (void *) listener_client_settings, (void *) listener_client_settings->mFullDuplexReport, (void *) server, (void *) server->mFullDuplexReport);
+		    thread_debug("V1 test (-d or -r) sum report client=%p/%p server=%p/%p", (void *) listener_client_settings, (void *) listener_client_settings->mFullDuplexReport, (void *) server, (void *) server->mFullDuplexReport);
 #endif
-			if (listener_client_settings->mMode == kTest_DualTest) {
+		    if (listener_client_settings->mMode == kTest_DualTest) {
 #ifdef HAVE_THREAD
-			    server->runNow =  listener_client_settings;
+			server->runNow =  listener_client_settings;
 #else
-			    server->runNext = listener_client_settings;
+			server->runNext = listener_client_settings;
 #endif
-			} else {
-			    server->runNext =  listener_client_settings;
-			}
+		    } else {
+			server->runNext =  listener_client_settings;
 		    }
 		}
 	    }
-	} else {
-	    setTransferID(server, 1);
 	}
 	// Now start the server side traffic threads
 	thread_start_all(server);
