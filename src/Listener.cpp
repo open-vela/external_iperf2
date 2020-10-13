@@ -194,11 +194,7 @@ void Listener::Run (void) {
 	    fd_set set;
 	    FD_ZERO(&set);
 	    FD_SET(ListenSocket, &set);
-	    if (select(ListenSocket + 1, &set, NULL, NULL, &timeout) > 0) {
-		if (!setsock_blocking(mSettings->mSock, 0)) {
-		    WARN(1, "Failed setting socket to non-blocking mode");
-		}
-	    } else {
+	    if (!(select(ListenSocket + 1, &set, NULL, NULL, &timeout) > 0)) {
 #ifdef HAVE_THREAD_DEBUG
 		thread_debug("Listener select timeout");
 #endif
@@ -208,7 +204,8 @@ void Listener::Run (void) {
 		} else
 		    continue;
 	    }
-	} else if (!setsock_blocking(mSettings->mSock, 1)) {
+	}
+	if (!setsock_blocking(mSettings->mSock, 1)) {
 	    WARN(1, "Failed setting socket to blocking mode");
 	}
 	// Instantiate another settings object to be used by the server thread
@@ -304,6 +301,11 @@ void Listener::Run (void) {
 		continue;
 	    }
 	}
+	// Force compat mode to use 64 bit seq numbers
+	if (isUDP(server) && isCompat(mSettings)) {
+	    setSeqNo64b(server);
+	}
+
 	setTransferID(server, isCompat(mSettings));
 	if (isConnectionReport(server) && isSumOnly(server)) {
 	    PostReport(InitConnectionReport(server, 0));
