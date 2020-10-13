@@ -159,20 +159,24 @@ int setTransferID (struct thread_Settings *inSettings, int role_reversal) {
     if (inSettings->mTransferIDStr)
 	free(inSettings->mTransferIDStr);
     if (role_reversal)  {
+#ifdef HAVE_ROLE_REVERSAL_ID
 	if (inSettings->mTransferID < 10)
 	    len = snprintf(NULL, 0, "[ *%d] ", inSettings->mTransferID);
 	else
 	    len = snprintf(NULL, 0, "[*%d] ", inSettings->mTransferID);
+#endif
     } else {
 	len = snprintf(NULL, 0, "[%3d] ", inSettings->mTransferID);
     }
     len++;  // Trailing null byte + extra
     inSettings->mTransferIDStr = (char *) calloc(1, len);
     if (role_reversal)  {
+#ifdef HAVE_ROLE_REVERSAL_ID
 	if (inSettings->mTransferID < 10)
 	    len = snprintf(inSettings->mTransferIDStr, len, "[ *%d] ", inSettings->mTransferID);
 	else
 	    len = snprintf(inSettings->mTransferIDStr, len, "[*%d] ", inSettings->mTransferID);
+#endif
     } else {
 	len = snprintf(inSettings->mTransferIDStr, len, "[%3d] ", inSettings->mTransferID);
     }

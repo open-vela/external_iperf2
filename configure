@@ -757,6 +757,7 @@ enable_threads
 enable_debuginfo
 enable_web100
 enable_kalman
+enable_role_reversal_id
 enable_seqno64b
 enable_fastsampling
 enable_thread_debug
@@ -1407,6 +1408,9 @@ Optional Features:
                           (default is no)
   --disable-web100        disable web100 support (default is autodetect)
   --disable-kalman        disable kalman delay tuning (default is enable)
+  --disable-role-reversal-id
+                          disable role reversal special characters (default is
+                          enable)
   --disable-seqno64b      disable 64 bit sequence numer support (default is
                           enable)
   --enable-fastsampling   enable support for 100 microsecond report intervals
@@ -3401,6 +3405,12 @@ fi
 # Check whether --enable-kalman was given.
 if test "${enable_kalman+set}" = set; then :
   enableval=$enable_kalman;
+fi
+
+
+# Check whether --enable-role_reversal_id was given.
+if test "${enable_role_reversal_id+set}" = set; then :
+  enableval=$enable_role_reversal_id;
 fi
 
 
@@ -8810,6 +8820,12 @@ fi
 if test "$enable_kalman" != no; then
 
 $as_echo "#define HAVE_KALMAN 1" >>confdefs.h
+
+fi
+
+if test "$enable_role_reversal_id" != no; then
+
+$as_echo "#define HAVE_ROLE_REVERSAL_ID 1" >>confdefs.h
 
 fi
 

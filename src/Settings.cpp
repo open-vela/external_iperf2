@@ -1494,14 +1494,7 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
     if (isUDP(server)) { // UDP test information passed in every packet per being stateless
 	struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) mBuf;
 	Settings_ReadClientSettingsV1(&reversed_thread, &hdr->base);
-	if (v1test) {
-	    setServerReverse(reversed_thread);
-	    if (flags & RUN_NOW) {
-		reversed_thread->mMode = kTest_DualTest;
-	    } else {
-		reversed_thread->mMode = kTest_TradeOff;
-	    }
-	} else if (flags & (HEADER_EXTEND| HEADER_VERSION2)) {
+	if (flags & HEADER_EXTEND) {
 	    reversed_thread->mUDPRate = ntohl(hdr->extend.lRate);
 #ifdef HAVE_INT64_T
 	    reversed_thread->mUDPRate |= ((uint64_t)(ntohl(hdr->extend.uRate) >> 8) << 32);
@@ -1512,23 +1505,7 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
 	    } else {
 		reversed_thread->mUDPRateUnits = kRate_BW;
 	    }
-	    if (flags & HEADER_VERSION2) {
-		reversed_thread->mTOS = ntohs(hdr->extend.tos);
-		if (isIsochronous(server)) {
-		    Settings_ReadClientSettingsIsoch(&reversed_thread, &hdr->isoch_settings);
-		}
-		if (upperflags & HEADER_FQRATESET) {
-		    setFQPacing(reversed_thread);
-		    reversed_thread->mFQPacingRate = ntohl(hdr->start_fq.fqratel);
-#ifdef HAVE_INT64_T
-		    reversed_thread->mFQPacingRate |= ((uint64_t)(ntohl(hdr->start_fq.fqrateu)) << 32);
-#endif
-		}
-	    }
 	}
-    } else { //tcp first payload
-	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) mBuf;
-	Settings_ReadClientSettingsV1(&reversed_thread, &hdr->base);
 	if (v1test) {
 	    setServerReverse(reversed_thread);
 	    if (flags & RUN_NOW) {
@@ -1536,24 +1513,47 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
 	    } else {
 		reversed_thread->mMode = kTest_TradeOff;
 	    }
-	} else if (flags & (HEADER_EXTEND | HEADER_VERSION2)) {
+	} else if (flags & HEADER_VERSION2) {
+	    reversed_thread->mTOS = ntohs(hdr->extend.tos);
+	    if (isIsochronous(server)) {
+		Settings_ReadClientSettingsIsoch(&reversed_thread, &hdr->isoch_settings);
+	    }
+	    if (upperflags & HEADER_FQRATESET) {
+		setFQPacing(reversed_thread);
+		reversed_thread->mFQPacingRate = ntohl(hdr->start_fq.fqratel);
+#ifdef HAVE_INT64_T
+		reversed_thread->mFQPacingRate |= ((uint64_t)(ntohl(hdr->start_fq.fqrateu)) << 32);
+#endif
+	    }
+	}
+    } else { //tcp first payload
+	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) mBuf;
+	Settings_ReadClientSettingsV1(&reversed_thread, &hdr->base);
+	if (flags & HEADER_EXTEND) {
 	    reversed_thread->mUDPRate = ntohl(hdr->extend.lRate);
 #ifdef HAVE_INT64_T
 	    reversed_thread->mUDPRate |= ((uint64_t)(ntohl(hdr->extend.uRate) >> 8) << 32);
 #endif
 	    upperflags = ntohs(hdr->extend.upperflags);
-	    if (flags & HEADER_VERSION2) {
-		reversed_thread->mTOS = ntohs(hdr->extend.tos);
-		if (isIsochronous(server)) {
-		    Settings_ReadClientSettingsIsoch(&reversed_thread, &hdr->isoch_settings);
-		}
-		if (upperflags & HEADER_FQRATESET) {
-		    setFQPacing(reversed_thread);
-		    reversed_thread->mFQPacingRate = ntohl(hdr->start_fq.fqratel);
+	}
+	if (v1test) {
+	    setServerReverse(reversed_thread);
+	    if (flags & RUN_NOW) {
+		reversed_thread->mMode = kTest_DualTest;
+	    } else {
+		reversed_thread->mMode = kTest_TradeOff;
+	    }
+	} else if (flags & HEADER_VERSION2) {
+	    reversed_thread->mTOS = ntohs(hdr->extend.tos);
+	    if (isIsochronous(server)) {
+		Settings_ReadClientSettingsIsoch(&reversed_thread, &hdr->isoch_settings);
+	    }
+	    if (upperflags & HEADER_FQRATESET) {
+		setFQPacing(reversed_thread);
+		reversed_thread->mFQPacingRate = ntohl(hdr->start_fq.fqratel);
 #ifdef HAVE_INT64_T
-		    reversed_thread->mFQPacingRate |= ((uint64_t)(ntohl(hdr->start_fq.fqrateu)) << 32);
+		reversed_thread->mFQPacingRate |= ((uint64_t)(ntohl(hdr->start_fq.fqrateu)) << 32);
 #endif
-		}
 	    }
 	}
     }
