@@ -169,8 +169,7 @@ static void clientside_client_basic (struct thread_Settings *thread, Client *the
 	if (thread->mThreads > 1)
 	    Iperf_push_host(&thread->peer, thread);
 	theClient->StartSynch();
-	if (!isCompat(thread))
-	    theClient->SendFirstPayload();
+	theClient->SendFirstPayload();
 	if (isTxHoldback(thread))
 	    theClient->TxDelay();
 	theClient->Run();

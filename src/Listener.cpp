@@ -273,19 +273,23 @@ void Listener::Run (void) {
 	// Note 2: The mBuf read is a peek so the server's traffic thread started later
 	// will also process the first message from an accounting perspective.
 	// This is required for accurate traffic statistics
-	if (!isCompat(mSettings) && (apply_client_settings(server) <= 0)) {
-	    if (isConnectionReport(server) && !isSumOnly(server)) {
-		PostReport(InitConnectionReport(server, 0));
+	if (!isCompat(mSettings)) {
+	    if (apply_client_settings(server) <= 0) {
+		if (isConnectionReport(server) && !isSumOnly(server)) {
+		    PostReport(InitConnectionReport(server, 0));
+		}
+		Iperf_remove_host(&server->peer);
+		if (DecrSumReportRefCounter(server->mSumReport) <= 0) {
+		    FreeSumReport(server->mSumReport);
+		}
+		if (!isUDP(server))
+		    close(server->mSock);
+		assert(server != mSettings);
+		Settings_Destroy(server);
+		continue;
+	    } else {
+		apply_client_settings(server);
 	    }
-	    Iperf_remove_host(&server->peer);
-	    if (DecrSumReportRefCounter(server->mSumReport) <= 0) {
-		FreeSumReport(server->mSumReport);
-	    }
-	    if (!isUDP(server))
-		close(server->mSock);
-	    assert(server != mSettings);
-	    Settings_Destroy(server);
-	    continue;
 	}
 	// server settings flags should now be set per the client's first message exchange
 	// so the server setting's flags per the client can now be checked
@@ -1047,7 +1051,7 @@ int Listener::apply_client_settings (thread_Settings *server) {
     // Signaled by not UDP (only supported by TCP)
     // and either 2.0.13 flags or the newer 2.0.14 flag of
     // V2PEERDETECT
-    if (!isUDP(server) && \
+    if (!isUDP(server) && !isCompat(mSettings) && \
 	((!(flags & HEADER_VERSION2) && (flags & HEADER_EXTEND)) || \
 	 (flags & HEADER_V2PEERDETECT))) {
 	client_test_ack(server);
