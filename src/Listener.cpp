@@ -938,27 +938,38 @@ int Listener::apply_client_settings (thread_Settings *server) {
 	    else
 		server->mMode = kTest_TradeOff;
 	}
-	if (flags & (HEADER_EXTEND | HEADER_VERSION2)) {
+	if (flags & HEADER_EXTEND) {
 	    upperflags = htons(hdr->extend.upperflags);
 	    server->mTOS = ntohs(hdr->extend.tos);
 	    server->peer_version_u = ntohl(hdr->extend.version_u);
 	    server->peer_version_l = ntohl(hdr->extend.version_l);
-	}
-	if (flags & HEADER_UDPTESTS) {
-	    // Handle stateless flags
-	    if (upperflags & HEADER_ISOCH) {
-		setIsochronous(server);
+	    if (flags & HEADER_UDPTESTS) {
+		// Handle stateless flags
+		if (upperflags & HEADER_ISOCH) {
+		    setIsochronous(server);
+		}
+		if (upperflags & HEADER_L2ETHPIPV6) {
+		    setIPV6(server);
+		} else {
+		    unsetIPV6(server);
+		}
+		if (upperflags & HEADER_L2LENCHECK) {
+		    setL2LengthCheck(server);
+		}
+		if (upperflags & HEADER_NOUDPFIN) {
+		    setNoUDPfin(server);
+		}
 	    }
-	    if (upperflags & HEADER_L2ETHPIPV6) {
-		setIPV6(server);
-	    } else {
-		unsetIPV6(server);
-	    }
-	    if (upperflags & HEADER_L2LENCHECK) {
-		setL2LengthCheck(server);
-	    }
-	    if (upperflags & HEADER_NOUDPFIN) {
-		setNoUDPfin(server);
+	    if (upperflags & HEADER_TRIPTIME) {
+		server->triptime_start.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
+		server->triptime_start.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
+		Timestamp now;
+		if ((abs(now.getSecs() - server->triptime_start.tv_sec)) > MAXDIFFTIMESTAMPSECS) {
+		    fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
+		} else {
+		    setTripTime(server);
+		    setEnhanced(server);
+		}
 	    }
 	}
 	if (flags & HEADER_VERSION2) {
@@ -971,17 +982,6 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		setServerReverse(server);
 		setNoUDPfin(server);
 		unsetReport(server);
-	    }
-	    if (upperflags & HEADER_TRIPTIME) {
-		server->triptime_start.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
-		server->triptime_start.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
-		Timestamp now;
-		if ((abs(now.getSecs() - server->triptime_start.tv_sec)) > MAXDIFFTIMESTAMPSECS) {
-		    fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
-		} else {
-		    setTripTime(server);
-		    setEnhanced(server);
-		}
 	    }
 	}
     } else {
@@ -1008,7 +1008,7 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		else
 		    server->mMode = kTest_TradeOff;
 	    }
-	    if (flags & (HEADER_EXTEND | HEADER_VERSION2)) {
+	    if (flags & HEADER_EXTEND) {
 		upperflags = htons(hdr->extend.upperflags);
 		server->mTOS = ntohs(hdr->extend.tos);
 		server->peer_version_u = ntohl(hdr->extend.version_u);
@@ -1019,6 +1019,17 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		}
 		if (upperflags & HEADER_ISOCH) {
 		    setIsochronous(server);
+		}
+		if (upperflags & HEADER_TRIPTIME) {
+		    server->triptime_start.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
+		    server->triptime_start.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
+		    Timestamp now;
+		    if ((abs(now.getSecs() - server->triptime_start.tv_sec)) > MAXDIFFTIMESTAMPSECS) {
+			fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
+		    } else {
+			setTripTime(server);
+			setEnhanced(server);
+		    }
 		}
 		if (flags & HEADER_VERSION2) {
 		    if (upperflags & HEADER_FULLDUPLEX) {
