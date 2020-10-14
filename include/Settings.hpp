@@ -204,6 +204,7 @@ struct thread_Settings {
         bool   mSinlgeClient;           // -1 */
     int flags;
     int flags_extend;
+    int skip;
     // enums (which should be special int's)
     enum ThreadMode mThreadMode;         // -s or -c
     enum ReportMode mReportMode;
