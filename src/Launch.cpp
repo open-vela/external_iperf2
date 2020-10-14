@@ -359,7 +359,6 @@ void client_init(struct thread_Settings *clients) {
     setReport(clients);
     // See if we need to start a listener as well
     Settings_GenerateListenerSettings(clients, &next);
-
 #ifdef HAVE_THREAD
     if (next != NULL) {
         // We have threads and we need to start a listener so
