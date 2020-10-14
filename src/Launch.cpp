@@ -270,8 +270,11 @@ static void serverside_client_bidir (struct thread_Settings *thread, Client *the
     theClient->my_connect();
     if (theClient->isConnected()) {
 	Iperf_push_host(&thread->peer, thread);
-	theClient->StartSynch();
-	theClient->Run();
+	if (theClient->StartSynch() != -1) {
+	    theClient->SendFirstPayload();
+	    theClient->StartSynch();
+	    theClient->Run();
+	}
     }
 }
 
