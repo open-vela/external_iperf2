@@ -395,6 +395,7 @@ void Settings_Destroy (struct thread_Settings *mSettings) {
     DELETE_ARRAY(mSettings->mCongestion);
     FREE_ARRAY(mSettings->mIfrname);
     FREE_ARRAY(mSettings->mIfrnametx);
+    FREE_ARRAY(mSettings->mTransferIDStr);
     DELETE_ARRAY(mSettings->mIsochronousStr);
     DELETE_PTR(mSettings);
 } // end ~Settings
