@@ -325,6 +325,8 @@ void Listener::Run (void) {
 	    // read client header for reverse settings
 	    Settings_GenerateClientSettings(server, &listener_client_settings, mBuf);
 	    if (listener_client_settings) {
+		if (server->mMode != kTest_Normal)
+		    listener_client_settings->mTransferID = 0;
 		setTransferID(listener_client_settings, 1);
 		if (isFullDuplex(listener_client_settings) || isReverse(listener_client_settings))
 		    Iperf_push_host(&listener_client_settings->peer, listener_client_settings);
