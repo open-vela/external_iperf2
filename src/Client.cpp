@@ -1213,12 +1213,18 @@ void Client::SendFirstPayload (void) {
 		tmphdr->seqno_ts.tv_sec  = htonl(reportstruct->packetTime.tv_sec);
 		tmphdr->seqno_ts.tv_usec = htonl(reportstruct->packetTime.tv_usec);
 		udp_payload_minimum = pktlen;
-	    }
 #if HAVE_DECL_MSG_DONTWAIT
-	    reportstruct->packetLen = send(mySocket, mBuf, (pktlen > mSettings->mBufLen) ? pktlen : mSettings->mBufLen, MSG_DONTWAIT);
+		reportstruct->packetLen = send(mySocket, mBuf, (pktlen > mSettings->mBufLen) ? pktlen : mSettings->mBufLen, MSG_DONTWAIT);
 #else
-	    reportstruct->packetLen = send(mySocket, mBuf, (pktlen > mSettings->mBufLen) ? pktlen : mSettings->mBufLen, 0);
+		reportstruct->packetLen = send(mySocket, mBuf, (pktlen > mSettings->mBufLen) ? pktlen : mSettings->mBufLen, 0);
 #endif
+	    } else {
+#if HAVE_DECL_MSG_DONTWAIT
+		reportstruct->packetLen = send(mySocket, mBuf, pktlen, MSG_DONTWAIT);
+#else
+		reportstruct->packetLen = send(mySocket, mBuf, pktlen, 0);
+#endif
+	    }
 	    WARN_errno(reportstruct->packetLen < 0, "send_hdr");
 	    if (reportstruct->packetLen > 0) {
 		ReportPacket(myReport, reportstruct);
