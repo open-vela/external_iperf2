@@ -368,7 +368,6 @@ void Settings_Copy (struct thread_Settings *from, struct thread_Settings **into,
     (*into)->mTID = thread_zeroid();
     (*into)->runNext = NULL;
     (*into)->runNow = NULL;
-    (*into)->mTransferID = 0;
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
     (*into)->mSockDrop = INVALID_SOCKET;
 #endif
@@ -1476,6 +1475,8 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
     if (v1test)
 	thread_debug("header set for a version 1 test");
 #endif
+    if (isFullDuplex(server) || isServerReverse(server))
+	setTransferID(server, 0);
     if (isFullDuplex(server) || v1test) {
 	Settings_Copy(server, client, 0);
 	reversed_thread = *client;
