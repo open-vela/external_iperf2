@@ -1017,6 +1017,7 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		    setIsochronous(server);
 		}
 		if (upperflags & HEADER_TRIPTIME) {
+		    server->skip = peeklen;
 		    server->triptime_start.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
 		    server->triptime_start.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
 		    Timestamp now;
