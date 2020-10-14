@@ -1648,7 +1648,6 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	    hdr->extend.version_u = htonl(IPERF_VERSION_MAJORHEX);
 	    hdr->extend.version_l = htonl(IPERF_VERSION_MINORHEX);
 	    hdr->extend.tos = htons(client->mTOS & 0xFF);
-	    len += sizeof(struct client_hdrext_starttime_fq);
 	    if (isBWSet(client)) {
 		hdr->extend.lRate = htonl((uint32_t)(client->mUDPRate));
 #ifdef HAVE_INT64_T
@@ -1658,6 +1657,7 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 		hdr->extend.lRate = htonl(kDefault_UDPRate);
 		hdr->extend.uRate = 0x0;
 	    }
+	    len += sizeof(struct client_hdrext);
 	    len += Settings_GenerateClientHdrV1(client, &hdr->base);
 	    if (client->mMode != kTest_Normal) {
 		flags |= HEADER_VERSION1;
@@ -1736,14 +1736,14 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	    hdr->extend.version_u = htonl(IPERF_VERSION_MAJORHEX);
 	    hdr->extend.version_l = htonl(IPERF_VERSION_MINORHEX);
 	    hdr->extend.tos = htons(client->mTOS & 0xFF);
-	    len += sizeof(struct client_hdrext_starttime_fq);
-	    len += Settings_GenerateClientHdrV1(client, &hdr->base);
 	    if (isBWSet(client)) {
 		hdr->extend.lRate = htonl((uint32_t)(client->mUDPRate));
 #ifdef HAVE_INT64_T
 		hdr->extend.uRate = htonl(((uint32_t)(client->mUDPRate >> 32)) << 8);
 #endif
 	    }
+	    len += sizeof(struct client_hdrext);
+	    len += Settings_GenerateClientHdrV1(client, &hdr->base);
 	    if (client->mMode != kTest_Normal) {
 		flags |= HEADER_VERSION1;
 		if (client->mMode == kTest_DualTest)
@@ -1752,7 +1752,7 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	    if (isPeerVerDetect(client)) {
 		flags |= (HEADER_V2PEERDETECT | HEADER_VERSION2);
 	    }
-	    if (isTripTime(client) || isFQPacing(client)) {
+	    if (isTripTime(client) || isFQPacing(client) || isIsochronous(client)) {
 		hdr->start_fq.start_tv_sec = htonl(startTime.tv_sec);
 		hdr->start_fq.start_tv_usec = htonl(startTime.tv_usec);
 		hdr->start_fq.fqratel = htonl((uint32_t) client->mFQPacingRate);

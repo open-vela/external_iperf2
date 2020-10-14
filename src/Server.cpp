@@ -408,6 +408,7 @@ bool Server::InitTrafficLoop (void) {
 	    flags = ntohl(udp_pkt->base.flags);
 	    mSettings->triptime_start.tv_sec = ntohl(udp_pkt->start_fq.start_tv_sec);
 	    mSettings->triptime_start.tv_usec = ntohl(udp_pkt->start_fq.start_tv_usec);
+	    reportstruct->packetLen = n;
 	} else {
 	    n = recvn(mSettings->mSock, mBuf, sizeof(uint32_t), MSG_PEEK);
 	    if (n == 0) {
@@ -426,6 +427,7 @@ bool Server::InitTrafficLoop (void) {
 		struct client_tcp_testhdr *tcp_pkt = (struct client_tcp_testhdr *) mBuf;
 		mSettings->triptime_start.tv_sec = ntohl(tcp_pkt->start_fq.start_tv_sec);
 		mSettings->triptime_start.tv_usec = ntohl(tcp_pkt->start_fq.start_tv_usec);
+		reportstruct->packetLen = n;
 		reportstruct->packetID = n;
 	    }
 	}
