@@ -61,6 +61,7 @@
 #include "Server.hpp"
 #include "PerfSocket.hpp"
 #include "active_hosts.h"
+#include "SocketAddr.h"
 
 static int fullduplex_startstop_barrier (struct BarrierMutex *barrier) {
     int rc = 0;
@@ -156,6 +157,7 @@ void server_spawn(struct thread_Settings *thread) {
 
 static void clientside_client_basic (struct thread_Settings *thread, Client *theClient) {
     setTransferID(thread, 0);
+    SockAddr_remoteAddr(thread);
     theClient->my_connect();
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Client spawn thread basic (sock=%d)", thread->mSock);
@@ -177,6 +179,7 @@ static void clientside_client_basic (struct thread_Settings *thread, Client *the
 
 static void clientside_client_reverse (struct thread_Settings *thread, Client *theClient) {
     setTransferID(thread, 0);
+    SockAddr_remoteAddr(thread);
     theClient->my_connect();
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Client spawn thread reverse (sock=%d)", thread->mSock);
@@ -216,6 +219,7 @@ static void clientside_client_reverse (struct thread_Settings *thread, Client *t
 static void clientside_client_fullduplex (struct thread_Settings *thread, Client *theClient) {
     struct thread_Settings *reverse_client = NULL;
     setTransferID(thread, 0);
+    SockAddr_remoteAddr(thread);
     thread->mFullDuplexReport = InitSumReport(thread, -1, 1);
     Settings_Copy(thread, &reverse_client, 0);
     assert(reverse_client != NULL);
@@ -265,6 +269,7 @@ static void serverside_client_bidir (struct thread_Settings *thread, Client *the
     thread_debug("Listener spawn client thread (bidir sock=%d)", thread->mSock);
 #endif
     setTransferID(thread, 1);
+    SockAddr_remoteAddr(thread);
     unsetNoSettReport(thread);
     setReport(thread);
     theClient->my_connect();
@@ -272,7 +277,6 @@ static void serverside_client_bidir (struct thread_Settings *thread, Client *the
 	Iperf_push_host(&thread->peer, thread);
 	if (theClient->StartSynch() != -1) {
 	    theClient->SendFirstPayload();
-	    theClient->StartSynch();
 	    theClient->Run();
 	}
     }
