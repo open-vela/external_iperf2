@@ -7,22 +7,21 @@ o major code refactoring (see doc/DESIGN_NOTES) for maintainability, extensibilt
 o support for full duplex traffic using --full-duplex
 o support for reverse traffic using --reverse
 o support for role-reversal character of asterisk in the transfer id
-o transfer id now an incrementing integer and no longer the socket
+o transfer id now an incrementing integer and no longer the socket id
 o support for TCP connect only tests with --connect-only
 o isochronous support compiled in by default, must use config to disable
 o support --isochronous for both UDP or TCP traffic to simulate video streams
-o use of clock_nanosleep to schedule isochrnous bursts when possible, otherwise use nanosleep
+o use of clock_nanosleep when supported to schedule isochronous burst starts, otherwise use nanosleep delay
 o support for --trip-times indicating the client and server clocks are synchronized to an accuracy sufficient, note: consider the use of precision time protocol as well as ask your data center to provide access to a GPS disciplined reference time source
-o support for --trip-times with -d and -r tests
+o support for --trip-times with -d and -r bidirectional tests
 o output TCP connect times (3WHS) in connect reports
 o rate-limited options of -b and --fq-rate supported for unidirectional, full duplex and reverse traffic
-o support for destination ip increments with -P and --incr-dstip
 o reporter thread designed to automatically cause packet reports to aggregate - mitigating and hopefully removing thread thrashing
-o support for frame or burst based reporting or sampling vs time based via -i [f|F]
+o support for frame or burst based reporting or sampling vs time based via -i [f|F] (experimental)
 o support for UDP traffic only from client to server with --no-udp-fin
 o support for write to read latencies (UDP and TCP) with --trip-times
 o support for sum only outputs with --sum-only
-o support for little's law calculations in --trip-time output
+o support for little's law calculations in --trip-time outputs
 o support for --txstart-time <epoch-time> to schedule client traffic start, timestamp support microseconds, e.g. unix $(expr $(date +%s) + 1).$(date +%N)
 o support for --txdelay-time to insert delay between TCP three way handshake (3WHS) and data transfer
 o support for --no-connect-sync which disables transmit traffic start synchronization when -P is used, defaults to synchronized
