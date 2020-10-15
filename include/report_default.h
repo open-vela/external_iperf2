@@ -1,10 +1,11 @@
+
 /*---------------------------------------------------------------
- * Copyright (c) 2017
- * Broadcom Corporation
+ * Copyright (c) 1999,2000,2001,2002,2003
+ * The Board of Trustees of the University of Illinois
  * All Rights Reserved.
  *---------------------------------------------------------------
  * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated
+ * obtaining a copy of this software (Iperf) and associated
  * documentation files (the "Software"), to deal in the Software
  * without restriction, including without limitation the
  * rights to use, copy, modify, merge, publish, distribute,
@@ -24,7 +25,7 @@
  * provided with the distribution.
  *
  *
- * Neither the name of Broadcom Coporation,
+ * Neither the names of the University of Illinois, NCSA,
  * nor the names of its contributors may be used to endorse
  * or promote products derived from this Software without
  * specific prior written permission.
@@ -38,38 +39,26 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * ________________________________________________________________
+ * National Laboratory for Applied Network Research
+ * National Center for Supercomputing Applications
+ * University of Illinois at Urbana-Champaign
+ * http://www.ncsa.uiuc.edu
+ * ________________________________________________________________
  *
- * isochronous.hpp
- * Suppport for isochonronous traffic testing
+ * report_default.h
+ * by Kevin Gibbs <kgibbs@nlanr.net>
  *
- * by Robert J. McMahon (rjmcmahon@rjmcmahon.com, bob.mcmahon@broadcom.com)
- * -------------------------------------------------------------------
- */
-#ifndef ISOCHRONOUS_H
-#define ISOCHRONOUS_H
+ * ________________________________________________________________ */
 
-#include "Settings.hpp"
-#include "Timestamp.hpp"
 
-/* ------------------------------------------------------------------- */
-namespace Isochronous {
-    class FrameCounter {
-    public :
-	FrameCounter(double);
-	unsigned int get(long *);
-	unsigned int period_us(void);
-	unsigned int wait_tick(void);
-	unsigned int wait_sync(long sec, long usec);
-	long getSecs(void);
-	long getUsecs(void);
-	void reset(void);
-	unsigned int slip;
+#ifndef REPORT_DEFAULT_H
+#define REPORT_DEFAULT_H
 
-    private :
-	Timestamp startTime;
-	double frequency;
-	unsigned int period;  // units microseconds
-	unsigned int lastcounter;
-    }; // end class FrameCounter
-}
-#endif // ISOCHRONOUS_H
+void reporter_printstats( Transfer_Info *stats );
+void reporter_multistats( Transfer_Info *stats );
+void reporter_serverstats( Connection_Info *conn, Transfer_Info *stats );
+void reporter_reportsettings( ReporterData *stats );
+void *reporter_reportpeer( Connection_Info *stats, int ID);
+
+
+#endif // REPORT_DEFAULT_H
