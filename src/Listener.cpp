@@ -198,7 +198,6 @@ void Listener::Run (void) {
 #ifdef HAVE_THREAD_DEBUG
 		thread_debug("Listener select timeout");
 #endif
-		printf("**** select timeout\n");
 		if (isCompat(mSettings)) {
 		    fprintf(stderr, "ERROR: expected reverse connect did not occur\n");
 		    break;
@@ -206,7 +205,6 @@ void Listener::Run (void) {
 		    continue;
 	    }
 	}
-	printf("**** select occurred %d %d\n", ListenSocket, FD_ISSET(ListenSocket,&set));	
 	if (!setsock_blocking(mSettings->mSock, 1)) {
 	    WARN(1, "Failed setting socket to blocking mode");
 	}
@@ -276,7 +274,6 @@ void Listener::Run (void) {
 	// will also process the first message from an accounting perspective.
 	// This is required for accurate traffic statistics
 	if (apply_client_settings(server) <= 0) {
-	    printf("**** why\n");
 	    if (isConnectionReport(server) && !isSumOnly(server)) {
 		PostReport(InitConnectionReport(server, 0));
 	    }
