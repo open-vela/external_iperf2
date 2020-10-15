@@ -1192,7 +1192,6 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    fprintf(stderr, "ERROR: option of -X or --peer-detect not supported on the server\n");
 	    bail = true;
 	}
-
     }
     if (bail)
 	exit(1);
@@ -1339,7 +1338,18 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    }
 	}
 	if (SockAddr_isMulticast(&tmp)) {
-	    setMulticast(mExtSettings);
+	    bail = false;
+	    if ((mExtSettings->mThreads > 1) && !isIncrDstIP(mExtSettings)) {
+		fprintf(stderr, "ERROR: client option of -P greater than 1 not supported with multicast address\n");
+		bail = true;
+	    } else if (isFullDuplex(mExtSettings) || isReverse(mExtSettings) || (mExtSettings->mMode != kTest_Normal)) {
+		fprintf(stderr, "ERROR: options of --full-duplex, --reverse, -d and -r not supported with multicast addresses\n");
+		bail = true;
+	    }
+	    if (bail)
+		exit(1);
+	    else
+		setMulticast(mExtSettings);
 	}
 #ifndef HAVE_DECL_SO_BINDTODEVICE
 	if (mExtSettings->mIfrnametx) {
