@@ -1016,7 +1016,9 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
     if (!isBWSet(mExtSettings) && isUDP(mExtSettings)) {
 	mExtSettings->mUDPRate = kDefault_UDPRate;
     }
-    if (isTripTime(mExtSettings) && (isReverse(mExtSettings) || isFullDuplex(mExtSettings))) {
+    if (isTripTime(mExtSettings) && (isReverse(mExtSettings) || \
+				     isFullDuplex(mExtSettings) || \
+				     (mExtSettings->mMode != kTest_Normal))) {
 	setEnhanced(mExtSettings);
     }
     // Warnings
