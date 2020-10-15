@@ -186,18 +186,19 @@ void Listener::Run (void) {
 	    my_listen(); // This will set ListenSocket to a new sock fd
 	}
 	// Use a select() with a timeout if -t is set or if this is a v1 -r or -d test
+	    fd_set set;
 	if ((mMode_Time) || isCompat(mSettings)) {
 	    // Hang a select w/timeout on the listener socket
 	    struct timeval timeout;
 	    timeout.tv_sec = mSettings->mAmount / 100;
 	    timeout.tv_usec = (mSettings->mAmount % 100) * 10000;
-	    fd_set set;
 	    FD_ZERO(&set);
 	    FD_SET(ListenSocket, &set);
 	    if (!(select(ListenSocket + 1, &set, NULL, NULL, &timeout) > 0)) {
 #ifdef HAVE_THREAD_DEBUG
 		thread_debug("Listener select timeout");
 #endif
+		printf("**** select timeout\n");
 		if (isCompat(mSettings)) {
 		    fprintf(stderr, "ERROR: expected reverse connect did not occur\n");
 		    break;
@@ -205,6 +206,7 @@ void Listener::Run (void) {
 		    continue;
 	    }
 	}
+	printf("**** select occurred %d %d\n", ListenSocket, FD_ISSET(ListenSocket,&set));	
 	if (!setsock_blocking(mSettings->mSock, 1)) {
 	    WARN(1, "Failed setting socket to blocking mode");
 	}
@@ -273,23 +275,20 @@ void Listener::Run (void) {
 	// Note 2: The mBuf read is a peek so the server's traffic thread started later
 	// will also process the first message from an accounting perspective.
 	// This is required for accurate traffic statistics
-	if (!isCompat(mSettings)) {
-	    if (apply_client_settings(server) <= 0) {
-		if (isConnectionReport(server) && !isSumOnly(server)) {
-		    PostReport(InitConnectionReport(server, 0));
-		}
-		Iperf_remove_host(&server->peer);
-		if (DecrSumReportRefCounter(server->mSumReport) <= 0) {
-		    FreeSumReport(server->mSumReport);
-		}
-		if (!isUDP(server))
-		    close(server->mSock);
-		assert(server != mSettings);
-		Settings_Destroy(server);
-		continue;
-	    } else {
-		apply_client_settings(server);
+	if (apply_client_settings(server) <= 0) {
+	    printf("**** why\n");
+	    if (isConnectionReport(server) && !isSumOnly(server)) {
+		PostReport(InitConnectionReport(server, 0));
 	    }
+	    Iperf_remove_host(&server->peer);
+	    if (DecrSumReportRefCounter(server->mSumReport) <= 0) {
+		FreeSumReport(server->mSumReport);
+	    }
+	    if (!isUDP(server))
+		close(server->mSock);
+	    assert(server != mSettings);
+	    Settings_Destroy(server);
+	    continue;
 	}
 	// server settings flags should now be set per the client's first message exchange
 	// so the server setting's flags per the client can now be checked

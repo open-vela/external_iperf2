@@ -913,6 +913,10 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 	    b += strlen(b);
 	}
     }
+    if (isEnhanced(report->common)) {
+	snprintf(b, SNBUFFERSIZE-strlen(b), " (sock=%d)", report->common->socket);;
+	b += strlen(b);
+    }
     if (isEnhanced(report->common) || isConnectOnly(report->common)) {
 	if (report->connecttime > 0) {
 	    snprintf(b, SNBUFFERSIZE-strlen(b), " (ct=%4.2f ms)", report->connecttime);;
