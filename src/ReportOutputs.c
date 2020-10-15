@@ -907,15 +907,15 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 	    b += strlen(b);
 	}
     }
+    if (isEnhanced(report->common)) {
+	snprintf(b, SNBUFFERSIZE-strlen(b), " (sock=%d)", report->common->socket);;
+	b += strlen(b);
+    }
     if (isEnhanced(report->common) || isPeerVerDetect(report->common)) {
 	if (report->peerversion[0] != '\0') {
 	    snprintf(b, SNBUFFERSIZE-strlen(b), "%s", report->peerversion);
 	    b += strlen(b);
 	}
-    }
-    if (isEnhanced(report->common)) {
-	snprintf(b, SNBUFFERSIZE-strlen(b), " (sock=%d)", report->common->socket);;
-	b += strlen(b);
     }
     if (isEnhanced(report->common) || isConnectOnly(report->common)) {
 	if (report->connecttime > 0) {
