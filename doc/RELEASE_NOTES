@@ -5,13 +5,14 @@ See doc/DESIGN_NOTES for some description around the software design
 o scaling improvements for -P, i.e. improved support for large numbers of traffic threads (tested to thousands)
 o support for full duplex traffic using --full-duplex
 o support for reverse traffic using --reverse
-o support for role-reversal character of asterick in the transfer id
+o support for role-reversal character of asterisk in the transfer id
 o support for TCP connect only tests with --connect-only
+o isochronous support on by default, must use config to disable
 o support --isochronous both UDP or TCP traffic to simulate video streams
 o support for --trip-times indicating the client and server clocks are synchronized to an accuracy sufficient, note consider the use of precision time protocol as well as ask your data center to provide access to a GPS disciplined reference time source
 o support for --trip-times with -d and -r tests
 o output TCP connect times (3WHS) in connect reports
-o rate-limited options of -b and --fq-rate supported for unidirectional, full duples and reverse traffic
+o rate-limited options of -b and --fq-rate supported for unidirectional, full duplex and reverse traffic
 o support for destination ip increments with -P and --incr-dstip
 o reporter thread designed to automatically cause packet reports to aggregate - mitigating and hopefully removing thread thrashing
 o support for frame or burst based reporting or sampling vs time based via -i [f|F]
@@ -25,14 +26,15 @@ o support for --no-connect-sync which disables transmit traffic start synchroniz
 o option of --full-duplex implementation uses a barrier on the client side to synchronize full duplex traffic
 o No limits to group sum reports, i.e. all clients will get its own sum report per a server
 o improved time-stamping including end to end or client and server based timestamps with --trip-times
-o improvee messaging for --linux-congestion or -Z
+o improve messaging for --linux-congestion or -Z
 o improved settings messaging
 o re-implemented -U for single UDP server with minimal threading interactions
 o re-implemented -1 or --singleclient where server will serialize traffic runs
-o major code refactoring (see doc/Design.txt) for maintainability, extensibility, performance, scaling, memory usage
+o major code refactoring (see doc/Design.txt) for maintainability, extensibilty, performance, scaling, memory usage
 o warning message if the test were CPU bound instead of network i/o bound
 o fix the case when -P <value> is set on the server such that summing output is displayed
 o multicast listener will autoset -U (single server)
+o immediate bail out on mutually exclusive command line options
 o tested with 1000's of traffic streams, WiFi, 10G and 100G
 
 2.0.13 change set (as of January 22, 2019)
@@ -41,25 +43,25 @@ o Set the listening socket backlog to a large value, let os control the max, bet
 o Fix breakage to -r and -d options
 o Fix so ctrl-c works with -r and -d 
 o Fix ctrl-c on server to have a graceful exit including print report
-o Fix kfreebsd compile breakage per multicast support
+o Fix freebsd compile breakage per multicast support
 o The UDP final server report may be larger than the client's -l length, fix the client to read maximum packet length for that instead of using -l as the read size
 o Minor code clean up around write errors
 o Added netpower to TCP client enhanced output (throughput/RTT)
 o Display TCP client connect time in the connected to message
 o use IPV6_TCLASS for ipv6 (-V) dscp/tos (-S) if available
-o Add suport for --txstart-time <value> where value is epoch/unix format, e.g. iperf -c 192.168.100.33 --txstart-time 1536090358.515
+o Add support for --txstart-time <value> where value is epoch/unix format, e.g. iperf -c 192.168.100.33 --txstart-time 1536090358.515
 o Add support for socket option SO_MAX_PACING_RATE using --fq-rate
 o Add configure support for --enable-fastsampling, allowing 100 microsecond report intervals
 o Add support for --trip-time on the client.  Measures client's 3WHS done to client's fin+fin-ack, reported on the server requires -e and synchronized clocks
-o Support for 64 bit sequence numbers on by default, no longer requires --udp-counters-64bit, interoperates with 2.0.5 32 bit sequence numbers
+o Support for 64 bit sequence numbers on by default, no longer requires --udp-counters-64bit, inter-operates with 2.0.5 32 bit sequence numbers
 o Integer fixes for 64 bit, int max, printf,  etc.
 o Obsolete the need for include/slim_headers.h
 o Update man page to have some example usages
 
 2.0.12 change set (as of June 25th 2018)
 ----------------------------------------
-o Change the unicast TTL default value from 1 to the system default (to be compatable with previous versions.)   Mulitcast still defaults to 1.
-o adpative formatting bug fix: crash occurs when values exceed 1 Tera.  Add support for Tera and Peta and eliminate the potential crash condition
+o Change the unicast TTL default value from 1 to the system default (to be compatible with previous versions.)   Multicast still defaults to 1.
+o adaptive formatting bug fix: crash occurs when values exceed 1 Tera.  Add support for Tera and Peta and eliminate the potential crash condition
 o configure default compile to include isochronous support (use configure --disable-isochronous to remove support)
 o replace 2.0.11's --vary-load option with a more general -b option to include <mean>,<stdev>, e.g. -b 100m,40m, which will pull from a log normal distribution every 0.1 seconds
 o fixes for windows cross compile (using mingw32)
