@@ -1,12 +1,15 @@
 See doc/DESIGN_NOTES for some description around the software design
 
-2.0.14 change set (as of September 22nd, 2020)
+2.0.14 change set (as of October 14th, 2020)
 ----------------------------------------
+o scaling improvements for -P, i.e. improved support for large numbers of traffic threads (tested to thousands)
 o support for full duplex traffic using --full-duplex
 o support for reverse traffic using --reverse
+o support for role-reversal character of asterick in the transfer id
 o support for TCP connect only tests with --connect-only
 o support --isochronous both UDP or TCP traffic to simulate video streams
-o support for --trip-times indicating the client and server clocks are synchronized to an accuracy sufficient, note consider the use of precision time protocol as well as ask your data center to provide access to a GPS disciplined reference time source 
+o support for --trip-times indicating the client and server clocks are synchronized to an accuracy sufficient, note consider the use of precision time protocol as well as ask your data center to provide access to a GPS disciplined reference time source
+o support for --trip-times with -d and -r tests
 o output TCP connect times (3WHS) in connect reports
 o rate-limited options of -b and --fq-rate supported for unidirectional, full duples and reverse traffic
 o support for destination ip increments with -P and --incr-dstip
@@ -14,10 +17,9 @@ o reporter thread designed to automatically cause packet reports to aggregate - 
 o support for frame or burst based reporting or sampling vs time based via -i [f|F]
 o support for UDP traffic only from client to server with --no-udp-fin
 o support for write to read latencies (UDP and TCP) with --trip-times
-o support for large numbers of traffic threads via -P (tested to thousands)
 o support for sum only outputs with --sum-only
 o support for little's law calculations in --trip-time output
-o support for --txstart-time <epoch-time> to schedule client start, timestamp support microseconds, e.g. unix 'date +%s'
+o support for --txstart-time <epoch-time> to schedule client traffic start, timestamp support microseconds, e.g. unix 'date +%s'
 o support for --txdelay-time to insert delay between TCP three way handshake (3WHS) and data transfer
 o support for --no-connect-sync which disables transmit traffic start synchronization when -P is used, defaults to synchronized
 o option of --full-duplex implementation uses a barrier on the client side to synchronize full duplex traffic
@@ -30,6 +32,7 @@ o re-implemented -1 or --singleclient where server will serialize traffic runs
 o major code refactoring (see doc/Design.txt) for maintainability, extensibility, performance, scaling, memory usage
 o warning message if the test were CPU bound instead of network i/o bound
 o fix the case when -P <value> is set on the server such that summing output is displayed
+o multicast listener will autoset -U (single server)
 o tested with 1000's of traffic streams, WiFi, 10G and 100G
 
 2.0.13 change set (as of January 22, 2019)
