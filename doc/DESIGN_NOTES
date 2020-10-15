@@ -8,33 +8,38 @@ hoped this overview will help someone to understand the code. As with any open
 source software, the authoritative information comes from reading the source code
 itself.
 
-Iperf 2 is a designed to be a multi-threaded program. It's also a hybrid of C
-and C++ code that evolved from 1.7 to 2.0.5 where it stalled. A new group from
-Broadcom with a WiFi focus took over the code base starting at 2.0.5 and we are
-now up to 2.0.14. The only link between the groups has been the code itself.
+Iperf 2 is designed to be a multi-threaded program. It's written using a hybrid
+of C and C++ code. It evolved from 1.7 to 2.0.5 where devolpemnt stalled in 2010.
+A new group from Broadcom with a WiFi focus took over the code base in 2014
+and we are now up to 2.0.14. The only link between these groups has been
+the code itself.
 
-Iperf 3 is a simpler design and simpler code base and isn't compatible with
-iperf 2. The primary differences are that iperf 2 is multi-threaded, supports
-multicast, and has end/end latency features. Iperf 3 has SCTP support and
-support for JSON output. This document doesn't discuss iperf 3 beyond this.
+Iperf 3 is a rewrite usina a simpler design and simpler code base. Iperf 3
+isn't compatible with iperf 2. The primary differences are that iperf 2
+is multi-threaded, supports multicast, and has end/end latency features.
+Iperf 3 has SCTP support and support for JSON output. This document
+doesn't discuss iperf 3 beyond this.
 
 Threading overview
 ------------------
-The idea behind the threading is to have very lean traffic threads that are
-decoupled from user i/o. The goal with iperf is to stress network i/o and this
-threading separation allows for that. User i/o and calculations are done by a
-dedicated thread, i.e. the reporter thread.
+One major goal with iperf is to stress network i/o and find those bottlenecks
+which limit network performance. The idea behind the threading is for very
+lean traffic threads that are decoupled from user i/o. This threading separation
+allows for that. User i/o and performance calculations are done by a dedicated
+thread, i.e. the reporter thread.
 
-There are multiple threads being a listener thread, a reporter thread, and one
+The multiple threads consist of a listener thread, a reporter thread, and one
 or more traffic threads. The traffic threads are either a server or a client, or
-a server in the role of a client or a client in the role of as server per the
---reverse option. The traffic threads scale with the -P option.
+a server in the role of a client, or a client in the role of as server per the
+--reverse option. The traffic threads scale with the -P option. There is only
+one listener and reporter thread regardless of -P.
 
 Listener (src/Listener.cpp include/Listener.hpp):
 -------------------------------------------------
-The listener thread runs on the server side when a user issues a -s for server,
-it actually starts the listener thread and not a server thread. The goals of
-the listener thread are
+The listener thread runs on the server side. When a user issues a -s for server,
+it actually starts the listener thread and not a server thread. The listener
+thread will spawn a server thread per connection to a client.  The goals of
+the listener thread are:
 
 o) open the listen socket with is set with -p or defaults to 5001
 o) issue the socket listen() command
@@ -47,17 +52,15 @@ o) Upon a new connection install the peer's (client's) IP address into an active
 o) Instantiate a server thread and set it up settings
 o) Apply client initiated settings to the server thread
 o) Instantiate a server object
-o) Read test exchange header and instantiate client thread if needed
+o) Read test exchange header and instantiate a reversed client thread if needed
 o) Spawn a server thread which will receive traffic from a client
 
 Reporter (src/Reporter.c include/Reporter.h):
 ---------------------------------------------
-There is one reporter thread for a client and one for a server (excluding full
-duplex traffic where the reporter handles both a client and a server.) The goal
-of the reporter thread is to decouple user i/o from traffic. This allows the
-tool to measure traffic performance unrelated to user i/o. The reporter thread
-also does traffic accounting. The reporter thread outputs the following types of
-reports
+There is one reporter thread. The goal of the reporter thread is to decouple user
+i/o from traffic as well as peform CPU related logic. This structure allows the
+tool to measure traffic performance unrelated to user i/o and traffic accounting.
+The reporter thread outputs the following types of reports
 
 o) settings report
 o) connection report
