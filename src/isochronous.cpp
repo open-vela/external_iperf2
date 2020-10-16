@@ -86,7 +86,11 @@ unsigned int FrameCounter::wait_tick(void) {
 #endif
 	slip++;
     }
+#ifndef WIN32
     int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &txtime_ts, NULL);
+#else
+    int rc = clock_nanosleep(0, TIMER_ABSTIME, &txtime_ts, NULL);
+#endif
     if (rc) {
 	fprintf(stderr, "txstart failed clock_nanosleep()=%d\n", rc);
     }

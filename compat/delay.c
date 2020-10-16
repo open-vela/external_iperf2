@@ -117,6 +117,30 @@ void delay_loop(unsigned long usec)
 #endif
 }
 
+int clock_usleep (clockid_t clockid, int flags, struct timeval *request) {
+    int rc = 0;
+#ifdef HAVE_CLOCK_NANOSLEEP
+    struct timespec tmp;
+    tmp.tv_sec = request->tv_sec;
+    tmp.tv_nsec = request->tv_usec * 1000;
+#ifndef WIN32
+    rc = clock_nanosleep(clockid, flags, &tmp, NULL);
+#else
+    rc = clock_nanosleep(0, 0, &tmp, NULL);
+#endif
+    if (rc) {
+	fprintf(stderr, "failed clock_nanosleep()=%d\n", rc);
+    }
+#else
+    Timestamp *now = new Timestamp();
+    if ((double delta_usecs = TimeDifference(request, now)) > 0.0) {
+	delay_loop(delta_usecs);
+    }
+    DELETE_PTR(now);
+#endif
+    return rc;
+}
+
 #ifdef HAVE_NANOSLEEP
 // Can use the nanosleep syscall suspending the thread
 void delay_nanosleep (unsigned long usec) {
