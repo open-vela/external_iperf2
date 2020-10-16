@@ -117,14 +117,16 @@ void delay_loop(unsigned long usec)
 #endif
 }
 
-int clock_usleep (clockid_t clockid, int flags, struct timeval *request) {
+int clock_usleep (struct timeval *request) {
     int rc = 0;
 #ifdef HAVE_CLOCK_NANOSLEEP
     struct timespec tmp;
     tmp.tv_sec = request->tv_sec;
     tmp.tv_nsec = request->tv_usec * 1000;
-#ifndef WIN32
-    rc = clock_nanosleep(clockid, flags, &tmp, NULL);
+
+// Cygwin systems have an issue with CLOCK_MONOTONIC
+#if defined(CLOCK_MONOTONIC) && !defined(WIN32)
+    rc = clock_nanosleep(CLOCK_MONOTONIC, 0, &tmp, NULL);
 #else
     rc = clock_nanosleep(0, 0, &tmp, NULL);
 #endif
@@ -132,11 +134,49 @@ int clock_usleep (clockid_t clockid, int flags, struct timeval *request) {
 	fprintf(stderr, "failed clock_nanosleep()=%d\n", rc);
     }
 #else
-    Timestamp *now = new Timestamp();
-    if ((double delta_usecs = TimeDifference(request, now)) > 0.0) {
+    struct timeval now;
+    struct timeval next = *request;
+#ifdef HAVE_CLOCK_GETTIME
+    struct timespec t1;
+    clock_gettime(CLOCK_REALTIME, &t1);
+    now.tv_sec  = t1.tv_sec;
+    now.tv_usec = t1.tv_nsec / 1000;
+#else
+    gettimeofday(&now, NULL);
+#endif
+    double delta_usecs;
+    if ((delta_usecs = TimeDifference(next, now)) > 0.0) {
 	delay_loop(delta_usecs);
     }
-    DELETE_PTR(now);
+#endif
+    return rc;
+}
+
+int clock_usleep_abstime (struct timeval *request) {
+    int rc = 0;
+    struct timespec tmp;
+    tmp.tv_sec = request->tv_sec;
+    tmp.tv_nsec = request->tv_usec * 1000;
+#if defined(HAVE_CLOCK_NANOSLEEP) && defined(TIMER_ABSTIME) && !defined(WIN32)
+    rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &tmp, NULL);
+    if (rc) {
+	fprintf(stderr, "failed clock_nanosleep()=%d\n", rc);
+    }
+#else
+    struct timeval now;
+    struct timeval next = *request;
+#ifdef HAVE_CLOCK_GETTIME
+    struct timespec t1;
+    clock_gettime(CLOCK_REALTIME, &t1);
+    now.tv_sec  = t1.tv_sec;
+    now.tv_usec = t1.tv_nsec / 1000;
+#else
+    gettimeofday(&now, NULL);
+#endif
+    double delta_usecs;
+    if ((delta_usecs = (1e6 * TimeDifference(next, now))) > 0.0) {
+	delay_loop(delta_usecs);
+    }
 #endif
     return rc;
 }

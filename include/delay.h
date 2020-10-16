@@ -58,7 +58,8 @@ extern "C" {
 void delay_loop( unsigned long usecs );
 void delay_busyloop(unsigned long usecs);
 void delay_nanosleep(unsigned long usecs);
-int clock_usleep (clockid_t clockid, int flags, struct timeval *request);
+int clock_usleep(struct timeval *request);
+int clock_usleep_abstime(struct timeval *request);
 #ifdef HAVE_KALMAN
 // Kalman filter states
 struct kalman_state {
