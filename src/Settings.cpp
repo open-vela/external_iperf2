@@ -878,6 +878,7 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    if (connectonly) {
 		connectonly = 0;
 		setConnectOnly(mExtSettings);
+		unsetNoConnReport(mExtSettings);
 		if (optarg) {
 		  mExtSettings->connectonly_count = atoi(optarg);
 		} else {
