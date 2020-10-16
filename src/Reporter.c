@@ -417,8 +417,9 @@ void reporter_spawn (struct thread_Settings *thread) {
 	}
     }
     if (myConnectionReport) {
-	if (myConnectionReport->connect_times.cnt > 1)
+	if (myConnectionReport->connect_times.cnt > 1) {
 	    reporter_connect_printf_tcp_final(myConnectionReport);
+	}
 	FreeConnectionReport(myConnectionReport);
     }
 #ifdef HAVE_THREAD_DEBUG
@@ -541,7 +542,7 @@ inline int reporter_process_report (struct ReportHeader *reporthdr) {
     {
 	struct ConnectionInfo *creport = (struct ConnectionInfo *)reporthdr->this_report;
 	assert(creport!=NULL);
-	if (isCompat(creport->common) && (creport->common->ThreadMode == kMode_Client)) {
+	if (!isCompat(creport->common) && (creport->common->ThreadMode == kMode_Client)) {
 	    // Clients' connect times will be inputs to the overall connect stats
 	    reporter_update_connect_time(creport->connecttime);
 	}
