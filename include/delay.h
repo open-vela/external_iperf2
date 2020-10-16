@@ -49,15 +49,16 @@
  * -------------------------------------------------------------------
  * accurate microsecond delay
  * ------------------------------------------------------------------- */
-
 #ifndef DELAY_H
 #define DELAY_H
 #ifdef __cplusplus
 extern "C" {
 #endif
+#include <time.h>
 void delay_loop( unsigned long usecs );
 void delay_busyloop(unsigned long usecs);
 void delay_nanosleep(unsigned long usecs);
+int clock_usleep (clockid_t clockid, int flags, struct timeval *request);
 #ifdef HAVE_KALMAN
 // Kalman filter states
 struct kalman_state {

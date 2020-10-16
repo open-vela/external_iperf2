@@ -184,7 +184,7 @@ void Client::my_connect (void) {
 	connected = true;
     } else {
 	connecttime = -1;
-	connected = false;	
+	connected = false;
 	if (mySocket != INVALID_SOCKET) {
 	    int rc = close(mySocket);
 	    WARN_errno(rc == SOCKET_ERROR, "client connect close");
@@ -210,21 +210,7 @@ bool Client::isConnected (void) {
 
 void Client::TxDelay (void) {
     if (isTxHoldback(mSettings)) {
-#ifdef HAVE_CLOCK_NANOSLEEP
-	timespec tmp;
-	tmp.tv_sec = mSettings->txholdback_timer.tv_sec;
-	tmp.tv_nsec = mSettings->txholdback_timer.tv_usec * 1000;
-	// See if this a delay between connect and data
-	int rc = clock_nanosleep(CLOCK_MONOTONIC, 0, &tmp, NULL);
-	if (rc) {
-	    fprintf(stderr, "txholdback failed clock_nanosleep()=%d\n", rc);
-	}
-#else
-	now.setnow();
-	Timestamp tmp;
-	tmp.set(mSettings->txholdback_timer.tv_sec, mSettings->txholdback_timer.tv_usec);
-	delay_loop(tmp.subUsec(now));
-#endif
+	clock_usleep(CLOCK_MONOTONIC, 0, &mSettings->txholdback_timer);
     }
 }
 
@@ -252,21 +238,7 @@ int Client::StartSynch (void) {
 	    tmp.set(mSettings->txstart_epoch.tv_sec, mSettings->txstart_epoch.tv_usec);
 	    framecounter = new Isochronous::FrameCounter(mSettings->mFPS, tmp);
 	} else {
-	    // RJM move to compat/clock_nanonsleep.c
-#ifdef HAVE_CLOCK_NANOSLEEP
-	    timespec tmp;
-	    tmp.tv_sec = mSettings->txstart_epoch.tv_sec;
-	    tmp.tv_nsec = mSettings->txstart_epoch.tv_usec * 1000;
-	    int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &tmp, NULL);
-	    if (rc) {
-		fprintf(stderr, "txstart failed clock_nanosleep()=%d\n", rc);
-	    }
-#else
-	    now.setnow();
-	    Timestamp tmp;
-	    tmp.set(mSettings->txstart_epoch.tv_sec, mSettings->txstart_epoch.tv_usec);
-	    delay_loop(tmp.subUsec(now));
-#endif
+	    clock_usleep(CLOCK_REALTIME, TIMER_ABSTIME, &mSettings->txstart_epoch);
 	}
     }
     int setfullduplexflag = 0;
@@ -345,18 +317,10 @@ void Client::ConnectPeriodic (void) {
 	    next.add(mSettings->mInterval);
 	}
 	if (next.before(end)) {
-	    timespec tmp;
-	    tmp.tv_sec = next.getSecs();
-	    tmp.tv_nsec = next.getUsecs() * 1000;
-#if defined(HAVE_CLOCK_NANOSLEEP)
-	    int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &tmp, NULL);
-	    if (rc) {
-		fprintf(stderr, "ConnectPeriodic() failed clock_nanosleep()=%d\n", rc);
-	    }
-#else
-	    now.setnow();
-	    delay_loop(next.subUsec(now));
-#endif
+	    struct timeval tmp;
+	    tmp.tv_sec = end.getSecs();
+	    tmp.tv_usec = end.getUsecs();
+	    clock_usleep(CLOCK_REALTIME, TIMER_ABSTIME, &tmp);
 	    if (isReport(mSettings)) {
 		// Post a settings report now
 		PostReport(InitSettingsReport(mSettings));
