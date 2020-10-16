@@ -154,10 +154,10 @@ int clock_usleep (struct timeval *request) {
 
 int clock_usleep_abstime (struct timeval *request) {
     int rc = 0;
+#if defined(HAVE_CLOCK_NANOSLEEP) && defined(TIMER_ABSTIME) && !defined(WIN32)
     struct timespec tmp;
     tmp.tv_sec = request->tv_sec;
     tmp.tv_nsec = request->tv_usec * 1000;
-#if defined(HAVE_CLOCK_NANOSLEEP) && defined(TIMER_ABSTIME) && !defined(WIN32)
     rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &tmp, NULL);
     if (rc) {
 	fprintf(stderr, "failed clock_nanosleep()=%d\n", rc);
