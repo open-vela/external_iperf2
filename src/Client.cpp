@@ -151,6 +151,7 @@ void Client::my_connect (void) {
     mSettings->mSock=mySocket;
     SetSocketOptions(mSettings);
     SockAddr_localAddr(mSettings);
+    SockAddr_remoteAddr(mSettings);
     if (mSettings->mLocalhost != NULL) {
         // bind socket to local address
         rc = bind(mySocket, (sockaddr*) &mSettings->local,
@@ -195,6 +196,7 @@ void Client::my_connect (void) {
 	struct ReportHeader *tmp = InitSettingsReport(mSettings);
 	assert(tmp!=NULL);
 	PostReport(tmp);
+	setNoSettReport(mSettings);
     }
     // Post the connect report unless peer version exchange is set
     if (connected && isConnectionReport(mSettings) && !isSumOnly(mSettings) && !isPeerVerDetect(mSettings))
@@ -305,36 +307,33 @@ inline void Client::SetReportStartTime (void) {
 
 void Client::ConnectPeriodic (void) {
     Timestamp end;
+    Timestamp next;
     unsigned int amount_usec = 1000000;
     if (isModeTime(mSettings)) {
 	amount_usec = (mSettings->mAmount * 10000);
+	end.add(amount_usec); // add in micro seconds
     }
-    end.add(amount_usec); // add in micro seconds
-    Timestamp next = now;
     setNoConnectSync(mSettings);
-    while (!sInterupted && (mSettings->mInterval && isModeTime(mSettings) && now.before(end) && next.before(end))) {
-	while (!now.before(next)) {
-	    next.add(mSettings->mInterval);
+    do {
+	my_connect();
+	if (isConnected()) {
+	    int rc = close(mySocket);
+	    WARN_errno(rc == SOCKET_ERROR, "client close");
+	    mySocket = INVALID_SOCKET;
 	}
-	if (next.before(end)) {
-	    struct timeval tmp;
-	    tmp.tv_sec = end.getSecs();
-	    tmp.tv_usec = end.getUsecs();
-	    clock_usleep(CLOCK_REALTIME, TIMER_ABSTIME, &tmp);
-	    if (isReport(mSettings)) {
-		// Post a settings report now
-		PostReport(InitSettingsReport(mSettings));
-		unsetReport(mSettings);
-	    }
-	    if (isConnected()) {
-		int rc = close(mySocket);
-		WARN_errno(rc == SOCKET_ERROR, "client close");
-		mySocket = INVALID_SOCKET;
-	    }
-	    my_connect();
+	if (mSettings->mInterval > 0) {
 	    now.setnow();
+	    do {
+		next.add(mSettings->mInterval);
+	    } while (next.before(now));
+	    if (next.before(end)) {
+		struct timeval tmp;
+		tmp.tv_sec = next.getSecs();
+		tmp.tv_usec = next.getUsecs();
+		clock_usleep(CLOCK_REALTIME, TIMER_ABSTIME, &tmp);
+	    }
 	}
-    }
+    } while (!sInterupted && (next.before(end) || (isModeTime(mSettings) && !(mSettings->mInterval > 0))));
 }
 /* -------------------------------------------------------------------
  * Common traffic loop intializations

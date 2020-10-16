@@ -281,8 +281,7 @@ void Listener::Run (void) {
 	    if (DecrSumReportRefCounter(server->mSumReport) <= 0) {
 		FreeSumReport(server->mSumReport);
 	    }
-	    if (!isUDP(server))
-		close(server->mSock);
+	    close(server->mSock);
 	    assert(server != mSettings);
 	    Settings_Destroy(server);
 	    continue;
