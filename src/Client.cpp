@@ -212,7 +212,7 @@ bool Client::isConnected (void) {
 
 void Client::TxDelay (void) {
     if (isTxHoldback(mSettings)) {
-	clock_usleep(CLOCK_MONOTONIC, 0, &mSettings->txholdback_timer);
+	clock_usleep(&mSettings->txholdback_timer);
     }
 }
 
@@ -240,7 +240,7 @@ int Client::StartSynch (void) {
 	    tmp.set(mSettings->txstart_epoch.tv_sec, mSettings->txstart_epoch.tv_usec);
 	    framecounter = new Isochronous::FrameCounter(mSettings->mFPS, tmp);
 	} else {
-	    clock_usleep(CLOCK_REALTIME, TIMER_ABSTIME, &mSettings->txstart_epoch);
+	    clock_usleep_abstime(&mSettings->txstart_epoch);
 	}
     }
     int setfullduplexflag = 0;
@@ -330,7 +330,7 @@ void Client::ConnectPeriodic (void) {
 		struct timeval tmp;
 		tmp.tv_sec = next.getSecs();
 		tmp.tv_usec = next.getUsecs();
-		clock_usleep(CLOCK_REALTIME, TIMER_ABSTIME, &tmp);
+		clock_usleep_abstime(&tmp);
 	    }
 	}
     } while (!sInterupted && (next.before(end) || (isModeTime(mSettings) && !(mSettings->mInterval > 0))));
