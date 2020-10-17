@@ -1036,7 +1036,7 @@ void reporter_transfer_protocol_server_udp (struct ReporterData *data, int final
 		stats->cntError = 0;
 	    stats->cntDatagrams = stats->PacketID - stats->total.Datagrams.prev;
 	    reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
-	    if (stats->output_handler)
+	    if ((stats->ts.iEnd > stats->ts.iStart) && (stats->output_handler))
 		(*stats->output_handler)(stats);
 	}
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
@@ -1210,7 +1210,8 @@ void reporter_transfer_protocol_server_tcp (struct ReporterData *data, int final
 	if ((stats->cntBytes > 0) && stats->output_handler && !TimeZero(stats->ts.intervalTime)) {
 	    // print a partial interval report if enable and this a final
 	    reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
-	    (*stats->output_handler)(stats);
+	    if ((stats->ts.iEnd > stats->ts.iStart) && (stats->output_handler))
+		(*stats->output_handler)(stats);
 	    reporter_reset_transfer_stats_server_tcp(stats);
         }
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
@@ -1257,7 +1258,8 @@ void reporter_transfer_protocol_client_tcp (struct ReporterData *data, int final
 	if ((stats->cntBytes > 0) && stats->output_handler && !TimeZero(stats->ts.intervalTime)) {
 	    // print a partial interval report if enable and this a final
 	    reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
-	    (*stats->output_handler)(stats);
+	    if ((stats->ts.iEnd > stats->ts.iStart) && (stats->output_handler))
+		(*stats->output_handler)(stats);
 	    reporter_reset_transfer_stats_client_tcp(stats);
         }
 	stats->sock_callstats.write.WriteErr = stats->sock_callstats.write.totWriteErr;
@@ -1281,7 +1283,7 @@ void reporter_transfer_protocol_sum_client_tcp (struct TransferInfo *stats, int 
 	    stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
 	    if (final)
 		reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
-	    if (stats->output_handler)
+	    if ((stats->ts.iEnd > stats->ts.iStart) && (stats->output_handler))
 		(*stats->output_handler)(stats);
 	    if (!final)
 		stats->threadcnt = 0;
@@ -1305,7 +1307,7 @@ void reporter_transfer_protocol_sum_server_tcp (struct TransferInfo *stats, int 
 	    stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
 	    if (final)
 		reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
-	    if (stats->output_handler)
+	    if ((stats->ts.iEnd > stats->ts.iStart) && (stats->output_handler))
 		(*stats->output_handler)(stats);
 	    if (!final)
 		stats->threadcnt = 0;
@@ -1330,7 +1332,7 @@ void reporter_transfer_protocol_fullduplex_tcp (struct TransferInfo *stats, int 
 	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
 	if (final)
 	    reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
-	if (stats->output_handler)
+	if ((stats->ts.iEnd > stats->ts.iStart) && (stats->output_handler))
 	    (*stats->output_handler)(stats);
 	stats->total.Bytes.prev = stats->total.Bytes.current;
     }
@@ -1349,7 +1351,7 @@ void reporter_transfer_protocol_fullduplex_udp (struct TransferInfo *stats, int 
 	stats->cntIPG = stats->total.IPG.current - stats->total.IPG.prev;
 	if (final)
 	    reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
-	if (stats->output_handler)
+	if ((stats->ts.iEnd > stats->ts.iStart) && (stats->output_handler))
 	    (*stats->output_handler)(stats);
 	stats->total.Bytes.prev = stats->total.Bytes.current;
 	stats->total.IPG.prev = stats->total.IPG.current;
