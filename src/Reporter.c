@@ -1314,9 +1314,10 @@ void reporter_transfer_protocol_sum_server_tcp (struct TransferInfo *stats, int 
 		if ((stats->ts.iEnd - stats->ts.iStart) > stats->ts.significant_partial)
 		    (*stats->output_handler)(stats);
 	    }
-	}
-	if (!final)
+	} else if ((stats->output_handler) && !(stats->nooutput)) {
+	    (*stats->output_handler)(stats);
 	    stats->threadcnt = 0;
+	}
 	reporter_reset_transfer_stats_server_tcp(stats);
     }
     if (final) {
