@@ -1035,8 +1035,7 @@ void reporter_transfer_protocol_server_udp (struct ReporterData *data, int final
 	    if (stats->cntError < 0)
 		stats->cntError = 0;
 	    stats->cntDatagrams = stats->PacketID - stats->total.Datagrams.prev;
-	    if (final)
-		reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
+	    reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
 	    if (stats->output_handler)
 		(*stats->output_handler)(stats);
 	}
