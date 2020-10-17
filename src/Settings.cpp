@@ -882,7 +882,7 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		if (optarg) {
 		  mExtSettings->connectonly_count = atoi(optarg);
 		} else {
-		  mExtSettings->connectonly_count = 1;
+		  mExtSettings->connectonly_count = -1;
 		}
 	    }
 	    if (sumonly) {

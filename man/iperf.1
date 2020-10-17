@@ -138,8 +138,8 @@ set target bandwidth to \fIn\fR bits/sec (default 1 Mbit/sec) or
 .BR -c ", " --client " \fI\fIhost\fR | \fIhost\fR%\fIdevice\fR"
 run in client mode, connecting to \fIhost\fR  where the optional %dev will SO_BINDTODEVICE that output interface (requires root and see NOTES)
 .TP
-.BR "    --connect-only"
-only perform a TCP connect without any data transfer - useful to measure TCP connect() times
+.BR "    --connect-only[=" \fIn\fR "]"
+only perform a TCP connect (or 3WHS) without any data transfer, useful to measure TCP connect() times. Optional value of n is the total number of connects to do (zero is run forever.) Note that -i will rate limit the connects where -P will create bursts and -t will end the client and hence end its connect attempts.
 .TP
 .BR -d ", " --dualtest " "
 Do a bidirectional test simultaneous test using two unidirectional sockets
