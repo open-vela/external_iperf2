@@ -317,6 +317,14 @@ void Client::ConnectPeriodic (void) {
 	end.add(amount_usec); // add in micro seconds
     }
     setNoConnectSync(mSettings);
+    int num_connects;
+    if (mSettings->connectonly_count < 0)
+	num_connects = 10;
+    else if (mSettings->connectonly_count > 0)
+	num_connects = mSettings->connectonly_count;
+    else
+	num_connects = -1;
+    printf("***num_connects = %d\n",num_connects);
     do {
 	my_connect();
 	if (isConnected()) {
@@ -336,7 +344,10 @@ void Client::ConnectPeriodic (void) {
 		clock_usleep_abstime(&tmp);
 	    }
 	}
-    } while (!sInterupted && (next.before(end) || (isModeTime(mSettings) && !(mSettings->mInterval > 0))));
+	if (num_connects > 0) {
+	    --num_connects;
+	}
+    } while (num_connects && !sInterupted && (next.before(end) || (isModeTime(mSettings) && !(mSettings->mInterval > 0))));
 }
 /* -------------------------------------------------------------------
  * Common traffic loop intializations
