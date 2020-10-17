@@ -68,7 +68,7 @@ struct server_hdr;
 #define NETPOWERCONSTANT 1e-6
 #define REPORTTXTMAX 80
 #define MINBARRIERTIMEOUT 3
-
+#define PARTIALPERCENT 0.2 // used to decide if a final partial report should be displayed
 // If the minimum latency exceeds the boundaries below
 // assume the clocks are not synched and suppress the
 // latency output. Units are seconds
@@ -304,6 +304,7 @@ struct ShiftCounters {
 struct ReportTimeStamps {
     double iStart;
     double iEnd;
+    double significant_partial;
     struct timeval startTime;
     struct timeval matchTime;
     struct timeval packetTime;
