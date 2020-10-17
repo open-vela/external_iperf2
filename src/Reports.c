@@ -272,7 +272,7 @@ struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, in
     if ((inSettings->mInterval) && (inSettings->mIntervalMode == kInterval_Time)) {
 	sumreport->info.ts.intervalTime.tv_sec = (long) (inSettings->mInterval / rMillion);
 	sumreport->info.ts.intervalTime.tv_usec = (long) (inSettings->mInterval % rMillion);
-	sumreport->info.ts.significant_partial= (double) inSettings->mInterval * PARTIALPERCENT;
+	sumreport->info.ts.significant_partial = ((double) inSettings->mInterval * PARTIALPERCENT / rMillion) ;
     }
     if (fullduplex_report) {
 	SetFullDuplexHandlers(inSettings, sumreport);
@@ -575,7 +575,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	ireport->info.ts.intervalTime.tv_sec = (long) (inSettings->mInterval / rMillion);
 	ireport->info.ts.intervalTime.tv_usec = (long) (inSettings->mInterval % rMillion);
 	ireport->transfer_interval_handler = reporter_condprint_time_interval_report;
-	ireport->info.ts.significant_partial = (double) inSettings->mInterval * PARTIALPERCENT;
+	ireport->info.ts.significant_partial = (double) inSettings->mInterval * PARTIALPERCENT / rMillion ;
 	break;
     case kInterval_Frames :
 	if (isUDP(inSettings)) {
