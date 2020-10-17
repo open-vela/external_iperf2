@@ -317,14 +317,14 @@ void Client::ConnectPeriodic (void) {
 	end.add(amount_usec); // add in micro seconds
     }
     setNoConnectSync(mSettings);
-    int num_connects;
-    if (mSettings->connectonly_count < 0)
-	num_connects = 10;
-    else if (mSettings->connectonly_count > 0)
-	num_connects = mSettings->connectonly_count;
-    else
-	num_connects = -1;
-    printf("***num_connects = %d\n",num_connects);
+    int num_connects = -1;
+    if (!(mSettings->mInterval > 0)) {
+	if (mSettings->connectonly_count < 0)
+	    num_connects = 10;
+	else if (mSettings->connectonly_count > 0)
+	    num_connects = mSettings->connectonly_count;
+    }
+
     do {
 	my_connect();
 	if (isConnected()) {
