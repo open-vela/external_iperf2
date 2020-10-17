@@ -159,17 +159,15 @@ void Client::my_connect (void) {
         WARN_errno(rc == SOCKET_ERROR, "bind");
     }
 
-    // Bound the TCP connect() to the -t value (if it was given on the command line)
-    // otherwise let TCP use its defaul timeouts fo the connect()
-    if (isModeTime(mSettings) && !isUDP(mSettings)) {
-	SetSocketOptionsSendTimeout(mSettings, (mSettings->mAmount * 10000));
-    }
-
     // connect socket
     if (!isUDP(mSettings)) {
 	connect_start.setnow();
 	rc = connect(mySocket, (sockaddr*) &mSettings->peer,
 		      SockAddr_get_sizeof_sockaddr(&mSettings->peer));
+	if (rc == SOCKET_ERROR) {
+	    close(mySocket);
+	    FAIL_errno(rc == SOCKET_ERROR, "connect", mSettings);
+	}
 	connect_done.setnow();
 	connecttime = 1e3 * connect_done.subSec(connect_start);
 	mSettings->connecttime = connecttime;
@@ -178,6 +176,11 @@ void Client::my_connect (void) {
 		      SockAddr_get_sizeof_sockaddr(&mSettings->peer));
     }
     WARN_errno(rc == SOCKET_ERROR, "connect");
+    if (mSettings->mInterval > 0) {
+	SetSocketOptionsSendTimeout(mSettings, (mSettings->mInterval * 1000000) / 2);
+    } else {
+	SetSocketOptionsSendTimeout(mSettings, (mSettings->mAmount * 10000) / 2);
+    }
     if (rc != SOCKET_ERROR) {
 	getsockname(mySocket, (sockaddr*) &mSettings->local, &mSettings->size_local);
 	getpeername(mySocket, (sockaddr*) &mSettings->peer, &mSettings->size_peer);
