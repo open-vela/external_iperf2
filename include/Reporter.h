@@ -68,7 +68,7 @@ struct server_hdr;
 #define NETPOWERCONSTANT 1e-6
 #define REPORTTXTMAX 80
 #define MINBARRIERTIMEOUT 3
-#define PARTIALPERCENT 0.2 // used to decide if a final partial report should be displayed
+#define PARTIALPERCENT 0.25 // used to decide if a final partial report should be displayed
 // If the minimum latency exceeds the boundaries below
 // assume the clocks are not synched and suppress the
 // latency output. Units are seconds
@@ -320,7 +320,7 @@ struct TransferInfo {
     void (*output_handler) (struct TransferInfo *stats);
     int groupID;
     int threadcnt;
-    int sumflag;
+    int nooutput;
     uintmax_t cntBytes;
     intmax_t cntError;
     intmax_t cntOutofOrder;
