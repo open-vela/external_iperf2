@@ -253,8 +253,9 @@ int Client::StartSynch (void) {
 	    return -1;
     }
     SetReportStartTime();
-    if (setfullduplexflag)
+    if (setfullduplexflag) {
 	SetFullDuplexReportStartTime();
+    }
     // Full duplex sockets need to be syncronized
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Client start sync exited");
@@ -298,7 +299,7 @@ inline void Client::SetReportStartTime (void) {
 		sumstats->ts.nextTime = myReport->info.ts.nextTime;
 	    }
 #ifdef HAVE_THREAD_DEBUG
-	    thread_debug("Client fullduplex report start=%ld.%ld next=%ld.%ld", sumstats->ts.startTime.tv_sec, sumstats->ts.startTime.tv_usec, sumstats->ts.nextTime.tv_sec, sumstats->ts.nextTime.tv_usec);
+	    thread_debug("Client group sum report start=%ld.%ld next=%ld.%ld", sumstats->ts.startTime.tv_sec, sumstats->ts.startTime.tv_usec, sumstats->ts.nextTime.tv_sec, sumstats->ts.nextTime.tv_usec);
 #endif
 	}
 	Mutex_Unlock(&myReport->GroupSumReport->reference.lock);
