@@ -15,6 +15,7 @@ o use of clock_nanosleep when supported to schedule isochronous burst starts, ot
 o support for --trip-times indicating the client and server clocks are synchronized to an accuracy sufficient, note: consider the use of precision time protocol as well as ask your data center to provide access to a GPS disciplined reference time source
 o support for --trip-times with -d and -r bidirectional tests
 o output TCP connect times (3WHS) in connect reports
+o support for application level tcp connect retries via --connect-retries n
 o rate-limited options of -b and --fq-rate supported for unidirectional, full duplex and reverse traffic
 o reporter thread designed to automatically cause packet reports to aggregate - mitigating and hopefully removing thread thrashing
 o support for frame or burst based reporting or sampling vs time based via -i [f|F] (experimental)

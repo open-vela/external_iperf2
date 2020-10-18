@@ -167,6 +167,7 @@ struct thread_Settings {
     int mThreads;                   // -P
     int mTOS;                       // -S
     int mTransferID;
+    int mConnectRetries;
 #if WIN32
     SOCKET mSock;
 #else
