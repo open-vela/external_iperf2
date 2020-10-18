@@ -320,7 +320,7 @@ struct TransferInfo {
     void (*output_handler) (struct TransferInfo *stats);
     int groupID;
     int threadcnt;
-    int nooutput;
+    int filter_this_sample_ouput;
     uintmax_t cntBytes;
     intmax_t cntError;
     intmax_t cntOutofOrder;
