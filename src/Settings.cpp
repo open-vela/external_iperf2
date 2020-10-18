@@ -85,6 +85,7 @@ static int triptime = 0;
 static int writeack = 0;
 static int infinitetime = 0;
 static int connectonly = 0;
+static int connectretry = 0;
 static int burstipg = 0;
 static int isochronous = 0;
 static int noudpfin = 0;
@@ -162,6 +163,7 @@ const struct option long_options[] =
 {"write-ack", optional_argument, &writeack, 1},
 {"no-udp-fin", no_argument, &noudpfin, 1},
 {"connect-only", optional_argument, &connectonly, 1},
+{"connect-retries", required_argument, &connectretry, 1},
 {"no-connect-sync", no_argument, &noconnectsync, 1},
 {"full-duplex", no_argument, &fullduplextest, 1},
 {"ipg", required_argument, &burstipg, 1},
@@ -885,6 +887,10 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		  mExtSettings->connectonly_count = -1;
 		}
 	    }
+	    if (connectretry) {
+		connectretry = 0;
+		mExtSettings->mConnectRetries = atoi(optarg);
+	    }
 	    if (sumonly) {
 		sumonly = 0;
 		setSumOnly(mExtSettings);
@@ -1067,6 +1073,11 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    }
 	    if (mExtSettings->mBurstIPG < 0.0) {
 		fprintf(stderr, "ERROR: option --ipg must be a positive value\n");
+		bail = true;
+	    }
+	    if (mExtSettings->mConnectRetries > 0) {
+		fprintf(stderr, "ERROR: option --connect-retries not supported with -u UDP\n");
+		bail = true;
 	    }
 	    {
 		double delay_target;
@@ -1191,6 +1202,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	}
 	if (isPeerVerDetect(mExtSettings)) {
 	    fprintf(stderr, "ERROR: option of -X or --peer-detect not supported on the server\n");
+	    bail = true;
+	}
+	if (mExtSettings->mConnectRetries > 0) {
+	    fprintf(stderr, "ERROR: option --connect-retries not supported on the server\n");
 	    bail = true;
 	}
     }

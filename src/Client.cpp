@@ -132,7 +132,7 @@ Client::~Client () {
  * If inLocalhost is not null, bind to that address, specifying
  * which outgoing interface to use.
  * ------------------------------------------------------------------- */
-void Client::my_connect (void) {
+int Client::my_connect (int exit_on_fail) {
     int rc;
     double connecttime = -1.0;
     // create an internet socket
@@ -155,40 +155,57 @@ void Client::my_connect (void) {
     if (mSettings->mLocalhost != NULL) {
         // bind socket to local address
         rc = bind(mySocket, (sockaddr*) &mSettings->local,
-                   SockAddr_get_sizeof_sockaddr(&mSettings->local));
+		  SockAddr_get_sizeof_sockaddr(&mSettings->local));
         WARN_errno(rc == SOCKET_ERROR, "bind");
     }
 
     // connect socket
+    connected = false;
     if (!isUDP(mSettings)) {
-	connect_start.setnow();
-	rc = connect(mySocket, (sockaddr*) &mSettings->peer,
-		      SockAddr_get_sizeof_sockaddr(&mSettings->peer));
-	if (rc == SOCKET_ERROR) {
-	    close(mySocket);
-	    FAIL_errno(rc == SOCKET_ERROR, "connect", mSettings);
+	int trycnt = mSettings->mConnectRetries + 1;
+	while (trycnt > 0) {
+	    connect_start.setnow();
+	    rc = connect(mySocket, (sockaddr*) &mSettings->peer,
+			 SockAddr_get_sizeof_sockaddr(&mSettings->peer));
+	    if (rc == SOCKET_ERROR) {
+		WARN_errno(rc == SOCKET_ERROR, "tcp connect");
+		if ((--trycnt) <= 0) {
+		    if (exit_on_fail) {
+			close(mySocket);
+			_exit(1);
+		    } else {
+			return 0;
+		    }
+		} else {
+		    delay_loop(200000);
+		}
+	    } else {
+		connect_done.setnow();
+		connecttime = 1e3 * connect_done.subSec(connect_start);
+		mSettings->connecttime = connecttime;
+		connected = true;
+		break;
+	    }
 	}
-	connect_done.setnow();
-	connecttime = 1e3 * connect_done.subSec(connect_start);
-	mSettings->connecttime = connecttime;
     } else {
 	rc = connect(mySocket, (sockaddr*) &mSettings->peer,
-		      SockAddr_get_sizeof_sockaddr(&mSettings->peer));
+		     SockAddr_get_sizeof_sockaddr(&mSettings->peer));
+	WARN_errno(rc == SOCKET_ERROR, "udp connect");
+	if (rc != SOCKET_ERROR)
+	    connected = true;
     }
-    WARN_errno(rc == SOCKET_ERROR, "connect");
     if (mSettings->mInterval > 0) {
 	SetSocketOptionsSendTimeout(mSettings, (mSettings->mInterval * 1000000) / 2);
     } else {
 	SetSocketOptionsSendTimeout(mSettings, (mSettings->mAmount * 10000) / 2);
     }
-    if (rc != SOCKET_ERROR) {
+    if (connected) {
 	getsockname(mySocket, (sockaddr*) &mSettings->local, &mSettings->size_local);
 	getpeername(mySocket, (sockaddr*) &mSettings->peer, &mSettings->size_peer);
 	SockAddr_Ifrname(mSettings);
 	connected = true;
     } else {
 	connecttime = -1;
-	connected = false;
 	if (mySocket != INVALID_SOCKET) {
 	    int rc = close(mySocket);
 	    WARN_errno(rc == SOCKET_ERROR, "client connect close");
@@ -204,6 +221,7 @@ void Client::my_connect (void) {
     // Post the connect report unless peer version exchange is set
     if (connected && isConnectionReport(mSettings) && !isSumOnly(mSettings) && !isPeerVerDetect(mSettings))
 	PostReport(InitConnectionReport(mSettings, connecttime));
+    return connected;
 } // end Connect
 
 bool Client::isConnected (void) {
@@ -327,8 +345,7 @@ void Client::ConnectPeriodic (void) {
     }
 
     do {
-	my_connect();
-	if (isConnected()) {
+	if (my_connect(0)){
 	    int rc = close(mySocket);
 	    WARN_errno(rc == SOCKET_ERROR, "client close");
 	    mySocket = INVALID_SOCKET;
