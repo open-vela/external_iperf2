@@ -50,16 +50,8 @@
  * -------------------------------------------------------------------
  * Strings and other stuff that is locale specific.
  * ------------------------------------------------------------------- */
-#include <inttypes.h>
 #include "headers.h"
 #include "version.h"
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#else
-#ifdef WIN32
-#include "config.win32.h"
-#endif
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -78,18 +70,15 @@ Usage: iperf [-s|-c host] [options]\n\
 \n\
 Client/Server:\n\
   -b, --bandwidth #[kmgKMG | pps]  bandwidth to send at in bits/sec or packets per second\n\
-  -e, --enhancedreports    use enhanced reporting giving more tcp/udp and traffic information\n\
+  -e, --enhanced    use enhanced reporting giving more tcp/udp and traffic information\n\
   -f, --format    [kmgKMG]   format to report: Kbits, Mbits, KBytes, MBytes\n\
   -i, --interval  #        seconds between periodic bandwidth reports\n\
   -l, --len       #[kmKM]    length of buffer in bytes to read or write (Defaults: TCP=128K, v4 UDP=1470, v6 UDP=1450)\n\
   -m, --print_mss          print TCP maximum segment size (MTU - TCP/IP header)\n\
   -o, --output    <filename> output the report or error message to this specified file\n\
   -p, --port      #        server port to listen on/connect to\n\
-  -u, --udp                use UDP rather than TCP\n"
-#ifdef HAVE_SEQNO64b
-"      --udp-counters-64bit use 64 bit sequence numbers with UDP\n"
-#endif
-"  -w, --window    #[KM]    TCP window size (socket buffer size)\n"
+  -u, --udp                use UDP rather than TCP\n\
+  -w, --window    #[KM]    TCP window size (socket buffer size)\n"
 #ifdef HAVE_SCHED_SETSCHEDULER
 "  -z, --realtime           request realtime scheduler\n"
 #endif
@@ -98,9 +87,13 @@ Client/Server:\n\
   -M, --mss       #        set TCP maximum segment size (MTU - 40 bytes)\n\
   -N, --nodelay            set TCP no delay, disabling Nagle's Algorithm\n\
   -S, --tos       #        set the socket's IP_TOS (byte) field\n\
+  -Z, --tcp-congestion <algo>  set TCP congestion control algorithm (Linux only)\n\
 \n\
 Server specific:\n\
   -s, --server             run in server mode\n\
+  -1, --singleclient       run one server at a time\n\
+  -b, --bandwidth #[kmgKMG]  bandwidth to read at in bits/sec or packets per second\n\
+      --histograms         enable latency histograms\n\
   -t, --time      #        time in seconds to listen for new connections as well as to receive traffic (default not set)\n\
       --udp-histogram #,#  enable UDP latency histogram(s) with bin width and count, e.g. 1,1000=1(ms),1000(bins)\n\
   -B, --bind <ip>[%<dev>]  bind to multicast address and optional device\n\
@@ -117,26 +110,36 @@ const char usage_long2[] = "\
 \n\
 Client specific:\n\
   -c, --client    <host>   run in client mode, connecting to <host>\n\
-  -d, --dualtest           Do a bidirectional test simultaneously\n"
-#ifdef HAVE_ISOCHRONOUS
-"      --ipg                set the the interpacket gap (milliseconds) for packets within an isochronous frame\n\
-      --isochronous <frames-per-second>:<mean>,<stddev> send traffic in bursts (frames - emulate video traffic)\n"
-#endif
-"  -n, --num       #[kmgKMG]    number of bytes to transmit (instead of -t)\n\
-  -r, --tradeoff           Do a bidirectional test individually\n\
+      --connect-only       run a connect only test\n\
+  -d, --dualtest           Do a bidirectional test simultaneously (multiple sockets)\n\
+      --fq-rate #[kmgKMG]  bandwidth to socket pacing\n\
+      --full-duplex        run full duplex test using same socket\n\
+      --ipg                set the the interpacket gap (milliseconds) for packets within an isochronous frame\n\
+      --isochronous <frames-per-second>:<mean>,<stddev> send traffic in bursts (frames - emulate video traffic)\n\
+      --incr-dstip         Increment the destination ip with parallel (-P) traffic threads\n\
+      --no-connect-sync    No sychronization after connect when -P or parallel traffic threads\n\
+      --no-udp-fin         No final server to client stats at end of UDP test\n\
+  -n, --num       #[kmgKMG]    number of bytes to transmit (instead of -t)\n\
+  -r, --tradeoff           Do a fullduplexectional test individually\n\
   -t, --time      #        time in seconds to transmit for (default 10 secs)\n\
+      --trip-times         enable end to end measurements (requires client and server clock sync)\n\
+      --txdelay-time       time in seconds to hold back after connect and before first write\n\
+      --txstart-time       unix epoch time to schedule first write and start traffic\n\
   -B, --bind [<ip> | <ip:port>] bind ip (and optional port) from which to source traffic\n\
   -F, --fileinput <name>   input the data to be transmitted from a file\n\
   -I, --stdin              input the data to be transmitted from stdin\n\
-  -L, --listenport #       port to receive bidirectional tests back on\n\
+  -L, --listenport #       port to receive fullduplexectional tests back on\n\
   -P, --parallel  #        number of parallel client threads to run\n"
 #ifndef WIN32
 "  -R, --reverse            reverse the test (client receives, server sends)\n"
+#else
+"  -R                       Remove the windows service\n"
+"      --reverse            reverse the test (client receives, server sends)\n"
 #endif
-"  -T, --ttl       #        time-to-live, for multicast (default 1)\n\
+"  -S, --tos                IP DSCP or tos settings\n\
+  -T, --ttl       #        time-to-live, for multicast (default 1)\n\
   -V, --ipv6_domain        Set the domain to IPv6 (send packets over IPv6)\n\
   -X, --peer-detect        perform server version detection and version exchange\n\
-  -Z, --linux-congestion <algo>  set TCP congestion control algorithm (Linux only)\n\
 \n\
 Miscellaneous:\n\
   -x, --reportexclude [CDMSV]   exclude C(connection) D(data) M(multicast) S(settings) V(server) reports\n\
@@ -184,10 +187,16 @@ const char server_pid_port[] =
 "Server listening on %s port %d with pid %d\n";
 
 const char client_pid_port[] =
-"Client connecting to %s, %s port %d with pid %d\n";
+"Client connecting to %s, %s port %d with pid %d (%d flows)\n";
+
+const char client_pid_port_dev[] =
+"Client connecting to %s, %s port %d with pid %d via %s (%d flows)\n";
 
 const char bind_address[] =
 "Binding to local address %s\n";
+
+const char bind_address_iface[] =
+"Binding to local address %s and iface %s\n";
 
 const char multicast_ttl[] =
 "Setting multicast TTL to %d\n";
@@ -228,8 +237,8 @@ const char window_default[] =
 const char wait_server_threads[] =
 "Waiting for server threads to complete. Interrupt again to force quit.\n";
 
-const char client_udp_isochronous[] =
-"UDP isochronous: %d frames/sec mean=%s/s, stddev=%s/s, Period/IPG=%0.2f/%0.3f ms\n";
+const char client_isochronous[] =
+"Isochronous: %d frames/sec mean=%s/s, stddev=%s/s, Period/IPG=%0.2f/%0.3f ms\n";
 
 const char client_fq_pacing [] =
 "fair-queue socket pacing set to %s/s\n";
@@ -242,25 +251,37 @@ const char report_bw_header[] =
 "[ ID] Interval       Transfer     Bandwidth\n";
 
 const char report_bw_format[] =
-"[%3d] %4.1f-%4.1f sec  %ss  %ss/sec\n";
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec\n";
 
 const char report_sum_bw_format[] =
-"[SUM] %4.1f-%4.1f sec  %ss  %ss/sec\n";
+"[SUM] " IPERFTimeFrmt " sec  %ss  %ss/sec\n";
+
+const char report_sumcnt_bw_format[] =
+"[SUM-%d] " IPERFTimeFrmt " sec  %ss  %ss/sec\n";
 
 const char report_bw_jitter_loss_header[] =
 "[ ID] Interval       Transfer     Bandwidth        Jitter   Lost/Total Datagrams\n";
+
 const char report_bw_jitter_loss_format[] =
-"[%3d] %4.1f-%4.1f sec  %ss  %ss/sec  %6.3f ms %4" IPERFdMAX "/%5" IPERFdMAX " (%.2g%%)\n";
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%)\n";
 
 const char report_sum_bw_jitter_loss_format[] =
-"[SUM] %4.1f-%4.1f sec  %ss  %ss/sec  %6.3f ms %4" IPERFdMAX "/%5" IPERFdMAX " (%.2g%%)\n";
+"[SUM] " IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%)\n";
+
+const char report_sumcnt_bw_jitter_loss_format[] =
+"[SUM-%d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%)\n";
 
 /* -------------------------------------------------------------------
  * Enhanced reports (per -e)
  * ------------------------------------------------------------------- */
-const char client_report_epoch_start[] =
-"[%3d] Client thread traffic started at %ld.%.6ld (epoch/unix format)\n";
+const char report_sumcnt_bw_header[] =
+"[SUM-cnt] Interval       Transfer     Bandwidth\n";
 
+const char client_report_epoch_start[] =
+"%sClient traffic to start at %s (%ld.%ld in epoch/unix format)\n";
+
+const char client_report_epoch_start_current[] =
+"%sClient traffic to start at %s (%ld.%ld) current time %s\n";
 
 const char client_write_size[] =
 "Write buffer size";
@@ -269,87 +290,166 @@ const char server_read_size[] =
 "Read buffer size";
 
 const char report_bw_enhanced_format[] =
-"[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec\n";
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec\n";
 
 const char report_sum_bw_enhanced_format[] =
 "[SUM] " IPERFTimeFrmt " sec  %ss  %ss/sec\n";
 
 const char report_bw_read_enhanced_header[] =
-"[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth       Reads   Dist(bin=%.1fK)\n";
+"[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth       Reads=Dist\n";
 
 const char report_bw_read_enhanced_format[] =
-"[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d    %d:%d:%d:%d:%d:%d:%d:%d\n";
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d=%d:%d:%d:%d:%d:%d:%d:%d\n";
+
+const char report_sumcnt_bw_read_enhanced_header[] =
+"[SUM-cnt] Interval" IPERFTimeSpace "Transfer    Bandwidth       Reads=Dist\n";
+
+const char report_sumcnt_bw_read_enhanced_format[] =
+"[SUM-%d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d=%d:%d:%d:%d:%d:%d:%d:%d\n";
+
+const char report_bw_read_enhanced_netpwr_header[] =
+"[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth    Burst Latency avg/min/max/stdev (cnt/size) inP NetPwr  Reads=Dist\n";
+
+const char report_bw_read_enhanced_netpwr_format[] =
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f/%6.3f/%6.3f/%6.3f ms (%d/%d) %s %4.2f  %d=%d:%d:%d:%d:%d:%d:%d:%d\n";
 
 const char report_sum_bw_read_enhanced_format[] =
-"[SUM] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d    %d:%d:%d:%d:%d:%d:%d:%d\n";
+"[SUM] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d=%d:%d:%d:%d:%d:%d:%d:%d\n";
 
 const char report_triptime_enhanced_format[] =
-"[%3d] " IPERFTimeFrmt " trip-time (3WHS done->fin+finack) = %4.4f sec\n";
+"%s" IPERFTimeFrmt " trip-time (3WHS done->fin+finack) = %4.4f sec\n";
 
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 const char report_bw_write_enhanced_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth       Write/Err  Rtry     Cwnd/RTT        NetPwr\n";
 
-const char report_bw_write_enhanced_format[] =
-"[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %10d %8dK/%u us  %4.2f\n";
-
 const char report_sum_bw_write_enhanced_format[] =
 "[SUM] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d%10d\n";
+
+const char report_bw_write_enhanced_format[] =
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %10d %8dK/%u us  %4.2f\n";
+
+const char report_bw_write_enhanced_nocwnd_format[] =
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %10d       NA/%u us  %4.2f\n";
 
 #else
 const char report_bw_write_enhanced_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth       Write/Err\n";
 
 const char report_bw_write_enhanced_format[] =
-"[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d\n";
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d\n";
 
 const char report_sum_bw_write_enhanced_format[] =
 "[SUM] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d\n";
+
 #endif
+
+const char report_sumcnt_bw_write_enhanced_header[] =
+"[SUM-cnt] Interval" IPERFTimeSpace "Transfer    Bandwidth       Write/Err  Rtry\n";
+
+const char report_sumcnt_bw_write_enhanced_format[] =
+"[SUM-%d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d\n";
 
 const char report_bw_pps_enhanced_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer     Bandwidth      Write/Err  PPS\n";
 
 const char report_bw_pps_enhanced_format[] =
-"[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %8.0f pps\n";
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %8.0f pps\n";
 
 const char report_bw_pps_enhanced_isoch_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer     Bandwidth      Write/Err  PPS  frames:tx/missed/slips\n";
 
 const char report_bw_pps_enhanced_isoch_format[] =
-"[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %8.0f pps  %3d/%d/%d\n";
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %8.0f pps  %3d/%d/%d\n";
 
 const char report_sum_bw_pps_enhanced_format[] =
 "[SUM] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %8.0f pps\n";
 
+const char report_bw_jitter_loss_pps_header[] =
+"[ ID] Interval       Transfer     Bandwidth        Jitter   Lost/Total Datagrams   PPS\n";
+
+const char report_bw_jitter_loss_pps_format[] =
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%) %8.0f pps\n";
+
 const char report_bw_jitter_loss_enhanced_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer     Bandwidth        Jitter   Lost/Total \
- Latency avg/min/max/stdev PPS  NetPwr\n";
+ Latency avg/min/max/stdev PPS  inP NetPwr\n";
 
 const char report_bw_jitter_loss_enhanced_format[] =
-"[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %4" IPERFdMAX "/%5" IPERFdMAX " (%.2g%%) %6.3f/%6.3f/%6.3f/%6.3f ms %4.0f pps  %4.2f\n";
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%) %6.3f/%6.3f/%6.3f/%6.3f ms %4.0f pps %s %4.2f\n";
 
 const char report_bw_jitter_loss_enhanced_isoch_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer     Bandwidth        Jitter   Lost/Total \
- Latency avg/min/max/stdev PPS  NetPwr  Frames/Lost\n";
+ Latency avg/min/max/stdev PPS  inP NetPwr  Frames/Lost\n";
 
 const char report_bw_jitter_loss_enhanced_isoch_format[] =
-"[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %4" IPERFdMAX "/%5" IPERFdMAX " (%.2g%%) %6.3f/%6.3f/%6.3f/%6.3f ms %4.0f pps  %4.2f  %3d/%d\n";
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%) %6.3f/%6.3f/%6.3f/%6.3f ms %4.0f pps %s %4.2f  %3d/%d\n";
 
 const char report_sum_bw_jitter_loss_enhanced_format[] =
-"[SUM] " IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %4" IPERFdMAX "/%5" IPERFdMAX " (%.2g%%)  %4.0f pps\n";
+"[SUM] " IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%)  %4.0f pps\n";
+
+const char report_sumcnt_bw_jitter_loss_enhanced_format[] =
+"[SUM-%d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%)  %4.0f pps\n";
 
 const char report_bw_jitter_loss_suppress_enhanced_format[] =
-"[%3d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %4" IPERFdMAX "/%5" IPERFdMAX " (%.2g%%) -/-/-/- ms %4.0f pps\n";
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%) -/-/-/- ms %4.0f pps\n";
+
+/*
+ * Frame interval reports
+ */
+#define IPERFFTimeFrmt "%4.4f-%4.4f"
+#define IPERFFTimeSpace "       "
+const char report_frame_jitter_loss_enhanced_header[] =
+"[ ID] Interval(f-transit)" IPERFFTimeSpace "Transfer     Bandwidth    FrameID   Jitter   Lost/Total \
+ Latency avg/min/max/stdev PPS  inP NetPwr\n";
+
+const char report_frame_jitter_loss_enhanced_format[] =
+"%s" IPERFFTimeFrmt "(%0.4f) sec %ss  %ss/sec %4" PRIdMAX "   %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%) %6.3f/%6.3f/%6.3f/%6.3f ms %4.0f pps %2.0f pkts %4.2f\n";
+
+const char report_frame_jitter_loss_suppress_enhanced_format[] =
+"%s" IPERFTimeFrmt "(%0.4f) sec %ld %ss  %ss/sec %4" PRIdMAX "   %6.3f ms %4" PRIdMAX "/%5" PRIdMAX " (%.2g%%) -/-/-/- ms %4.0f pps\n";
+
+const char report_frame_tcp_enhanced_header[] =
+"[ ID] Interval(f-transit)" IPERFFTimeSpace "Transfer     Bandwidth    FrameID\n";
+
+/* -------------------------------------------------------------------
+ * Fullduplex reports
+ * ------------------------------------------------------------------- */
+const char report_bw_sum_fullduplex_format[] =
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec\n";
+
+const char report_bw_sum_fullduplex_enhanced_format[] =
+"[FD%d] " IPERFTimeFrmt " sec  %ss  %ss/sec\n";
+
+const char report_udp_fullduplex_header[] =
+"[ ID] Interval       Transfer     Bandwidth    Datagrams   PPS\n";
+
+const char report_sumcnt_udp_fullduplex_header[] =
+"[SUM-cnt] Interval       Transfer     Bandwidth    Datagrams   PPS\n";
+
+const char report_sumcnt_udp_fullduplex_format[] =
+"[SUM-%d] " IPERFTimeFrmt " sec  %ss  %ss/sec %5" PRIdMAX "%8.0f pps\n";
+
+const char report_udp_fullduplex_format[] =
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec %5" PRIdMAX "%8.0f pps\n";
+
+const char report_udp_fullduplex_enhanced_format[] =
+"[FD%d] " IPERFTimeFrmt " sec  %ss  %ss/sec %5" PRIdMAX "%8.0f pps\n";
+
+const char report_udp_fullduplex_sum_format[] =
+"[SUM] " IPERFTimeFrmt " sec  %ss  %ss/sec %5" PRIdMAX "%8.0f pps\n";
 
 /* -------------------------------------------------------------------
  * Misc reports
  * ------------------------------------------------------------------- */
 const char report_outoforder[] =
-"[%3d] " IPERFTimeFrmt " sec  %d datagrams received out-of-order\n";
+"%s" IPERFTimeFrmt " sec  %d datagrams received out-of-order\n";
+
+const char report_sumcnt_outoforder[] =
+"[SUM-%d] " IPERFTimeFrmt " sec  %d datagrams received out-of-order\n";
 
 const char report_l2statistics[] =
-"[%3d] " IPERFTimeFrmt " sec   L2 processing detected errors, total(length/checksum/unknown) = %" IPERFdMAX "(%" IPERFdMAX "/%" IPERFdMAX "/%" IPERFdMAX ")\n";
+"%s" IPERFTimeFrmt " sec   L2 processing detected errors, total(length/checksum/unknown) = %" PRIdMAX "(%" PRIdMAX "/%" PRIdMAX "/%" PRIdMAX ")\n";
 
 const char report_sum_outoforder[] =
 "[SUM] " IPERFTimeFrmt " sec  %d datagrams received out-of-order\n";
@@ -357,14 +457,20 @@ const char report_sum_outoforder[] =
 const char report_peer [] =
 "[%3d] local %s port %u connected with %s port %u%s\n";
 
+const char report_peer_dev [] =
+"[%3d] local %s%%%s port %u connected with %s port %u%s\n";
+
 const char report_mss_unsupported[] =
-"[%3d] MSS and MTU size unknown (TCP_MAXSEG not supported by OS?)\n";
+"[%3d] MSS and MTU size unknown (TCP_MAXSEG not supported)\n";
 
 const char report_mss[] =
-"[%3d] MSS size %d bytes (MTU %d bytes, %s)\n";
+"[%3d] MSS size %d bytes\n";
 
 const char report_datagrams[] =
 "[%3d] Sent %d datagrams\n";
+
+const char report_sumcnt_datagrams[] =
+"[SUM-%d] Sent %d datagrams\n";
 
 const char report_sum_datagrams[] =
 "[SUM] Sent %d datagrams\n";
@@ -376,14 +482,16 @@ const char reportCSV_peer[] =
 "%s,%u,%s,%u";
 
 const char report_l2length_error[] =
-"[%3d] " IPERFTimeFrmt " sec  %d datagrams received out-of-order\n";
+"%s" IPERFTimeFrmt " sec  %d datagrams received out-of-order\n";
 
-
+/*-------------------------------------------------------------------
+ * CSV outputs
+ *------------------------------------------------------------------*/
 const char reportCSV_bw_format[] =
-"%s,%s,%d,%.1f-%.1f,%" IPERFdMAX ",%" IPERFdMAX "\n";
+"%s,%s,%d,%.1f-%.1f,%" PRIdMAX ",%" PRIdMAX "\n";
 
 const char reportCSV_bw_jitter_loss_format[] =
-"%s,%s,%d,%.1f-%.1f,%" IPERFdMAX ",%" IPERFdMAX ",%.3f,%d,%d,%.3f,%d\n";
+"%s,%s,%d,%.1f-%.1f,%" PRIdMAX ",%" PRIdMAX ",%.3f,%d,%d,%.3f,%d\n";
 
  /* -------------------------------------------------------------------
  * warnings
@@ -406,7 +514,7 @@ const char warn_no_ack[]=
 "[%3d] WARNING: did not receive ack of last datagram after %d tries.\n";
 
 const char warn_ack_failed[]=
-"[%3d] WARNING: ack of last datagram failed after %d tries.\n";
+"[%3d] WARNING: ack of last datagram failed.\n";
 
 const char warn_fileopen_failed[]=
 "WARNING: Unable to open file stream for transfer\n\
@@ -441,7 +549,7 @@ const char warn_implied_compatibility[] =
 "WARNING: option -%c has implied compatibility mode\n";
 
 const char warn_buffer_too_small[] =
-"WARNING: %s UDP buffer size (-l value) increased to %d bytes for proper operation\n";
+"WARNING: %s socket buffer size (-l value) increased to %d bytes for proper operation\n";
 
 const char warn_invalid_single_threaded[] =
 "WARNING: option -%c is not valid in single threaded versions\n";
@@ -463,10 +571,6 @@ const char warn_len_too_small_peer_exchange[] =
 
 const char warn_compat_and_peer_exchange[] =
 "WARNING: Options of '-C' '--compatibility' AND '-X' '--peerdetect' are mutually exclusive, --peerdetect ignored\n";
-
-const char warn_seqno_wrap[] =
-"WARNING: Client UDP sequence number wrapped, suggest --udp-counters-64bit on both client and server\n";
-
 
 #ifdef __cplusplus
 } /* end extern "C" */
