@@ -1524,6 +1524,9 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
     if (isUDP(server)) { // UDP test information passed in every packet per being stateless
 	struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) mBuf;
 	Settings_ReadClientSettingsV1(&reversed_thread, &hdr->base);
+	if (isFullDuplex(server) || v1test) {
+	    server->mAmount = reversed_thread->mAmount + (SLOPSECS * 100);
+	}
 	if (v1test) {
 	    setServerReverse(reversed_thread);
 	    if (flags & RUN_NOW) {
@@ -1557,6 +1560,10 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
 	}
     } else { //tcp first payload
 	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) mBuf;
+	Settings_ReadClientSettingsV1(&reversed_thread, &hdr->base);
+	if (isFullDuplex(server) || v1test) {
+	    server->mAmount = reversed_thread->mAmount + (SLOPSECS * 100);
+	}
 	if (v1test) {
 	    setServerReverse(reversed_thread);
 	    if (flags & RUN_NOW) {
@@ -1565,7 +1572,6 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
 		reversed_thread->mMode = kTest_TradeOff;
 	    }
 	}
-	Settings_ReadClientSettingsV1(&reversed_thread, &hdr->base);
 	if (flags & HEADER_EXTEND) {
 	    reversed_thread->mUDPRate = ntohl(hdr->extend.lRate);
 #ifdef HAVE_INT64_T
