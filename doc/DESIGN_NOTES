@@ -1,6 +1,6 @@
 Overview of Iperf 2 design
 By Robert McMahon
-September 2020
+October 2020
 Code at rev 2.0.14
 
 This document helps to describe the iperf 2 design. It's quite complicated. It's
@@ -127,7 +127,7 @@ the header types. Since 1.7 initalize the first by to decimal 3 or 0x03 as a byt
 this gives 6 upper bits (0x04 to 0x80) that can be used to indicate header type. These are
 shown in include/payloads.h
 
-The -C or --compatibility option disables header exchanage.
+The -C or --compatibility option indicates older header or no header.
 
 Reporter Jobq
 -------------
@@ -214,11 +214,15 @@ sufficient information such that the reporter thread can perform the traffic
 accounting as well as display interval or final reports base upon timestamps
 held within the ring's elements.
 
-Summing (src/list.cpp include/list.hpp)
+Summing (src/active_hosts.cpp include/active_hosts.hpp)
 ---------------------------------------
 Packet or read or write summing is done on a per client (host ip) basis. All
-traffic from a specific client will be summed. The active client list is kept in
-a linked list. A new client will trigger a new sum report.
+traffic from a specific client will be summed, as an example. Full duplex packet
+will also be summed. The active client list is kept in a simple linked list. A new
+client will trigger a new sum report.
+
+The active hosts also cotains port information.  This is needed to simulate
+a UDP accept.
 
 
 Function vectors (src/Reports.c src/Reporter.c src/ReportOutputs.c)
@@ -267,20 +271,34 @@ listener thread. On the server side, the listener thread will instantiate server
 and client threads.
 
 Thread interactions:
+-------------------
 
-Client startups
+There are a fair amount of non obvious thread interactions. To be filled out
+
+Mutexes and Condition variables
+
+Client startups (see launch.cpp)
+--------------------------------
+
+There are 5 types of client start ups. To be filled out
 
 Server startups
+---------------
+There are 3 types of server start ups. To be filled out
 
-Mutexes and Condition variables:
 
-A day in the life of a UDP packet
-
-Write the packet microsecond timestamp and sequence number into the payload
+A day in the life of a UDP packet (or a write to read)
+------------------------------------------------------
+Write the packet microsecond timestamp and sequence number into the payload. To be filled out
 
 Traffic profiles and rate limiting.  The box mueller can be found in src/pdfs.c
+-------------------------------------------------------------------------------
+To be filled out
 
 Debug support using configure --enable-thread-debug
+---------------------------------------------------
+To be filled out
+
 
 File system structure
 =====================
@@ -337,8 +355,6 @@ iperf_SOURCES = \
 		pdfs.c -- code that supports log normal distribution per a box
 			  mueller
 iperf_LDADD = $(LIBCOMPAT_LDADDS)
-
-
 
 
 Special test files per ./configure --enable-checkprograms
