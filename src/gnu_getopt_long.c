@@ -46,7 +46,7 @@ int
 gnu_getopt_long( int argc,
                  char *const *argv,
                  const char *options,
-                 const struct option *long_options,
+                 const struct gnu_option *long_options,
                  int *opt_index ) {
     return _gnu_getopt_internal (argc, argv, options, long_options, opt_index, 0);
 }
@@ -60,7 +60,7 @@ int
 gnu_getopt_long_only( int argc,
                       char *const *argv,
                       const char *options,
-                      const struct option *long_options,
+                      const struct gnu_option *long_options,
                       int *opt_index ) {
     return _gnu_getopt_internal (argc, argv, options, long_options, opt_index, 1);
 }
@@ -85,7 +85,7 @@ int digit_optind = 0;
 while ( 1 ) {
     int this_option_optind = gnu_optind ? gnu_optind : 1;
     int option_index = 0;
-    static struct option long_options[] =
+    static struct gnu_option long_options[] =
     {
         {"add", 1, 0, 0},
         {"append", 0, 0, 0},
