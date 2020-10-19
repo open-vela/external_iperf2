@@ -290,7 +290,11 @@ const char short_options[] = "146b:c:def:hi:l:mn:o:p:rst:uvw:x:y:zAB:CDF:H:IL:M:
 #define DEFAULTS()
 
 const long kDefault_UDPRate = 1024 * 1024; // -u  if set, 1 Mbit/sec
+#if defined(CONFIG_TOOLS_IPERF2_TCP_BUFSIZE)
+const int kDefault_TCPBufLen = CONFIG_TOOLS_IPERF2_TCP_BUFSIZE;
+#else
 const int kDefault_TCPBufLen = 128 * 1024; // TCP default read/write size
+#endif
 const int kDefault_BBTCPBufLen = 100; // default bounce-back size in bytes
 
 

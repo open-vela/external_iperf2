@@ -65,7 +65,12 @@ struct server_hdr;
 
 #include "Settings.hpp"
 
+#if defined(CONFIG_TOOLS_IPERF2_DATA_REPORT_NUM)
+#define NUM_REPORT_STRUCTS CONFIG_TOOLS_IPERF2_DATA_REPORT_NUM
+#else
 #define NUM_REPORT_STRUCTS 10000
+#endif
+
 #define PEERVERBUFSIZE 256
 #define NETPOWERCONSTANT 1e-6
 #define REPORTTXTMAX 80
