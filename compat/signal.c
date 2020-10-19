@@ -52,6 +52,7 @@
 
 #include "headers.h"
 #include "util.h"
+#include "Thread.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -168,20 +169,15 @@ SigfuncPtr my_signal( int inSigno, SigfuncPtr inFunc ) {
  * ------------------------------------------------------------------- */
 
 void sig_exit( int inSigno ) {
+#ifndef HAVE_THREAD
     static int num = 0;
-    if ( num++ == 0 ) {
+    if ( num++ == 0 )
+#endif
+    {
         fflush( 0 );
-	_exit(0);
+        exit(0);
     }
 } /* end sig_exit */
-
-void disarm_itimer(void) {
-#ifdef HAVE_SETITIMER
-    struct itimerval it;
-    memset (&it, 0, sizeof (it));
-    setitimer(ITIMER_REAL, &it, NULL);
-#endif
-}
 
 #ifdef __cplusplus
 } /* end extern "C" */
