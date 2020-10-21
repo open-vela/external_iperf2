@@ -57,6 +57,18 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+
+#define HEADING_FLAG(HEADING) __ ## HEADING ## _print_done
+#define HEADING_HDR(HEADING) HEADING ## _header
+#define HEADING_PRINT_COND(HEADING)	        \
+  do {                                          \
+      if (!HEADING_FLAG(HEADING)) {		\
+	  printf("%s", HEADING_HDR(HEADING));	\
+	  HEADING_FLAG(HEADING) = 1;		\
+      }					        \
+  } while(0)
+
 /* -------------------------------------------------------------------
  * usage
  * ------------------------------------------------------------------- */
@@ -80,11 +92,17 @@ extern const char client_port[];
 
 extern const char client_report_epoch_start[];
 
+extern const char client_report_epoch_start_current[];
+
 extern const char server_pid_port[];
 
 extern const char client_pid_port[];
 
+extern const char client_pid_port_dev[];
+
 extern const char bind_address[];
+
+extern const char bind_address_iface[];
 
 extern const char multicast_ttl[];
 
@@ -112,7 +130,7 @@ extern const char window_default[];
 
 extern const char wait_server_threads[];
 
-extern const char client_udp_isochronous[];
+extern const char client_isochronous[];
 
 extern const char client_fq_pacing[];
 /* -------------------------------------------------------------------
@@ -121,9 +139,13 @@ extern const char client_fq_pacing[];
 
 extern const char report_bw_header[];
 
+extern const char report_sumcnt_bw_header[];
+
 extern const char report_bw_format[];
 
 extern const char report_sum_bw_format[];
+
+extern const char report_sumcnt_bw_format[];
 
 extern const char report_bw_read_format[];
 
@@ -133,9 +155,12 @@ extern const char report_bw_jitter_loss_format[];
 
 extern const char report_sum_bw_jitter_loss_format[];
 
+extern const char report_sumcnt_bw_jitter_loss_format[];
+
 /* -------------------------------------------------------------------
  * Enhanced reports (per -e)
  * ------------------------------------------------------------------- */
+
 extern const char client_write_size[];
 
 extern const char server_read_size[];
@@ -146,17 +171,31 @@ extern const char report_sum_bw_enhanced_format[];
 
 extern const char report_bw_read_enhanced_header[];
 
+extern const char report_bw_read_enhanced_netpwr_header[];
+
+extern const char report_bw_read_enhanced_netpwr_format[];
+
 extern const char report_bw_read_enhanced_format[];
 
 extern const char report_sum_bw_read_enhanced_format[];
+
+extern const char report_sumcnt_bw_read_enhanced_header[];
+
+extern const char report_sumcnt_bw_read_enhanced_format[];
 
 extern const char report_triptime_enhanced_format[];
 
 extern const char report_bw_write_enhanced_header[];
 
+extern const char report_sumcnt_bw_write_enhanced_header[];
+
 extern const char report_bw_write_enhanced_format[];
 
+extern const char report_bw_write_enhanced_nocwnd_format[];
+
 extern const char report_sum_bw_write_enhanced_format[];
+
+extern const char report_sumcnt_bw_write_enhanced_format[];
 
 extern const char report_bw_pps_enhanced_header[];
 
@@ -167,6 +206,10 @@ extern const char report_bw_pps_enhanced_isoch_header[];
 extern const char report_bw_pps_enhanced_isoch_format[];
 
 extern const char report_sum_bw_pps_enhanced_format[];
+
+extern const char report_bw_jitter_loss_pps_header[];
+
+extern const char report_bw_jitter_loss_pps_format[];
 
 extern const char report_bw_jitter_loss_enhanced_header[];
 
@@ -180,11 +223,39 @@ extern const char report_bw_jitter_loss_suppress_enhanced_format[];
 
 extern const char report_sum_bw_jitter_loss_enhanced_format[];
 
+extern const char report_sumcnt_bw_jitter_loss_enhanced_format[];
+
+extern const char report_bw_sum_fullduplex_format[];
+
+extern const char report_bw_sum_fullduplex_enhanced_format[];
+
+extern const char report_frame_jitter_loss_enhanced_header[];
+
+extern const char report_frame_jitter_loss_enhanced_format[];
+
+extern const char report_frame_jitter_loss_suppress_enhanced_format[];
+
+extern const char report_frame_tcp_enhanced_header[];
+
+extern const char report_udp_fullduplex_header[];
+
+extern const char report_udp_fullduplex_format[];
+
+extern const char report_udp_fullduplex_sum_format[];
+
+extern const char report_udp_fullduplex_enhanced_format[];
+
+extern const char report_sumcnt_udp_fullduplex_header[];
+
+extern const char report_sumcnt_udp_fullduplex_format[];
+
 /* -------------------------------------------------------------------
  * Misc reports
  * ------------------------------------------------------------------- */
 
 extern const char report_outoforder[];
+
+extern const char report_sumcnt_outoforder[];
 
 extern const char report_l2statistics[];
 
@@ -192,11 +263,15 @@ extern const char report_sum_outoforder[];
 
 extern const char report_peer[];
 
+extern const char report_peer_dev[];
+
 extern const char report_mss_unsupported[];
 
 extern const char report_mss[];
 
 extern const char report_datagrams[];
+
+extern const char report_sumcnt_datagrams[];
 
 extern const char report_sum_datagrams[];
 
