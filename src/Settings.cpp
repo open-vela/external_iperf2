@@ -68,29 +68,33 @@
 #include "util.h"
 #include "version.h"
 #include "gnu_getopt.h"
-#ifdef HAVE_ISOCHRONOUS
 #include "isochronous.hpp"
 #include "pdfs.h"
-#endif
+#include "payloads.h"
 
-static int seqno64b = 0;
 static int reversetest = 0;
-static int udphistogram = 0;
+static int fullduplextest = 0;
+static int rxhistogram = 0;
 static int l2checks = 0;
 static int incrdstip = 0;
 static int txstarttime = 0;
+static int noconnectsync = 0;
+static int txholdback = 0;
 static int fqrate = 0;
 static int triptime = 0;
-#ifdef HAVE_ISOCHRONOUS
+static int writeack = 0;
+static int infinitetime = 0;
+static int connectonly = 0;
+static int connectretry = 0;
 static int burstipg = 0;
-static int burstipg_set = 0;
 static int isochronous = 0;
-#endif
-static int setcport = 0;
+static int noudpfin = 0;
+static int numreportstructs = 0;
+static int sumonly = 0;
 
-void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtSettings );
+void Settings_Interpret(char option, const char *optarg, struct thread_Settings *mExtSettings);
 // apply compound settings after the command line has been fully parsed
-void Settings_ModalOptions( thread_Settings *mExtSettings );
+void Settings_ModalOptions(struct thread_Settings *mExtSettings);
 
 
 /* -------------------------------------------------------------------
@@ -101,13 +105,13 @@ void Settings_ModalOptions( thread_Settings *mExtSettings );
  * ------------------------------------------------------------------- */
 #define LONG_OPTIONS()
 
-const struct gnu_option long_options[] =
+const struct option long_options[] =
 {
 {"singleclient",     no_argument, NULL, '1'},
 {"bandwidth",  required_argument, NULL, 'b'},
 {"client",     required_argument, NULL, 'c'},
 {"dualtest",         no_argument, NULL, 'd'},
-{"enhancedreports",   no_argument, NULL, 'e'},
+{"enhanced",         no_argument, NULL, 'e'},
 {"format",     required_argument, NULL, 'f'},
 {"help",             no_argument, NULL, 'h'},
 {"interval",   required_argument, NULL, 'i'},
@@ -148,28 +152,33 @@ const struct gnu_option long_options[] =
 {"ipv6_domain",      no_argument, NULL, 'V'},
 {"suggest_win_size", no_argument, NULL, 'W'},
 {"peer-detect",      no_argument, NULL, 'X'},
-{"linux-congestion", required_argument, NULL, 'Z'},
-{"udp-counters-64bit", no_argument, &seqno64b, 1},
-{"udp-histogram", optional_argument, &udphistogram, 1},
+{"tcp-congestion", required_argument, NULL, 'Z'},
+{"histograms", optional_argument, &rxhistogram, 1},
 {"l2checks", no_argument, &l2checks, 1},
 {"incr-dstip", no_argument, &incrdstip, 1},
 {"txstart-time", required_argument, &txstarttime, 1},
+{"txdelay-time", required_argument, &txholdback, 1},
 {"fq-rate", required_argument, &fqrate, 1},
-{"trip-time", no_argument, &triptime, 1},
-#ifdef HAVE_ISOCHRONOUS
+{"trip-times", no_argument, &triptime, 1},
+{"write-ack", optional_argument, &writeack, 1},
+{"no-udp-fin", no_argument, &noudpfin, 1},
+{"connect-only", optional_argument, &connectonly, 1},
+{"connect-retries", required_argument, &connectretry, 1},
+{"no-connect-sync", no_argument, &noconnectsync, 1},
+{"full-duplex", no_argument, &fullduplextest, 1},
 {"ipg", required_argument, &burstipg, 1},
 {"isochronous", optional_argument, &isochronous, 1},
-#endif
+{"sum-only", no_argument, &sumonly, 1},
+{"NUM_REPORT_STRUCTS", required_argument, &numreportstructs, 1},
 #ifdef WIN32
 {"reverse", no_argument, &reversetest, 1},
 #endif
-{"cport", required_argument, &setcport, 1},
 {0, 0, 0, 0}
 };
 
 #define ENV_OPTIONS()
 
-const struct gnu_option env_options[] =
+const struct option env_options[] =
 {
 {"IPERF_IPV6_DOMAIN",      no_argument, NULL, 'V'},
 {"IPERF_SINGLECLIENT",     no_argument, NULL, '1'},
@@ -226,20 +235,16 @@ const int  kDefault_UDPBufLen = 1470;      // -u  if set, read/write 1470 bytes
 // v4: 1470 bytes UDP payload will fill one and only one ethernet datagram (IPv4 overhead is 20 bytes)
 const int  kDefault_UDPBufLenV6 = 1450;      // -u  if set, read/write 1470 bytes
 // v6: 1450 bytes UDP payload will fill one and only one ethernet datagram (IPv6 overhead is 40 bytes)
-#if defined(CONFIG_TOOLS_IPERF2_TCP_BUFSIZE)
-const int kDefault_TCPBufLen = CONFIG_TOOLS_IPERF2_TCP_BUFSIZE;
-#else
 const int kDefault_TCPBufLen = 128 * 1024; // TCP default read/write size
-#endif
+
 /* -------------------------------------------------------------------
  * Initialize all settings to defaults.
  * ------------------------------------------------------------------- */
-
-void Settings_Initialize( thread_Settings *main ) {
+void Settings_Initialize (struct thread_Settings *main) {
     // Everything defaults to zero or NULL with
     // this memset. Only need to set non-zero values
     // below.
-    memset( main, 0, sizeof(thread_Settings) );
+    memset(main, 0, sizeof(struct thread_Settings));
     main->mSock = INVALID_SOCKET;
     main->mReportMode = kReport_Default;
     // option, defaults
@@ -262,6 +267,7 @@ void Settings_Initialize( thread_Settings *main ) {
     // mMode    = kTest_Normal;          // -r,  mMode == kTest_TradeOff
     main->mThreadMode   = kMode_Unknown; // -s,  or -c, none
     main->mAmount       = 1000;          // -t,  10 seconds
+    main->mIntervalMode = kInterval_None;// -i   none, time, packets, or bursts
     // mUDPRate > 0 means UDP            // -u,  N/A, see kDefault_UDPRate
     // skip version                      // -v,
     //main->mTCPWin       = 0;           // -w,  ie. don't set window
@@ -276,9 +282,7 @@ void Settings_Initialize( thread_Settings *main ) {
     //main->mListenPort   = 0;           // -L,  listen port
     //main->mMSS          = 0;           // -M,  ie. don't set MSS
     //main->mNodelay    = false;         // -N,  don't set nodelay
-#if !defined(WIN32) && !defined(HAVE_DECL_SO_REUSEADDR)
-    main->mThreads      = 1;             // -P,
-#endif
+    //main->mThreads      = 0;           // -P,
     //main->mRemoveService = false;      // -R,
     //main->mTOS          = 0;           // -S,  ie. don't set type of service
     main->mTTL          = -1;            // -T,  link-local TTL
@@ -287,43 +291,81 @@ void Settings_Initialize( thread_Settings *main ) {
 
 } // end Settings
 
-void Settings_Copy( thread_Settings *from, thread_Settings **into ) {
-    *into = new thread_Settings;
-    memcpy( *into, from, sizeof(thread_Settings) );
-    if ( from->mHost != NULL ) {
-        (*into)->mHost = new char[ strlen(from->mHost) + 1];
-        strcpy( (*into)->mHost, from->mHost );
-    }
-    if ( from->mOutputFileName != NULL ) {
-        (*into)->mOutputFileName = new char[ strlen(from->mOutputFileName) + 1];
-        strcpy( (*into)->mOutputFileName, from->mOutputFileName );
-    }
-    if ( from->mLocalhost != NULL ) {
-        (*into)->mLocalhost = new char[ strlen(from->mLocalhost) + 1];
-        strcpy( (*into)->mLocalhost, from->mLocalhost );
-    }
-    if ( from->mFileName != NULL ) {
-        (*into)->mFileName = new char[ strlen(from->mFileName) + 1];
-        strcpy( (*into)->mFileName, from->mFileName );
-    }
-    if ( from->mUDPHistogramStr != NULL ) {
-	(*into)->mUDPHistogramStr = new char[ strlen(from->mUDPHistogramStr) + 1];
-        strcpy( (*into)->mUDPHistogramStr, from->mUDPHistogramStr );
-    }
-    if ( from->mSSMMulticastStr != NULL ) {
-	(*into)->mSSMMulticastStr = new char[ strlen(from->mSSMMulticastStr) + 1];
-        strcpy( (*into)->mSSMMulticastStr, from->mSSMMulticastStr );
-    }
-    if ( from->mIfrname != NULL ) {
-	(*into)->mIfrname = new char[ strlen(from->mIfrname) + 1];
-        strcpy( (*into)->mIfrname, from->mIfrname );
-    }
-#ifdef HAVE_ISOCHRONOUS
-    if ( from->mIsochronousStr != NULL ) {
-	(*into)->mIsochronousStr = new char[ strlen(from->mIsochronousStr) + 1];
-        strcpy( (*into)->mIsochronousStr, from->mIsochronousStr );
-    }
+void Settings_Copy (struct thread_Settings *from, struct thread_Settings **into, int copyall) {
+    *into = new struct thread_Settings;
+    memset(*into, 0, sizeof(struct thread_Settings));
+    memcpy(*into, from, sizeof(struct thread_Settings));
+    (*into)->mSumReport = NULL;
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Copy thread settings (malloc) from/to=%p/%p report/sum/fullduplex %p/%p/%p", \
+		 (void *)from, (void *)*into, (void *)(*into)->reporthdr, (void *)(*into)->mSumReport, (void *)(*into)->mFullDuplexReport);
 #endif
+    // Some settings don't need to be copied and will confuse things. Don't copy them unless copyall is set
+    if (copyall) {
+	// Don't allocate memory for these if this is a reverse client
+	if (from->mHost != NULL) {
+	    (*into)->mHost = new char[ strlen(from->mHost) + 1];
+	    strcpy((*into)->mHost, from->mHost);
+	}
+	if (from->mOutputFileName != NULL) {
+	    (*into)->mOutputFileName = new char[ strlen(from->mOutputFileName) + 1];
+	    strcpy((*into)->mOutputFileName, from->mOutputFileName);
+	}
+	if (from->mLocalhost != NULL) {
+	    (*into)->mLocalhost = new char[ strlen(from->mLocalhost) + 1];
+	    strcpy((*into)->mLocalhost, from->mLocalhost);
+	}
+	if (from->mFileName != NULL) {
+	    (*into)->mFileName = new char[ strlen(from->mFileName) + 1];
+	    strcpy((*into)->mFileName, from->mFileName);
+	}
+	if (from->mRxHistogramStr != NULL) {
+	    (*into)->mRxHistogramStr = new char[ strlen(from->mRxHistogramStr) + 1];
+	    strcpy((*into)->mRxHistogramStr, from->mRxHistogramStr);
+	}
+	if (from->mSSMMulticastStr != NULL) {
+	    (*into)->mSSMMulticastStr = new char[ strlen(from->mSSMMulticastStr) + 1];
+	    strcpy((*into)->mSSMMulticastStr, from->mSSMMulticastStr);
+	}
+	if (from->mIfrname != NULL) {
+	    (*into)->mIfrname = (char *) calloc(1, strlen(from->mIfrname) + 1);
+	    strcpy((*into)->mIfrname, from->mIfrname);
+	}
+	if (from->mIfrnametx != NULL) {
+	    (*into)->mIfrnametx = (char *) calloc(1, strlen(from->mIfrnametx) + 1);
+	    strcpy((*into)->mIfrnametx, from->mIfrnametx);
+	}
+	if (from->mIsochronousStr != NULL) {
+	    (*into)->mIsochronousStr = new char[ strlen(from->mIsochronousStr) + 1];
+	    strcpy((*into)->mIsochronousStr, from->mIsochronousStr);
+	}
+	if (from->mCongestion != NULL) {
+	    (*into)->mCongestion = new char[ strlen(from->mCongestion) + 1];
+	    strcpy((*into)->mCongestion, from->mCongestion);
+	}
+    } else {
+	(*into)->mHost = NULL;
+	(*into)->mOutputFileName = NULL;
+	(*into)->mLocalhost = NULL;
+	(*into)->mFileName = NULL;
+	(*into)->mRxHistogramStr = NULL;
+	(*into)->mSSMMulticastStr = NULL;
+	(*into)->mIfrname = NULL;
+	(*into)->mIfrnametx = NULL;
+	(*into)->mIsochronousStr = NULL;
+	(*into)->mCongestion = NULL;
+	(*into)->mTransferIDStr = NULL;
+	// apply the server side congestion setting to reverse clients
+	if (from->mIsochronousStr != NULL) {
+	    (*into)->mIsochronousStr = new char[ strlen(from->mIsochronousStr) + 1];
+	    strcpy((*into)->mIsochronousStr, from->mIsochronousStr);
+	}
+    }
+
+    (*into)->txstart_epoch = from->txstart_epoch;
+    (*into)->mSumReport = from->mSumReport;
+    (*into)->mFullDuplexReport = from->mFullDuplexReport;
+
     // Zero out certain entries
     (*into)->mTID = thread_zeroid();
     (*into)->runNext = NULL;
@@ -331,44 +373,45 @@ void Settings_Copy( thread_Settings *from, thread_Settings **into ) {
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
     (*into)->mSockDrop = INVALID_SOCKET;
 #endif
+    Condition_Initialize(&(*into)->awake_me);
+    // default copied settings to no reporter reporting
+    unsetReport((*into));
 }
 
 /* -------------------------------------------------------------------
  * Delete memory: Does not clean up open file pointers or ptr_parents
  * ------------------------------------------------------------------- */
 
-void Settings_Destroy( thread_Settings *mSettings) {
-    DELETE_ARRAY( mSettings->mHost      );
-    DELETE_ARRAY( mSettings->mLocalhost );
-    DELETE_ARRAY( mSettings->mFileName  );
-    DELETE_ARRAY( mSettings->mOutputFileName );
-    DELETE_ARRAY( mSettings->mUDPHistogramStr );
-    DELETE_ARRAY( mSettings->mSSMMulticastStr);
-    DELETE_ARRAY( mSettings->mIfrname);
-#ifdef HAVE_ISOCHRONOUS
-    DELETE_ARRAY( mSettings->mIsochronousStr );
+void Settings_Destroy (struct thread_Settings *mSettings) {
+#if HAVE_THREAD_DEBUG
+    thread_debug("Free thread settings=%p", mSettings);
 #endif
-    if (mSettings->multihdr) {
-        mSettings->multihdr->referenceCount--;
-        if (mSettings->multihdr->referenceCount == 0) {
-            DELETE_PTR( mSettings->multihdr );
-        }
-    }
-
-    DELETE_PTR( mSettings );
+    Condition_Destroy(&mSettings->awake_me);
+    DELETE_ARRAY(mSettings->mHost);
+    DELETE_ARRAY(mSettings->mLocalhost);
+    DELETE_ARRAY(mSettings->mFileName);
+    DELETE_ARRAY(mSettings->mOutputFileName);
+    DELETE_ARRAY(mSettings->mRxHistogramStr);
+    DELETE_ARRAY(mSettings->mSSMMulticastStr);
+    DELETE_ARRAY(mSettings->mCongestion);
+    FREE_ARRAY(mSettings->mIfrname);
+    FREE_ARRAY(mSettings->mIfrnametx);
+    FREE_ARRAY(mSettings->mTransferIDStr);
+    DELETE_ARRAY(mSettings->mIsochronousStr);
+    DELETE_PTR(mSettings);
 } // end ~Settings
 
 /* -------------------------------------------------------------------
  * Parses settings from user's environment variables.
  * ------------------------------------------------------------------- */
-void Settings_ParseEnvironment( thread_Settings *mSettings ) {
+void Settings_ParseEnvironment (struct thread_Settings *mSettings) {
     char *theVariable;
 
     int i = 0;
-    while ( env_options[i].name != NULL ) {
-        theVariable = getenv( env_options[i].name );
-        if ( theVariable != NULL ) {
-            Settings_Interpret( env_options[i].val, theVariable, mSettings );
+    while (env_options[i].name != NULL) {
+        theVariable = getenv(env_options[i].name);
+        if (theVariable != NULL) {
+            Settings_Interpret(env_options[i].val, theVariable, mSettings);
         }
         i++;
     }
@@ -378,20 +421,20 @@ void Settings_ParseEnvironment( thread_Settings *mSettings ) {
  * Parse settings from app's command line.
  * ------------------------------------------------------------------- */
 
-void Settings_ParseCommandLine( int argc, char **argv, thread_Settings *mSettings ) {
+void Settings_ParseCommandLine (int argc, char **argv, struct thread_Settings *mSettings) {
     int option;
     gnu_opterr = 1; // Fail on an unrecognized command line option
-    while ( (option =
-             gnu_getopt_long( argc, argv, short_options,
-                              long_options, NULL )) != EOF ) {
-        Settings_Interpret( option, gnu_optarg, mSettings );
+    while ((option =
+             gnu_getopt_long(argc, argv, short_options,
+                              long_options, NULL)) != EOF) {
+        Settings_Interpret(option, gnu_optarg, mSettings);
     }
 
-    for ( int i = gnu_optind; i < argc; i++ ) {
-        fprintf( stderr, "%s: ignoring extra argument -- %s\n", argv[0], argv[i] );
+    for (int i = gnu_optind; i < argc; i++) {
+        fprintf(stderr, "%s: ignoring extra argument -- %s\n", argv[0], argv[i]);
     }
     // Determine the modal or compound settings now that the full command line has been parsed
-    Settings_ModalOptions( mSettings );
+    Settings_ModalOptions(mSettings);
 
 } // end ParseCommandLine
 
@@ -400,11 +443,11 @@ void Settings_ParseCommandLine( int argc, char **argv, thread_Settings *mSetting
  * or from environment variables.
  * ------------------------------------------------------------------- */
 
-void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtSettings ) {
+void Settings_Interpret (char option, const char *optarg, struct thread_Settings *mExtSettings) {
     char *results;
-    switch ( option ) {
+    switch (option) {
         case '1': // Single Client
-            setSingleClient( mExtSettings );
+            setSingleClient(mExtSettings);
             break;
 
         case 'b': // UDP bandwidth
@@ -426,35 +469,35 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
 		}
 		delete [] tmp;
 	    }
-	    setBWSet( mExtSettings );
+	    setBWSet(mExtSettings);
 	    break;
         case 'c': // client mode w/ server host to connect to
-            mExtSettings->mHost = new char[ strlen( optarg ) + 1 ];
-            strcpy( mExtSettings->mHost, optarg );
+            mExtSettings->mHost = new char[ strlen(optarg) + 1 ];
+            strcpy(mExtSettings->mHost, optarg);
 
-            if ( mExtSettings->mThreadMode == kMode_Unknown ) {
+            if (mExtSettings->mThreadMode == kMode_Unknown) {
                 mExtSettings->mThreadMode = kMode_Client;
                 mExtSettings->mThreads = 1;
             }
             break;
 
         case 'd': // Dual-test Mode
-            if ( mExtSettings->mThreadMode != kMode_Client ) {
-                fprintf( stderr, warn_invalid_server_option, option );
+            if (mExtSettings->mThreadMode != kMode_Client) {
+                fprintf(stderr, warn_invalid_server_option, option);
                 break;
             }
-            if ( isCompat( mExtSettings ) ) {
-                fprintf( stderr, warn_invalid_compatibility_option, option );
+            if (isCompat(mExtSettings)) {
+                fprintf(stderr, warn_invalid_compatibility_option, option);
             }
 #ifdef HAVE_THREAD
             mExtSettings->mMode = kTest_DualTest;
 #else
-            fprintf( stderr, warn_invalid_single_threaded, option );
+            fprintf(stderr, warn_invalid_single_threaded, option);
             mExtSettings->mMode = kTest_TradeOff;
 #endif
             break;
         case 'e': // Use enhanced reports
-            setEnhanced( mExtSettings );
+            setEnhanced(mExtSettings);
             break;
         case 'f': // format to print in
             mExtSettings->mFormat = (*optarg);
@@ -467,63 +510,87 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
             break;
 
         case 'i': // specify interval between periodic bw reports
-	    char *end;
-	    mExtSettings->mInterval = strtof( optarg, &end );
-	    if (*end != '\0') {
-		fprintf (stderr, "Invalid value of '%s' for -i interval\n", optarg);
-	    } else {
-	        if ( mExtSettings->mInterval < SMALLEST_INTERVAL ) {
-		    mExtSettings->mInterval = SMALLEST_INTERVAL;
+	    {
+		char framechar;
+		char *tmp= new char [strlen(optarg) + 1];
+		strcpy(tmp, optarg);
+		// scan for frames as units
+		if ((sscanf(optarg,"%c", &framechar)) && ((framechar == 'f') || (framechar == 'F'))) {
+		    mExtSettings->mIntervalMode = kInterval_Frames;
+		    setEnhanced(mExtSettings);
+		    setFrameInterval(mExtSettings);
+		} else {
+		    char *end;
+		    strcpy(tmp, optarg);
+		    double itime = strtof(optarg, &end);
+		    if (*end != '\0') {
+			fprintf (stderr, "Invalid value of '%s' for -i interval\n", optarg);
+			exit(1);
+		    }
+		    if (itime > (UINT_MAX / 1e6)) {
+			fprintf (stderr, "Too large value of '%s' for -i interval, max is %f\n", optarg, (UINT_MAX / 1e6));
+			exit(1);
+		    }
+		    mExtSettings->mInterval = (unsigned int) (itime * 1e6);
+		    if (!mExtSettings->mInterval) {
+			fprintf (stderr, "Interval per -i cannot be zero\n");
+			exit(1);
+		    }
+		    mExtSettings->mIntervalMode = kInterval_Time;
+		    if (mExtSettings->mInterval < SMALLEST_INTERVAL) {
+			mExtSettings->mInterval = SMALLEST_INTERVAL;
 #ifndef HAVE_FASTSAMPLING
-		    fprintf (stderr, report_interval_small, mExtSettings->mInterval);
+			fprintf (stderr, report_interval_small, mExtSettings->mInterval);
 #endif
-	        }
-		if ( mExtSettings->mInterval < 0.5 ) {
-		    setEnhanced( mExtSettings );
+		    }
 		}
+		delete [] tmp;
 	    }
             break;
 
         case 'l': // length of each buffer
-            mExtSettings->mBufLen = byte_atoi( optarg );
-            setBuflenSet( mExtSettings );
+            mExtSettings->mBufLen = byte_atoi(optarg);
+            setBuflenSet(mExtSettings);
             break;
 
         case 'm': // print TCP MSS
-            setPrintMSS( mExtSettings );
+            setPrintMSS(mExtSettings);
             break;
 
         case 'n': // bytes of data
             // amount mode (instead of time mode)
-            unsetModeTime( mExtSettings );
-            mExtSettings->mAmount = byte_atoi( optarg );
+            unsetModeTime(mExtSettings);
+            mExtSettings->mAmount = byte_atoi(optarg);
+	    if (!(mExtSettings->mAmount > 0)) {
+		fprintf (stderr, "Invalid value for -n amount of '%s'\n", optarg);
+	        exit(1);
+	    }
             break;
 
         case 'o' : // output the report and other messages into the file
-            unsetSTDOUT( mExtSettings );
+            unsetSTDOUT(mExtSettings);
             mExtSettings->mOutputFileName = new char[strlen(optarg)+1];
-            strcpy( mExtSettings->mOutputFileName, optarg);
+            strcpy(mExtSettings->mOutputFileName, optarg);
             break;
 
         case 'p': // server port
-            mExtSettings->mPort = atoi( optarg );
+            mExtSettings->mPort = atoi(optarg);
             break;
 
         case 'r': // test mode tradeoff
-            if ( mExtSettings->mThreadMode != kMode_Client ) {
-                fprintf( stderr, warn_invalid_server_option, option );
+            if (mExtSettings->mThreadMode != kMode_Client) {
+                fprintf(stderr, warn_invalid_server_option, option);
                 break;
             }
-            if ( isCompat( mExtSettings ) ) {
-                fprintf( stderr, warn_invalid_compatibility_option, option );
+            if (isCompat(mExtSettings)) {
+                fprintf(stderr, warn_invalid_compatibility_option, option);
             }
-
             mExtSettings->mMode = kTest_TradeOff;
             break;
 
         case 's': // server mode
-            if ( mExtSettings->mThreadMode != kMode_Unknown ) {
-                fprintf( stderr, warn_invalid_client_option, option );
+            if (mExtSettings->mThreadMode != kMode_Unknown) {
+                fprintf(stderr, warn_invalid_client_option, option);
                 break;
             }
 
@@ -532,50 +599,52 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
 
         case 't': // seconds to run the client, server, listener
             // time mode (instead of amount mode), units is 10 ms
-            setModeTime( mExtSettings );
-            setServerModeTime( mExtSettings );
-            mExtSettings->mAmount = (int) (atof( optarg ) * 100.0);
+            setModeTime(mExtSettings);
+            setServerModeTime(mExtSettings);
+	    if (atof(optarg) > 0.0)
+                mExtSettings->mAmount = (size_t) (atof(optarg) * 100.0);
+	    else
+	        infinitetime = 1;
             break;
 
         case 'u': // UDP instead of TCP
-	    setUDP( mExtSettings );
+	    setUDP(mExtSettings);
             break;
 
         case 'v': // print version and exit
-	    fprintf( stderr, "%s", version );
+	    fprintf(stderr, "%s", version);
             exit(1);
             break;
 
         case 'w': // TCP window size (socket buffer size)
             mExtSettings->mTCPWin = byte_atoi(optarg);
-
-            if ( mExtSettings->mTCPWin < 2048 ) {
-                fprintf( stderr, warn_window_small, mExtSettings->mTCPWin );
+            if (mExtSettings->mTCPWin < 2048) {
+                fprintf(stderr, warn_window_small, mExtSettings->mTCPWin);
             }
             break;
 
         case 'x': // Limit Reports
-            while ( *optarg != '\0' ) {
-                switch ( *optarg ) {
+            while (*optarg != '\0') {
+                switch (*optarg) {
                     case 's':
                     case 'S':
-                        setNoSettReport( mExtSettings );
+                        setNoSettReport(mExtSettings);
                         break;
                     case 'c':
                     case 'C':
-                        setNoConnReport( mExtSettings );
+                        setNoConnReport(mExtSettings);
                         break;
                     case 'd':
                     case 'D':
-                        setNoDataReport( mExtSettings );
+                        setNoDataReport(mExtSettings);
                         break;
                     case 'v':
                     case 'V':
-                        setNoServReport( mExtSettings );
+                        setNoServReport(mExtSettings);
                         break;
                     case 'm':
                     case 'M':
-                        setNoMultReport( mExtSettings );
+                        setNoMultReport(mExtSettings);
                         break;
                     default:
                         fprintf(stderr, warn_invalid_report, *optarg);
@@ -583,115 +652,114 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
                 optarg++;
             }
             break;
-#ifdef HAVE_SCHED_SETSCHEDULER
+#if HAVE_SCHED_SETSCHEDULER
         case 'z': // Use realtime scheduling
-	    setRealtime( mExtSettings );
+	    setRealtime(mExtSettings);
             break;
 #endif
 
         case 'y': // Reporting Style
-            switch ( *optarg ) {
-                case 'c':
-                case 'C':
-                    mExtSettings->mReportMode = kReport_CSV;
-                    break;
-                default:
-                    fprintf( stderr, warn_invalid_report_style, optarg );
+            switch (*optarg) {
+	    case 'c':
+	    case 'C':
+		mExtSettings->mReportMode = kReport_CSV;
+		setNoSettReport(mExtSettings);
+		setNoConnReport(mExtSettings);
+		break;
+	    default:
+		fprintf(stderr, warn_invalid_report_style, optarg);
             }
             break;
-
 
             // more esoteric options
         case 'B': // specify bind address
 	    if (mExtSettings->mLocalhost == NULL) {
-		mExtSettings->mLocalhost = new char[ strlen( optarg ) + 1 ];
-		strcpy( mExtSettings->mLocalhost, optarg );
+		mExtSettings->mLocalhost = new char[ strlen(optarg) + 1 ];
+		strcpy(mExtSettings->mLocalhost, optarg);
 	    }
             break;
 
         case 'C': // Run in Compatibility Mode, i.e. no intial nor final header messaging
-            setCompat( mExtSettings );
-            if ( mExtSettings->mMode != kTest_Normal ) {
-                fprintf( stderr, warn_invalid_compatibility_option,
-                        ( mExtSettings->mMode == kTest_DualTest ?
-                          'd' : 'r' ) );
+            setCompat(mExtSettings);
+            if (mExtSettings->mMode != kTest_Normal) {
+                fprintf(stderr, warn_invalid_compatibility_option,
+                        (mExtSettings->mMode == kTest_DualTest ?
+                          'd' : 'r'));
                 mExtSettings->mMode = kTest_Normal;
             }
             break;
 
         case 'D': // Run as a daemon
-            setDaemon( mExtSettings );
+            setDaemon(mExtSettings);
             break;
 
         case 'F' : // Get the input for the data stream from a file
-            if ( mExtSettings->mThreadMode != kMode_Client ) {
-                fprintf( stderr, warn_invalid_server_option, option );
+            if (mExtSettings->mThreadMode != kMode_Client) {
+                fprintf(stderr, warn_invalid_server_option, option);
                 break;
             }
 
-            setFileInput( mExtSettings );
+            setFileInput(mExtSettings);
             mExtSettings->mFileName = new char[strlen(optarg)+1];
-            strcpy( mExtSettings->mFileName, optarg);
+            strcpy(mExtSettings->mFileName, optarg);
             break;
 
         case 'H' : // Get the SSM host (or Source per the S,G)
-            if ( mExtSettings->mThreadMode == kMode_Client ) {
-                fprintf( stderr, warn_invalid_client_option, option );
+            if (mExtSettings->mThreadMode == kMode_Client) {
+                fprintf(stderr, warn_invalid_client_option, option);
                 break;
             }
             mExtSettings->mSSMMulticastStr = new char[strlen(optarg)+1];
-            strcpy( mExtSettings->mSSMMulticastStr, optarg);
-            setSSMMulticast( mExtSettings );
+            strcpy(mExtSettings->mSSMMulticastStr, optarg);
+            setSSMMulticast(mExtSettings);
             break;
 
         case 'I' : // Set the stdin as the input source
-            if ( mExtSettings->mThreadMode != kMode_Client ) {
-                fprintf( stderr, warn_invalid_server_option, option );
+            if (mExtSettings->mThreadMode != kMode_Client) {
+                fprintf(stderr, warn_invalid_server_option, option);
                 break;
             }
 
-            setFileInput( mExtSettings );
-            setSTDIN( mExtSettings );
+            setFileInput(mExtSettings);
+            setSTDIN(mExtSettings);
             mExtSettings->mFileName = new char[strlen("<stdin>")+1];
-            strcpy( mExtSettings->mFileName,"<stdin>");
+            strcpy(mExtSettings->mFileName,"<stdin>");
             break;
 
         case 'L': // Listen Port (bidirectional testing client-side)
-            if ( mExtSettings->mThreadMode != kMode_Client ) {
-                fprintf( stderr, warn_invalid_server_option, option );
+            if (mExtSettings->mThreadMode != kMode_Client) {
+                fprintf(stderr, warn_invalid_server_option, option);
                 break;
             }
-
-            mExtSettings->mListenPort = atoi( optarg );
+            mExtSettings->mListenPort = atoi(optarg);
             break;
 
         case 'M': // specify TCP MSS (maximum segment size)
-            mExtSettings->mMSS = byte_atoi( optarg );
+            mExtSettings->mMSS = byte_atoi(optarg);
+            setPrintMSS(mExtSettings);
             break;
 
         case 'N': // specify TCP nodelay option (disable Jacobson's Algorithm)
-            setNoDelay( mExtSettings );
+            setNoDelay(mExtSettings);
             break;
 
         case 'P': // number of client threads
 #ifdef HAVE_THREAD
-            mExtSettings->mThreads = atoi( optarg );
+            mExtSettings->mThreads = atoi(optarg);
 #else
-            if ( mExtSettings->mThreadMode != kMode_Server ) {
-                fprintf( stderr, warn_invalid_single_threaded, option );
+            if (mExtSettings->mThreadMode != kMode_Server) {
+                fprintf(stderr, warn_invalid_single_threaded, option);
             } else {
-                mExtSettings->mThreads = atoi( optarg );
+                mExtSettings->mThreads = atoi(optarg);
             }
 #endif
             break;
 #ifdef WIN32
         case 'R':
-            setRemoveService( mExtSettings );
+            setRemoveService(mExtSettings);
             break;
 #else
         case 'R':
-	    fprintf( stderr, "The --reverse option is currently not supported\n");
-	    exit(1);
 	    setReverse(mExtSettings);
             break;
 #endif
@@ -700,166 +768,227 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
             // TODO use a function that understands base-2
             // the zero base here allows the user to specify
             // "0x#" hex, "0#" octal, and "#" decimal numbers
-            mExtSettings->mTOS = strtol( optarg, NULL, 0 );
+            mExtSettings->mTOS = strtol(optarg, NULL, 0);
             break;
 
         case 'T': // time-to-live for both unicast and multicast
-            mExtSettings->mTTL = atoi( optarg );
+            mExtSettings->mTTL = atoi(optarg);
             break;
 
         case 'U': // single threaded UDP server
-            setSingleUDP( mExtSettings );
+	    setUDP(mExtSettings);
+            setSingleUDP(mExtSettings);
+            setSingleClient(mExtSettings);
             break;
 
         case 'V': // IPv6 Domain
 #ifdef HAVE_IPV6
-            setIPV6( mExtSettings );
+            setIPV6(mExtSettings);
 #else
-	    fprintf( stderr, "The --ipv6_domain (-V) option is not enabled in this build.\n");
+	    fprintf(stderr, "The --ipv6_domain (-V) option is not enabled in this build.\n");
 	    exit(1);
 #endif
             break;
 
         case 'W' :
-            setSuggestWin( mExtSettings );
-            fprintf( stderr, "The -W option is not available in this release\n");
+            setSuggestWin(mExtSettings);
+            fprintf(stderr, "The -W option is not available in this release\n");
             break;
 
         case 'X' :
-            setPeerVerDetect( mExtSettings );
+            setPeerVerDetect(mExtSettings);
             break;
 
         case 'Z':
 #ifdef TCP_CONGESTION
-	    setCongestionControl( mExtSettings );
+	    setCongestionControl(mExtSettings);
 	    mExtSettings->mCongestion = new char[strlen(optarg)+1];
-	    strcpy( mExtSettings->mCongestion, optarg);
+	    strcpy(mExtSettings->mCongestion, optarg);
 #else
-            fprintf( stderr, "The -Z option is not available on this operating system\n");
+            fprintf(stderr, "The -Z option is not available on this operating system\n");
 #endif
 	    break;
 
         case 0:
-	    if (seqno64b) {
-		seqno64b = 0;
-#if (HAVE_SEQNO64b && (HAVE_QUAD_SUPPORT || HAVE_INT64_T))
-		setSeqNo64b(mExtSettings);
-#else
-		fprintf( stderr, "WARNING: 64 bit sequence numbers not supported\n");
-#endif
-	    }
 	    if (incrdstip) {
 		incrdstip = 0;
 		setIncrDstIP(mExtSettings);
 	    }
 	    if (txstarttime) {
-#ifdef HAVE_CLOCK_NANOSLEEP
 		long seconds;
+		long usecs;
 		int match = 0;
-		char f0 = '0';
-		char f1 = '0';
-		char f2 = '0';
-		char f3 = '0';
-		char f4 = '0';
-		char f5 = '0';
-		char f6 = '0';
-		char f7 = '0';
-		char f8 = '0';
 		txstarttime = 0;
 		setTxStartTime(mExtSettings);
-		match = sscanf(optarg,"%ld.%c%c%c%c%c%c%c%c%c", &seconds, &f0,&f1,&f2,&f3,&f4,&f5,&f6,&f7,&f8);
-		if (match > 1) {
-		    int i;
-		    mExtSettings->txstart.tv_sec = seconds;
-		    i = f0 - '0'; mExtSettings->txstart.tv_nsec  = i * 100000000;
-		    i = f1 - '0'; mExtSettings->txstart.tv_nsec += i * 10000000;
-		    i = f2 - '0'; mExtSettings->txstart.tv_nsec += i * 1000000;
-		    i = f3 - '0'; mExtSettings->txstart.tv_nsec += i * 100000;
-		    i = f4 - '0'; mExtSettings->txstart.tv_nsec += i * 10000;
-		    i = f5 - '0'; mExtSettings->txstart.tv_nsec += i * 1000;
-		    i = f6 - '0'; mExtSettings->txstart.tv_nsec += i * 100;
-		    i = f7 - '0'; mExtSettings->txstart.tv_nsec += i * 10;
-		    i = f8 - '0'; mExtSettings->txstart.tv_nsec += i;
-		} else if (match == 1) {
-		    mExtSettings->txstart.tv_sec = seconds;
-		    mExtSettings->txstart.tv_nsec = 0;
-		} else {
+		setEnhanced(mExtSettings);
+		match = sscanf(optarg,"%ld.%6ld", &seconds, &usecs);
+		mExtSettings->txstart_epoch.tv_usec = 0;
+		Timestamp now;
+		switch (match) {
+		case 2:
+		    mExtSettings->txstart_epoch.tv_usec = usecs;
+		case 1:
+		    mExtSettings->txstart_epoch.tv_sec = seconds;
+		    if ((now.getSecs() - seconds) > 0) {
+			fprintf(stderr, "WARNING: start time of before now ignored\n");
+			unsetTxStartTime(mExtSettings);
+		    }
+		    break;
+		default:
+		    unsetTxStartTime(mExtSettings);
 		    fprintf(stderr, "WARNING: invalid --txstart-time format\n");
 		}
+	    }
+	    if (noconnectsync) {
+#ifdef HAVE_THREAD
+		noconnectsync = 0;
+		setNoConnectSync(mExtSettings);
 #else
-	        fprintf(stderr, "WARNING: --txstart-time not supported\n");
+	        fprintf(stderr, "WARNING: --no-connect-sync requires thread support and not supported\n");
 #endif
+	    }
+	    if (txholdback) {
+		txholdback = 0;
+	        char *end;
+		Timestamp holdbackdelay;
+		double delay = strtof(optarg, &end);
+		if (*end != '\0') {
+		    fprintf (stderr, "Invalid value of '%s' for --tcp-holdback time\n", optarg);
+		} else {
+		    holdbackdelay.set(delay);
+		    mExtSettings->txholdback_timer.tv_sec = holdbackdelay.getSecs();
+		    mExtSettings->txholdback_timer.tv_usec = (holdbackdelay.getUsecs());
+		    setTxHoldback(mExtSettings);
+		    setEnhanced(mExtSettings);
+		}
 	    }
 	    if (triptime) {
 		triptime = 0;
 		setTripTime(mExtSettings);
 	    }
-	    if (udphistogram) {
-		udphistogram = 0;
-		setUDPHistogram( mExtSettings );
-		setEnhanced( mExtSettings );
-		// The following are default values which
-		mExtSettings->mUDPbins = 1000;
-		mExtSettings->mUDPbinsize = 1;
-		mExtSettings->mUDPunits = 0;
-		mExtSettings->mUDPci_lower = 5;
-		mExtSettings->mUDPci_upper = 95;
+	    if (writeack) {
+		writeack = 0;
+		setWriteAck(mExtSettings);
 		if (optarg) {
-		    mExtSettings->mUDPHistogramStr = new char[ strlen( optarg ) + 1 ];
-		    strcpy(mExtSettings->mUDPHistogramStr, optarg);
+		    mExtSettings->mWriteAckLen = byte_atoi(optarg);
+		}
+	    }
+	    if (noudpfin) {
+		noudpfin = 0;
+		setNoUDPfin(mExtSettings);
+	    }
+	    if (connectonly) {
+		connectonly = 0;
+		setConnectOnly(mExtSettings);
+		unsetNoConnReport(mExtSettings);
+		if (optarg) {
+		  mExtSettings->connectonly_count = atoi(optarg);
+		} else {
+		  mExtSettings->connectonly_count = -1;
+		}
+	    }
+	    if (connectretry) {
+		connectretry = 0;
+		mExtSettings->mConnectRetries = atoi(optarg);
+	    }
+	    if (sumonly) {
+		sumonly = 0;
+		setSumOnly(mExtSettings);
+	    }
+	    if (rxhistogram) {
+		rxhistogram = 0;
+		setRxHistogram(mExtSettings);
+		setEnhanced(mExtSettings);
+		// set default histogram settings, milliseconds bins between 0 and 1 secs
+		mExtSettings->mRXbins = 1000;
+		mExtSettings->mRXbinsize = 1;
+		mExtSettings->mRXunits = 3;
+		mExtSettings->mRXci_lower = 5;
+		mExtSettings->mRXci_upper = 95;
+		if (optarg) {
+		    mExtSettings->mRxHistogramStr = new char[ strlen(optarg) + 1 ];
+		    strcpy(mExtSettings->mRxHistogramStr, optarg);
 		}
 	    }
 	    if (reversetest) {
 		reversetest = 0;
-		fprintf( stderr, "WARNING: The --reverse option is currently not supported\n");
-		exit(1);
 		setReverse(mExtSettings);
+	    }
+	    if (fullduplextest) {
+		fullduplextest = 0;
+		setFullDuplex(mExtSettings);
 	    }
 	    if (fqrate) {
 #if defined(HAVE_DECL_SO_MAX_PACING_RATE)
 	        fqrate=0;
 		setFQPacing(mExtSettings);
-		mExtSettings->mFQPacingRate = (unsigned int) (bitorbyte_atoi(optarg) / 8);
+		mExtSettings->mFQPacingRate = (uintmax_t) (bitorbyte_atoi(optarg) / 8);
 #else
-		fprintf( stderr, "WARNING: The --fq-rate option is not supported\n");
+		fprintf(stderr, "WARNING: The --fq-rate option is not supported\n");
 #endif
 	    }
-
-#ifdef HAVE_ISOCHRONOUS
 	    if (isochronous) {
 		isochronous = 0;
-		setEnhanced( mExtSettings );
+		setEnhanced(mExtSettings);
 		setIsochronous(mExtSettings);
 		// The following are default values which
 		// may be overwritten during modal parsing
 		mExtSettings->mFPS = 60.0;
 		mExtSettings->mMean = 20000000.0;
 		mExtSettings->mVariance = 0.0;
-		mExtSettings->mBurstIPG = 0.005;
+		mExtSettings->mBurstIPG = 5e-6;
 		if (optarg) {
-		    mExtSettings->mIsochronousStr = new char[ strlen( optarg ) + 1 ];
-		    strcpy( mExtSettings->mIsochronousStr, optarg );
+		    mExtSettings->mIsochronousStr = new char[ strlen(optarg) + 1 ];
+		    strcpy(mExtSettings->mIsochronousStr, optarg);
 		}
 	    }
 	    if (burstipg) {
 		burstipg = 0;
-		burstipg_set = 1;
+		setIPG(mExtSettings);
 		char *end;
 		mExtSettings->mBurstIPG = strtof(optarg,&end);
 		if (*end != '\0') {
-		    fprintf (stderr, "Invalid value of '%s' for --ipg\n", optarg);
+		    fprintf (stderr, "ERRPORE: Invalid value of '%s' for --ipg\n", optarg);
+		    exit(1);
 		}
 	    }
-#endif
-	    if (setcport) {
-		setcport = 0;
-		mExtSettings->mBindPort = atoi(optarg);
+	    if (numreportstructs) {
+		numreportstructs = 0;
+		mExtSettings->numreportstructs = byte_atoi(optarg);
 	    }
 	    break;
         default: // ignore unknown
             break;
     }
 } // end Interpret
+
+static void strip_v6_brackets (char *v6addr) {
+    char * results;
+    if (v6addr && (*v6addr ==  '[') && ((results = strtok(v6addr, "]")) != NULL)) {
+	int len = strlen(v6addr);
+	for (int jx = 0; jx < len; jx++) {
+	    v6addr[jx]= v6addr[jx + 1];
+	}
+    }
+}
+
+static char * isv6_bracketed_port (char *v6addr) {
+    char *results = NULL;
+    if (v6addr && (*v6addr ==  '[') && ((results = strtok(v6addr, "]")) != NULL)) {
+	strip_v6_brackets(v6addr);
+	if (results[0]==':') {
+	    return ++results;
+	}
+    }
+    return NULL;
+}
+static char * isv4_port (char *v4addr) {
+    char *results = NULL;
+    if (((results = strtok(v4addr, ":")) != NULL) && ((results = strtok(NULL, ":")) != NULL)) {
+	return results;
+    }
+    return NULL;
+}
 
 
 //  The commmand line options are position independent and hence some settings become "modal"
@@ -871,14 +1000,15 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
 //
 //  Since Settings_Interpret() will set all the *individual* options and flags
 //  then the below code (per the example UDP, v4 or v6, and not -l) can set final
-//  values, e.g. a correct default mBufLen.
+//  values, e.g. a correct default mBufLen. Other examples that need this are multicast
+//  socket or not,-B local bind port parsing, and when to use the default UDP offered load
 //
-//  Other things that need this are multicast socket or not,
-//  -B local bind port parsing, and when to use the default UDP offered load
-void Settings_ModalOptions( thread_Settings *mExtSettings ) {
+//  Also apply the bail out or exit conditions if the user requested mutually exclusive
+//  or incompatabile options
+void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
     char *results;
     // Handle default read/write sizes based on v4, v6, UDP or TCP
-    if ( !isBuflenSet( mExtSettings ) ) {
+    if (!isBuflenSet(mExtSettings)) {
 	if (isUDP(mExtSettings)) {
 	    if (isIPV6(mExtSettings) && mExtSettings->mThreadMode == kMode_Client) {
 		mExtSettings->mBufLen = kDefault_UDPBufLenV6;
@@ -893,67 +1023,240 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
     if (!isBWSet(mExtSettings) && isUDP(mExtSettings)) {
 	mExtSettings->mUDPRate = kDefault_UDPRate;
     }
-
-    if (mExtSettings->mThreadMode != kMode_Client) {
-	if (isVaryLoad(mExtSettings)) {
-	    fprintf(stderr, "option of variance ignored as not supported on the server\n");
+    if (isTripTime(mExtSettings) && (isReverse(mExtSettings) || \
+				     isFullDuplex(mExtSettings) || \
+				     (mExtSettings->mMode != kTest_Normal))) {
+	setEnhanced(mExtSettings);
+    }
+    // Warnings
+    if (mExtSettings->mThreadMode == kMode_Client) {
+	if (isModeTime(mExtSettings) && infinitetime) {
+	    unsetModeTime(mExtSettings);
+	    setModeInfinite(mExtSettings);
+	    fprintf(stderr, "WARNING: client will send traffic forever or until an external signal (e.g. SIGINT or SIGTERM) occurs to stop it\n");
 	}
-	if (isTxStartTime(mExtSettings)) {
-	    unsetTxStartTime(mExtSettings);
-	    fprintf(stderr, "option of --txstart-time ignored as not supported on the server\n");
+	if (isFullDuplex(mExtSettings) && isCongestionControl(mExtSettings)) {
+	    fprintf(stderr, "WARNING: tcp congestion control will only be applied on transmit traffic, use -Z on the server\n");
 	}
     }
-
-
-    // UDP histogram settings
-    if (isUDPHistogram(mExtSettings) && isUDP(mExtSettings) && mExtSettings->mThreadMode != kMode_Client) {
-	if (((results = strtok(mExtSettings->mUDPHistogramStr, ",")) != NULL) && !strcmp(results,mExtSettings->mUDPHistogramStr)) {
+    // Bail outs
+    bool bail = false;
+    // compat mode doesn't support these test settings
+    int compat_nosupport = (isReverse(mExtSettings) | isFullDuplex(mExtSettings) | isTripTime(mExtSettings) | isVaryLoad(mExtSettings) \
+			    | isRxHistogram(mExtSettings) |  isIsochronous(mExtSettings) \
+			    | isEnhanced(mExtSettings) | (mExtSettings->mMode != kTest_Normal));
+    if (isCompat(mExtSettings) && compat_nosupport) {
+	fprintf(stderr, "ERROR: compatibility mode not supported with the requested with options\n");
+	bail = true;
+    }
+    if (mExtSettings->mThreadMode == kMode_Client) {
+	if (isSumOnly(mExtSettings) && !(mExtSettings->mThreads > 1)) {
+	    fprintf(stderr, "ERROR: option of --sum-only requires -P greater than 1\n");
+	    bail = true;
+	}
+        if (isUDP(mExtSettings)) {
+	    if (isPeerVerDetect(mExtSettings)) {
+		fprintf(stderr, "ERROR: option of -X or --peer-detect not supported with -u UDP\n");
+		bail = true;
+	    }
+	    if (isConnectOnly(mExtSettings)) {
+		fprintf(stderr, "ERROR: option of --connect-only not supported with -u UDP\n");
+		bail = true;
+	    }
+	    if (isTxHoldback(mExtSettings)) {
+		fprintf(stderr, "ERROR: option of --txdelay-time is not supported with -u UDP\n");
+		bail = true;
+	    }
+	    if (isIPG(mExtSettings) && isBWSet(mExtSettings)) {
+		fprintf(stderr, "ERROR: options of --b and --ipg cannot be applied together\n");
+		bail = true;
+	    }
+	    if (mExtSettings->mBurstIPG < 0.0) {
+		fprintf(stderr, "ERROR: option --ipg must be a positive value\n");
+		bail = true;
+	    }
+	    if (mExtSettings->mConnectRetries > 0) {
+		fprintf(stderr, "ERROR: option --connect-retries not supported with -u UDP\n");
+		bail = true;
+	    }
+	    {
+		double delay_target;
+		if (isIPG(mExtSettings)) {
+		    delay_target = mExtSettings->mBurstIPG * 1e9;  // convert from seconds to nanoseconds
+		} else {
+		    // compute delay target in units of nanoseconds
+		    if (mExtSettings->mUDPRateUnits == kRate_BW) {
+			// compute delay for bandwidth restriction, constrained to [0,max] seconds
+			delay_target = (mExtSettings->mBufLen * 8e9) / mExtSettings->mUDPRate;
+		    } else {
+			delay_target = 1e9 / mExtSettings->mUDPRate;
+		    }
+		}
+		if (delay_target < 0  ||
+		    delay_target > MAXIPGSECS * 1e9) {
+		    fprintf(stderr, "ERROR: IPG delay target of %.1f secs too large (max value is %d secs)\n", (delay_target / 1e9), MAXIPGSECS);
+		    bail = true;
+		}
+	    }
+	} else {
+	    if (isIPG(mExtSettings)) {
+		fprintf(stderr, "ERROR: option --ipg requires -u UDP\n");
+		bail = true;
+	    }
+	    if (isNoUDPfin(mExtSettings)) {
+		fprintf(stderr, "ERROR: option --no-udp-fin requires -u UDP\n");
+		bail = true;
+	    }
+	    if (isTxHoldback(mExtSettings)) {
+		Timestamp now;
+		if (mExtSettings->txholdback_timer.tv_sec > MAXDIFFTXDELAY) {
+		    fprintf(stdout,"ERROR: Fail because --txdelay-time is not within %d seconds of now\n", MAXDIFFTXDELAY);
+		    bail = true;
+		}
+		if (isConnectOnly(mExtSettings)) {
+		    fprintf(stdout,"ERROR: Fail because --txdelay-time and --connect-only cannot be applied together\n");
+		    bail = true;			;
+		}
+	    }
+	}
+	if (isTxStartTime(mExtSettings)) {
+	    Timestamp now;
+	    if ((mExtSettings->txstart_epoch.tv_sec- now.getSecs()) > MAXDIFFTXSTART) {
+		fprintf(stdout,"ERROR: Fail because --txstart-time is not within %d seconds of now\n", MAXDIFFTXSTART);
+		bail = true;
+	    }
+	}
+	if (isRxHistogram(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of --histograms is not supported on the client\n");
+	    bail = true;
+	}
+	if (isCongestionControl(mExtSettings) && isReverse(mExtSettings)) {
+	    fprintf(stderr, "ERROR: tcp congestion control -Z and --reverse cannot be applied together\n");
+	    bail = true;
+	}
+	{
+	    int one_only = 0;
+	    if (isFullDuplex(mExtSettings))
+		one_only++;
+	    if (isReverse(mExtSettings))
+		one_only++;
+            if (mExtSettings->mMode != kTest_Normal)
+		one_only++;
+	    if (one_only > 1) {
+		fprintf(stderr, "ERROR: options of --full-duplex, --reverse, -d and -r are mutually exclusive\n");
+		bail = true;
+	    }
+	}
+	if (isBWSet(mExtSettings) && isIsochronous(mExtSettings)) {
+	    fprintf(stderr, "ERROR: options of --b and --isochronous cannot be applied together\n");
+	    bail = true;
+	}
+    } else {
+        if (isTripTime(mExtSettings)) {
+            fprintf(stderr, "ERROR: setting of option --trip-times is not supported on the server\n");
+	    bail = true;
+	}
+	if (isVaryLoad(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of variance per -b is not supported on the server\n");
+	    bail = true;
+	}
+	if (isTxStartTime(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of --txstart-time is not supported on the server\n");
+	    bail = true;
+	}
+	if (isTxHoldback(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of --txdelay-time is not supported on the server\n");
+	    bail = true;
+	}
+        if (isConnectOnly(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of --connect-only is not supported on the server\n");
+	    bail = true;
+	}
+	if (isIPG(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of --ipg is not supported on the server\n");
+	    bail = true;
+	}
+	if (isIsochronous(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of --isochronous is not supported on the server\n");
+	    bail = true;
+	}
+	if (isFullDuplex(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of --full-duplex is not supported on the server\n");
+	    bail = true;
+	}
+	if (isReverse(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of --reverse is not supported on the server\n");
+	    bail = true;
+	}
+	if (isIncrDstIP(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of --incr-dstpip is not supported on the server\n");
+	    bail = true;
+	}
+	if (isFQPacing(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of --fq-rate is not supported on the server\n");
+	    bail = true;
+	}
+	if (isNoUDPfin(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of --no-udp-fin is not supported on the server\n");
+	    bail = true;
+	}
+	if (isPeerVerDetect(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of -X or --peer-detect not supported on the server\n");
+	    bail = true;
+	}
+	if (mExtSettings->mConnectRetries > 0) {
+	    fprintf(stderr, "ERROR: option --connect-retries not supported on the server\n");
+	    bail = true;
+	}
+    }
+    if (bail)
+	exit(1);
+    // UDP histogram optional settings
+    if (isRxHistogram(mExtSettings) && (mExtSettings->mThreadMode != kMode_Client) && mExtSettings->mRxHistogramStr) {
+	// check for optional arguments to change histogram settings
+	if (((results = strtok(mExtSettings->mRxHistogramStr, ",")) != NULL) && !strcmp(results,mExtSettings->mRxHistogramStr)) {
+	    // scan for unit specifier
 	    char *tmp = new char [strlen(results) + 1];
 	    strcpy(tmp, results);
-	    // scan for microseconds as units
 	    if ((strtok(tmp, "u") != NULL) && strcmp(results,tmp)) {
-		mExtSettings->mUDPunits = 1;
+		mExtSettings->mRXunits = 6;  // units is microseconds
+	    } else {
+		strcpy(tmp, results);
+		if ((strtok(tmp, "m") != NULL) && strcmp(results,tmp)) {
+		    mExtSettings->mRXunits = 3;  // units is milliseconds
+		}
 	    }
-	    mExtSettings->mUDPbinsize = atoi(tmp);
+	    mExtSettings->mRXbinsize = atoi(tmp);
 	    delete [] tmp;
 	    if ((results = strtok(results+strlen(results)+1, ",")) != NULL) {
-		mExtSettings->mUDPbins = byte_atoi(results);
+		mExtSettings->mRXbins = byte_atoi(results);
 		if ((results = strtok(NULL, ",")) != NULL) {
-		    mExtSettings->mUDPci_lower = atoi(results);
+		    mExtSettings->mRXci_lower = atof(results);
 		    if ((results = strtok(NULL, ",")) != NULL) {
-			mExtSettings->mUDPci_upper = atoi(results);
+			mExtSettings->mRXci_upper = atof(results);
 		    }
 		}
 	    }
 	}
     }
-    // L2 settings
-    if (l2checks && isUDP(mExtSettings)) {
-	l2checks = 0;
-
-	// Client controls hash or not
-	if (mExtSettings->mThreadMode == kMode_Client) {
-	    setL2LengthCheck(mExtSettings);
-	} else {
+    if (isUDP(mExtSettings)) {
+	// L2 settings
+	if (l2checks && isUDP(mExtSettings)) {
+	    l2checks = 0;
+	    // Client controls hash or not
+	    if (mExtSettings->mThreadMode == kMode_Client) {
+		setL2LengthCheck(mExtSettings);
+	    } else {
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
-	  // Request server to do length checks
-	  setL2LengthCheck(mExtSettings);
+		// Request server to do length checks
+		setL2LengthCheck(mExtSettings);
 #else
-	  fprintf(stderr, "--l2checks not supported on this platform\n");
+		fprintf(stderr, "WARNING: option --l2checks not supported on this platform\n");
 #endif
+	    }
 	}
-    }
-
-
-#ifdef HAVE_ISOCHRONOUS
-    if (mExtSettings->mBurstIPG > 0.0) {
-	if (!isIsochronous(mExtSettings)) {
-	    fprintf(stderr, "option --ipg requires the --isochronous option\n");
-	    exit(1);
-	}
-	if (mExtSettings->mThreadMode != kMode_Client) {
-	    fprintf(stderr, "option --ipg only supported on clients\n");
-	    exit(1);
+	if (isFullDuplex(mExtSettings)) {
+	    setNoUDPfin(mExtSettings);
 	}
     }
     if (isIsochronous(mExtSettings) && mExtSettings->mIsochronousStr) {
@@ -966,82 +1269,129 @@ void Settings_ModalOptions( thread_Settings *mExtSettings ) {
 		mExtSettings->mFPS = atof(results);
 		if ((results = strtok(NULL, ",")) != NULL) {
 		    mExtSettings->mMean = bitorbyte_atof(results);
+		    if (mExtSettings->mMean < 0) {
+		        mExtSettings->mMean *= -8 * mExtSettings->mBufLen * mExtSettings->mFPS;
+		    }
 		    if ((results = strtok(NULL, ",")) != NULL) {
-			mExtSettings->mVariance = bitorbyte_atof(results);
+		        mExtSettings->mVariance = bitorbyte_atof(results);
 		    }
 		} else {
 		    mExtSettings->mMean = 20000000.0;
 		    mExtSettings->mVariance = 0.0;
 		}
 	    } else {
-		fprintf(stderr, "Invalid --isochronous value, format is <fps>:<mean>,<variance> (e.g. 60:18M,1m)\n");
+		fprintf(stderr, "WARNING: Invalid --isochronous value, format is <fps>:<mean>,<variance> (e.g. 60:18M,1m)\n");
 	    }
 	}
     }
-#endif
-    // Check for further mLocalhost (-B) parsing:
-    if ( mExtSettings->mLocalhost) {
-	// Check for -B device
+    // See if the Write ack size should equal the write size (vs a configured or a burst size)
+    if (isWriteAck(mExtSettings) && !mExtSettings->mWriteAckLen && \
+	(mExtSettings->mThreadMode == kMode_Client) && !isIsochronous(mExtSettings))
+	mExtSettings->mWriteAckLen = mExtSettings->mBufLen;
+
+    // Check for further mLocalhost (-B) and <dev> requests
+    // full addresses look like 192.168.1.1:6001%eth0 or [2001:e30:1401:2:d46e:b891:3082:b939]:6001%eth0
+    iperf_sockaddr tmp;
+    // Parse -B addresses
+    if (mExtSettings->mLocalhost) {
 	if (((results = strtok(mExtSettings->mLocalhost, "%")) != NULL) && ((results = strtok(NULL, "%")) != NULL)) {
-	    mExtSettings->mIfrname = new char[ strlen(results) + 1 ];
-	    strcpy( mExtSettings->mIfrname, results );
-	}
-	// Client local host parsing
-	if (mExtSettings->mThreadMode == kMode_Client ) {
-	    // v4 uses a colon as the delimeter for the local bind port, e.g. 192.168.1.1:6001
-	    if (!isIPV6(mExtSettings)) {
-		if (((results = strtok(mExtSettings->mLocalhost, ":")) != NULL) && ((results = strtok(NULL, ":")) != NULL)) {
-		    mExtSettings->mBindPort = atoi(results);
-		}
-		// v6 uses bracket notation, e.g. [2001:e30:1401:2:d46e:b891:3082:b939]:6001
-	    } else if (mExtSettings->mLocalhost[0] ==  '[') {
-		if ((results = strtok(mExtSettings->mLocalhost, "]")) != NULL) {
-		    results++;
-		    strcpy(mExtSettings->mLocalhost, results);
-		    if ((results = strtok(NULL, ":")) != NULL) {
-			mExtSettings->mBindPort = atoi(results);
-		    }
-		}
+	    mExtSettings->mIfrname = (char *) calloc(1,strlen(results) + 1);
+	    strcpy(mExtSettings->mIfrname, results);
+	    if (mExtSettings->mThreadMode == kMode_Client) {
+	        fprintf(stderr, "WARNING: Client cannot set bind device %s via -B consider using -c\n", mExtSettings->mIfrname);
+		free(mExtSettings->mIfrname);
+		mExtSettings->mIfrname = NULL;
 	    }
 	}
+	if (isIPV6(mExtSettings)) {
+	    results = isv6_bracketed_port(mExtSettings->mLocalhost);
+	} else {
+	    results = isv4_port(mExtSettings->mLocalhost);
+	}
+	if (results) {
+	    if (mExtSettings->mThreadMode == kMode_Client) {
+		mExtSettings->mBindPort = atoi(results);
+	    } else {
+		fprintf(stderr, "WARNING: port %s ignored - set receive port on server via -p or -L\n", results);
+	    }
+	}
+	// Check for multicast per the -B
+	SockAddr_setHostname(mExtSettings->mLocalhost, &tmp,
+			     (isIPV6(mExtSettings) ? 1 : 0));
+	if ((mExtSettings->mThreadMode != kMode_Client) && SockAddr_isMulticast(&tmp)) {
+	    setMulticast(mExtSettings);
+	} else if (SockAddr_isMulticast(&tmp)) {
+	    if (mExtSettings->mIfrname) {
+		free(mExtSettings->mIfrname);
+		mExtSettings->mIfrname = NULL;
+	    }
+	    fprintf(stderr, "WARNING: Client src addr (per -B) must be ip unicast\n");
+	}
     }
-    //  Check for a multicast
-    if ( mExtSettings->mThreadMode == kMode_Client ) {
-	// For client, check the destination host for multicast
+    // Parse client (-c) addresses for multicast, link-local and bind to device
+    if (mExtSettings->mThreadMode == kMode_Client) {
 	iperf_sockaddr tmp;
-	SockAddr_setHostname( mExtSettings->mHost, &tmp,
-			      (isIPV6( mExtSettings ) ? 1 : 0 ));
-	if ( SockAddr_isMulticast( &tmp ) ) {
-	    setMulticast( mExtSettings );
+	mExtSettings->mIfrnametx = NULL; // default off SO_BINDTODEVICE
+	if (((results = strtok(mExtSettings->mHost, "%")) != NULL) && ((results = strtok(NULL, "%")) != NULL)) {
+	    mExtSettings->mIfrnametx = (char *) calloc(1,strlen(results) + 1);
+	    strcpy(mExtSettings->mIfrnametx, results);
 	}
-    } else if (mExtSettings->mLocalhost != NULL) {
-	// For listener or server, check if a -B bind interface is set and for multicast
-	iperf_sockaddr tmp;
-	SockAddr_setHostname( mExtSettings->mLocalhost, &tmp,
-			      (isIPV6( mExtSettings ) ? 1 : 0 ));
-	if ( SockAddr_isMulticast( &tmp ) ) {
-	    setMulticast( mExtSettings );
+	if (isIPV6(mExtSettings))
+	    strip_v6_brackets(mExtSettings->mHost);
+	// get the socket address settings from the host, needed for link-local and multicast tests
+	SockAddr_setHostname(mExtSettings->mHost, &tmp,
+			     (isIPV6(mExtSettings) ? 1 : 0));
+	if (isIPV6(mExtSettings) && SockAddr_isLinklocal(&tmp)) {
+	    // link-local doesn't use SO_BINDTODEVICE but includes it in the host string
+	    // so stitch things back together and null the bind to name
+	    if (mExtSettings->mIfrnametx) {
+		strcat(mExtSettings->mHost, "%");
+		strcat(mExtSettings->mHost, mExtSettings->mIfrnametx);
+		free(mExtSettings->mIfrnametx);
+		mExtSettings->mIfrnametx = NULL;
+	    } else {
+		fprintf(stderr, "WARNING: usage of ipv6 link-local requires a device specifier, e.g. %s%%eth0\n", mExtSettings->mHost);
+	    }
 	}
+	if (SockAddr_isMulticast(&tmp)) {
+	    bail = false;
+	    if ((mExtSettings->mThreads > 1) && !isIncrDstIP(mExtSettings)) {
+		fprintf(stderr, "ERROR: client option of -P greater than 1 not supported with multicast address\n");
+		bail = true;
+	    } else if (isFullDuplex(mExtSettings) || isReverse(mExtSettings) || (mExtSettings->mMode != kTest_Normal)) {
+		fprintf(stderr, "ERROR: options of --full-duplex, --reverse, -d and -r not supported with multicast addresses\n");
+		bail = true;
+	    }
+	    if (bail)
+		exit(1);
+	    else
+		setMulticast(mExtSettings);
+	}
+#ifndef HAVE_DECL_SO_BINDTODEVICE
+	if (mExtSettings->mIfrnametx) {
+	    fprintf(stderr, "bind to device will be ignored because not supported\n");
+	    free(mExtSettings->mIfrnametx);
+	    mExtSettings->mIfrnametx=NULL;
+	}
+#endif
     }
 }
 
-void Settings_GetUpperCaseArg(const char *inarg, char *outarg) {
-
+void Settings_GetUpperCaseArg (const char *inarg, char *outarg) {
     int len = strlen(inarg);
     strcpy(outarg,inarg);
 
-    if ( (len > 0) && (inarg[len-1] >='a')
-         && (inarg[len-1] <= 'z') )
+    if ((len > 0) && (inarg[len-1] >='a')
+         && (inarg[len-1] <= 'z'))
         outarg[len-1]= outarg[len-1]+'A'-'a';
 }
 
-void Settings_GetLowerCaseArg(const char *inarg, char *outarg) {
-
+void Settings_GetLowerCaseArg (const char *inarg, char *outarg) {
     int len = strlen(inarg);
     strcpy(outarg,inarg);
 
-    if ( (len > 0) && (inarg[len-1] >='A')
-         && (inarg[len-1] <= 'Z') )
+    if ((len > 0) && (inarg[len-1] >='A')
+         && (inarg[len-1] <= 'Z'))
         outarg[len-1]= outarg[len-1]-'A'+'a';
 }
 
@@ -1050,40 +1400,86 @@ void Settings_GetLowerCaseArg(const char *inarg, char *outarg) {
  * Called to generate the settings to be passed to the Listener
  * instance that will handle dual testings from the client side
  * this should only return an instance if it was called on
- * the thread_Settings instance generated from the command line
+ * the struct thread_settings instance generated from the command line
  * for client side execution
  */
-void Settings_GenerateListenerSettings( thread_Settings *client, thread_Settings **listener ) {
-    if ( !isCompat( client ) && \
-         (client->mMode == kTest_DualTest || client->mMode == kTest_TradeOff) ) {
-        *listener = new thread_Settings;
-        memcpy(*listener, client, sizeof( thread_Settings ));
-	setCompat((*listener));
-        unsetDaemon( (*listener) );
-        if ( client->mListenPort != 0 ) {
+#define DUALTIMER_MS 300
+void Settings_GenerateListenerSettings (struct thread_Settings *client, struct thread_Settings **listener) {
+    if ((client->mMode == kTest_DualTest) || (client->mMode == kTest_TradeOff)) {
+	Settings_Copy(client, listener, 0);
+        unsetDaemon((*listener));
+        setCompat((*listener));
+        if (client->mListenPort != 0) {
             (*listener)->mPort   = client->mListenPort;
         } else {
             (*listener)->mPort   = client->mPort;
         }
-	if (client->mMode == kTest_TradeOff)
-	    (*listener)->mAmount   = 2 * client->mAmount;
+	if (client->mMode == kTest_TradeOff) {
+	    (*listener)->mAmount   = client->mAmount + DUALTIMER_MS;
+	} else if (client->mMode == kTest_DualTest) {
+	    (*listener)->mAmount   = client->mAmount / 2;
+	}
+	if ((client->mMode != kTest_Normal) && ((*listener)->mAmount  < DUALTIMER_MS)) {
+	    (*listener)->mAmount   = DUALTIMER_MS;
+	}
         (*listener)->mFileName   = NULL;
         (*listener)->mHost       = NULL;
         (*listener)->mLocalhost  = NULL;
         (*listener)->mOutputFileName = NULL;
         (*listener)->mMode       = kTest_Normal;
         (*listener)->mThreadMode = kMode_Listener;
-        if ( client->mHost != NULL ) {
-            (*listener)->mHost = new char[strlen( client->mHost ) + 1];
-            strcpy( (*listener)->mHost, client->mHost );
+        if (client->mHost != NULL) {
+            (*listener)->mHost = new char[strlen(client->mHost) + 1];
+            strcpy((*listener)->mHost, client->mHost);
         }
-        if ( client->mLocalhost != NULL ) {
-            (*listener)->mLocalhost = new char[strlen( client->mLocalhost ) + 1];
-            strcpy( (*listener)->mLocalhost, client->mLocalhost );
+        if (client->mLocalhost != NULL) {
+            (*listener)->mLocalhost = new char[strlen(client->mLocalhost) + 1];
+            strcpy((*listener)->mLocalhost, client->mLocalhost);
         }
-	(*listener)->mBufLen   = kDefault_UDPBufLen;
+	if (client->mBufLen <= 0) {
+	    if (isUDP((*listener))) {
+		(*listener)->mBufLen = kDefault_UDPBufLen;
+	    } else {
+		(*listener)->mBufLen = kDefault_TCPBufLen;
+	    }
+	} else {
+	    (*listener)->mBufLen = client->mBufLen;
+	}
+	setReport((*listener));
     } else {
         *listener = NULL;
+    }
+}
+
+void Settings_ReadClientSettingsIsoch (struct thread_Settings **client, struct client_hdrext_isoch_settings *hdr) {
+    (*client)->mFPS = ntohl(hdr->FPSl);
+    (*client)->mFPS += ntohl(hdr->FPSu) / (double)rMillion;
+    (*client)->mMean = ntohl(hdr->Meanl);
+    (*client)->mMean += ntohl(hdr->Meanu) / (double)rMillion;
+    (*client)->mVariance = ntohl(hdr->Variancel);
+    (*client)->mVariance += ntohl(hdr->Varianceu) / (double)rMillion;
+    (*client)->mBurstIPG = ntohl(hdr->BurstIPGl);
+    (*client)->mBurstIPG += ntohl(hdr->BurstIPGu) / (double)rMillion;
+}
+
+void Settings_ReadClientSettingsV1 (struct thread_Settings **client, struct client_hdr_v1 *hdr) {
+    (*client)->mTID = thread_zeroid();
+    (*client)->mPort = (unsigned short) ntohl(hdr->mPort);
+    (*client)->mThreads = 1;
+    if (hdr->mBufLen != 0) {
+	(*client)->mBufLen = ntohl(hdr->mBufLen);
+    }
+    (*client)->mAmount = ntohl(hdr->mAmount);
+    if (((*client)->mAmount & 0x80000000) > 0) {
+	setModeTime((*client));
+#ifndef WIN32
+	(*client)->mAmount |= 0xFFFFFFFF00000000LL;
+#else
+	(*client)->mAmount |= 0xFFFFFFFF00000000;
+#endif
+	(*client)->mAmount = -(*client)->mAmount;
+    } else {
+	unsetModeTime((*client));
     }
 }
 
@@ -1091,74 +1487,166 @@ void Settings_GenerateListenerSettings( thread_Settings *client, thread_Settings
  * Settings_GenerateClientSettings
  *
  * Called by the Listener to generate the settings to be used by clients
- * per things like dual tests.
+ * per things like dual tests. Set client pointer to null if a client isn't needed
  *
+ * Note: mBuf should already be filled out per the Listener's apply_client_settings
  */
-void Settings_GenerateClientSettings( thread_Settings *server,
-                                      thread_Settings **client,
-                                      client_hdr *hdr ) {
-    int extendflags = 0;
-    int flags = ntohl(hdr->base.flags);
-    if ((flags & HEADER_EXTEND) != 0 ) {
-	extendflags = ntohl(hdr->extend.flags);
-    }
-    if ( (flags & HEADER_VERSION1) != 0 ) {
-        *client = new thread_Settings;
-        memcpy(*client, server, sizeof( thread_Settings ));
-        setCompat( (*client) );
-        (*client)->mTID = thread_zeroid();
-        (*client)->mPort       = (unsigned short) ntohl(hdr->base.mPort);
-        (*client)->mThreads    = 1;
-        if ( hdr->base.bufferlen != 0 ) {
-            (*client)->mBufLen = ntohl(hdr->base.bufferlen);
-        }
-	(*client)->mAmount     = ntohl(hdr->base.mAmount);
-        if ( ((*client)->mAmount & 0x80000000) > 0 ) {
-            setModeTime( (*client) );
-#ifndef WIN32
-            (*client)->mAmount |= 0xFFFFFFFF00000000LL;
-#else
-            (*client)->mAmount |= 0xFFFFFFFF00000000;
+void Settings_GenerateClientSettings (struct thread_Settings *server, struct thread_Settings **client, void *mBuf) {
+    assert(server != NULL);
+    assert(mBuf != NULL);
+    uint32_t flags = isUDP(server) ? ntohl(*(uint32_t *)((char *)mBuf + sizeof(struct UDP_datagram))) : ntohl(*(uint32_t *)mBuf);
+    uint16_t upperflags = 0;
+    thread_Settings *reversed_thread = NULL;
+    *client = NULL;
+    bool v1test = (flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2);
+#ifdef HAVE_THREAD_DEBUG
+    if (v1test)
+	thread_debug("header set for a version 1 test");
 #endif
-            (*client)->mAmount = -(*client)->mAmount;
-        } else {
-	    unsetModeTime( (*client) );
+    if (isFullDuplex(server) || isServerReverse(server))
+	setTransferID(server, 0);
+    if (isFullDuplex(server) || v1test) {
+	Settings_Copy(server, client, 0);
+	reversed_thread = *client;
+	if (isFullDuplex(server) && !(flags & HEADER_VERSION1)) {
+	    setFullDuplex(reversed_thread);
+	} else {
+	    unsetFullDuplex(reversed_thread);
 	}
-        (*client)->mFileName   = NULL;
-        (*client)->mHost       = NULL;
-        (*client)->mLocalhost  = NULL;
-        (*client)->mOutputFileName = NULL;
-        (*client)->mMode       = ((flags & RUN_NOW) == 0 ?
-				  kTest_TradeOff : kTest_DualTest);
-        (*client)->mThreadMode = kMode_Client;
-	if ((flags & HEADER_EXTEND) != 0 ) {
-	    if ( !isBWSet(server) ) {
-		(*client)->mUDPRate = ntohl(hdr->extend.mRate);
-		if ((extendflags & UNITS_PPS) == UNITS_PPS) {
-		    (*client)->mUDPRateUnits = kRate_PPS;
-		} else {
-		    (*client)->mUDPRateUnits = kRate_BW;
-		}
+    } else if (isServerReverse(server)) {
+	reversed_thread = server;
+    } else {
+	assert(0);
+	return;
+    }
+    reversed_thread->mThreadMode = kMode_Client;
+
+    if (isUDP(server)) { // UDP test information passed in every packet per being stateless
+	struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) mBuf;
+	Settings_ReadClientSettingsV1(&reversed_thread, &hdr->base);
+	if (isFullDuplex(server) || v1test) {
+	    server->mAmount = reversed_thread->mAmount + (SLOPSECS * 100);
+	}
+	if (v1test) {
+	    setServerReverse(reversed_thread);
+	    if (flags & RUN_NOW) {
+		reversed_thread->mMode = kTest_DualTest;
+	    } else {
+		reversed_thread->mMode = kTest_TradeOff;
 	    }
 	}
-        if ( server->mLocalhost != NULL ) {
-            (*client)->mLocalhost = new char[strlen( server->mLocalhost ) + 1];
-            strcpy( (*client)->mLocalhost, server->mLocalhost );
-        }
-        (*client)->mHost = new char[REPORT_ADDRLEN];
-        if ( ((sockaddr*)&server->peer)->sa_family == AF_INET ) {
-            inet_ntop( AF_INET, &((sockaddr_in*)&server->peer)->sin_addr,
-                       (*client)->mHost, REPORT_ADDRLEN);
-        }
+	if (flags & HEADER_EXTEND) {
+	    reversed_thread->mUDPRate = ntohl(hdr->extend.lRate);
+#ifdef HAVE_INT64_T
+	    reversed_thread->mUDPRate |= ((uint64_t)(ntohl(hdr->extend.uRate) >> 8) << 32);
+#endif
+	    upperflags = ntohs(hdr->extend.upperflags);
+	    if ((upperflags & HEADER_UNITS_PPS) == HEADER_UNITS_PPS) {
+		reversed_thread->mUDPRateUnits = kRate_PPS;
+	    } else {
+		reversed_thread->mUDPRateUnits = kRate_BW;
+	    }
+	    reversed_thread->mTOS = ntohs(hdr->extend.tos);
+	    if (isIsochronous(server)) {
+		Settings_ReadClientSettingsIsoch(&reversed_thread, &hdr->isoch_settings);
+	    }
+	    if (upperflags & HEADER_FQRATESET) {
+		setFQPacing(reversed_thread);
+		reversed_thread->mFQPacingRate = ntohl(hdr->start_fq.fqratel);
+#ifdef HAVE_INT64_T
+		reversed_thread->mFQPacingRate |= ((uint64_t)(ntohl(hdr->start_fq.fqrateu)) << 32);
+#endif
+	    }
+	}
+    } else { //tcp first payload
+	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) mBuf;
+	Settings_ReadClientSettingsV1(&reversed_thread, &hdr->base);
+	if (isFullDuplex(server) || v1test) {
+	    server->mAmount = reversed_thread->mAmount + (SLOPSECS * 100);
+	}
+	if (v1test) {
+	    setServerReverse(reversed_thread);
+	    if (flags & RUN_NOW) {
+		reversed_thread->mMode = kTest_DualTest;
+	    } else {
+		reversed_thread->mMode = kTest_TradeOff;
+	    }
+	}
+	if (flags & HEADER_EXTEND) {
+	    reversed_thread->mUDPRate = ntohl(hdr->extend.lRate);
+#ifdef HAVE_INT64_T
+	    reversed_thread->mUDPRate |= ((uint64_t)(ntohl(hdr->extend.uRate) >> 8) << 32);
+#endif
+	    upperflags = ntohs(hdr->extend.upperflags);
+	    reversed_thread->mTOS = ntohs(hdr->extend.tos);
+
+	    if (isIsochronous(server)) {
+		Settings_ReadClientSettingsIsoch(&reversed_thread, &hdr->isoch_settings);
+	    }
+	    if (upperflags & HEADER_FQRATESET) {
+		setFQPacing(reversed_thread);
+		reversed_thread->mFQPacingRate = ntohl(hdr->start_fq.fqratel);
+#ifdef HAVE_INT64_T
+		reversed_thread->mFQPacingRate |= ((uint64_t)(ntohl(hdr->start_fq.fqrateu)) << 32);
+#endif
+	    }
+	}
+    }
+    unsetTxStartTime(reversed_thread);
+    unsetTxHoldback(reversed_thread);
+    setNoSettReport(reversed_thread);
+    setNoConnectSync(reversed_thread);
+    // for legacy -d and -r need so set the reversed threads mHost
+    if (v1test) {
+	reversed_thread->mHost = new char[REPORT_ADDRLEN];
+	if (((sockaddr*)&server->peer)->sa_family == AF_INET) {
+	    inet_ntop(AF_INET, &((sockaddr_in*)&server->peer)->sin_addr,
+		      reversed_thread->mHost, REPORT_ADDRLEN);
+	}
 #ifdef HAVE_IPV6
 	else {
-            inet_ntop( AF_INET6, &((sockaddr_in6*)&server->peer)->sin6_addr,
-                       (*client)->mHost, REPORT_ADDRLEN);
-        }
+	    inet_ntop(AF_INET6, &((sockaddr_in6*)&server->peer)->sin6_addr,
+		      reversed_thread->mHost, REPORT_ADDRLEN);
+	}
 #endif
     } else {
-        *client = NULL;
+	reversed_thread->mMode = kTest_Normal;
+#if HAVE_DECL_SO_MAX_PACING_RATE
+	if (isFQPacing(reversed_thread)) {
+	    int rc = setsockopt(reversed_thread->mSock, SOL_SOCKET, SO_MAX_PACING_RATE, \
+				&reversed_thread->mFQPacingRate, sizeof(reversed_thread->mFQPacingRate));
+	    WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
+  #ifdef HAVE_THREAD_DEBUG
+    #ifdef HAVE_INT64_T
+	    thread_debug("Set socket %d pacing rate to %ld byte/sec", reversed_thread->mSock, reversed_thread->mFQPacingRate);
+    #else
+	    thread_debug("Set socket %d pacing rate to %d byte/sec", reversed_thread->mSock, reversed_thread->mFQPacingRate);
+    #endif
+  #endif
+	}
+#endif // MAX_PACING_RATE
     }
+}
+
+int Settings_GenerateClientHdrV1 (struct thread_Settings *client, struct client_hdr_v1 *hdr) {
+    if (isBuflenSet(client)) {
+	hdr->mBufLen = htonl(client->mBufLen);
+    } else {
+	hdr->mBufLen = 0;
+    }
+    if (client->mListenPort != 0) {
+	hdr->mPort  = htonl(client->mListenPort);
+    } else {
+	hdr->mPort  = htonl(client->mPort);
+    }
+    hdr->numThreads = htonl(client->mThreads);
+    if (isModeTime(client)) {
+	hdr->mAmount = htonl(-(long)client->mAmount);
+    } else {
+	hdr->mAmount = htonl((long)client->mAmount);
+	hdr->mAmount &= htonl(0x7FFFFFFF);
+    }
+    return (sizeof(struct client_hdr_v1));
 }
 
 /*
@@ -1170,78 +1658,193 @@ void Settings_GenerateClientSettings( thread_Settings *server,
  * o) dual testings from the listener/server side
  * o) advanced udp test settings
  *
- * Returns hdr flags set
+ * Returns size of header in bytes
  */
-int Settings_GenerateClientHdr( thread_Settings *client, client_hdr *hdr ) {
-    uint32_t flags = 0, extendflags = 0;
-    if (isPeerVerDetect(client) || (client->mMode != kTest_Normal && isBWSet(client))) {
+int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, struct timeval startTime) {
+    uint16_t len = 0;
+    uint16_t upperflags = 0;
+    uint16_t lowerflags = 0;
+    uint32_t flags = 0;
+
+    // flags common to both TCP and UDP
+    if (isReverse(client) && !isCompat(client)) {
+	upperflags |= HEADER_REVERSE;
+    }
+    if (isFullDuplex(client) && !isCompat(client)) {
+	upperflags |= HEADER_FULLDUPLEX;
+    }
+    // Now setup UDP and TCP specific passed settings from client to server
+    if (isUDP(client)) { // UDP test information passed in every packet per being stateless
+	struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) testhdr;
+	memset(hdr, 0, sizeof(struct client_udp_testhdr));
+	flags |= HEADER_SEQNO64B; // use 64 bit by default
 	flags |= HEADER_EXTEND;
-    }
-    if ( client->mMode != kTest_Normal ) {
-	flags |= HEADER_VERSION1;
-	if ( isBuflenSet( client ) ) {
-	    hdr->base.bufferlen = htonl(client->mBufLen);
+	hdr->extend.version_u = htonl(IPERF_VERSION_MAJORHEX);
+	hdr->extend.version_l = htonl(IPERF_VERSION_MINORHEX);
+	hdr->extend.tos = htons(client->mTOS & 0xFF);
+	if (isBWSet(client)) {
+	    hdr->extend.lRate = htonl((uint32_t)(client->mUDPRate));
+#ifdef HAVE_INT64_T
+	    hdr->extend.uRate = htonl(((uint32_t)(client->mUDPRate >> 32)) << 8);
+#endif
 	} else {
-	    hdr->base.bufferlen = 0;
+	    hdr->extend.lRate = htonl(kDefault_UDPRate);
+	    hdr->extend.uRate = 0x0;
 	}
-	if ( client->mListenPort != 0 ) {
-	    hdr->base.mPort  = htonl(client->mListenPort);
-	} else {
-	    hdr->base.mPort  = htonl(client->mPort);
+	len += sizeof(struct client_hdrext);
+	len += Settings_GenerateClientHdrV1(client, &hdr->base);
+	if (!isCompat(client) && (client->mMode != kTest_Normal)) {
+	    flags |= HEADER_VERSION1;
+	    if (client->mMode == kTest_DualTest)
+		flags |= RUN_NOW;
+	    hdr->base.flags = htonl(flags);
 	}
-	hdr->base.numThreads = htonl(client->mThreads);
-	if ( isModeTime( client ) ) {
-	    hdr->base.mAmount = htonl(-(long)client->mAmount);
-	} else {
-	    hdr->base.mAmount = htonl((long)client->mAmount);
-	    hdr->base.mAmount &= htonl( 0x7FFFFFFF );
-	}
-	if ( client->mMode == kTest_DualTest ) {
-	    flags |= RUN_NOW;
-	}
-    }
-    if (isUDP(client)) {
 	/*
 	 * set the default offset where underlying "inline" subsystems can write into the udp payload
 	 */
-	hdr->udp.tlvoffset = htons((sizeof(client_hdr_udp_tests) + sizeof(client_hdr_v1) + sizeof(UDP_datagram)));
-
-	if (isL2LengthCheck(client) || isIsochronous(client)) {
+	if (isL2LengthCheck(client)) {
 	    flags |= HEADER_UDPTESTS;
-	    uint16_t testflags = 0;
-
 	    if (isL2LengthCheck(client)) {
-		testflags |= HEADER_L2LENCHECK;
+		upperflags |= HEADER_L2LENCHECK;
 		if (isIPV6(client))
-		    testflags |= HEADER_L2ETHPIPV6;
+		    upperflags |= HEADER_L2ETHPIPV6;
 	    }
-	    if (isIsochronous(client)) {
-		hdr->udp.tlvoffset = htons((sizeof(UDP_isoch_payload) + sizeof(client_hdr_udp_tests) + sizeof(client_hdr_v1) + sizeof(UDP_datagram)));
-		testflags |= HEADER_UDP_ISOCH;
+	}
+	if (isIsochronous(client)) {
+	    flags |= (HEADER_UDPTESTS | HEADER_EXTEND) ;
+	    upperflags |= HEADER_ISOCH;
+	    if (isFullDuplex(client) || isReverse(client)) {
+		upperflags |= HEADER_ISOCH_SETTINGS;
+		hdr->isoch_settings.FPSl = htonl((long)(client->mFPS));
+		hdr->isoch_settings.FPSu = htonl(((client->mFPS - (long)(client->mFPS)) * rMillion));
+		hdr->isoch_settings.Meanl = htonl((long)(client->mMean));
+		hdr->isoch_settings.Meanu = htonl((((client->mMean) - (long)(client->mMean)) * rMillion));
+		hdr->isoch_settings.Variancel = htonl((long)(client->mVariance));
+		hdr->isoch_settings.Varianceu = htonl(((client->mVariance - (long)(client->mVariance)) * rMillion));
+		hdr->isoch_settings.BurstIPGl = htonl((long)(client->mBurstIPG));
+		hdr->isoch_settings.BurstIPGu = htonl(((client->mBurstIPG - (long)(client->mBurstIPG)) * rMillion));
+		len += sizeof(struct client_hdrext_isoch_settings);
 	    }
-	    // Write flags to header so the listener can determine the tests requested
-	    hdr->udp.testflags = htons(testflags);
-	    hdr->udp.version_u = htonl(IPERF_VERSION_MAJORHEX);
-	    hdr->udp.version_l = htonl(IPERF_VERSION_MINORHEX);
 	}
-    }
-    /*
-     * Finally, update the header flags (to be passed to the remote server)
-     */
-    hdr->base.flags = htonl(flags);
-    if (flags & HEADER_EXTEND) {
-	if (isBWSet(client)) {
-	    hdr->extend.mRate = htonl(client->mUDPRate);
+	if (isReverse(client) || isFullDuplex(client)) {
+	    flags |= (HEADER_UDPTESTS | HEADER_VERSION2);
 	}
-	if (client->mUDPRateUnits == kRate_PPS) {
-	    extendflags |= UNITS_PPS;
+	if (isNoUDPfin(client)) {
+	    flags |= (HEADER_UDPTESTS | HEADER_VERSION2);
+	    upperflags |= HEADER_NOUDPFIN;
 	}
-        hdr->extend.typelen.type  = htonl(CLIENTHDR);
-	hdr->extend.typelen.length = htonl((sizeof(client_hdrext) - sizeof(hdr_typelen)));
-	hdr->extend.reserved = 0;
+	if (isTripTime(client) || isFQPacing(client)) {
+	    flags |= HEADER_UDPTESTS;
+	    if (isTripTime(client)) {
+		upperflags |= HEADER_TRIPTIME;
+		hdr->start_fq.start_tv_sec = htonl(startTime.tv_sec);
+		hdr->start_fq.start_tv_usec = htonl(startTime.tv_usec);
+	    }
+	    if (isFQPacing(client)) {
+		upperflags |= HEADER_FQRATESET;
+		hdr->start_fq.fqratel = htonl((uint32_t) client->mFQPacingRate);
+#ifdef HAVE_INT64_T
+		hdr->start_fq.fqrateu = htonl((uint32_t) (client->mFQPacingRate >> 32));
+#endif
+	    }
+	}
+	// Write flags to header so the listener can determine the tests requested
+	hdr->extend.upperflags = htons(upperflags);
+	hdr->extend.lowerflags = htons(lowerflags);
+
+	// isoch payload is an enclave field between v 0.13 and v0.14
+	// so figure out if it's there now - UDP only
+	// will be filled in by the client write
+	if (isTripTime(client) || isFQPacing(client) || isIsochronous(client))
+	    len += sizeof (struct isoch_payload);
+
+	if (len > 0) {
+	    len += sizeof(struct UDP_datagram);
+	    flags |= HEADER_LEN_BIT;
+	}
+	hdr->base.flags = htonl(flags | ((len << 1) & 0xFFFE));
+    } else { // TCP first write with test information
+	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) testhdr;
+	memset(hdr, 0, sizeof(struct client_tcp_testhdr));
+	flags |= HEADER_EXTEND;
 	hdr->extend.version_u = htonl(IPERF_VERSION_MAJORHEX);
 	hdr->extend.version_l = htonl(IPERF_VERSION_MINORHEX);
-	hdr->extend.flags  = htonl(extendflags);
+	hdr->extend.tos = htons(client->mTOS & 0xFF);
+	if (isBWSet(client)) {
+	    hdr->extend.lRate = htonl((uint32_t)(client->mUDPRate));
+#ifdef HAVE_INT64_T
+	    hdr->extend.uRate = htonl(((uint32_t)(client->mUDPRate >> 32)) << 8);
+#endif
+	}
+	len += sizeof(struct client_hdrext);
+	len += Settings_GenerateClientHdrV1(client, &hdr->base);
+	if (!isCompat(client) && (client->mMode != kTest_Normal)) {
+	    flags |= HEADER_VERSION1;
+	    if (client->mMode == kTest_DualTest)
+		flags |= RUN_NOW;
+	}
+	if (isPeerVerDetect(client)) {
+	    flags |= (HEADER_V2PEERDETECT | HEADER_VERSION2);
+	}
+	if (isTripTime(client) || isFQPacing(client) || isIsochronous(client)) {
+	    hdr->start_fq.start_tv_sec = htonl(startTime.tv_sec);
+	    hdr->start_fq.start_tv_usec = htonl(startTime.tv_usec);
+	    hdr->start_fq.fqratel = htonl((uint32_t) client->mFQPacingRate);
+#ifdef HAVE_INT64_T
+	    hdr->start_fq.fqrateu = htonl((uint32_t) (client->mFQPacingRate >> 32));
+#endif
+	    len += sizeof(struct client_hdrext_starttime_fq);
+	    // Set flags on
+	    if (isTripTime(client)) {
+		upperflags |= HEADER_TRIPTIME;
+	    }
+	    if (isFQPacing(client)) {
+		upperflags |= HEADER_FQRATESET;
+	    }
+	}
+	if (isIsochronous(client)) {
+	    upperflags |= HEADER_ISOCH;
+	    if (isFullDuplex(client) || isReverse(client)) {
+		upperflags |= HEADER_ISOCH_SETTINGS;
+		hdr->isoch_settings.FPSl = htonl(client->mFPS);
+		hdr->isoch_settings.FPSu = htonl(((long)(client->mFPS) - (long)client->mFPS * rMillion));
+		hdr->isoch_settings.Meanl = htonl(client->mMean);
+		hdr->isoch_settings.Meanu = htonl(((long)(client->mMean) - (long)client->mMean * rMillion));
+		hdr->isoch_settings.Variancel = htonl(client->mVariance);
+		hdr->isoch_settings.Varianceu = htonl(((long)(client->mVariance) - (long)client->mVariance * rMillion));
+		hdr->isoch_settings.BurstIPGl = htonl(client->mBurstIPG);
+		hdr->isoch_settings.BurstIPGu = htonl(((long)(client->mBurstIPG) - (long)client->mBurstIPG * rMillion));
+		len += sizeof(struct client_hdrext_isoch_settings);
+	    }
+	}
+	if (isReverse(client) || isFullDuplex(client)) {
+	    flags |= HEADER_VERSION2;
+	}
+	hdr->extend.upperflags = htons(upperflags);
+	hdr->extend.lowerflags = htons(lowerflags);
+	if (len > 0) {
+	    flags |= HEADER_LEN_BIT;
+	}
+	hdr->base.flags = htonl((flags | ((len << 1) & 0xFFFE)));
     }
-    return (flags);
+    return (len);
+}
+
+int Settings_ClientHdrPeekLen (uint32_t flags) {
+    //* determine peek length
+    int peeklen = 0;
+    if (flags & HEADER_LEN_BIT) {
+	peeklen = (flags & 0xFFFE) >> 1;
+	if (peeklen <= 0)
+	    fprintf(stderr, "WARN: header length bit set and length invalid\n");
+    } else {
+	peeklen = 0;
+	if (flags & (HEADER_VERSION1 | HEADER_EXTEND)) {
+	    peeklen = sizeof(struct client_hdr_v1);
+	}
+	if (flags & (HEADER_VERSION2 | HEADER_EXTEND)) {
+	    peeklen += sizeof(struct client_hdrext);
+	}
+    }
+    return peeklen;
 }
