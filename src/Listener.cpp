@@ -981,6 +981,7 @@ bool Listener::apply_client_settings_udp (thread_Settings *server) {
 	    }
 	}
 	if (flags & HEADER_VERSION2) {
+	    upperflags = htons(hdr->extend.upperflags);
 	    if (upperflags & HEADER_FULLDUPLEX) {
 		setFullDuplex(server);
 		setServerReverse(server);
