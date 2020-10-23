@@ -208,7 +208,7 @@ AC_CHECK_MEMBERS([struct tcp_info.tcpi_total_retrans], [], [],[
 dnl ===================================================================
 dnl Check for compiler characteristics
 
-DAST_CHECK_BOOL
+AC_HEADER_STDBOOL
 
 AC_C_BIGENDIAN
 
