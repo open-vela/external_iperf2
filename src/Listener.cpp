@@ -273,7 +273,7 @@ void Listener::Run (void) {
 	// Note 2: The mBuf read is a peek so the server's traffic thread started later
 	// will also process the first message from an accounting perspective.
 	// This is required for accurate traffic statistics
-	if (apply_client_settings(server) <= 0) {
+	if (apply_client_settings(server) < 0) {
 	    if (isConnectionReport(server) && !isSumOnly(server)) {
 		PostReport(InitConnectionReport(server, 0));
 	    }
@@ -893,7 +893,7 @@ int Listener::my_accept (thread_Settings *server) {
 // Read the headers but don't pull them from the queue in order to
 // preserve server thread accounting, i.e. these exchanges will
 // be part of traffic accounting
-bool Listener::apply_client_settings (thread_Settings *server) {
+int Listener::apply_client_settings (thread_Settings *server) {
     assert(server != NULL);
     assert(mBuf != NULL);
     int n, peeklen;
