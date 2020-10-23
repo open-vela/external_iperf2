@@ -87,6 +87,7 @@
 #include <net/if.h>
 #endif
 /* -------------------------------------------------------------------
+
  * Stores local hostname and socket info.
  * ------------------------------------------------------------------- */
 
@@ -273,7 +274,7 @@ void Listener::Run (void) {
 	// Note 2: The mBuf read is a peek so the server's traffic thread started later
 	// will also process the first message from an accounting perspective.
 	// This is required for accurate traffic statistics
-	if (apply_client_settings(server) < 0) {
+	if (!apply_client_settings(server)) {
 	    if (isConnectionReport(server) && !isSumOnly(server)) {
 		PostReport(InitConnectionReport(server, 0));
 	    }
@@ -892,17 +893,16 @@ int Listener::my_accept (thread_Settings *server) {
 // Read deep enough into the packet to get the client settings
 // Read the headers but don't pull them from the queue in order to
 // preserve server thread accounting, i.e. these exchanges will
-// be part of traffic accounting
-int Listener::apply_client_settings (thread_Settings *server) {
+// be part of traffic accounting. Return false if it's determined
+// this traffic shouldn't be accepted for a test run
+// Description of bits and fields is in include/payloads.h
+bool Listener::apply_client_settings (thread_Settings *server) {
     assert(server != NULL);
     assert(mBuf != NULL);
-    int n, peeklen;
-    uint32_t flags = 0;
-    uint16_t upperflags = 0;
-    int rc = 1;
+    bool rc;
+
     // Set the receive timeout for the very first read based upon the -t
     // and not -i.
-
 #ifdef WIN32
     int sorcvtimer = 2000;
     DWORD timeout;
@@ -925,14 +925,21 @@ int Listener::apply_client_settings (thread_Settings *server) {
     server->mMode = kTest_Normal;
 
     if (isUDP(server)) {
-	struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) mBuf;
-	flags = ntohl(hdr->base.flags);
-	if (flags & HEADER_SEQNO64B) {
-	    setSeqNo64b(server);
-	}
-	if (!(flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2) && \
-	    !(flags & HEADER_EXTEND))
-	    return 0;
+	rc = apply_client_settings_udp(server);
+    } else {
+	rc = apply_client_settings_tcp(server);
+    }
+    return rc;
+}
+
+bool Listener::apply_client_settings_udp (thread_Settings *server) {
+    struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) mBuf;
+    uint32_t flags = ntohl(hdr->base.flags);
+    uint16_t upperflags = 0;
+    if (flags & HEADER_SEQNO64B) {
+	setSeqNo64b(server);
+    }
+    if ((flags & HEADER_VERSION1) || (flags & HEADER_VERSION2) || (flags & HEADER_EXTEND)) {
 	if ((flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2)) {
 	    if (flags & RUN_NOW)
 		server->mMode = kTest_DualTest;
@@ -985,71 +992,77 @@ int Listener::apply_client_settings (thread_Settings *server) {
 		unsetReport(server);
 	    }
 	}
-    } else {
-	n = recvn(server->mSock, mBuf, sizeof(uint32_t), MSG_PEEK);
-	if (n == 0) {
-	    //peer closed the socket, with no writes e.g. a connect-only test
-	    return -1;
-	}
-	FAIL_errno((n < (int) sizeof(uint32_t)), "read tcp flags", server);
-	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) mBuf;
-	flags = ntohl(hdr->base.flags);
-	if (!(flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2) && \
-	    !(flags & HEADER_EXTEND))
-	    return 0;
-	// figure out the length of the test header
-	if ((peeklen = Settings_ClientHdrPeekLen(flags)) > 0) {
-	    // read the test settings passed to the server by the client
-	    n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK);
-	    FAIL_errno((n < peeklen), "read tcp test info", server);
-	    struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) mBuf;
-	    if ((flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2)) {
-		if (flags & RUN_NOW)
-		    server->mMode = kTest_DualTest;
-		else
-		    server->mMode = kTest_TradeOff;
-	    }
-	    if (flags & HEADER_EXTEND) {
-		upperflags = htons(hdr->extend.upperflags);
-		server->mTOS = ntohs(hdr->extend.tos);
-		server->peer_version_u = ntohl(hdr->extend.version_u);
-		server->peer_version_l = ntohl(hdr->extend.version_l);
-		if (upperflags & HEADER_ISOCH) {
-		    setIsochronous(server);
-		}
-		if (upperflags & HEADER_TRIPTIME) {
-		    server->skip = peeklen;
-		    server->triptime_start.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
-		    server->triptime_start.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
-		    Timestamp now;
-		    if ((abs(now.getSecs() - server->triptime_start.tv_sec)) > MAXDIFFTIMESTAMPSECS) {
-			fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
-		    } else {
-			setTripTime(server);
-			setEnhanced(server);
-		    }
-		}
-		if (flags & HEADER_VERSION2) {
-		    if (upperflags & HEADER_FULLDUPLEX) {
-			setFullDuplex(server);
-			setServerReverse(server);
-		    }
-		    if (upperflags & HEADER_REVERSE) {
-			server->mThreadMode=kMode_Client;
-			setServerReverse(server);
-		    }
-		}
-	    }
-	}
     }
-    // Handle case that requires an ack back to the client
-    // Signaled by not UDP (only supported by TCP)
-    // and either 2.0.13 flags or the newer 2.0.14 flag of
-    // V2PEERDETECT
-    if (!isUDP(server) && !isCompat(mSettings) && \
-	((!(flags & HEADER_VERSION2) && (flags & HEADER_EXTEND)) || \
-	 (flags & HEADER_V2PEERDETECT))) {
-	client_test_ack(server);
+    return true;
+}
+bool Listener::apply_client_settings_tcp (thread_Settings *server) {
+    bool rc;
+    int n = recvn(server->mSock, mBuf, sizeof(uint32_t), MSG_PEEK);
+    if (n == 0) {
+	//peer closed the socket, with no writes e.g. a connect-only test
+	rc = false;
+    } else {
+	FAIL_errno((n < (int) sizeof(uint32_t)), "read tcp flags", server);
+	rc = true;
+	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) mBuf;
+	uint32_t flags = ntohl(hdr->base.flags);
+	uint16_t upperflags = 0;
+	int peeklen;
+	if ((flags & HEADER_VERSION1) || (flags & HEADER_VERSION2) || (flags & HEADER_EXTEND)) {
+	    // figure out the length of the test header
+	    if ((peeklen = Settings_ClientHdrPeekLen(flags)) > 0) {
+		// read the test settings passed to the server by the client
+		int n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK);
+		FAIL_errno((n < peeklen), "read tcp test info", server);
+		struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) mBuf;
+		if ((flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2)) {
+		    if (flags & RUN_NOW)
+			server->mMode = kTest_DualTest;
+		    else
+			server->mMode = kTest_TradeOff;
+		}
+		if (flags & HEADER_EXTEND) {
+		    upperflags = htons(hdr->extend.upperflags);
+		    server->mTOS = ntohs(hdr->extend.tos);
+		    server->peer_version_u = ntohl(hdr->extend.version_u);
+		    server->peer_version_l = ntohl(hdr->extend.version_l);
+		    if (upperflags & HEADER_ISOCH) {
+			setIsochronous(server);
+		    }
+		    if (upperflags & HEADER_TRIPTIME) {
+			server->skip = peeklen;
+			server->triptime_start.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
+			server->triptime_start.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
+			Timestamp now;
+			if ((abs(now.getSecs() - server->triptime_start.tv_sec)) > MAXDIFFTIMESTAMPSECS) {
+			    fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
+			} else {
+			    setTripTime(server);
+			    setEnhanced(server);
+			}
+		    }
+		    if (flags & HEADER_VERSION2) {
+			if (upperflags & HEADER_FULLDUPLEX) {
+			    setFullDuplex(server);
+			    setServerReverse(server);
+			}
+			if (upperflags & HEADER_REVERSE) {
+			    server->mThreadMode=kMode_Client;
+			    setServerReverse(server);
+			}
+		    }
+		}
+	    }
+	    // Handle case that requires an ack back to the client
+	    // Signaled by not UDP (only supported by TCP)
+	    // and either 2.0.13 flags or the newer 2.0.14 flag of
+	    // V2PEERDETECT
+	    if (!isUDP(server) && !isCompat(mSettings) && \
+		((!(flags & HEADER_VERSION2) && (flags & HEADER_EXTEND)) || \
+		 (flags & HEADER_V2PEERDETECT))) {
+		client_test_ack(server);
+	    }
+	}
     }
     return rc;
 }
