@@ -278,10 +278,10 @@ const char report_sumcnt_bw_header[] =
 "[SUM-cnt] Interval       Transfer     Bandwidth\n";
 
 const char client_report_epoch_start[] =
-"%sClient traffic to start at %s (%ld.%ld in epoch/unix format)\n";
+"[%3d] Client traffic to start at %s (%ld.%ld in epoch/unix format)\n";
 
 const char client_report_epoch_start_current[] =
-"%sClient traffic to start at %s (%ld.%ld) current time %s\n";
+"[%3d] Client traffic to start at %s (%ld.%ld) current time %s\n";
 
 const char client_write_size[] =
 "Write buffer size";
