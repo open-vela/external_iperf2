@@ -904,14 +904,14 @@ bool Listener::apply_client_settings (thread_Settings *server) {
     // Set the receive timeout for the very first read based upon the -t
     // and not -i.
 #ifdef WIN32
-    int sorcvtimer = 2000;
+    int sorcvtimer = 4000;
     DWORD timeout;
     if (isServerModeTime(server)) {
 	// Windows SO_RCVTIMEO uses ms
 	timeout = (double) sorcvtimer / 1e3;
     }
 #else
-    struct timeval timeout = {2, 0};
+    struct timeval timeout = {4, 0};
     if (isServerModeTime(server)) {
 	timeout.tv_sec = server->mAmount / 100;
 	timeout.tv_usec = (server->mAmount % 100) * 10000;
