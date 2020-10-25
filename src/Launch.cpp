@@ -169,7 +169,6 @@ static void clientside_client_basic (struct thread_Settings *thread, Client *the
 	if (thread->mThreads > 1)
 	    Iperf_push_host(&thread->peer, thread);
 	theClient->StartSynch();
-	theClient->SendFirstPayload();
 	if (isTxHoldback(thread))
 	    theClient->TxDelay();
 	theClient->Run();
@@ -192,7 +191,6 @@ static void clientside_client_reverse (struct thread_Settings *thread, Client *t
 	FAIL((!reverse_client || !(thread->mSock > 0)), "Reverse test failed to start per thread settings or socket problem",  thread);
 	setTransferID(reverse_client, 1);
 	theClient->StartSynch();
-	theClient->SendFirstPayload();
 	reverse_client->mSock = thread->mSock; // use the same socket for both directions
 	reverse_client->mThreadMode = kMode_Server;
 	setReverse(reverse_client);
@@ -243,7 +241,6 @@ static void clientside_client_fullduplex (struct thread_Settings *thread, Client
 	}
 	thread_start(reverse_client);
 	if (theClient->StartSynch() != -1) {
-	    theClient->SendFirstPayload();
 	    theClient->Run();
 	}
     }
@@ -255,8 +252,6 @@ static void serverside_client_fullduplex (struct thread_Settings *thread, Client
 #endif
     setTransferID(thread, 1);
     if (theClient->StartSynch() != -1) {
-	if (isTripTime(thread) || isIsochronous(thread))
-	    theClient->SendFirstPayload();
 	theClient->Run();
     }
 }
@@ -273,7 +268,6 @@ static void serverside_client_bidir (struct thread_Settings *thread, Client *the
     if (theClient->isConnected()) {
 	Iperf_push_host(&thread->peer, thread);
 	if (theClient->StartSynch() != -1) {
-	    theClient->SendFirstPayload();
 	    theClient->Run();
 	}
     }

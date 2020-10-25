@@ -91,7 +91,7 @@ public:
     void ConnectPeriodic(void);
     int my_connect(int exit_on_fail);
     bool isConnected(void);
-    void SendFirstPayload(void);
+    int SendFirstPayload(void);
     int BarrierClient(struct BarrierMutex *);
     struct ReportHeader *myJob;
 
