@@ -77,13 +77,14 @@ extern "C" {
 #define HEADER_L2LENCHECK     0x0004
 #define HEADER_NOUDPFIN       0x0008
 #define HEADER_TRIPTIME       0x0010
-#define HEADER_TOSSTARTTIME   0x0020
+#define HEADER_UNUSED2        0x0020
 #define HEADER_ISOCH_SETTINGS 0x0040
 #define HEADER_UNITS_PPS      0x0080
 #define HEADER_BWSET          0x0100
 #define HEADER_FQRATESET      0x0200
 #define HEADER_REVERSE        0x0400
 #define HEADER_FULLDUPLEX     0x0800
+#define HEADER_EPOCH_START    0x1000
 
 // later features
 #define HDRXACKMAX 2500000 // default 2.5 seconds, units microseconds
