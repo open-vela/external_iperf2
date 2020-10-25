@@ -193,6 +193,12 @@ void Listener::Run (void) {
 	    struct timeval timeout;
 	    timeout.tv_sec = mSettings->mAmount / 100;
 	    timeout.tv_usec = (mSettings->mAmount % 100) * 10000;
+	    if (isTxStartTime(mSettings)) {
+		now.setnow();
+		ulong adjsecs = (mSettings->txstart_epoch.tv_sec - now.getSecs());
+		if (adjsecs > 0)
+		    timeout.tv_sec += adjsecs + 1;
+	    }
 	    FD_ZERO(&set);
 	    FD_SET(ListenSocket, &set);
 	    if (!(select(ListenSocket + 1, &set, NULL, NULL, &timeout) > 0)) {
