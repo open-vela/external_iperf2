@@ -824,12 +824,13 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		match = sscanf(optarg,"%ld.%6ld", &seconds, &usecs);
 		mExtSettings->txstart_epoch.tv_usec = 0;
 		Timestamp now;
+		long nowsecs = now.getSecs();
 		switch (match) {
 		case 2:
 		    mExtSettings->txstart_epoch.tv_usec = usecs;
 		case 1:
 		    mExtSettings->txstart_epoch.tv_sec = seconds;
-		    if ((now.getSecs() - seconds) > 0) {
+		    if (((nowsecs - seconds) > 0) || ((nowsecs == seconds) && (now.getUsecs() > usecs))) {
 			fprintf(stderr, "WARNING: start time of before now ignored\n");
 			unsetTxStartTime(mExtSettings);
 		    }
@@ -1592,7 +1593,6 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
 	    }
 	}
     }
-    unsetTxStartTime(reversed_thread);
     unsetTxHoldback(reversed_thread);
     setNoSettReport(reversed_thread);
     setNoConnectSync(reversed_thread);
