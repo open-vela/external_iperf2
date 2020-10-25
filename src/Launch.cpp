@@ -62,6 +62,7 @@
 #include "PerfSocket.hpp"
 #include "active_hosts.h"
 #include "SocketAddr.h"
+#include "delay.h"
 
 static int fullduplex_startstop_barrier (struct BarrierMutex *barrier) {
     int rc = 0;
@@ -98,7 +99,7 @@ static int fullduplex_startstop_barrier (struct BarrierMutex *barrier) {
     return rc;
 }
 int fullduplex_start_barrier (struct BarrierMutex *barrier) {
-    int rc=fullduplex_startstop_barrier(barrier);
+    int rc = fullduplex_startstop_barrier(barrier);
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Fullduplex start barrier done on condition %p rc=%d", (void *)&barrier->await, rc);
 #endif
@@ -146,6 +147,9 @@ void server_spawn(struct thread_Settings *thread) {
 #endif
     // Start up the server
     theServer = new Server(thread);
+    if (isTxStartTime(thread)) {
+	clock_usleep_abstime(&thread->txstart_epoch);
+    }
     // Run the test
     if (isUDP(thread)) {
         theServer->RunUDP();
