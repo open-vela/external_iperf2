@@ -254,7 +254,9 @@ int Client::StartSynch (void) {
     // o First is an absolute start time per unix epoch format
     // o Second is a holdback, a relative amount of seconds between the connect and data xfers
     // check for an epoch based start time
-    now.setnow();
+    if (!isServerReverse(mSettings) || isTripTime(mSettings) || isIsochronous(mSettings)) {
+	reportstruct->packetLen = SendFirstPayload();
+    }
     if (isTxStartTime(mSettings)) {
 	if (isIsochronous(mSettings)) {
 	    Timestamp tmp;
@@ -271,6 +273,9 @@ int Client::StartSynch (void) {
 	    return -1;
     }
     SetReportStartTime();
+    if (reportstruct->packetLen > 0) {
+	ReportPacket(myReport, reportstruct);
+    }
     if (setfullduplexflag) {
 	SetFullDuplexReportStartTime();
     }
@@ -1188,9 +1193,9 @@ void Client::AwaitServerCloseEvent (void) {
 #endif
 }
 
-void Client::SendFirstPayload (void) {
+int Client::SendFirstPayload (void) {
+    int pktlen = 0;
     if (!isConnectOnly(mSettings)) {
-	int pktlen = 0;
 	if (myReport && !TimeZero(myReport->info.ts.startTime)) {
 	    reportstruct->packetTime = myReport->info.ts.startTime;
 	} else {
@@ -1207,26 +1212,24 @@ void Client::SendFirstPayload (void) {
 		tmphdr->seqno_ts.tv_usec = htonl(reportstruct->packetTime.tv_usec);
 		udp_payload_minimum = pktlen;
 #if HAVE_DECL_MSG_DONTWAIT
-		reportstruct->packetLen = send(mySocket, mBuf, (pktlen > mSettings->mBufLen) ? pktlen : mSettings->mBufLen, MSG_DONTWAIT);
+		pktlen = send(mySocket, mBuf, (pktlen > mSettings->mBufLen) ? pktlen : mSettings->mBufLen, MSG_DONTWAIT);
 #else
-		reportstruct->packetLen = send(mySocket, mBuf, (pktlen > mSettings->mBufLen) ? pktlen : mSettings->mBufLen, 0);
+		pktlen = send(mySocket, mBuf, (pktlen > mSettings->mBufLen) ? pktlen : mSettings->mBufLen, 0);
 #endif
 	    } else {
 #if HAVE_DECL_MSG_DONTWAIT
-		reportstruct->packetLen = send(mySocket, mBuf, pktlen, MSG_DONTWAIT);
+		pktlen = send(mySocket, mBuf, pktlen, MSG_DONTWAIT);
 #else
-		reportstruct->packetLen = send(mySocket, mBuf, pktlen, 0);
+		pktlen = send(mySocket, mBuf, pktlen, 0);
 #endif
-	    }
-	    WARN_errno(reportstruct->packetLen < 0, "send_hdr");
-	    if (reportstruct->packetLen > 0) {
-		ReportPacket(myReport, reportstruct);
-		if (!isUDP(mSettings) && isPeerVerDetect(mSettings) && !isServerReverse(mSettings)) {
+		if (isPeerVerDetect(mSettings) && !isServerReverse(mSettings)) {
 		    PeerXchange();
 		}
 	    }
+	    WARN_errno(pktlen < 0, "send_hdr");
 	}
     }
+    return pktlen;
 }
 
 void Client::PeerXchange (void) {

@@ -250,7 +250,7 @@ void Server::RunTCP (void) {
 		thread_debug("Server thread detected EOF on socket %d", mSettings->mSock);
 #endif
 	    } else if ((n < 0) && (!NONFATALTCPREADERR(errno))) {
-		WARN_errno(1, "recv");
+		// WARN_errno(1, "recv");
 		n = 0;
 	    }
 	    currLen += n;

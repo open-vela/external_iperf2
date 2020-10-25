@@ -968,6 +968,16 @@ bool Listener::apply_client_settings_udp (thread_Settings *server) {
 		    setNoUDPfin(server);
 		}
 	    }
+	    if (upperflags & HEADER_EPOCH_START) {
+		server->txstart_epoch.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
+		server->txstart_epoch.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
+		Timestamp now;
+		if ((abs(now.getSecs() - server->triptime_start.tv_sec)) > MAXDIFFTXSTART) {
+		    fprintf(stdout,"WARN: ignore --txstart-time because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTXSTART);
+		} else {
+		    setTxStartTime(server);
+		}
+	    }
 	    if (upperflags & HEADER_TRIPTIME) {
 		server->triptime_start.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
 		server->triptime_start.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
@@ -1029,6 +1039,16 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 		    server->peer_version_l = ntohl(hdr->extend.version_l);
 		    if (upperflags & HEADER_ISOCH) {
 			setIsochronous(server);
+		    }
+		    if (upperflags & HEADER_EPOCH_START) {
+			server->txstart_epoch.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
+			server->txstart_epoch.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
+			Timestamp now;
+			if ((abs(now.getSecs() - server->triptime_start.tv_sec)) > MAXDIFFTXSTART) {
+			    fprintf(stdout,"WARN: ignore --txstart-time because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTXSTART);
+			} else {
+			    setTxStartTime(server);
+			}
 		    }
 		    if (upperflags & HEADER_TRIPTIME) {
 			server->skip = peeklen;
