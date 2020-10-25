@@ -54,6 +54,7 @@
 #include "headers.h"
 #include "util.h"
 #include "delay.h"
+#include "Thread.h"
 #include <math.h>
 
 #define MILLION 1000000
@@ -120,7 +121,7 @@ void delay_loop(unsigned long usec)
 int clock_usleep (struct timeval *request) {
     int rc = 0;
 #if HAVE_THREAD_DEBUG
-    thread_debug("Thread alled clock_usleep() until %ld.%ld", request->tv_sec, request_tv_usec);
+    thread_debug("Thread called clock_usleep() until %ld.%ld", request->tv_sec, request->tv_usec);
 #endif
 #ifdef HAVE_CLOCK_NANOSLEEP
     struct timespec tmp;
