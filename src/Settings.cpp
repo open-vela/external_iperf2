@@ -1673,6 +1673,9 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
     if (isFullDuplex(client) && !isCompat(client)) {
 	upperflags |= HEADER_FULLDUPLEX;
     }
+    if (isTxStartTime(client) && !TimeZero(startTime)) {
+	upperflags |= HEADER_EPOCH_START;
+    }
     // Now setup UDP and TCP specific passed settings from client to server
     if (isUDP(client)) { // UDP test information passed in every packet per being stateless
 	struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) testhdr;
@@ -1733,12 +1736,13 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	    flags |= (HEADER_UDPTESTS | HEADER_VERSION2);
 	    upperflags |= HEADER_NOUDPFIN;
 	}
-	if (isTripTime(client) || isFQPacing(client)) {
+	if (isTripTime(client) || isFQPacing(client) || isTxStartTime(client)) {
 	    flags |= HEADER_UDPTESTS;
-	    if (isTripTime(client)) {
-		upperflags |= HEADER_TRIPTIME;
+	    if (isTripTime(client) || isTxStartTime(client)) {
 		hdr->start_fq.start_tv_sec = htonl(startTime.tv_sec);
 		hdr->start_fq.start_tv_usec = htonl(startTime.tv_usec);
+		if (isTripTime(client))
+		    upperflags |= HEADER_TRIPTIME;
 	    }
 	    if (isFQPacing(client)) {
 		upperflags |= HEADER_FQRATESET;
@@ -1786,7 +1790,7 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	if (isPeerVerDetect(client)) {
 	    flags |= (HEADER_V2PEERDETECT | HEADER_VERSION2);
 	}
-	if (isTripTime(client) || isFQPacing(client) || isIsochronous(client)) {
+	if (isTripTime(client) || isFQPacing(client) || isIsochronous(client) || isTxStartTime(client)) {
 	    hdr->start_fq.start_tv_sec = htonl(startTime.tv_sec);
 	    hdr->start_fq.start_tv_usec = htonl(startTime.tv_usec);
 	    hdr->start_fq.fqratel = htonl((uint32_t) client->mFQPacingRate);

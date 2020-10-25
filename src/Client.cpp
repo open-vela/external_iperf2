@@ -1203,7 +1203,11 @@ int Client::SendFirstPayload (void) {
 	    reportstruct->packetTime.tv_sec = now.getSecs();
 	    reportstruct->packetTime.tv_usec = now.getUsecs();
 	}
-	pktlen = Settings_GenerateClientHdr(mSettings, (void *) mBuf, reportstruct->packetTime);
+	if (isTxStartTime(mSettings)) {
+	    pktlen = Settings_GenerateClientHdr(mSettings, (void *) mBuf, mSettings->txstart_epoch);
+	} else {
+	    pktlen = Settings_GenerateClientHdr(mSettings, (void *) mBuf, reportstruct->packetTime);
+	}
 	if (pktlen > 0) {
 	    if (isUDP(mSettings)) {
 		struct client_udp_testhdr *tmphdr = (struct client_udp_testhdr *) mBuf;
