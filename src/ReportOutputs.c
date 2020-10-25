@@ -872,6 +872,14 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
     outbufferext[0]='\0';
     outbufferext2[0]='\0';
     char *b = &outbuffer[0];
+    if (!isUDP(report->common) && (report->common->socket > 0) && (isPrintMSS(report->common) || isEnhanced(report->common)))  {
+	if (isPrintMSS(report->common) && (report->MSS <= 0)) {
+	    printf(report_mss_unsupported, report->MSS);
+	} else {
+	    snprintf(b, SNBUFFERSIZE-strlen(b), " (%s%d)", "MSS=", report->MSS);
+	    b += strlen(b);
+	}
+    }
     if (isIsochronous(report->common)) {
 	snprintf(b, SNBUFFERSIZE-strlen(b), " (isoch)");
 	b += strlen(b);
@@ -887,8 +895,8 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 	    b += strlen(b);
 	}
     }
-    if (isTripTime(report->common)) {
-	snprintf(b, SNBUFFERSIZE-strlen(b), " (trip-times)");
+    if (isTxStartTime(report->common)) {
+	snprintf(b, SNBUFFERSIZE-strlen(b), " (epoch-start)");
 	b += strlen(b);
     }
     if (isL2LengthCheck(report->common)) {
@@ -899,14 +907,11 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 	snprintf(b, SNBUFFERSIZE-strlen(b), " (no-udp-fin)");
 	b += strlen(b);
     }
-    if (!isUDP(report->common) && (report->common->socket > 0) && (isPrintMSS(report->common) || isEnhanced(report->common)))  {
-	if (isPrintMSS(report->common) && (report->MSS <= 0)) {
-	    printf(report_mss_unsupported, report->MSS);
-	} else {
-	    snprintf(b, SNBUFFERSIZE-strlen(b), " (%s%d)", "MSS=", report->MSS);
-	    b += strlen(b);
-	}
+    if (isTripTime(report->common)) {
+	snprintf(b, SNBUFFERSIZE-strlen(b), " (trip-times)");
+	b += strlen(b);
     }
+
     if (isEnhanced(report->common)) {
 	snprintf(b, SNBUFFERSIZE-strlen(b), " (sock=%d)", report->common->socket);;
 	b += strlen(b);
