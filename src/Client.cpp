@@ -1203,7 +1203,7 @@ int Client::SendFirstPayload (void) {
 	    reportstruct->packetTime.tv_sec = now.getSecs();
 	    reportstruct->packetTime.tv_usec = now.getUsecs();
 	}
-	if (isTxStartTime(mSettings) && !(mSettings->mMode == kTest_TradeOff)) {
+	if (isTxStartTime(mSettings)) {
 	    pktlen = Settings_GenerateClientHdr(mSettings, (void *) mBuf, mSettings->txstart_epoch);
 	} else {
 	    pktlen = Settings_GenerateClientHdr(mSettings, (void *) mBuf, reportstruct->packetTime);
