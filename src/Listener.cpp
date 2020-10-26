@@ -195,7 +195,7 @@ void Listener::Run (void) {
 	    timeout.tv_usec = (mSettings->mAmount % 100) * 10000;
 	    if (isTxStartTime(mSettings)) {
 		now.setnow();
-		ulong adjsecs = (mSettings->txstart_epoch.tv_sec - now.getSecs());
+		long adjsecs = (mSettings->txstart_epoch.tv_sec - now.getSecs());
 		if (adjsecs > 0)
 		    timeout.tv_sec += adjsecs + 1;
 	    }
