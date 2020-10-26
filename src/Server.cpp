@@ -339,7 +339,7 @@ inline void Server::SetReportStartTime (void) {
 	myReport->info.ts.startTime.tv_sec = mSettings->triptime_start.tv_sec;
 	myReport->info.ts.startTime.tv_usec = mSettings->triptime_start.tv_usec;
 	myReport->info.ts.prevpacketTime = myReport->info.ts.startTime;
-    } else if (TimeZero(myReport->info.ts.startTime) && !TimeZero(mSettings->accept_time)) {
+    } else if (TimeZero(myReport->info.ts.startTime) && !TimeZero(mSettings->accept_time) && !isTxStartTime(mSettings)) {
 	// Servers that aren't full duplex use the accept timestamp for start
 	myReport->info.ts.startTime.tv_sec = mSettings->accept_time.tv_sec;
 	myReport->info.ts.startTime.tv_usec = mSettings->accept_time.tv_usec;
