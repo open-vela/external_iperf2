@@ -1196,14 +1196,14 @@ void Client::AwaitServerCloseEvent (void) {
 int Client::SendFirstPayload (void) {
     int pktlen = 0;
     if (!isConnectOnly(mSettings)) {
-	if (myReport && !TimeZero(myReport->info.ts.startTime)) {
+	if (myReport && !TimeZero(myReport->info.ts.startTime) && !(mSettings->mMode == kTest_TradeOff)) {
 	    reportstruct->packetTime = myReport->info.ts.startTime;
 	} else {
 	    now.setnow();
 	    reportstruct->packetTime.tv_sec = now.getSecs();
 	    reportstruct->packetTime.tv_usec = now.getUsecs();
 	}
-	if (isTxStartTime(mSettings) && !(mSettings->mMode = kTest_TradeOff)) {
+	if (isTxStartTime(mSettings) && !(mSettings->mMode == kTest_TradeOff)) {
 	    pktlen = Settings_GenerateClientHdr(mSettings, (void *) mBuf, mSettings->txstart_epoch);
 	} else {
 	    pktlen = Settings_GenerateClientHdr(mSettings, (void *) mBuf, reportstruct->packetTime);
