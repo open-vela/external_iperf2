@@ -258,13 +258,12 @@ int Client::StartSynch (void) {
 	reportstruct->packetLen = SendFirstPayload();
     }
     if (isTxStartTime(mSettings)) {
-	if (isIsochronous(mSettings)) {
-	    Timestamp tmp;
-	    tmp.set(mSettings->txstart_epoch.tv_sec, mSettings->txstart_epoch.tv_usec);
-	    framecounter = new Isochronous::FrameCounter(mSettings->mFPS, tmp);
-	} else {
-	    clock_usleep_abstime(&mSettings->txstart_epoch);
-	}
+        clock_usleep_abstime(&mSettings->txstart_epoch);
+    }
+    if (isIsochronous(mSettings)) {
+        Timestamp tmp;
+        tmp.set(mSettings->txstart_epoch.tv_sec, mSettings->txstart_epoch.tv_usec);
+        framecounter = new Isochronous::FrameCounter(mSettings->mFPS, tmp);
     }
     int setfullduplexflag = 0;
     if (isFullDuplex(mSettings) && !isServerReverse(mSettings)) {
