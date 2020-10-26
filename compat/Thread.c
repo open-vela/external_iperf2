@@ -222,7 +222,6 @@ void thread_start(struct thread_Settings* thread) {
         Condition_Unlock(thread_sNum_cond);
 
 #if defined(HAVE_POSIX_THREAD)
-
         // pthreads -- spawn new thread
         if (pthread_create(&thread->mTID, NULL, thread_run_wrapper, thread) != 0) {
             WARN(1, "pthread_create");
@@ -243,9 +242,7 @@ void thread_start(struct thread_Settings* thread) {
 #if HAVE_THREAD_DEBUG
 	thread_debug("Thread_run_wrapper(%p mode=%x) thread counts tot/trfc=%d/%d", (void *)thread, thread->mThreadMode, thread_sNum, thread_trfc_sNum);
 #endif
-
 #elif defined(HAVE_WIN32_THREAD)
-
         // Win32 threads -- spawn new thread
         // Win32 has a thread handle in addition to the thread ID
         thread->mHandle = CreateThread(NULL, 0, thread_run_wrapper, thread, 0, &thread->mTID);
@@ -260,9 +257,7 @@ void thread_start(struct thread_Settings* thread) {
 	    }
             Condition_Unlock(thread_sNum_cond);
         }
-
 #else
-
         // single-threaded -- call Run_Wrapper in this thread
         thread_run_wrapper(thread);
 #endif
