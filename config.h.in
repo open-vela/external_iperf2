@@ -103,6 +103,9 @@
 /* Define if fast sampling for report intervals is desired */
 #undef HAVE_FASTSAMPLING
 
+/* Define to 1 if you have the `freopen' function. */
+#undef HAVE_FREOPEN
+
 /* Define if syscall(SYS_gettid) available. */
 #undef HAVE_GETTID_SYSCALL
 
