@@ -1153,7 +1153,7 @@ void Client::AwaitServerFinPacket (void) {
     if (!ack_success)
 	fprintf(stderr, warn_no_ack, mySocket, (isModeTime(mSettings) ? 10 : 1));
 }
-// end write_UDP_FIN
+
 
 void Client::PostNullEvent (void) {
     assert(myReport!=NULL);
