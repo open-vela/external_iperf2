@@ -72,7 +72,7 @@ struct server_hdr;
 // If the minimum latency exceeds the boundaries below
 // assume the clocks are not synched and suppress the
 // latency output. Units are seconds
-#define UNREALISTIC_LATENCYMINMIN -1
+#define UNREALISTIC_LATENCYMINMIN -0.01
 #define UNREALISTIC_LATENCYMINMAX 60
 
 #ifdef __cplusplus
