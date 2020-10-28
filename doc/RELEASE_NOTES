@@ -38,6 +38,7 @@ o fix the case when -P <value> is set on the server such that summing output is 
 o multicast listener will autoset -U (single server), e.g -P > 1 not supported for multicast
 o multicast listener no longer busy drops multicast packets during traffic test, i.e. only server thread receives them
 o immediate bail out on mutually exclusive command line options
+o fix -o or --output using freopen to redirect stdout and stderr to a file
 o man page updates with examples
 o tested with 1000's of traffic streams, WiFi, 10G and 100G
 
