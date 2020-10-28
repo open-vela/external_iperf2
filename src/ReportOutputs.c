@@ -333,21 +333,31 @@ void udp_output_read_enhanced_triptime (struct TransferInfo *stats) {
 	       stats->cntDatagrams,
 	       0.0,0.0,0.0,0.0,0.0,0.0);
     } else {
-	double meantransit = (stats->transit.cntTransit > 0) ? (stats->transit.sumTransit / stats->transit.cntTransit) : 0;
-	double lambda = (stats->IPGsum > 0.0) ? ((double)stats->cntBytes / stats->IPGsum) : 0.0;
-	set_llawbuf(lambda, meantransit);
-	printf(report_bw_jitter_loss_enhanced_format, stats->common->transferIDStr,
-	       stats->ts.iStart, stats->ts.iEnd,
-	       outbuffer, outbufferext,
-	       stats->jitter*1000.0, stats->cntError, stats->cntDatagrams,
-	       (100.0 * stats->cntError) / stats->cntDatagrams,
-	       (meantransit * 1e3),
-	       stats->transit.minTransit*1e3,
-	       stats->transit.maxTransit*1e3,
-	       (stats->transit.cntTransit < 2) ? 0 : sqrt(stats->transit.m2Transit / (stats->transit.cntTransit - 1)) / 1e3,
-	       (stats->cntIPG / stats->IPGsum),
-	       llaw_buf,
-	       (meantransit > 0.0) ? (NETPOWERCONSTANT * ((double)stats->cntBytes) / (double) (stats->ts.iEnd - stats->ts.iStart) / meantransit) : 0);
+	if ((stats->transit.minTransit > UNREALISTIC_LATENCYMINMAX) ||
+	    (stats->transit.minTransit < UNREALISTIC_LATENCYMINMIN)) {
+	    printf(report_bw_jitter_loss_suppress_enhanced_format, stats->common->transferIDStr,
+		   stats->ts.iStart, stats->ts.iEnd,
+		   outbuffer, outbufferext,
+		   stats->jitter*1000.0, stats->cntError, stats->cntDatagrams,
+		   (100.0 * stats->cntError) / stats->cntDatagrams,
+		   (stats->cntIPG / stats->IPGsum));
+	} else {
+	    double meantransit = (stats->transit.cntTransit > 0) ? (stats->transit.sumTransit / stats->transit.cntTransit) : 0;
+	    double lambda = (stats->IPGsum > 0.0) ? ((double)stats->cntBytes / stats->IPGsum) : 0.0;
+	    set_llawbuf(lambda, meantransit);
+	    printf(report_bw_jitter_loss_enhanced_format, stats->common->transferIDStr,
+		   stats->ts.iStart, stats->ts.iEnd,
+		   outbuffer, outbufferext,
+		   stats->jitter*1000.0, stats->cntError, stats->cntDatagrams,
+		   (100.0 * stats->cntError) / stats->cntDatagrams,
+		   (meantransit * 1e3),
+		   stats->transit.minTransit*1e3,
+		   stats->transit.maxTransit*1e3,
+		   (stats->transit.cntTransit < 2) ? 0 : sqrt(stats->transit.m2Transit / (stats->transit.cntTransit - 1)) / 1e3,
+		   (stats->cntIPG / stats->IPGsum),
+		   llaw_buf,
+		   (meantransit > 0.0) ? (NETPOWERCONSTANT * ((double)stats->cntBytes) / (double) (stats->ts.iEnd - stats->ts.iStart) / meantransit) : 0);
+	}
     }
     if (stats->latency_histogram) {
 	histogram_print(stats->latency_histogram, stats->ts.iStart, stats->ts.iEnd);
