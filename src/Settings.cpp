@@ -131,6 +131,7 @@ const struct option long_options[] =
 {"realtime",         no_argument, NULL, 'z'},
 
 // more esoteric options
+{"awdl",             no_argument, NULL, 'A'},
 {"bind",       required_argument, NULL, 'B'},
 {"compatibility",    no_argument, NULL, 'C'},
 {"daemon",           no_argument, NULL, 'D'},
@@ -223,7 +224,7 @@ const struct option env_options[] =
 
 #define SHORT_OPTIONS()
 
-const char short_options[] = "1b:c:def:hi:l:mn:o:p:rst:uvw:x:y:zB:CDF:H:IL:M:NP:RS:T:UVWXZ:";
+const char short_options[] = "1b:c:def:hi:l:mn:o:p:rst:uvw:x:y:zAB:CDF:H:IL:M:NP:RS:T:UVWXZ:";
 
 /* -------------------------------------------------------------------
  * defaults
@@ -672,6 +673,10 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
             break;
 
             // more esoteric options
+        case 'A': // set AWDK
+	    setAWDL(mExtSettings);
+            break;
+
         case 'B': // specify bind address
 	    if (mExtSettings->mLocalhost == NULL) {
 		mExtSettings->mLocalhost = new char[ strlen(optarg) + 1 ];
@@ -1129,6 +1134,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	}
 	if (isRxHistogram(mExtSettings)) {
 	    fprintf(stderr, "ERROR: option of --histograms is not supported on the client\n");
+	    bail = true;
+	}
+	if (isAWDL(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of -A or --awdl is not supported on the client\n");
 	    bail = true;
 	}
 	if (isCongestionControl(mExtSettings) && isReverse(mExtSettings)) {

@@ -332,6 +332,7 @@ struct thread_Settings {
 #define FLAG_SUMONLY        0x00800000
 #define FLAG_FRAMEINTERVAL  0x01000000
 #define FLAG_IPG            0x02000000
+#define FLAG_AWDL           0x04000000
 
 #define isBuflenSet(settings)      ((settings->flags & FLAG_BUFLENSET) != 0)
 #define isCompat(settings)         ((settings->flags & FLAG_COMPAT) != 0)
@@ -386,6 +387,7 @@ struct thread_Settings {
 #define isSumOnly(settings)        ((settings->flags_extend & FLAG_SUMONLY) != 0)
 #define isFrameInterval(settings)  ((settings->flags_extend & FLAG_FRAMEINTERVAL) != 0)
 #define isIPG(settings)  ((settings->flags_extend & FLAG_IPG) != 0)
+#define isAWDL(settings)  ((settings->flags_extend & FLAG_AWDL) != 0)
 
 #define setBuflenSet(settings)     settings->flags |= FLAG_BUFLENSET
 #define setCompat(settings)        settings->flags |= FLAG_COMPAT
@@ -437,6 +439,7 @@ struct thread_Settings {
 #define setSumOnly(settings)       settings->flags_extend |= FLAG_SUMONLY
 #define setFrameInterval(settings) settings->flags_extend |= FLAG_FRAMEINTERVAL
 #define setIPG(settings) settings->flags_extend |= FLAG_IPG
+#define setAWDL(settings) settings->flags_extend |= FLAG_AWDL
 
 #define unsetBuflenSet(settings)   settings->flags &= ~FLAG_BUFLENSET
 #define unsetCompat(settings)      settings->flags &= ~FLAG_COMPAT
@@ -488,6 +491,7 @@ struct thread_Settings {
 #define unsetSumOnly(settings) settings->flags_extend &= ~FLAG_SUMONLY
 #define unsetFrameInterval(settings) settings->flags_extend &= ~FLAG_FRAMEINTERVAL
 #define unsetIPG(settings) settings->flags_extend &= ~FLAG_IPG
+#define unsetAWDL(settings) settings->flags_extend &= ~FLAG_AWDL
 
 // set to defaults
 void Settings_Initialize(struct thread_Settings* main);
