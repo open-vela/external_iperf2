@@ -673,7 +673,7 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
             break;
 
             // more esoteric options
-        case 'A': // set AWDK
+        case 'A': // set AWDL
 	    setAWDL(mExtSettings);
             break;
 
@@ -1427,7 +1427,7 @@ void Settings_GenerateListenerSettings (struct thread_Settings *client, struct t
 	if (client->mMode == kTest_TradeOff) {
 	    (*listener)->mAmount   = client->mAmount + DUALTIMER_MS;
 	} else if (client->mMode == kTest_DualTest) {
-	    (*listener)->mAmount   = client->mAmount / 2;
+	    (*listener)->mAmount   = client->mAmount + (SLOPSECS * 100);
 	}
 	if ((client->mMode != kTest_Normal) && ((*listener)->mAmount  < DUALTIMER_MS)) {
 	    (*listener)->mAmount   = DUALTIMER_MS;
