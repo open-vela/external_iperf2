@@ -700,8 +700,12 @@ void Server::RunUDP (void) {
 
     if (!InitTrafficLoop())
 	return;
-    struct timeval prevsend = myReport->info.ts.startTime;
 
+    struct timeval prevreceive;
+    struct timeval prevsend = myReport->info.ts.startTime;
+    now.setnow();
+    prevreceive.tv_sec = now.getSecs();
+    prevreceive.tv_usec = now.getUsecs();
     // Exit loop on three conditions
     // 1) Fatal read error
     // 2) Last packet of traffic flow sent by client
@@ -733,8 +737,10 @@ void Server::RunUDP (void) {
 		// ReadPacketID returns true if this is the last UDP packet sent by the client
 		// also sets the packet rx time in the reportstruct
 		reportstruct->prevSentTime = prevsend;
+		reportstruct->prevPacketTime = prevreceive;
 		lastpacket = ReadPacketID();
 		prevsend = reportstruct->sentTime;
+		prevreceive = reportstruct->packetTime;
 		if (isIsochronous(mSettings)) {
 		    udp_isoch_processing(rxlen);
 		}
