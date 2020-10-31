@@ -673,9 +673,6 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
             break;
 
             // more esoteric options
-        case 'A': // set AWDL
-	    setAWDL(mExtSettings);
-            break;
 
         case 'B': // specify bind address
 	    if (mExtSettings->mLocalhost == NULL) {
@@ -1134,10 +1131,6 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	}
 	if (isRxHistogram(mExtSettings)) {
 	    fprintf(stderr, "ERROR: option of --histograms is not supported on the client\n");
-	    bail = true;
-	}
-	if (isAWDL(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of -A or --awdl is not supported on the client\n");
 	    bail = true;
 	}
 	if (isCongestionControl(mExtSettings) && isReverse(mExtSettings)) {
