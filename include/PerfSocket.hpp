@@ -65,4 +65,6 @@ void SetSocketOptionsReceiveTimeout( struct thread_Settings *inSettings, int tim
 // handle interupts
 void Sig_Interupt(int inSigno);
 
+#define SO_RECV_ANYIF 0x1104 // OS X unrestricted inbound processing for AWDL
+
 #endif // PERFSOCKET_H
