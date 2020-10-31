@@ -60,6 +60,7 @@ struct ReportStruct {
     intmax_t packetID;
     intmax_t packetLen;
     struct timeval packetTime;
+    struct timeval prevPacketTime;
     struct timeval sentTime;
     struct timeval prevSentTime;
     int errwrite;

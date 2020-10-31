@@ -795,6 +795,7 @@ void Client::RunUDP (void) {
 	// report packets
 	reportstruct->packetLen = (unsigned long) currLen;
 	reportstruct->prevSentTime = prevsend;
+	reportstruct->prevPacketTime = prevsend;
 	ReportPacket(myReport, reportstruct);
 	prevsend = reportstruct->packetTime;
 	// Insert delay here only if the running delay is greater than 100 usec,
