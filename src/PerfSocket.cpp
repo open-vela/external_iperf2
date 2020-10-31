@@ -104,6 +104,12 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
 #endif
     }
 
+    if (isAWDL(inSettings)) {
+	int val = 1;
+	int rc = setsockopt(inSettings->mSock, SOL_SOCKET, SO_RECV_ANYIF, (char*) &val, (Socklen_t) sizeof(val));
+	WARN_errno(rc < 0, "SO_RECV_ANYIF");
+    }
+
 #if HAVE_DECL_SO_BINDTODEVICE
     if ((inSettings->mThreadMode == kMode_Client) && inSettings->mIfrnametx) {
         struct ifreq ifr;
