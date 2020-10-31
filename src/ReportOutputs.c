@@ -802,9 +802,6 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
     if (isCongestionControl(report->common) && report->common->Congestion) {
 	fprintf(stdout, "TCP congestion control set to %s\n", report->common->Congestion);
     }
-    if (isAWDL(report->common)) {
-	fprintf(stdout, "Socket set for AWDL\n");
-    }
     if (isSingleClient(report->common)) {
 	fprintf(stdout, "Server set to single client traffic mode per -U (serialize traffic tests)\n");
     }
