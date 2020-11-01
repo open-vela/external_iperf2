@@ -273,7 +273,14 @@ int Client::StartSynch (void) {
     }
     SetReportStartTime();
     if (reportstruct->packetLen > 0) {
+	now.setnow();
+	reportstruct->packetTime.tv_sec = now.getSecs();
+	reportstruct->packetTime.tv_usec = now.getUsecs();
+	reportstruct->sentTime = reportstruct->packetTime;
+	reportstruct->prevSentTime = reportstruct->packetTime;
+	reportstruct->prevPacketTime = myReport->info.ts.prevpacketTime;
 	ReportPacket(myReport, reportstruct);
+	reportstruct->packetID++;
     }
     if (setfullduplexflag) {
 	SetFullDuplexReportStartTime();
@@ -467,7 +474,6 @@ void Client::RunTCP (void) {
     int burst_size =  mSettings->mBufLen;
     int burst_remaining = 0;
     int burst_id = 1;
-    struct timeval prevsend = myReport->info.ts.startTime;
 
     // RJM, consider moving this into the constructor
     if (isIsochronous(mSettings)) {
@@ -500,7 +506,7 @@ void Client::RunTCP (void) {
 		    reportstruct->packetTime.tv_sec = now.getSecs();
 		    reportstruct->packetTime.tv_usec = now.getUsecs();
 		    reportstruct->sentTime = reportstruct->packetTime;
-		    reportstruct->prevSentTime = prevsend;
+		    reportstruct->prevSentTime = myReport->info.ts.prevsendTime;
 		    ReportPacket(myReport, reportstruct);
 		}
 		reportstruct->transit_ready = 0;
@@ -511,7 +517,7 @@ void Client::RunTCP (void) {
 		reportstruct->packetTime.tv_usec = now.getUsecs();
 		WriteTcpTxHdr(reportstruct, burst_size, burst_id++);
 		reportstruct->sentTime = reportstruct->packetTime;
-		prevsend = reportstruct->packetTime;
+		myReport->info.ts.prevsendTime = reportstruct->packetTime;
 		// perform write
 		n = writen(mySocket, mBuf, sizeof(struct TCP_burst_payload));
 		assert(n == sizeof(struct TCP_burst_payload));
@@ -654,7 +660,6 @@ void Client::RunRateLimitedTCP (void) {
 	    reportstruct->packetTime.tv_sec = time2.getSecs();
 	    reportstruct->packetTime.tv_usec = time2.getUsecs();
 	    reportstruct->sentTime = reportstruct->packetTime;
-
 	    if (isEnhanced(mSettings) || (mSettings->mIntervalMode == kInterval_Time)) {
 		ReportPacket(myReport, reportstruct);
 	    }
@@ -679,7 +684,6 @@ void Client::RunRateLimitedTCP (void) {
  * UDP send loop
  */
 void Client::RunUDP (void) {
-    struct timeval prevsend = myReport->info.ts.startTime;
     struct UDP_datagram* mBuf_UDP = (struct UDP_datagram*) mBuf;
     int currLen;
 
@@ -722,14 +726,12 @@ void Client::RunUDP (void) {
 		long var_rate = lognormal(mSettings->mUDPRate,variance);
 		if (var_rate < 0)
 		    var_rate = 0;
-
-		delay_target = (double) (mSettings->mBufLen * ((kSecs_to_nsecs * kBytes_to_Bits)
-								/ var_rate));
+		delay_target = (double) (mSettings->mBufLen * ((kSecs_to_nsecs * kBytes_to_Bits) / var_rate));
 		time3 = now;
 	    }
 	}
 	// store datagram ID into buffer
-	WritePacketID(reportstruct->packetID++);
+	WritePacketID(reportstruct->packetID);
 	mBuf_UDP->tv_sec  = htonl(reportstruct->packetTime.tv_sec);
 	mBuf_UDP->tv_usec = htonl(reportstruct->packetTime.tv_usec);
 
@@ -747,8 +749,7 @@ void Client::RunUDP (void) {
 	else
 	    adjust = 1000.0 * lastPacketTime.subUsec(reportstruct->packetTime);
 
-	lastPacketTime.set(reportstruct->packetTime.tv_sec,
-			    reportstruct->packetTime.tv_usec);
+	lastPacketTime.set(reportstruct->packetTime.tv_sec, reportstruct->packetTime.tv_usec);
 	// Since linux nanosleep/busyloop can exceed delay
 	// there are two possible equilibriums
 	//  1)  Try to perserve inter packet gap
@@ -794,10 +795,10 @@ void Client::RunUDP (void) {
 
 	// report packets
 	reportstruct->packetLen = (unsigned long) currLen;
-	reportstruct->prevSentTime = prevsend;
-	reportstruct->prevPacketTime = prevsend;
+	reportstruct->prevPacketTime = myReport->info.ts.prevpacketTime;
 	ReportPacket(myReport, reportstruct);
-	prevsend = reportstruct->packetTime;
+	reportstruct->packetID++;
+	myReport->info.ts.prevpacketTime = reportstruct->packetTime;
 	// Insert delay here only if the running delay is greater than 100 usec,
 	// otherwise don't delay and immediately continue with the next tx.
 	if (delay >= 100000) {
@@ -813,7 +814,6 @@ void Client::RunUDP (void) {
  * UDP isochronous send loop
  */
 void Client::RunUDPIsochronous (void) {
-    struct timeval prevsend = myReport->info.ts.startTime;
     struct UDP_datagram* mBuf_UDP = (struct UDP_datagram*) mBuf;
     // skip over the UDP datagram (seq no, timestamp) to reach the isoch fields
     struct client_udp_testhdr *udp_payload = (client_udp_testhdr *) mBuf;
@@ -858,7 +858,7 @@ void Client::RunUDPIsochronous (void) {
 	    reportstruct->sentTime = reportstruct->packetTime;
 	    mBuf_UDP->tv_sec  = htonl(reportstruct->packetTime.tv_sec);
 	    mBuf_UDP->tv_usec = htonl(reportstruct->packetTime.tv_usec);
-	    WritePacketID(reportstruct->packetID++);
+	    WritePacketID(reportstruct->packetID);
 
 	    // Adjustment for the running delay
 	    // o measure how long the last loop iteration took
@@ -934,9 +934,10 @@ void Client::RunUDPIsochronous (void) {
 
 	    reportstruct->frameID=frameid;
 	    reportstruct->packetLen = (unsigned long) currLen;
-	    reportstruct->prevSentTime = prevsend;
+	    reportstruct->prevPacketTime = myReport->info.ts.prevpacketTime;
 	    ReportPacket(myReport, reportstruct);
-	    prevsend = reportstruct->packetTime;
+	    reportstruct->packetID++;
+	    myReport->info.ts.prevpacketTime = reportstruct->packetTime;
 	    // Insert delay here only if the running delay is greater than 1 usec,
 	    // otherwise don't delay and immediately continue with the next tx.
 	    if (delay >= 1000) {
@@ -1211,7 +1212,7 @@ int Client::SendFirstPayload (void) {
 	if (pktlen > 0) {
 	    if (isUDP(mSettings)) {
 		struct client_udp_testhdr *tmphdr = (struct client_udp_testhdr *) mBuf;
-		WritePacketID(reportstruct->packetID++);
+		WritePacketID(reportstruct->packetID);
 		tmphdr->seqno_ts.tv_sec  = htonl(reportstruct->packetTime.tv_sec);
 		tmphdr->seqno_ts.tv_usec = htonl(reportstruct->packetTime.tv_usec);
 		udp_payload_minimum = pktlen;
@@ -1220,6 +1221,7 @@ int Client::SendFirstPayload (void) {
 #else
 		pktlen = send(mySocket, mBuf, (pktlen > mSettings->mBufLen) ? pktlen : mSettings->mBufLen, 0);
 #endif
+
 	    } else {
 #if HAVE_DECL_MSG_DONTWAIT
 		pktlen = send(mySocket, mBuf, pktlen, MSG_DONTWAIT);
