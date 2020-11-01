@@ -309,6 +309,7 @@ struct ReportTimeStamps {
     struct timeval matchTime;
     struct timeval packetTime;
     struct timeval prevpacketTime;
+    struct timeval prevsendTime;
     struct timeval nextTime;
     struct timeval intervalTime;
     struct timeval IPGstart;
