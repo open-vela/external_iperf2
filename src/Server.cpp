@@ -168,7 +168,7 @@ void Server::RunTCP (void) {
 
     if (!InitTrafficLoop())
 	return;
-    struct timeval prevsend = myReport->info.ts.startTime;
+    myReport->info.ts.prevsendTime = myReport->info.ts.startTime;
 
     int burst_nleft = 0;
     burst_info.burst_id = 0;
@@ -214,7 +214,7 @@ void Server::RunTCP (void) {
 			reportstruct->sentTime.tv_sec = now.getSecs();
 			reportstruct->sentTime.tv_usec = now.getUsecs();
 		    }
-		    prevsend = reportstruct->sentTime;
+		    myReport->info.ts.prevsendTime = reportstruct->sentTime;
 		    burst_nleft = burst_info.burst_size - n;
 		    currLen += n;
 		    readLen = (mSettings->mBufLen < burst_nleft) ? mSettings->mBufLen : burst_nleft;
@@ -238,7 +238,7 @@ void Server::RunTCP (void) {
 			    enqueue_ackring(mSettings->ackring, reportstruct);
 			}
 #endif
-			reportstruct->prevSentTime = prevsend;
+			reportstruct->prevSentTime = myReport->info.ts.prevsendTime;
 			reportstruct->transit_ready = 1;
 		    } else {
 //			printf("****currlen = %ld, n=%d, burst_nleft=%d id=%d\n", currLen, n, burst_nleft, burst_info.burst_id);
@@ -332,19 +332,24 @@ inline void Server::SetFullDuplexReportStartTime (void) {
 #endif
 }
 inline void Server::SetReportStartTime (void) {
+    now.setnow();
     if (isTripTime(mSettings)) {
 	// Start times come from the sender's timestamp
 	assert(mSettings->triptime_start.tv_sec != 0);
 	assert(mSettings->triptime_start.tv_usec != 0);
 	myReport->info.ts.startTime.tv_sec = mSettings->triptime_start.tv_sec;
 	myReport->info.ts.startTime.tv_usec = mSettings->triptime_start.tv_usec;
-	myReport->info.ts.prevpacketTime = myReport->info.ts.startTime;
+	if (isUDP(mSettings)) {
+	    myReport->info.ts.prevpacketTime = myReport->info.ts.startTime;
+	} else {
+	    myReport->info.ts.prevpacketTime.tv_sec = now.getSecs();
+	    myReport->info.ts.prevpacketTime.tv_usec = now.getUsecs();
+	}
     } else if (TimeZero(myReport->info.ts.startTime) && !TimeZero(mSettings->accept_time) && !isTxStartTime(mSettings)) {
 	// Servers that aren't full duplex use the accept timestamp for start
 	myReport->info.ts.startTime.tv_sec = mSettings->accept_time.tv_sec;
 	myReport->info.ts.startTime.tv_usec = mSettings->accept_time.tv_usec;
     } else {
-	now.setnow();
 	myReport->info.ts.startTime.tv_sec = now.getSecs();
 	myReport->info.ts.startTime.tv_usec = now.getUsecs();
     }
@@ -501,16 +506,17 @@ inline int Server::ReadWithRxTimestamp (void) {
 	    peerclose = true;
 	} else if
 #ifdef WIN32
-	    (WSAGetLastError() != WSAEWOULDBLOCK)
+		(WSAGetLastError() != WSAEWOULDBLOCK)
 #else
 	    ((errno != EAGAIN) && (errno != EWOULDBLOCK) && (errno != ECONNREFUSED))
 #endif
-        {
-	    WARN_errno(currLen, "recvmsg");
-	    currLen= 0;
-	}
+    {
+	WARN_errno(currLen, "recvmsg");
+	currLen= 0;
     }
-
+    } else if (TimeZero(myReport->info.ts.prevpacketTime)) {
+	myReport->info.ts.prevpacketTime = reportstruct->packetTime;
+    }
     if (!tsdone) {
 	now.setnow();
 	reportstruct->packetTime.tv_sec = now.getSecs();
@@ -701,11 +707,6 @@ void Server::RunUDP (void) {
     if (!InitTrafficLoop())
 	return;
 
-    struct timeval prevreceive;
-    struct timeval prevsend = myReport->info.ts.startTime;
-    now.setnow();
-    prevreceive.tv_sec = now.getSecs();
-    prevreceive.tv_usec = now.getUsecs();
     // Exit loop on three conditions
     // 1) Fatal read error
     // 2) Last packet of traffic flow sent by client
@@ -736,11 +737,11 @@ void Server::RunUDP (void) {
 	    if (!(reportstruct->l2errors & L2UNKNOWN)) {
 		// ReadPacketID returns true if this is the last UDP packet sent by the client
 		// also sets the packet rx time in the reportstruct
-		reportstruct->prevSentTime = prevsend;
-		reportstruct->prevPacketTime = prevreceive;
+		reportstruct->prevSentTime = myReport->info.ts.prevsendTime;
+		reportstruct->prevPacketTime = myReport->info.ts.prevpacketTime;
 		lastpacket = ReadPacketID();
-		prevsend = reportstruct->sentTime;
-		prevreceive = reportstruct->packetTime;
+		myReport->info.ts.prevsendTime = reportstruct->sentTime;
+		myReport->info.ts.prevpacketTime = reportstruct->packetTime;
 		if (isIsochronous(mSettings)) {
 		    udp_isoch_processing(rxlen);
 		}
