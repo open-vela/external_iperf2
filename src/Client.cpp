@@ -83,6 +83,7 @@ Client::Client (thread_Settings *inSettings) {
     myReport = NULL;
     one_report = false;
     udp_payload_minimum = 1;
+    apply_first_udppkt_delay = false;
 
     memset(&scratchpad, 0, sizeof(struct ReportStruct));
     reportstruct = &scratchpad;
@@ -280,6 +281,7 @@ int Client::StartSynch (void) {
 	reportstruct->prevSentTime = reportstruct->packetTime;
 	reportstruct->prevPacketTime = myReport->info.ts.prevpacketTime;
 	ReportPacket(myReport, reportstruct);
+	myReport->info.ts.prevpacketTime = reportstruct->packetTime;
 	reportstruct->packetID++;
     }
     if (setfullduplexflag) {
@@ -683,14 +685,8 @@ void Client::RunRateLimitedTCP (void) {
 /*
  * UDP send loop
  */
-void Client::RunUDP (void) {
-    struct UDP_datagram* mBuf_UDP = (struct UDP_datagram*) mBuf;
-    int currLen;
-
-    double delay_target = 0;
-    double delay = 0;
-    double adjust = 0;
-
+double Client::get_delay_target (void) {
+    double delay_target;
     if (isIPG(mSettings)) {
 	delay_target = mSettings->mBurstIPG * 1000000;  // convert from milliseconds to nanoseconds
     } else {
@@ -703,9 +699,24 @@ void Client::RunUDP (void) {
 	    delay_target = 1e9 / mSettings->mUDPRate;
 	}
     }
+    return delay_target;
+}
+
+void Client::RunUDP (void) {
+    struct UDP_datagram* mBuf_UDP = (struct UDP_datagram*) mBuf;
+    int currLen;
+
+    double delay_target = get_delay_target();
+    double delay = 0;
+    double adjust = 0;
+
     // Set this to > 0 so first loop iteration will delay the IPG
     currLen = 1;
     double variance = mSettings->mVariance;
+    if (apply_first_udppkt_delay && (delay_target > 100000)) {
+	//the case when a UDP first packet went out in SendFirstPayload
+	delay_loop((unsigned long) (delay_target / 1000));
+    }
 
     while (InProgress()) {
         // Test case: drop 17 packets and send 2 out-of-order:
@@ -1221,7 +1232,7 @@ int Client::SendFirstPayload (void) {
 #else
 		pktlen = send(mySocket, mBuf, (pktlen > mSettings->mBufLen) ? pktlen : mSettings->mBufLen, 0);
 #endif
-
+		apply_first_udppkt_delay = true;
 	    } else {
 #if HAVE_DECL_MSG_DONTWAIT
 		pktlen = send(mySocket, mBuf, pktlen, MSG_DONTWAIT);
