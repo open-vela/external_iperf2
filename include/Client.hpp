@@ -98,6 +98,7 @@ public:
 private:
     inline void WritePacketID(intmax_t);
     inline void WriteTcpTxHdr(struct ReportStruct *, int, int);
+    inline double get_delay_target(void);
     void InitTrafficLoop(void);
     void SetReportStartTime(void);
     inline void SetFullDuplexReportStartTime(void);
@@ -112,6 +113,7 @@ private:
     double delay_lower_bounds;
     intmax_t totLen;
     bool one_report;
+    bool apply_first_udppkt_delay;
     int udp_payload_minimum;
 
     // TCP plain
