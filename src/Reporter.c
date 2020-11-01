@@ -593,7 +593,7 @@ inline void reporter_handle_packet_pps (struct ReporterData *data, struct Report
     stats->ts.IPGstart = packet->packetTime;
     stats->IPGsum += TimeDifference(packet->packetTime, packet->prevPacketTime);
 #ifdef DEBUG_PPS
-    printf("*** IPGsum = %f cnt=%ld ipg=%ld.%ld pt=%ld.%ld id=%ld empty=%d transit=%f %ld.%ld\n", stats->IPGsum, stats->cntIPG, stats->ts.IPGstart.tv_sec, stats->ts.IPGstart.tv_usec, packet->packetTime.tv_sec, packet->packetTime.tv_usec, packet->packetID, packet->emptyreport, TimeDifference(packet->sentTime, packet->prevSentTime),packet->prevSentTime.tv_sec, packet->prevSentTime.tv_usec);
+    printf("*** IPGsum = %f cnt=%ld ipg=%ld.%ld pktt=%ld.%ld id=%ld empty=%d transit=%f prev=%ld.%ld\n", stats->IPGsum, stats->cntIPG, stats->ts.IPGstart.tv_sec, stats->ts.IPGstart.tv_usec, packet->packetTime.tv_sec, packet->packetTime.tv_usec, packet->packetID, packet->emptyreport, TimeDifference(packet->packetTime, packet->prevPacketTime), packet->prevPacketTime.tv_sec, packet->prevPacketTime.tv_usec);
 #endif
 }
 
