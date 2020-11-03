@@ -1153,7 +1153,7 @@ void Client::AwaitServerFinPacket (void) {
 	    // to contain the final server packet
             rc = read(mySocket, mBuf, MAXUDPBUF);
 	    WARN_errno(rc < 0, "read");
-	    if (rc > 0) {
+	    if ((rc > 0) && (mSettings->mReportMode != kReport_CSV)) {
 #ifdef HAVE_THREAD_DEBUG
 		thread_debug("UDP client post server relay report", -reportstruct->packetID);
 #endif
@@ -1163,7 +1163,7 @@ void Client::AwaitServerFinPacket (void) {
             }
         }
     }
-    if (!ack_success)
+    if ((!ack_success) && (mSettings->mReportMode != kReport_CSV))
 	fprintf(stderr, warn_no_ack, mySocket, (isModeTime(mSettings) ? 10 : 1));
 }
 
