@@ -213,6 +213,9 @@ int Client::my_connect (int exit_on_fail) {
 	    mySocket = INVALID_SOCKET;
 	}
     }
+    if (isUDP(mSettings) && !isIsochronous(mSettings) && !isIPG(mSettings)) {
+        mSettings->mBurstIPG = get_delay_target() / 1e3; // this is being set for the settings report only
+    }
     if (isReport(mSettings) && isSettingsReport(mSettings)) {
 	struct ReportHeader *tmp = InitSettingsReport(mSettings);
 	assert(tmp!=NULL);
