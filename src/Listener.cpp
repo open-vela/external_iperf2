@@ -187,7 +187,7 @@ void Listener::Run (void) {
 	    my_listen(); // This will set ListenSocket to a new sock fd
 	}
 	// Use a select() with a timeout if -t is set or if this is a v1 -r or -d test
-	    fd_set set;
+	fd_set set;
 	if ((mMode_Time) || isCompat(mSettings)) {
 	    // Hang a select w/timeout on the listener socket
 	    struct timeval timeout;
@@ -280,7 +280,7 @@ void Listener::Run (void) {
 	// Note 2: The mBuf read is a peek so the server's traffic thread started later
 	// will also process the first message from an accounting perspective.
 	// This is required for accurate traffic statistics
-	if (!apply_client_settings(server)) {
+	if (!isCompat(server) && !apply_client_settings(server)) {
 	    if (isConnectionReport(server) && !isSumOnly(server)) {
 		PostReport(InitConnectionReport(server, 0));
 	    }
