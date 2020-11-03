@@ -124,7 +124,6 @@ void listener_spawn(struct thread_Settings *thread) {
     setReport(thread);
     // start up a listener
     theListener = new Listener(thread);
-
     // Start listening
     theListener->Run();
     DELETE_PTR(theListener);
