@@ -209,6 +209,7 @@ union SendReadStats {
 // rather than using references
 struct ReportCommon {
     enum ThreadMode ThreadMode;
+    enum ReportMode ReportMode;
     int flags;
     int flags_extend;
     int threads;
