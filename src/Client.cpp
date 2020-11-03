@@ -662,10 +662,7 @@ void Client::RunRateLimitedTCP (void) {
 	    reportstruct->packetTime.tv_sec = time2.getSecs();
 	    reportstruct->packetTime.tv_usec = time2.getUsecs();
 	    reportstruct->sentTime = reportstruct->packetTime;
-	    if (isEnhanced(mSettings) || (mSettings->mIntervalMode == kInterval_Time)) {
-		ReportPacket(myReport, reportstruct);
-	    }
-
+	    ReportPacket(myReport, reportstruct);
 	    if (isModeAmount(mSettings)) {
 		/* mAmount may be unsigned, so don't let it underflow! */
 		if (mSettings->mAmount >= (unsigned long) reportstruct->packetLen) {
