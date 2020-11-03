@@ -1544,6 +1544,9 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
 	    reversed_thread->mUDPRate |= ((uint64_t)(ntohl(hdr->extend.uRate) >> 8) << 32);
 #endif
 	    upperflags = ntohs(hdr->extend.upperflags);
+	    if (upperflags & HEADER_NOUDPFIN) {
+		setNoUDPfin(reversed_thread);
+	    }
 	    if ((upperflags & HEADER_UNITS_PPS) == HEADER_UNITS_PPS) {
 		reversed_thread->mUDPRateUnits = kRate_PPS;
 	    } else {
@@ -1735,7 +1738,7 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	    flags |= (HEADER_UDPTESTS | HEADER_VERSION2);
 	}
 	if (isNoUDPfin(client)) {
-	    flags |= (HEADER_UDPTESTS | HEADER_VERSION2);
+	    flags |= (HEADER_UDPTESTS | HEADER_EXTEND);
 	    upperflags |= HEADER_NOUDPFIN;
 	}
 	if (isTripTime(client) || isFQPacing(client) || isTxStartTime(client)) {
