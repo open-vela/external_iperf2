@@ -93,6 +93,7 @@ static void common_copy (struct ReportCommon **common, struct thread_Settings *i
     (*common)->flags = inSettings->flags;
     (*common)->flags_extend = inSettings->flags_extend;
     (*common)->ThreadMode = inSettings->mThreadMode;
+    (*common)->ReportMode = inSettings->mReportMode;
     (*common)->Format = inSettings->mFormat;
     (*common)->TTL = inSettings->mTTL;
     // copy some traffic related settings
