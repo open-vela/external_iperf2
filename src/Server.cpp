@@ -747,12 +747,7 @@ void Server::RunUDP (void) {
 		}
 	    }
 	}
-	if (!isSingleUDP(mSettings))
-	    ReportPacket(myReport, reportstruct);
-	else {
-	    packetring_enqueue(myReport->packetring, reportstruct);
-	    reporter_process_transfer_report(myReport);
-	}
+	ReportPacket(myReport, reportstruct);
     }
     disarm_itimer();
     int do_close = EndJob(myJob, reportstruct);

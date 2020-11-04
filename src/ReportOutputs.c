@@ -825,10 +825,9 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
 	fprintf(stdout, "TCP congestion control set to %s\n", report->common->Congestion);
     }
     if (isSingleClient(report->common)) {
+	fprintf(stdout, "WARN: Suggested to use lower case -u instead of -U (to avoid serialize & bypass of reporter thread)\n");
+    } else if (isSingleClient(report->common)) {
 	fprintf(stdout, "Server set to single client traffic mode per -U (serialize traffic tests)\n");
-    }
-    if (isSingleClient(report->common)) {
-	fprintf(stdout, "WARN: Server set to bypass reporter thread per -U (suggest use lower case -u instead)\n");
     }
     if (isMulticast(report->common)) {
 	fprintf(stdout, "Server set to single client traffic mode (per multicast receive)\n");

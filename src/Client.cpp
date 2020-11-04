@@ -422,12 +422,10 @@ void Client::InitTrafficLoop (void) {
     // Finally, post this thread's "job report" which the reporter thread
     // will continuously process as long as there are packets flowing
     // right now the ring is empty
-    if (!isReverse(mSettings)) {
-	if (isDataReport(mSettings)) {
-	    assert(myJob!=NULL);
-	    assert(myReport!=NULL);
-	    PostReport(myJob);
-	}
+    if (!isReverse(mSettings) && !isSingleUDP(mSettings) && isDataReport(mSettings)) {
+        assert(myJob!=NULL);
+        assert(myReport!=NULL);
+        PostReport(myJob);
     }
     one_report = ((!isUDP(mSettings) && !isEnhanced(mSettings) && (mSettings->mIntervalMode != kInterval_Time) \
 		   && !isIsochronous(mSettings) && !isTripTime(mSettings) && !isReverse(mSettings)) ? true : false);
