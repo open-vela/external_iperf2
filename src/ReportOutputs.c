@@ -130,6 +130,7 @@ static inline void _output_outoforder(struct TransferInfo *stats) {
 //
 static inline void set_llawbuf(double lambda, double meantransit) {
     double L  = lambda * meantransit;
+    if (L < 0) {L = 0;}
     byte_snprintf(llaw_buf, sizeof(llaw_buf), L, 'A');
     llaw_buf[sizeof(llaw_buf)-1] = '\0';
 }
