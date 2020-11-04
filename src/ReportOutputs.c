@@ -136,8 +136,8 @@ static inline void set_llawbuf(double lambda, double meantransit, struct Transfe
     if (L < LLAW_LOWERBOUNDS) {
 	strcpy(llaw_buf, "OLB");
     } else {
-        //force to bytes
-        byte_snprintf(llaw_buf, sizeof(llaw_buf), L, toupper(stats->common->Format));
+        //force to adpative bytes for human readable
+        byte_snprintf(llaw_buf, sizeof(llaw_buf), L, 'A');
 	llaw_buf[sizeof(llaw_buf)-1] = '\0';
     }
 }
