@@ -157,7 +157,7 @@ run a full duplex test, i.e. traffic in both transmit and receive directions usi
 increment the destination ip address when using the parallel (-P) option
 .TP
 .BR "    --ipg "\fIn\fR
-set the interpacket gap to \fIn\fR (units of seconds) for packets or within a frame/burst when --isochronous is set
+set the inter-packet gap to \fIn\fR (units of seconds) for packets or within a frame/burst when --isochronous is set
 .TP
 .BR "    --isochronous[=" \fIfps\fR:\fImean\fR,\fIstdev\fR "]"
 send isochronous traffic with frequency frames per second and load defined by mean and standard deviation using a log normal distribution, defaults to 60:20m,0. (Note: Here the suffixes indicate bytes/sec or bits/sec per use of uppercase or lowercase, respectively. Also the p suffix is supported to set the burst size in packets, e.g. isochronous=2:25p will send two 25 packet bursts every second, or one 25 packet burst every 0.5 seconds.)
@@ -189,7 +189,7 @@ enable the measurement of end to end write to read latencies (client and server 
 time in seconds to hold back or delay after the TCP connect and prior to the socket writes. For UDP it's the delay between the traffic thread starting and the first write.
 .TP
 .BR "    --txstart-time "\fIn\fR.\fIn\fR
-set the txstart-time to \fIn\fR.\fIn\fR using unix or epoch time format (supports microsecond resolution, e.g 1536014418.123456) An example to delay one second using command subsitution is iperf -c 192.168.1.10 --txstart-time $(expr $(date +%s) + 1).$(date +%N)
+set the txstart-time to \fIn\fR.\fIn\fR using unix or epoch time format (supports microsecond resolution, e.g 1536014418.123456) An example to delay one second using command substitution is iperf -c 192.168.1.10 --txstart-time $(expr $(date +%s) + 1).$(date +%N)
 .TP
 .BR -B ", " --bind " \fIip\fR | \fIip\fR:\fIport\fR | \fIipv6 -V\fR | \fI[ipv6]\fR:\fIport -V\fR"
 bind src ip addr and optional port as the source of traffic (see notes)
