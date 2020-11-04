@@ -142,7 +142,11 @@ void ReportPacket (struct ReporterData* data, struct ReportStruct *packet) {
     }
 #endif
     packetring_enqueue(data->packetring, packet);
-#ifndef HAVE_THREAD
+#ifdef HAVE_THREAD
+    // bypass the reporter thread here for single UDP
+    if (isSingleUDP(stats->common))
+        reporter_process_transfer_report(data);
+#else
     /*
      * Process the report in this thread
      */
@@ -287,8 +291,10 @@ static inline struct ReportHeader *reporter_jobq_set_root (struct thread_Setting
     if (ReportRoot == NULL) {
 	// The reporter is starting from an empty state
 	// so set the load detect to trigger an initial delay
-	reset_consumption_detector();
-	reporter_default_heading_flags((inSettings->mReportMode == kReport_CSV));
+        if (!isSingleUDP(inSettings)) {
+	    reset_consumption_detector();
+	    reporter_default_heading_flags((inSettings->mReportMode == kReport_CSV));
+        }
 	if (!ReportPendingHead) {
 	    Condition_TimedWait(&ReportCond, 1);
 #ifdef HAVE_THREAD_DEBUG
@@ -404,14 +410,14 @@ void reporter_spawn (struct thread_Settings *thread) {
 		// Store a cached pointer for the linked list maitenance
 		struct ReportHeader *tmp = (*work_item)->next;
 	        if (reporter_process_report(*work_item)) {
+#ifdef HAVE_THREAD_DEBUG
+		  thread_debug("Jobq *REMOVE* %p", (void *) (*work_item));
+#endif
 		    // memory for *work_item is gone by now
 		    *work_item = tmp;
 		    if (!tmp)
 			break;
 		}
-#ifdef HAVE_THREAD_DEBUG
-//	        thread_debug( "Jobq *REMOVE* (%p)=%p (%p)=%p", (void *) work_item, (void *) (*work_item), (void *) &(*work_item)->next, (void *) *(&(*work_item)->next));
-#endif
 		work_item = &(*work_item)->next;
 	    }
 	}
