@@ -51,12 +51,15 @@
 #include "Locale.h"
 #include "SocketAddr.h"
 
+// These static variables are not thread safe but ok to use becase only
+// the repoter thread usses them
 #define SNBUFFERSIZE 256
 #define SNBUFFEREXTENDSIZE 512
 static char outbuffer[SNBUFFERSIZE]; // Buffer for printing
 static char outbufferext[SNBUFFEREXTENDSIZE]; // Buffer for printing
 static char outbufferext2[SNBUFFEREXTENDSIZE]; // Buffer for printing
 static char llaw_buf[100];
+static char netpower_buf[100];
 
 static int HEADING_FLAG(report_bw) = 0;
 static int HEADING_FLAG(report_bw_jitter_loss) = 0;
@@ -97,7 +100,6 @@ void reporter_default_heading_flags (int flag) {
     HEADING_FLAG(report_sumcnt_bw_write_enhanced) = flag;
     HEADING_FLAG(report_udp_fullduplex) = flag;
 }
-
 static inline void _print_stats_common (struct TransferInfo *stats) {
     assert(stats!=NULL);
     byte_snprintf(outbuffer, sizeof(outbuffer), (double) stats->cntBytes, toupper((int)stats->common->Format));
@@ -128,14 +130,28 @@ static inline void _output_outoforder(struct TransferInfo *stats) {
 //  Little's law is L = lambda * W, where L is queue depth,
 //  lambda the arrival rate and W is the processing time
 //
-static inline void set_llawbuf(double lambda, double meantransit) {
+#define LLAW_LOWERBOUNDS -1e7
+static inline void set_llawbuf(double lambda, double meantransit, struct TransferInfo *stats) {
     double L  = lambda * meantransit;
-    if (L < -1e7) {
-	strcpy(llaw_buf, "OOB");
+    if (L < LLAW_LOWERBOUNDS) {
+	strcpy(llaw_buf, "OLB");
     } else {
-	byte_snprintf(llaw_buf, sizeof(llaw_buf), L, 'A');
+	byte_snprintf(llaw_buf, sizeof(llaw_buf), L, stats->common->Format);
 	llaw_buf[sizeof(llaw_buf)-1] = '\0';
     }
+}
+#define NETPWR_LOWERBOUNDS -1e7
+static inline void set_netpowerbuf(double meantransit, struct TransferInfo *stats) {
+  if (meantransit == 0.0) {
+      strcpy(netpower_buf, "NAN");
+  } else {
+      double netpwr = (NETPOWERCONSTANT * ((double) stats->cntBytes) / (double) (stats->ts.iEnd - stats->ts.iStart) / meantransit);
+      if (netpwr <  NETPWR_LOWERBOUNDS) {
+	  strcpy(netpower_buf, "OLB");
+      } else {
+	  snprintf(netpower_buf, sizeof(netpower_buf), "%.0f", netpwr);
+      }
+  }
 }
 
 //TCP Output
@@ -183,9 +199,10 @@ void tcp_output_read_enhanced_triptime (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw_read_enhanced_netpwr);
     double meantransit = (stats->transit.cntTransit > 0) ? (stats->transit.sumTransit / stats->transit.cntTransit) : 0;
     double lambda = (stats->IPGsum > 0.0) ? ((double)stats->cntBytes / stats->IPGsum) : 0.0;
-    set_llawbuf(lambda, meantransit);
+    set_llawbuf(lambda, meantransit, stats);
     _print_stats_common(stats);
     if (stats->cntBytes) {
+        set_netpowerbuf(meantransit, stats);
 	printf(report_bw_read_enhanced_netpwr_format,
 	       stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
 	       outbuffer, outbufferext,
@@ -196,7 +213,7 @@ void tcp_output_read_enhanced_triptime (struct TransferInfo *stats) {
 	       stats->transit.cntTransit,
 	       stats->transit.cntTransit ? (long) ((double)stats->cntBytes / (double) stats->transit.cntTransit) : 0,
 	       llaw_buf,
-	       (meantransit > 0.0) ? (NETPOWERCONSTANT * ((double) stats->cntBytes) / (double) (stats->ts.iEnd - stats->ts.iStart) / meantransit) : NAN,
+	       netpower_buf,
 	       stats->sock_callstats.read.cntRead,
 	       stats->sock_callstats.read.bins[0],
 	       stats->sock_callstats.read.bins[1],
@@ -207,6 +224,7 @@ void tcp_output_read_enhanced_triptime (struct TransferInfo *stats) {
 	       stats->sock_callstats.read.bins[6],
 	       stats->sock_callstats.read.bins[7]);
     } else {
+        set_netpowerbuf(meantransit, stats);
 	printf(report_bw_read_enhanced_format,
 	       stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
 	       outbuffer, outbufferext,
@@ -217,7 +235,7 @@ void tcp_output_read_enhanced_triptime (struct TransferInfo *stats) {
 	       stats->transit.cntTransit,
 	       stats->transit.cntTransit ? (long) ((double)stats->cntBytes / (double) stats->transit.cntTransit) : 0,
 	       llaw_buf,
-	       (meantransit > 0.0) ? (NETPOWERCONSTANT * ((double) stats->cntBytes) / (double) (stats->ts.iEnd - stats->ts.iStart) / meantransit) : NAN,
+	       netpower_buf,
 	       stats->sock_callstats.read.cntRead,
 	       stats->sock_callstats.read.bins[0],
 	       stats->sock_callstats.read.bins[1],
@@ -253,10 +271,7 @@ void tcp_output_write_enhanced (struct TransferInfo *stats) {
 	   stats->sock_callstats.write.WriteErr,
 	   stats->sock_callstats.write.TCPretry);
 #else
-    double netpower = 0;
-    if (stats->sock_callstats.write.rtt > 0) {
-	netpower = NETPOWERCONSTANT * (((double)stats->cntBytes / (double) (stats->ts.iEnd - stats->ts.iStart)) / (1e-6 * stats->sock_callstats.write.rtt));
-    }
+    set_netpowerbuf(stats->sock_callstats.write.rtt * 1e-6, stats);
     if (stats->sock_callstats.write.cwnd > 0) {
 	printf(report_bw_write_enhanced_format,
 	       stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
@@ -266,7 +281,7 @@ void tcp_output_write_enhanced (struct TransferInfo *stats) {
 	       stats->sock_callstats.write.TCPretry,
 	       stats->sock_callstats.write.cwnd,
 	       stats->sock_callstats.write.rtt,
-	       netpower);
+	       netpower_buf);
     } else {
 	printf(report_bw_write_enhanced_nocwnd_format,
 	       stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
@@ -275,7 +290,7 @@ void tcp_output_write_enhanced (struct TransferInfo *stats) {
 	       stats->sock_callstats.write.WriteErr,
 	       stats->sock_callstats.write.TCPretry,
 	       stats->sock_callstats.write.rtt,
-	       netpower);
+	       netpower_buf);
     }
 #endif
 }
@@ -348,7 +363,8 @@ void udp_output_read_enhanced_triptime (struct TransferInfo *stats) {
 	} else {
 	    double meantransit = (stats->transit.cntTransit > 0) ? (stats->transit.sumTransit / stats->transit.cntTransit) : 0;
 	    double lambda = (stats->IPGsum > 0.0) ? ((double)stats->cntBytes / stats->IPGsum) : 0.0;
-	    set_llawbuf(lambda, meantransit);
+	    set_llawbuf(lambda, meantransit, stats);
+	    set_netpowerbuf(meantransit, stats);
 	    printf(report_bw_jitter_loss_enhanced_format, stats->common->transferIDStr,
 		   stats->ts.iStart, stats->ts.iEnd,
 		   outbuffer, outbufferext,
@@ -360,7 +376,7 @@ void udp_output_read_enhanced_triptime (struct TransferInfo *stats) {
 		   (stats->transit.cntTransit < 2) ? 0 : sqrt(stats->transit.m2Transit / (stats->transit.cntTransit - 1)) / 1e3,
 		   (stats->cntIPG / stats->IPGsum),
 		   llaw_buf,
-		   (meantransit > 0.0) ? (NETPOWERCONSTANT * ((double)stats->cntBytes) / (double) (stats->ts.iEnd - stats->ts.iStart) / meantransit) : 0);
+		   netpower_buf);
 	}
     }
     if (stats->latency_histogram) {
@@ -392,9 +408,10 @@ void udp_output_read_enhanced_triptime_isoch (struct TransferInfo *stats) {
 		   (100.0 * stats->cntError) / stats->cntDatagrams,
 		   (stats->cntIPG / stats->IPGsum));
 	} else {
-	    double meantransit = (stats->transit.sumTransit / stats->transit.cntTransit);
+	    double meantransit = (stats->transit.cntTransit > 0) ? (stats->transit.sumTransit / stats->transit.cntTransit) : 0;
 	    double lambda = (stats->IPGsum > 0.0) ? ((double)stats->cntBytes / stats->IPGsum) : 0.0;
-	    set_llawbuf(lambda, meantransit);
+	    set_llawbuf(lambda, meantransit, stats);
+	    set_netpowerbuf(meantransit, stats);
 	    printf(report_bw_jitter_loss_enhanced_isoch_format, stats->common->transferIDStr,
 		   stats->ts.iStart, stats->ts.iEnd,
 		   outbuffer, outbufferext,
@@ -405,8 +422,8 @@ void udp_output_read_enhanced_triptime_isoch (struct TransferInfo *stats) {
 		   stats->transit.maxTransit*1e3,
 		   (stats->transit.cntTransit < 2) ? 0 : sqrt(stats->transit.m2Transit / (stats->transit.cntTransit - 1)) / 1e3,
 		   (stats->cntIPG / stats->IPGsum),
-		   ((stats->IPGsum > 0.0) ? llaw_buf : 0),
-		   ((meantransit > 0.0) ? (NETPOWERCONSTANT * ((double) stats->cntBytes) / (double) (stats->ts.iEnd - stats->ts.iStart) / meantransit) : 0),
+		   llaw_buf,
+		   netpower_buf,
 		   stats->isochstats.framecnt, stats->isochstats.framelostcnt);
 	}
     }
