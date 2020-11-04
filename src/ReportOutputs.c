@@ -827,6 +827,9 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
     if (isSingleClient(report->common)) {
 	fprintf(stdout, "Server set to single client traffic mode per -U (serialize traffic tests)\n");
     }
+    if (isSingleClient(report->common)) {
+	fprintf(stdout, "WARN: Server set to bypass reporter thread per -U (suggest use lower case -u instead)\n");
+    }
     if (isMulticast(report->common)) {
 	fprintf(stdout, "Server set to single client traffic mode (per multicast receive)\n");
     }
@@ -870,6 +873,9 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
     }
     if (isCongestionControl(report->common) && report->common->Congestion) {
 	fprintf(stdout, "TCP congestion control set to %s\n", report->common->Congestion);
+    }
+    if (isSingleClient(report->common)) {
+	fprintf(stdout, "WARN: Client set to bypass reporter thread per -U (suggest use lower case -u instead)\n");
     }
     if ((isIPG(report->common) || isUDP(report->common)) && !isIsochronous(report->common)) {
 	byte_snprintf(outbuffer, sizeof(outbuffer), report->common->pktIPG, 'a');
