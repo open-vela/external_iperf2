@@ -261,6 +261,7 @@ void byte_snprintf(char* outString, int inLen, double inNum, char inFormat) {
     int conv = 0;
     const char* suffix;
     const char* format;
+    double tmpNum;
 
     /* convert to bits for [bkmga] */
     if (!isupper((int)inFormat)) {
@@ -277,7 +278,7 @@ void byte_snprintf(char* outString, int inLen, double inNum, char inFormat) {
 
         default:
         case 'A': {
-	    double tmpNum = inNum;
+	    tmpNum = abs(inNum);
 	    conv = kConv_Unit;
 
 	    if (isupper((int)inFormat)) {
@@ -296,21 +297,22 @@ void byte_snprintf(char* outString, int inLen, double inNum, char inFormat) {
     }
 
     if (!isupper((int)inFormat)) {
-        inNum *= kConversionForBits[ conv ];
+        inNum *= kConversionForBits[conv];
         suffix = kLabel_bit[conv];
     } else {
-        inNum *= kConversion [conv];
-        suffix = kLabel_Byte[ conv ];
+        inNum *= kConversion[conv];
+        suffix = kLabel_Byte[conv];
     }
 
     /* print such that we always fit in 4 places */
-    if (inNum < 0.9995) {          /* 9.995 would be rounded to 10.0 */
+    tmpNum = abs(inNum);
+    if (tmpNum < 0.9995) {          /* 9.995 would be rounded to 10.0 */
         format = "%4.3f %s";        /* #.## */
-    } else if (inNum < 9.995) {          /* 9.995 would be rounded to 10.0 */
+    } else if (tmpNum < 9.995) {          /* 9.995 would be rounded to 10.0 */
         format = "%4.2f %s";        /* #.## */
-    } else if (inNum < 99.95) {   /* 99.95 would be rounded to 100 */
+    } else if (tmpNum < 99.95) {   /* 99.95 would be rounded to 100 */
         format = "%4.1f %s";        /* ##.# */
-    } else if (inNum < 999.5) {   /* 999.5 would be rounded to 1000 */
+    } else if (tmpNum < 999.5) {   /* 999.5 would be rounded to 1000 */
 	format = "%4.0f %s";        /*  ### */
     } else {                        /* 1000-1024 fits in 4 places
 				     * If not using Adaptive sizes then
