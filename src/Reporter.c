@@ -597,6 +597,7 @@ inline void reporter_handle_packet_pps (struct ReporterData *data, struct Report
 #endif
 }
 
+// Variance uses the Welford inline algorithm, mean is also inline
 static inline double reporter_handle_packet_oneway_transit (struct ReporterData *data, struct ReportStruct *packet) {
     struct TransferInfo *stats = &data->info;
     // Transit or latency updates done inline below
