@@ -128,6 +128,7 @@ void PostReport (struct ReportHeader *reporthdr) {
  */
 void ReportPacket (struct ReporterData* data, struct ReportStruct *packet) {
     assert(data != NULL);
+    struct TransferInfo *stats = &data->info;    
 #ifdef HAVE_THREAD_DEBUG
     if (packet->packetID < 0) {
 	thread_debug("Reporting last packet for %p  qdepth=%d sock=%d", (void *) data, packetring_getcount(data->packetring), data->info.common->socket);
@@ -135,7 +136,6 @@ void ReportPacket (struct ReporterData* data, struct ReportStruct *packet) {
 #endif
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
     // tcpi stats are only sampled on the report interval
-    struct TransferInfo *stats = &data->info;
     if (isEnhanced(stats->common) && (stats->common->ThreadMode == kMode_Client) && \
 	(TimeDifference(stats->ts.nextTime, packet->packetTime) < 0)) {
 	gettcpistats(data, 0);
