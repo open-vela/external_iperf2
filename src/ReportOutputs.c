@@ -134,7 +134,7 @@ static inline void _output_outoforder(struct TransferInfo *stats) {
 static inline void set_llawbuf(double lambda, double meantransit, struct TransferInfo *stats) {
     double L  = lambda * meantransit;
     if (L < LLAW_LOWERBOUNDS) {
-	strcpy(llaw_buf, "OLB");
+	strcpy(llaw_buf, "OBL");
     } else {
         //force to adpative bytes for human readable
         byte_snprintf(llaw_buf, sizeof(llaw_buf), L, 'A');
@@ -148,7 +148,7 @@ static inline void set_netpowerbuf(double meantransit, struct TransferInfo *stat
   } else {
       double netpwr = (NETPOWERCONSTANT * ((double) stats->cntBytes) / (double) (stats->ts.iEnd - stats->ts.iStart) / meantransit);
       if (netpwr <  NETPWR_LOWERBOUNDS) {
-	  strcpy(netpower_buf, "OLB");
+	  strcpy(netpower_buf, "OBL");
       } else {
 	  snprintf(netpower_buf, sizeof(netpower_buf), "%.0f", netpwr);
       }
