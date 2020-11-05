@@ -141,7 +141,15 @@ void ReportPacket (struct ReporterData* data, struct ReportStruct *packet) {
 	gettcpistats(data, 0);
     }
 #endif
+    // Note for threaded operation all that needs
+    // to be done is to enqueue the packet data
+    // into the ring.
     packetring_enqueue(data->packetring, packet);
+    // The traffic thread calls the reporting process
+    // directly forr non-threaded operation
+    // These defeats the puropse of separating
+    // traffic i/o from user i/o and really
+    // should be avoided.
 #ifdef HAVE_THREAD
     // bypass the reporter thread here for single UDP
     if (isSingleUDP(stats->common))
