@@ -1057,6 +1057,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    fprintf(stderr, "ERROR: option of --sum-only requires -P greater than 1\n");
 	    bail = true;
 	}
+	if (isTxHoldback(mExtSettings) && isTxStartTime(mExtSettings)) {
+	    fprintf(stdout,"ERROR: options of --txstart-time and --txdelay-time are mutually exclusive\n");
+	    bail = true;
+	}
         if (isUDP(mExtSettings)) {
 	    if (isPeerVerDetect(mExtSettings)) {
 		fprintf(stderr, "ERROR: option of -X or --peer-detect not supported with -u UDP\n");
