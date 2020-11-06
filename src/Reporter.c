@@ -1020,6 +1020,8 @@ void reporter_transfer_protocol_server_udp (struct ReporterData *data, int final
 	stats->cntError = 0;
     stats->cntDatagrams = stats->PacketID - stats->total.Datagrams.prev;
     stats->cntIPG = stats->total.IPG.current - stats->total.IPG.prev;
+    if (stats->total.Datagrams.current == 1)
+	stats->jitter = 0;
     if (sumstats) {
 	sumstats->total.OutofOrder.current += stats->total.OutofOrder.current - stats->total.OutofOrder.prev;
 	// assume most of the  time out-of-order packets are not

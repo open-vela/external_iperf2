@@ -1066,10 +1066,6 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		fprintf(stderr, "ERROR: option of --connect-only not supported with -u UDP\n");
 		bail = true;
 	    }
-	    if (isTxHoldback(mExtSettings)) {
-		fprintf(stderr, "ERROR: option of --txdelay-time is not supported with -u UDP\n");
-		bail = true;
-	    }
 	    if (isIPG(mExtSettings) && isBWSet(mExtSettings)) {
 		fprintf(stderr, "ERROR: options of --b and --ipg cannot be applied together\n");
 		bail = true;
