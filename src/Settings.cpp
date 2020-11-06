@@ -1060,7 +1060,11 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		unsetTxStartTime(mExtSettings);
 	    }
 	}
-        if (isUDP(mExtSettings)) {
+	if (isTxHoldback(mExtSettings) && isTxStartTime(mExtSettings)) {
+	    fprintf(stdout,"ERROR: options of --txstart-time and --txdelay-time are mutually exclusive\n");
+	    bail = true;
+	}
+	if (isUDP(mExtSettings)) {
 	    if (isPeerVerDetect(mExtSettings)) {
 		fprintf(stderr, "ERROR: option of -X or --peer-detect not supported with -u UDP\n");
 		bail = true;
@@ -1142,7 +1146,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		one_only++;
 	    if (isReverse(mExtSettings))
 		one_only++;
-            if (mExtSettings->mMode != kTest_Normal)
+	    if (mExtSettings->mMode != kTest_Normal)
 		one_only++;
 	    if (one_only > 1) {
 		fprintf(stderr, "ERROR: options of --full-duplex, --reverse, -d and -r are mutually exclusive\n");
