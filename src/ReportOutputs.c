@@ -102,6 +102,8 @@ void reporter_default_heading_flags (int flag) {
 }
 static inline void _print_stats_common (struct TransferInfo *stats) {
     assert(stats!=NULL);
+    outbuffer[0] = '\0';
+    outbufferext[0] = '\0';
     byte_snprintf(outbuffer, sizeof(outbuffer), (double) stats->cntBytes, toupper((int)stats->common->Format));
     if (stats->ts.iEnd < SMALLEST_INTERVAL_SEC) {
         stats->cntBytes = 0;
