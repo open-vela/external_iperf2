@@ -825,17 +825,11 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		setEnhanced(mExtSettings);
 		match = sscanf(optarg,"%ld.%6ld", &seconds, &usecs);
 		mExtSettings->txstart_epoch.tv_usec = 0;
-		Timestamp now;
-		long nowsecs = now.getSecs();
 		switch (match) {
 		case 2:
 		    mExtSettings->txstart_epoch.tv_usec = usecs;
 		case 1:
 		    mExtSettings->txstart_epoch.tv_sec = seconds;
-		    if (((nowsecs - seconds) > 0) || ((nowsecs == seconds) && (now.getUsecs() > usecs))) {
-			fprintf(stderr, "WARNING: start time of before now ignored\n");
-			unsetTxStartTime(mExtSettings);
-		    }
 		    break;
 		default:
 		    unsetTxStartTime(mExtSettings);
@@ -1057,9 +1051,14 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    fprintf(stderr, "ERROR: option of --sum-only requires -P greater than 1\n");
 	    bail = true;
 	}
-	if (isTxHoldback(mExtSettings) && isTxStartTime(mExtSettings)) {
-	    fprintf(stdout,"ERROR: options of --txstart-time and --txdelay-time are mutually exclusive\n");
-	    bail = true;
+        if (isTxStartTime(mExtSettings)) {
+	    Timestamp now;
+	    long nowsecs = now.getSecs();
+	    if (((nowsecs - mExtSettings->txstart_epoch.tv_sec) > 0) \
+		|| ((nowsecs == mExtSettings->txstart_epoch.tv_sec) && (now.getUsecs() > mExtSettings->txstart_epoch.tv_usec))) {
+		fprintf(stderr, "WARNING: --txstart-time of before now ignored\n");
+		unsetTxStartTime(mExtSettings);
+	    }
 	}
         if (isUDP(mExtSettings)) {
 	    if (isPeerVerDetect(mExtSettings)) {
