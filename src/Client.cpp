@@ -263,7 +263,10 @@ int Client::StartSynch (void) {
     }
     if (isTxStartTime(mSettings)) {
         clock_usleep_abstime(&mSettings->txstart_epoch);
+    } else if(isTxHoldback(mSettings)) {
+	TxDelay();
     }
+
     if (isIsochronous(mSettings)) {
         Timestamp tmp;
         tmp.set(mSettings->txstart_epoch.tv_sec, mSettings->txstart_epoch.tv_usec);
