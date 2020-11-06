@@ -278,7 +278,7 @@ void byte_snprintf(char* outString, int inLen, double inNum, char inFormat) {
 
         default:
         case 'A': {
-	    tmpNum = abs(inNum);
+	    tmpNum = (inNum < 0.0 ? (-1 * inNum) : inNum);
 	    conv = kConv_Unit;
 
 	    if (isupper((int)inFormat)) {
@@ -305,7 +305,7 @@ void byte_snprintf(char* outString, int inLen, double inNum, char inFormat) {
     }
 
     /* print such that we always fit in 4 places */
-    tmpNum = abs(inNum);
+    tmpNum = (inNum < 0.0 ? (-1 * inNum) : inNum);
     if (tmpNum < 0.9995) {          /* 9.995 would be rounded to 10.0 */
         format = "%4.3f %s";        /* #.## */
     } else if (tmpNum < 9.995) {          /* 9.995 would be rounded to 10.0 */
