@@ -1,4 +1,5 @@
 See doc/DESIGN_NOTES for some description around the software design
+See doc/CLOCKSYNC_NOTES for some description around synchronizing the realtime clocks
 
 2.0.14 change set (as of October 17th, 2020)
 ----------------------------------------
