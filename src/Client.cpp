@@ -1100,14 +1100,12 @@ void Client::FinishTrafficActions (void) {
 	reportstruct->packetLen = 0;
     }
     int do_close = EndJob(myJob, reportstruct);
-    if (isUDP(mSettings)) {
-	if (!(isMulticast(mSettings) || isNoUDPfin(mSettings))) {
-	    /*
-	     *  For UDP, there is a final handshake between the client and the server,
-	     *  do that now (unless requested no to)
-	     */
-	    AwaitServerFinPacket();
-	}
+    if (isUDP(mSettings) && !isMulticast(mSettings) && !isNoUDPfin(mSettings)) {
+	/*
+	 *  For UDP, there is a final handshake between the client and the server,
+	 *  do that now (unless requested no to)
+	 */
+	AwaitServerFinPacket();
     }
     if (do_close) {
 #if HAVE_THREAD_DEBUG
