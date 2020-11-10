@@ -252,19 +252,20 @@ int Client::StartSynch (void) {
     myJob = InitIndividualReport(mSettings);
     myReport = (struct ReporterData *)myJob->this_report;
     myReport->info.common->socket=mySocket;
-
     // Perform delays, usually between connect() and data xfer though before connect
     // Two delays are supported:
     // o First is an absolute start time per unix epoch format
     // o Second is a holdback, a relative amount of seconds between the connect and data xfers
     // check for an epoch based start time
-    if (!isServerReverse(mSettings) || isTripTime(mSettings) || isIsochronous(mSettings)) {
+    if (!isServerReverse(mSettings)) {
+	if (isTxStartTime(mSettings)) {
+	    clock_usleep_abstime(&mSettings->txstart_epoch);
+	} else if (isTxHoldback(mSettings)) {
+	    TxDelay();
+	}
 	reportstruct->packetLen = SendFirstPayload();
-    }
-    if (isTxStartTime(mSettings)) {
-        clock_usleep_abstime(&mSettings->txstart_epoch);
-    } else if(isTxHoldback(mSettings)) {
-	TxDelay();
+    } else {
+	reportstruct->packetLen = 0;
     }
 
     if (isIsochronous(mSettings)) {
