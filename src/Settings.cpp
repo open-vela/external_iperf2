@@ -856,7 +856,6 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		    mExtSettings->txholdback_timer.tv_sec = holdbackdelay.getSecs();
 		    mExtSettings->txholdback_timer.tv_usec = (holdbackdelay.getUsecs());
 		    setTxHoldback(mExtSettings);
-		    setEnhanced(mExtSettings);
 		}
 	    }
 	    if (triptime) {
