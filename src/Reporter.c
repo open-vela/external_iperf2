@@ -128,7 +128,7 @@ void PostReport (struct ReportHeader *reporthdr) {
  */
 void ReportPacket (struct ReporterData* data, struct ReportStruct *packet) {
     assert(data != NULL);
-    struct TransferInfo *stats = &data->info;    
+    struct TransferInfo *stats = &data->info;
 #ifdef HAVE_THREAD_DEBUG
     if (packet->packetID < 0) {
 	thread_debug("Reporting last packet for %p  qdepth=%d sock=%d", (void *) data, packetring_getcount(data->packetring), data->info.common->socket);
@@ -1365,9 +1365,11 @@ void reporter_transfer_protocol_fullduplex_tcp (struct TransferInfo *stats, int 
     if (final) {
 	stats->cntBytes = stats->total.Bytes.current;
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
-	if ((stats->output_handler) && !(stats->filter_this_sample_ouput))
-	    (*stats->output_handler)(stats);
+    } else {
+	reporter_set_timestamps_time(&stats->ts, INTERVAL);
     }
+    if ((stats->output_handler) && !(stats->filter_this_sample_ouput))
+	(*stats->output_handler)(stats);
 }
 
 void reporter_transfer_protocol_fullduplex_udp (struct TransferInfo *stats, int final) {
@@ -1395,9 +1397,11 @@ void reporter_transfer_protocol_fullduplex_udp (struct TransferInfo *stats, int 
 	stats->cntIPG = stats->total.IPG.current;
 	stats->IPGsum = TimeDifference(stats->ts.packetTime, stats->ts.startTime);
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
-	if ((stats->output_handler) && !(stats->filter_this_sample_ouput))
-	    (*stats->output_handler)(stats);
+    } else {
+	reporter_set_timestamps_time(&stats->ts, INTERVAL);
     }
+    if ((stats->output_handler) && !(stats->filter_this_sample_ouput))
+	(*stats->output_handler)(stats);
 }
 
 // Conditional print based on time
