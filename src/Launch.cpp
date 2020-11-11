@@ -220,8 +220,10 @@ static void clientside_client_fullduplex (struct thread_Settings *thread, Client
     SockAddr_remoteAddr(thread);
     thread->mFullDuplexReport = InitSumReport(thread, -1, 1);
     Settings_Copy(thread, &reverse_client, 0);
-    Iperf_push_host(&thread->peer, thread);
-    Iperf_push_host(&reverse_client->peer, reverse_client);
+    if ((thread->mThreads > 1) || (!(thread->mThreads > 1) && !isEnhanced(thread))) {
+	Iperf_push_host(&thread->peer, thread);
+	Iperf_push_host(&reverse_client->peer, reverse_client);
+    }
     assert(reverse_client != NULL);
     setTransferID(reverse_client, 1);
     theClient->my_connect(1);
