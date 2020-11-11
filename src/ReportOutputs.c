@@ -309,7 +309,7 @@ void udp_output_fullduplex (struct TransferInfo *stats) {
 void udp_output_fullduplex_enhanced (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_udp_fullduplex);
     _print_stats_common(stats);
-    printf(report_udp_fullduplex_enhanced_format, stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext, \
+    printf(report_udp_fullduplex_enhanced_format, stats->common->transferID, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext, \
 	   stats->cntDatagrams, (stats->cntIPG && (stats->IPGsum > 0.0) ? (stats->cntIPG / stats->IPGsum) : 0.0));
 }
 
