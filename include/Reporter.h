@@ -216,8 +216,8 @@ struct ReportCommon {
     unsigned short Port;
     unsigned short BindPort;
     unsigned short ListenPort;
-    intmax_t UDPRate;            // -b or -u
-    int UDPRateUnits;
+    intmax_t AppRate;            // -b or -u
+    int AppRateUnits;
     char Format;
     int TTL;
     int BufLen;
@@ -268,8 +268,8 @@ struct ReportSettings {
     Socklen_t size_peer;
     iperf_sockaddr local;
     Socklen_t size_local;
-    intmax_t UDPRate;            // -b or -u
-    int UDPRateUnits;            // -b is either bw or pps
+    intmax_t AppRate;            // -b or -u
+    int AppRateUnits;            // -b is either bw or pps
     int pid;
     struct IsochStats isochstats;
     void (*output_handler) (struct ReportSettings *settings);

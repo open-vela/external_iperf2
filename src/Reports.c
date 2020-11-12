@@ -104,8 +104,8 @@ static void common_copy (struct ReportCommon **common, struct thread_Settings *i
     (*common)->Port = inSettings->mPort;
     (*common)->BindPort = inSettings->mBindPort;
     (*common)->ListenPort = inSettings->mListenPort;
-    (*common)->UDPRate = inSettings->mUDPRate;
-    (*common)->UDPRateUnits = inSettings->mUDPRateUnits;
+    (*common)->AppRate = inSettings->mAppRate;
+    (*common)->AppRateUnits = inSettings->mAppRateUnits;
     (*common)->socket = inSettings->mSock;
     (*common)->transferID = inSettings->mTransferID;
     (*common)->threads = inSettings->mThreads;

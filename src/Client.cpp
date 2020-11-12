@@ -467,7 +467,7 @@ void Client::Run (void) {
 	}
     } else {
 	// Launch the approprate TCP traffic loop
-	if (mSettings->mUDPRate > 0)
+	if (mSettings->mAppRate > 0)
 	    RunRateLimitedTCP();
 	else
 	    RunTCP();
@@ -596,7 +596,7 @@ void Client::RunRateLimitedTCP (void) {
     int burst_remaining = 0;
     int burst_id = 1;
 
-    long var_rate = mSettings->mUDPRate;
+    long var_rate = mSettings->mAppRate;
     int fatalwrite_err = 0;
     while (InProgress() && !fatalwrite_err) {
 	// Add tokens per the loop time
@@ -606,7 +606,7 @@ void Client::RunRateLimitedTCP (void) {
         if (isVaryLoad(mSettings)) {
 	    static Timestamp time3;
 	    if (time2.subSec(time3) >= VARYLOAD_PERIOD) {
-		var_rate = lognormal(mSettings->mUDPRate,mSettings->mVariance);
+		var_rate = lognormal(mSettings->mAppRate,mSettings->mVariance);
 		time3 = time2;
 		if (var_rate < 0)
 		    var_rate = 0;
@@ -693,12 +693,12 @@ double Client::get_delay_target (void) {
 	delay_target = mSettings->mBurstIPG * 1000000;  // convert from milliseconds to nanoseconds
     } else {
 	// compute delay target in units of nanoseconds
-	if (mSettings->mUDPRateUnits == kRate_BW) {
+	if (mSettings->mAppRateUnits == kRate_BW) {
 	    // compute delay for bandwidth restriction, constrained to [0,1] seconds
 	    delay_target = (double) (mSettings->mBufLen * ((kSecs_to_nsecs * kBytes_to_Bits)
-							   / mSettings->mUDPRate));
+							   / mSettings->mAppRate));
 	} else {
-	    delay_target = 1e9 / mSettings->mUDPRate;
+	    delay_target = 1e9 / mSettings->mAppRate;
 	}
     }
     return delay_target;
@@ -733,10 +733,10 @@ void Client::RunUDP (void) {
 	reportstruct->packetTime.tv_sec = now.getSecs();
 	reportstruct->packetTime.tv_usec = now.getUsecs();
 	reportstruct->sentTime = reportstruct->packetTime;
-        if (isVaryLoad(mSettings) && mSettings->mUDPRateUnits == kRate_BW) {
+        if (isVaryLoad(mSettings) && mSettings->mAppRateUnits == kRate_BW) {
 	    static Timestamp time3;
 	    if (now.subSec(time3) >= VARYLOAD_PERIOD) {
-		long var_rate = lognormal(mSettings->mUDPRate,variance);
+		long var_rate = lognormal(mSettings->mAppRate,variance);
 		if (var_rate < 0)
 		    var_rate = 0;
 		delay_target = (double) (mSettings->mBufLen * ((kSecs_to_nsecs * kBytes_to_Bits) / var_rate));
