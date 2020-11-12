@@ -251,8 +251,8 @@ void Settings_Initialize (struct thread_Settings *main) {
     // option, defaults
     main->flags         = FLAG_MODETIME | FLAG_STDOUT; // Default time and stdout
     main->flags_extend  = 0x0;           // Default all extend flags to off
-    //main->mUDPRate      = 0;           // -b,  offered (or rate limited) load (both UDP and TCP)
-    main->mUDPRateUnits = kRate_BW;
+    //main->mAppRate      = 0;           // -b,  offered (or rate limited) load (both UDP and TCP)
+    main->mAppRateUnits = kRate_BW;
     //main->mHost         = NULL;        // -c,  none, required for client
     main->mMode         = kTest_Normal;  // -d,  mMode == kTest_DualTest
     main->mFormat       = 'a';           // -f,  adaptive bits
@@ -269,7 +269,6 @@ void Settings_Initialize (struct thread_Settings *main) {
     main->mThreadMode   = kMode_Unknown; // -s,  or -c, none
     main->mAmount       = 1000;          // -t,  10 seconds
     main->mIntervalMode = kInterval_None;// -i   none, time, packets, or bursts
-    // mUDPRate > 0 means UDP            // -u,  N/A, see kDefault_UDPRate
     // skip version                      // -v,
     //main->mTCPWin       = 0;           // -w,  ie. don't set window
 
@@ -458,11 +457,11 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		// scan for PPS units, just look for 'p' as that's good enough
 		if ((((results = strtok(tmp, "p")) != NULL) && strcmp(results,optarg)) \
 		    || (((results = strtok(tmp, "P")) != NULL)  && strcmp(results,optarg))) {
-		    mExtSettings->mUDPRateUnits = kRate_PPS;
-		    mExtSettings->mUDPRate = byte_atoi(results);
+		    mExtSettings->mAppRateUnits = kRate_PPS;
+		    mExtSettings->mAppRate = byte_atoi(results);
 		} else {
-		    mExtSettings->mUDPRateUnits = kRate_BW;
-		    mExtSettings->mUDPRate = byte_atoi(optarg);
+		    mExtSettings->mAppRateUnits = kRate_BW;
+		    mExtSettings->mAppRate = byte_atoi(optarg);
 		    if (((results = strtok(tmp, ",")) != NULL) && strcmp(results,optarg)) {
 			setVaryLoad(mExtSettings);
 			mExtSettings->mVariance = byte_atoi(optarg);
@@ -1017,7 +1016,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
     }
     // Handle default UDP offered load (TCP will be max, i.e. no read() or write() rate limiting)
     if (!isBWSet(mExtSettings) && isUDP(mExtSettings)) {
-	mExtSettings->mUDPRate = kDefault_UDPRate;
+	mExtSettings->mAppRate = kDefault_UDPRate;
     }
     if (isTripTime(mExtSettings) && (isReverse(mExtSettings) || \
 				     isFullDuplex(mExtSettings) || \
@@ -1090,11 +1089,11 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		    delay_target = mExtSettings->mBurstIPG * 1e9;  // convert from seconds to nanoseconds
 		} else {
 		    // compute delay target in units of nanoseconds
-		    if (mExtSettings->mUDPRateUnits == kRate_BW) {
+		    if (mExtSettings->mAppRateUnits == kRate_BW) {
 			// compute delay for bandwidth restriction, constrained to [0,max] seconds
-			delay_target = (mExtSettings->mBufLen * 8e9) / mExtSettings->mUDPRate;
+			delay_target = (mExtSettings->mBufLen * 8e9) / mExtSettings->mAppRate;
 		    } else {
-			delay_target = 1e9 / mExtSettings->mUDPRate;
+			delay_target = 1e9 / mExtSettings->mAppRate;
 		    }
 		}
 		if (delay_target < 0  ||
@@ -1541,18 +1540,18 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
 	    }
 	}
 	if (flags & HEADER_EXTEND) {
-	    reversed_thread->mUDPRate = ntohl(hdr->extend.lRate);
+	    reversed_thread->mAppRate = ntohl(hdr->extend.lRate);
 #ifdef HAVE_INT64_T
-	    reversed_thread->mUDPRate |= ((uint64_t)(ntohl(hdr->extend.uRate) >> 8) << 32);
+	    reversed_thread->mAppRate |= ((uint64_t)(ntohl(hdr->extend.uRate) >> 8) << 32);
 #endif
 	    upperflags = ntohs(hdr->extend.upperflags);
 	    if (upperflags & HEADER_NOUDPFIN) {
 		setNoUDPfin(reversed_thread);
 	    }
 	    if ((upperflags & HEADER_UNITS_PPS) == HEADER_UNITS_PPS) {
-		reversed_thread->mUDPRateUnits = kRate_PPS;
+		reversed_thread->mAppRateUnits = kRate_PPS;
 	    } else {
-		reversed_thread->mUDPRateUnits = kRate_BW;
+		reversed_thread->mAppRateUnits = kRate_BW;
 	    }
 	    reversed_thread->mTOS = ntohs(hdr->extend.tos);
 	    if (isIsochronous(server)) {
@@ -1581,9 +1580,9 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
 	    }
 	}
 	if (flags & HEADER_EXTEND) {
-	    reversed_thread->mUDPRate = ntohl(hdr->extend.lRate);
+	    reversed_thread->mAppRate = ntohl(hdr->extend.lRate);
 #ifdef HAVE_INT64_T
-	    reversed_thread->mUDPRate |= ((uint64_t)(ntohl(hdr->extend.uRate) >> 8) << 32);
+	    reversed_thread->mAppRate |= ((uint64_t)(ntohl(hdr->extend.uRate) >> 8) << 32);
 #endif
 	    upperflags = ntohs(hdr->extend.upperflags);
 	    reversed_thread->mTOS = ntohs(hdr->extend.tos);
@@ -1693,9 +1692,9 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	hdr->extend.version_l = htonl(IPERF_VERSION_MINORHEX);
 	hdr->extend.tos = htons(client->mTOS & 0xFF);
 	if (isBWSet(client)) {
-	    hdr->extend.lRate = htonl((uint32_t)(client->mUDPRate));
+	    hdr->extend.lRate = htonl((uint32_t)(client->mAppRate));
 #ifdef HAVE_INT64_T
-	    hdr->extend.uRate = htonl(((uint32_t)(client->mUDPRate >> 32)) << 8);
+	    hdr->extend.uRate = htonl(((uint32_t)(client->mAppRate >> 32)) << 8);
 #endif
 	} else {
 	    hdr->extend.lRate = htonl(kDefault_UDPRate);
@@ -1782,9 +1781,9 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	hdr->extend.version_l = htonl(IPERF_VERSION_MINORHEX);
 	hdr->extend.tos = htons(client->mTOS & 0xFF);
 	if (isBWSet(client)) {
-	    hdr->extend.lRate = htonl((uint32_t)(client->mUDPRate));
+	    hdr->extend.lRate = htonl((uint32_t)(client->mAppRate));
 #ifdef HAVE_INT64_T
-	    hdr->extend.uRate = htonl(((uint32_t)(client->mUDPRate >> 32)) << 8);
+	    hdr->extend.uRate = htonl(((uint32_t)(client->mAppRate >> 32)) << 8);
 #endif
 	}
 	len += sizeof(struct client_hdrext);
