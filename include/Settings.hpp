@@ -212,8 +212,8 @@ struct thread_Settings {
     enum TestMode mMode;              // -r or -d
     bool clientListener;              // set to True if client mode listener per -r or -d
     // Hopefully int64_t's
-    uintmax_t mUDPRate;            // -b or -u
-    char mUDPRateUnits;            // -b is either bw or pps
+    uintmax_t mAppRate;            // -b or -u
+    char mAppRateUnits;            // -b is either bw or pps
     uintmax_t mAmount;             // -n or -t
     unsigned int mInterval;               // -i integer time units is usec
     enum IntervalMode mIntervalMode;

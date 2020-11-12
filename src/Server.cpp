@@ -185,7 +185,7 @@ void Server::RunTCP (void) {
 	// perform read
 	if (isBWSet(mSettings)) {
 	    time2.setnow();
-	    tokens += time2.subSec(time1) * (mSettings->mUDPRate / 8.0);
+	    tokens += time2.subSec(time1) * (mSettings->mAppRate / 8.0);
 	    time1 = time2;
 	}
 	reportstruct->transit_ready = 0;
