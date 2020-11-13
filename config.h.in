@@ -106,6 +106,9 @@
 /* Define to 1 if you have the `freopen' function. */
 #undef HAVE_FREOPEN
 
+/* Define to 1 if you have the `getaddrinfo' function. */
+#undef HAVE_GETADDRINFO
+
 /* Define if syscall(SYS_gettid) available. */
 #undef HAVE_GETTID_SYSCALL
 
