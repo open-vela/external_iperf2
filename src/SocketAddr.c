@@ -61,12 +61,12 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 /* -------------------------------------------------------------------
  * Create a socket address. If inHostname is not null, resolve that
  * address and fill it in. Fill in the port number. Use IPv6 ADDR_ANY
  * if that is what is desired.
  * ------------------------------------------------------------------- */
-
 void SockAddr_remoteAddr (struct thread_Settings *inSettings) {
     SockAddr_zeroAddress(&inSettings->peer);
     if (inSettings->mHost != NULL) {
@@ -178,97 +178,105 @@ void SockAddr_localAddr (struct thread_Settings *inSettings) {
 
 void SockAddr_setHostname (const char* inHostname, iperf_sockaddr *inSockAddr, int isIPv6) {
     // ..I think this works for both ipv6 & ipv4... we'll see
-#if defined(HAVE_IPV6)
-    {
-        struct addrinfo *res, *itr;
-        int ret_ga;
-
-	if (isIPv6) {
-	    struct addrinfo hints;
-	    memset(&hints, 0, sizeof(hints));
-	    hints.ai_family = AF_INET6;
-	    ret_ga = getaddrinfo(inHostname, NULL, &hints, &res);
+#if HAVE_GETADDRINFO
+    int found = 0;
+    int ret_ga;
+    struct addrinfo *res = NULL, *itr;
+    if (isIPv6) {
+#if HAVE_IPV6
+	struct addrinfo hints;
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET6;
+	ret_ga = getaddrinfo(inHostname, NULL, &hints, &res);
+	if (ret_ga == 0) {
+	    if (res && res->ai_addr) {
+	    // Now search for a IPv6 Address
+		itr = res;
+		while (itr != NULL) {
+		    if (itr->ai_family == AF_INET6) {
+			memcpy(inSockAddr, (itr->ai_addr), (itr->ai_addrlen));
+			freeaddrinfo(res);
+			found = 1;
+			break;
+		    } else {
+			itr = itr->ai_next;
+		    }
+		}
+	    }
 	} else {
-	    ret_ga = getaddrinfo(inHostname, NULL, NULL, &res);
+	    fprintf(stderr, "ERROR: %s (%s and v6)\n", gai_strerror(ret_ga), inHostname);
+	    exit(1);
 	}
-        if (ret_ga) {
-            fprintf(stderr, "error: %s\n", gai_strerror(ret_ga));
-            exit(1);
-        }
-        if (!res->ai_addr) {
-            fprintf(stderr, "getaddrinfo failed to get an address... target was '%s'\n", inHostname);
-            exit(1);
-        }
-
-        // Check address type before filling in the address
-        // ai_family = PF_xxx; ai_protocol = IPPROTO_xxx, see netdb.h
-        // ...but AF_INET6 == PF_INET6
-        itr = res;
-        if (isIPv6) {
-            // First check all results for a IPv6 Address
-            while (itr != NULL) {
-                if (itr->ai_family == AF_INET6) {
-                    memcpy(inSockAddr, (itr->ai_addr),
-                           (itr->ai_addrlen));
-                    freeaddrinfo(res);
-                    return;
-                } else {
-                    itr = itr->ai_next;
-                }
-            }
-        }
-        itr = res;
-        // Now find a IPv4 Address
-        while (itr != NULL) {
-            if (itr->ai_family == AF_INET) {
-                memcpy(inSockAddr, (itr->ai_addr),
-                       (itr->ai_addrlen));
-                freeaddrinfo(res);
-                return;
-            } else {
-                itr = itr->ai_next;
-            }
-        }
+#endif // IPV6
+	if (!found) {
+	    fprintf(stderr, "ERROR: getaddrinfo failed to find an ipv6 address for host '%s'\n", inHostname);
+	    exit(1);
+	}
+    } else {
+	ret_ga = getaddrinfo(inHostname, NULL, NULL, &res);
+	if (ret_ga == 0) {
+	    if (res && res->ai_addr) {
+		itr = res;
+		// Now search for a IPv4 Address
+		while (itr != NULL) {
+		    if (itr->ai_family == AF_INET) {
+			memcpy(inSockAddr, (itr->ai_addr), (itr->ai_addrlen));
+			freeaddrinfo(res);
+			found = 1;
+			break;
+		    } else {
+			itr = itr->ai_next;
+		    }
+		}
+	    }
+	} else {
+	    fprintf(stderr, "ERROR: %s (%s and v4)\n", gai_strerror(ret_ga), inHostname);
+	    exit(1);
+	}
+	if (!found) {
+	    fprintf(stderr, "ERROR: getaddrinfo failed to find an ipv4 address for host '%s'\n", inHostname);
+	    exit(1);
+	}
     }
 #else
+    if (isIPv6) {
+	fprintf(stderr, "ERROR: gethostbyname doesn't support ipv6 (per the use of -V)\n");
+	exit(1);
+    }
     // first try just converting dotted decimal
     // on Windows gethostbyname doesn't understand dotted decimal
-    int rc = inet_pton(AF_INET, inHostname,
-                        (unsigned char*)&(((struct sockaddr_in*)inSockAddr)->sin_addr));
-    inSockAddr->sin_family = AF_INET;
+    struct sockaddr_in *sockaddr = (struct sockaddr_in *)inSockAddr;
+    int rc = inet_pton(AF_INET, inHostname, &sockaddr->sin_addr);
+    sockaddr->sin_family = AF_INET;
     if (rc == 0) {
         struct hostent *hostP = gethostbyname(inHostname);
         if (hostP == NULL) {
             /* this is the same as herror() but works on more systems */
             const char* format;
             switch (h_errno) {
-                case HOST_NOT_FOUND:
-                    format = "%s: Unknown host\n";
-                    break;
-                case NO_ADDRESS:
-                    format = "%s: No address associated with name\n";
-                    break;
-                case NO_RECOVERY:
-                    format = "%s: Unknown server error\n";
-                    break;
-                case TRY_AGAIN:
-                    format = "%s: Host name lookup failure\n";
-                    break;
-
-                default:
-                    format = "%s: Unknown resolver error\n";
-                    break;
+	    case HOST_NOT_FOUND:
+		format = "%s: Unknown host\n";
+		break;
+	    case NO_ADDRESS:
+		format = "%s: No address associated with name\n";
+		break;
+	    case NO_RECOVERY:
+		format = "%s: Unknown server error\n";
+		break;
+	    case TRY_AGAIN:
+		format = "%s: Host name lookup failure\n";
+		break;
+	    default:
+		format = "%s: Unknown resolver error\n";
+		break;
             }
             fprintf(stderr, format, inHostname);
             exit(1);
-
             return; // TODO throw
         }
-
-        memcpy(&(((struct sockaddr_in*)inSockAddr)->sin_addr), *(hostP->h_addr_list),
-               (hostP->h_length));
+        memcpy(&sockaddr->sin_addr, *(hostP->h_addr_list), (hostP->h_length));
     }
-#endif
+#endif // ADDRINFO
 }
 // end setHostname
 
