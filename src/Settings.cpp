@@ -1104,8 +1104,8 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    }
 	} else {
 	    if (isBWSet(mExtSettings) && ((mExtSettings->mAppRate / 8) < (uintmax_t) mExtSettings->mBufLen)) {
-		fprintf(stderr, "ERROR: option -b of %" PRIdMAX " and -l of %d are incompatible, consider setting -l to %" PRIdMAX " or lower\n", \
-			(mExtSettings->mAppRate / 8), mExtSettings->mBufLen, (mExtSettings->mAppRate / 8));
+		fprintf(stderr, "ERROR: option -b and -l of %d are incompatible, consider setting -l to %d or lower\n", \
+			mExtSettings->mBufLen, (int) (mExtSettings->mAppRate / 8));
 		bail = true;
 	    }
 	    if (isIPG(mExtSettings)) {
