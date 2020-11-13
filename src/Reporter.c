@@ -967,9 +967,9 @@ static inline void reporter_reset_transfer_stats_server_tcp (struct TransferInfo
     for (ix = 0; ix < 8; ix++) {
 	stats->sock_callstats.read.bins[ix] = 0;
     }
-    stats->transit.minTransit=stats->transit.lastTransit;
-    stats->transit.maxTransit=stats->transit.lastTransit;
-    stats->transit.sumTransit = stats->transit.lastTransit;
+    stats->transit.minTransit = FLT_MAX;
+    stats->transit.maxTransit = FLT_MIN;
+    stats->transit.sumTransit = 0;
     stats->transit.cntTransit = 0;
     stats->transit.vdTransit = 0;
     stats->transit.meanTransit = 0;
@@ -983,9 +983,9 @@ static inline void reporter_reset_transfer_stats_server_udp (struct TransferInfo
     stats->total.OutofOrder.prev = stats->total.OutofOrder.current;
     stats->total.Lost.prev = stats->total.Lost.current;
     stats->total.IPG.prev = stats->total.IPG.current;
-    stats->transit.minTransit=stats->transit.lastTransit;
-    stats->transit.maxTransit=stats->transit.lastTransit;
-    stats->transit.sumTransit = stats->transit.lastTransit;
+    stats->transit.minTransit = FLT_MAX;
+    stats->transit.maxTransit = FLT_MIN;
+    stats->transit.sumTransit = 0;
     stats->transit.cntTransit = 0;
     stats->transit.vdTransit = 0;
     stats->transit.meanTransit = 0;
