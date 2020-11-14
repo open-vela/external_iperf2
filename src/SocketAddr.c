@@ -182,15 +182,15 @@ void SockAddr_setHostname (const char* inHostname, iperf_sockaddr *inSockAddr, i
     int found = 0;
     int ret_ga;
     struct addrinfo *res = NULL, *itr;
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
     if (isIPv6) {
 #if HAVE_IPV6
-	struct addrinfo hints;
-	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET6;
 	ret_ga = getaddrinfo(inHostname, NULL, &hints, &res);
 	if (ret_ga == 0) {
 	    if (res && res->ai_addr) {
-	    // Now search for a IPv6 Address
+		// Now search for a IPv6 Address
 		itr = res;
 		while (itr != NULL) {
 		    if (itr->ai_family == AF_INET6) {
@@ -213,7 +213,8 @@ void SockAddr_setHostname (const char* inHostname, iperf_sockaddr *inSockAddr, i
 	    exit(1);
 	}
     } else {
-	ret_ga = getaddrinfo(inHostname, NULL, NULL, &res);
+	hints.ai_family = AF_INET;
+	ret_ga = getaddrinfo(inHostname, NULL, &hints, &res);
 	if (ret_ga == 0) {
 	    if (res && res->ai_addr) {
 		itr = res;
