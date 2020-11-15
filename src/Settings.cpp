@@ -1339,8 +1339,6 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
     }
     // Parse client (-c) addresses for multicast, link-local and bind to device
     if (mExtSettings->mThreadMode == kMode_Client) {
-	iperf_sockaddr tmp;
-	SockAddr_zeroAddress(&tmp);
 	mExtSettings->mIfrnametx = NULL; // default off SO_BINDTODEVICE
 	if (((results = strtok(mExtSettings->mHost, "%")) != NULL) && ((results = strtok(NULL, "%")) != NULL)) {
 	    mExtSettings->mIfrnametx = (char *) calloc(1,strlen(results) + 1);
@@ -1349,12 +1347,9 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	if (isIPV6(mExtSettings))
 	    strip_v6_brackets(mExtSettings->mHost);
 	// get the socket address settings from the host, needed for link-local and multicast tests
-	SockAddr_setHostname(mExtSettings->mHost, &tmp, (isIPV6(mExtSettings) ? 1 : 0));
-	if (SockAddr_isZeroAddress(&tmp) == 0) {
-	    fprintf(stderr, "ERROR: failed to get ip addr for %s\n", mExtSettings->mHost);
-	    exit(1);
-	}
-	if (isIPV6(mExtSettings) && SockAddr_isLinklocal(&tmp)) {
+	SockAddr_zeroAddress(&mExtSettings->peer);
+	SockAddr_remoteAddr(mExtSettings);
+	if (isIPV6(mExtSettings) && SockAddr_isLinklocal(&mExtSettings->peer)) {
 	    // link-local doesn't use SO_BINDTODEVICE but includes it in the host string
 	    // so stitch things back together and null the bind to name
 	    if (mExtSettings->mIfrnametx) {
@@ -1366,7 +1361,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		fprintf(stderr, "WARNING: usage of ipv6 link-local requires a device specifier, e.g. %s%%eth0\n", mExtSettings->mHost);
 	    }
 	}
-	if (SockAddr_isMulticast(&tmp)) {
+	if (SockAddr_isMulticast(&mExtSettings->peer)) {
 	    bail = false;
 	    if ((mExtSettings->mThreads > 1) && !isIncrDstIP(mExtSettings)) {
 		fprintf(stderr, "ERROR: client option of -P greater than 1 not supported with multicast address\n");
