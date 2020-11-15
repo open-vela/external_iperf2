@@ -68,30 +68,30 @@ extern "C" {
  * if that is what is desired.
  * ------------------------------------------------------------------- */
 void SockAddr_remoteAddr (struct thread_Settings *inSettings) {
-    SockAddr_zeroAddress(&inSettings->peer);
-    if (inSettings->mHost != NULL) {
-        SockAddr_setHostname(inSettings->mHost, &inSettings->peer, isIPV6(inSettings));
-	if (inSettings->incrdstip)
-	    SockAddr_incrAddress(&inSettings->peer, inSettings->incrdstip);
-    } else {
+    if (SockAddr_isZeroAddress(&inSettings->peer) == 0) {
+	if (inSettings->mHost != NULL) {
+	    SockAddr_setHostname(inSettings->mHost, &inSettings->peer, isIPV6(inSettings));
+	    if (inSettings->incrdstip)
+		SockAddr_incrAddress(&inSettings->peer, inSettings->incrdstip);
+	} else {
 #ifdef HAVE_IPV6
-        if (isIPV6(inSettings)) {
-            ((struct sockaddr*)&inSettings->peer)->sa_family = AF_INET6;
-        } else {
-            ((struct sockaddr*)&inSettings->peer)->sa_family = AF_INET;
-        }
-    }
-    if (SockAddr_isIPv6(&inSettings->peer)) {
-        inSettings->size_peer = sizeof(struct sockaddr_in6);
-    } else {
-        inSettings->size_peer = sizeof(struct sockaddr_in);
-    }
+	    if (isIPV6(inSettings)) {
+		((struct sockaddr*)&inSettings->peer)->sa_family = AF_INET6;
+	    } else {
+		((struct sockaddr*)&inSettings->peer)->sa_family = AF_INET;
+	    }
+	}
+	if (SockAddr_isIPv6(&inSettings->peer)) {
+	    inSettings->size_peer = sizeof(struct sockaddr_in6);
+	} else {
+	    inSettings->size_peer = sizeof(struct sockaddr_in);
+	}
 #else
         ((struct sockaddr*)&inSettings->peer)->sa_family = AF_INET;
-    }
-    inSettings->size_peer = sizeof(struct sockaddr_in);
+	inSettings->size_peer = sizeof(struct sockaddr_in);
 #endif
-    SockAddr_setPort(&inSettings->peer, inSettings->mPort);
+	SockAddr_setPort(&inSettings->peer, inSettings->mPort);
+    }
 }
 // end SocketAddr
 
