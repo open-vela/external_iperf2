@@ -1,7 +1,7 @@
 See doc/DESIGN_NOTES for some description around the software design
 See doc/CLOCKSYNC_NOTES for some description around synchronizing the realtime clocks
 
-2.0.14 change set (as of October 17th, 2020)
+2.0.14 change set (as of November 15th, 2020)
 ----------------------------------------
 o scaling improvements for -P, i.e. improved support for large numbers of traffic threads
 o major code refactoring (see doc/DESIGN_NOTES) for maintainability, extensibilty, performance, scaling, memory usage
@@ -39,6 +39,7 @@ o fix the case when -P <value> is set on the server such that summing output is 
 o multicast listener will autoset -U (single server), e.g -P > 1 not supported for multicast
 o multicast listener no longer busy drops multicast packets during traffic test, i.e. only server thread receives them
 o immediate bail out on mutually exclusive command line options
+o getaddrinfo bug with -static linkage workaround and DNS lookup one time in setttings context vs twice in Settings and client traffic thread
 o fix -o or --output using freopen to redirect stdout and stderr to a file
 o man page updates with examples
 o tested with 1000's of traffic streams, WiFi, 10G and 100G
