@@ -366,8 +366,11 @@ void client_init(struct thread_Settings *clients) {
     for (int i = 1; i < clients->mThreads; i++) {
         Settings_Copy(clients, &next, 1);
 	if (next) {
-	    if (isIncrDstIP(clients))
+	    if (isIncrDstIP(clients)) {
 		next->incrdstip = i;
+		// force a setHostname
+		SockAddr_zeroAddress(&next->peer);
+	    }
 	}
         itr->runNow = next;
         itr = next;
