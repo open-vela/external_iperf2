@@ -68,8 +68,6 @@ extern "C" {
  * if that is what is desired.
  * ------------------------------------------------------------------- */
 void SockAddr_remoteAddr (struct thread_Settings *inSettings) {
-    if (inSettings->incrdstip)
-	SockAddr_zeroAddress(&inSettings->peer);
     if (SockAddr_isZeroAddress(&inSettings->peer) == 0) {
 	if (inSettings->mHost != NULL) {
 	    SockAddr_setHostname(inSettings->mHost, &inSettings->peer, isIPV6(inSettings));
