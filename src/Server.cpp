@@ -204,7 +204,7 @@ void Server::RunTCP (void) {
 		    assert(burst_info.burst_size > 0);
 		    reportstruct->burstsize = burst_info.burst_size;
 		    burst_info.burst_id = ntohl(burst_info.burst_id);
-//		    printf("**** burst size = %d id = %d\n", burst_info.burst_size, burst_info.burst_id);
+//                 printf("**** burst size = %d id = %d\n", burst_info.burst_size, burst_info.burst_id);
 		    reportstruct->frameID = burst_info.burst_id;
 		    if (isTripTime(mSettings)) {
 			reportstruct->sentTime.tv_sec = ntohl(burst_info.send_tt.write_tv_sec);
@@ -216,6 +216,10 @@ void Server::RunTCP (void) {
 		    }
 		    myReport->info.ts.prevsendTime = reportstruct->sentTime;
 		    burst_nleft = burst_info.burst_size - n;
+		    if (burst_nleft == 0) {
+			reportstruct->prevSentTime = myReport->info.ts.prevsendTime;
+			reportstruct->transit_ready = 1;
+		    }
 		    currLen += n;
 		    readLen = (mSettings->mBufLen < burst_nleft) ? mSettings->mBufLen : burst_nleft;
 		    WARN(burst_nleft <= 0, "invalid burst read req size");
@@ -227,33 +231,30 @@ void Server::RunTCP (void) {
 		    goto end;
 		}
 	    }
-	    n = recv(mSettings->mSock, mBuf, readLen, 0);
-	    if (n > 0) {
-		reportstruct->emptyreport=0;
-		if (isIsochronous(mSettings) || isTripTime(mSettings)) {
-		    burst_nleft -= n;
-		    if (burst_nleft == 0) {
-#ifdef WRITEACKDONE
-		        if (isWriteAck(mSettings)) {
-			    enqueue_ackring(mSettings->ackring, reportstruct);
-			}
-#endif
-			reportstruct->prevSentTime = myReport->info.ts.prevsendTime;
-			reportstruct->transit_ready = 1;
-		    } else {
+	    if (burst_nleft > 0) {
+		n = recv(mSettings->mSock, mBuf, readLen, 0);
+		if (n > 0) {
+		    reportstruct->emptyreport=0;
+		    if (isIsochronous(mSettings) || isTripTime(mSettings)) {
+			burst_nleft -= n;
+			if (burst_nleft == 0) {
+			    reportstruct->prevSentTime = myReport->info.ts.prevsendTime;
+			    reportstruct->transit_ready = 1;
+			} else {
 //			printf("****currlen = %ld, n=%d, burst_nleft=%d id=%d\n", currLen, n, burst_nleft, burst_info.burst_id);
+			}
 		    }
-		}
-	    } else if (n == 0) {
-		peerclose = true;
+		} else if (n == 0) {
+		    peerclose = true;
 #ifdef HAVE_THREAD_DEBUG
-		thread_debug("Server thread detected EOF on socket %d", mSettings->mSock);
+		    thread_debug("Server thread detected EOF on socket %d", mSettings->mSock);
 #endif
-	    } else if ((n < 0) && (!NONFATALTCPREADERR(errno))) {
-		// WARN_errno(1, "recv");
-		n = 0;
+		} else if ((n < 0) && (!NONFATALTCPREADERR(errno))) {
+		    // WARN_errno(1, "recv");
+		    n = 0;
+		}
+		currLen += n;
 	    }
-	    currLen += n;
 	    now.setnow();
 	    reportstruct->packetTime.tv_sec = now.getSecs();
 	    reportstruct->packetTime.tv_usec = now.getUsecs();
