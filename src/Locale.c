@@ -398,7 +398,7 @@ const char report_bw_jitter_loss_suppress_enhanced_format[] =
  * Frame interval reports
  */
 #define IPERFFTimeFrmt "%4.4f-%4.4f"
-#define IPERFFTimeSpace "       "
+#define IPERFFTimeSpace "  "
 const char report_frame_jitter_loss_enhanced_header[] =
 "[ ID] Interval(f-transit)" IPERFFTimeSpace "Transfer     Bandwidth    FrameID   Jitter   Lost/Total \
  Latency avg/min/max/stdev PPS  inP NetPwr\n";
@@ -411,6 +411,13 @@ const char report_frame_jitter_loss_suppress_enhanced_format[] =
 
 const char report_frame_tcp_enhanced_header[] =
 "[ ID] Interval(f-transit)" IPERFFTimeSpace "Transfer     Bandwidth    FrameID\n";
+
+const char report_frame_read_tcp_enhanced_triptime_header[] =
+"[ ID] Frame (start-end)" IPERFFTimeSpace "Transfer      Bandwidth      Latency (ms)  Reads=Dist\n";
+
+const char report_frame_read_triptime_format[] =
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f        %d=%d:%d:%d:%d:%d:%d:%d:%d\n";
+
 
 /* -------------------------------------------------------------------
  * Fullduplex reports

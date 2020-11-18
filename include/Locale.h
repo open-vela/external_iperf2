@@ -237,6 +237,10 @@ extern const char report_frame_jitter_loss_suppress_enhanced_format[];
 
 extern const char report_frame_tcp_enhanced_header[];
 
+extern const char report_frame_read_tcp_enhanced_triptime_header[];
+
+extern const char report_frame_read_triptime_format[];
+
 extern const char report_udp_fullduplex_header[];
 
 extern const char report_udp_fullduplex_format[];

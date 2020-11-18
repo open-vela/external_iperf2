@@ -756,7 +756,8 @@ inline void reporter_handle_packet_server_tcp (struct ReporterData *data, struct
 	    stats->sock_callstats.read.bins[bin]++;
 	    stats->sock_callstats.read.totbins[bin]++;
 	}
-	reporter_handle_burst_tcp_transit(data, packet);
+	if (!isFrameInterval(stats->common))
+	    reporter_handle_burst_tcp_transit(data, packet);
     }
 }
 
@@ -1246,8 +1247,12 @@ void reporter_transfer_protocol_server_tcp (struct ReporterData *data, int final
 	    stats->framelatency_histogram->final = 1;
 	}
     }
-    if ((stats->output_handler) && !(stats->filter_this_sample_ouput))
+    if ((stats->output_handler) && !stats->filter_this_sample_ouput) {
 	(*stats->output_handler)(stats);
+	if (isFrameInterval(stats->common) && stats->framelatency_histogram) {
+	    histogram_print(stats->framelatency_histogram, stats->ts.iStart, stats->ts.iEnd);
+	}
+    }
     if (!final)
 	reporter_reset_transfer_stats_server_tcp(stats);
 }
@@ -1452,7 +1457,7 @@ int reporter_condprint_time_interval_report (struct ReporterData *data, struct R
 }
 
 // Conditional print based on bursts or frames
-int reporter_condprint_frame_interval_report_udp (struct ReporterData *data, struct ReportStruct *packet) {
+int reporter_condprint_frame_interval_report_server_udp (struct ReporterData *data, struct ReportStruct *packet) {
     int advance_jobq = 0;
     struct TransferInfo *stats = &data->info;
     // first packet of a burst and not a duplicate
@@ -1482,7 +1487,7 @@ int reporter_condprint_frame_interval_report_udp (struct ReporterData *data, str
     return advance_jobq;
 }
 
-int reporter_condprint_frame_interval_report_tcp (struct ReporterData *data, struct ReportStruct *packet) {
+int reporter_condprint_frame_interval_report_server_tcp (struct ReporterData *data, struct ReportStruct *packet) {
     assert(packet->burstsize != 0);
     struct TransferInfo *stats = &data->info;
 
@@ -1493,6 +1498,11 @@ int reporter_condprint_frame_interval_report_tcp (struct ReporterData *data, str
     }
     // first packet of a burst and not a duplicate
     if (packet->transit_ready) {
+        stats->tripTime = reporter_handle_packet_oneway_transit(data, packet);
+	if (stats->framelatency_histogram) {
+	    histogram_insert(stats->framelatency_histogram, stats->tripTime, &packet->sentTime);
+	}
+	stats->tripTime *= 1e3; // convert from secs millisecs
 	stats->matchframeID++;
 //	printf("****sndpkt=%ld.%ld rxpkt=%ld.%ld\n", packet->sentTime.tv_sec, packet->sentTime.tv_usec, packet->packetTime.tv_sec,packet->packetTime.tv_usec);
 	stats->ts.prevpacketTime = packet->prevSentTime;
@@ -1501,7 +1511,7 @@ int reporter_condprint_frame_interval_report_tcp (struct ReporterData *data, str
 	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
 	if ((stats->output_handler) && !(stats->filter_this_sample_ouput))
 	    (*stats->output_handler)(stats);
-	reporter_reset_transfer_stats_client_tcp(stats);
+	reporter_reset_transfer_stats_server_tcp(stats);
 	advance_jobq = 1;
     }
     return advance_jobq;

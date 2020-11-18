@@ -334,7 +334,7 @@ inline void Server::SetFullDuplexReportStartTime (void) {
 }
 inline void Server::SetReportStartTime (void) {
     now.setnow();
-    if (isTripTime(mSettings)) {
+    if (isTripTime(mSettings) && !isFrameInterval(mSettings)) {
 	// Start times come from the sender's timestamp
 	assert(mSettings->triptime_start.tv_sec != 0);
 	assert(mSettings->triptime_start.tv_usec != 0);

@@ -580,11 +580,12 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	break;
     case kInterval_Frames :
 	if (isUDP(inSettings)) {
-	    ireport->transfer_interval_handler = reporter_condprint_frame_interval_report_udp;
+	    ireport->transfer_interval_handler = reporter_condprint_frame_interval_report_server_udp;
 	} else {
-	    if (isTripTime(inSettings) || isIsochronous(inSettings))
-		ireport->transfer_interval_handler = reporter_condprint_frame_interval_report_tcp;
-	    else
+	    if (isTripTime(inSettings) || isIsochronous(inSettings)) {
+		ireport->transfer_interval_handler = reporter_condprint_frame_interval_report_server_tcp;
+		ireport->info.output_handler = tcp_output_frame_read_triptime;
+	    } else
 		ireport->transfer_interval_handler = NULL;
 	}
 	break;
