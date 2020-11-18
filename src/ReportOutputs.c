@@ -74,6 +74,7 @@ static int HEADING_FLAG(report_bw_jitter_loss_enhanced) = 0;
 static int HEADING_FLAG(report_bw_jitter_loss_enhanced_isoch) = 0;
 static int HEADING_FLAG(report_frame_jitter_loss_enhanced) = 0;
 static int HEADING_FLAG(report_frame_tcp_enhanced) = 0;
+static int HEADING_FLAG(report_frame_read_tcp_enhanced_triptime) = 0;
 static int HEADING_FLAG(report_udp_fullduplex) = 0;
 static int HEADING_FLAG(report_sumcnt_bw) = 0;
 static int HEADING_FLAG(report_sumcnt_udp_fullduplex) = 0;
@@ -96,6 +97,7 @@ void reporter_default_heading_flags (int flag) {
     HEADING_FLAG(report_bw_jitter_loss_enhanced_isoch) = flag;
     HEADING_FLAG(report_frame_jitter_loss_enhanced) = flag;
     HEADING_FLAG(report_frame_tcp_enhanced) = flag;
+    HEADING_FLAG(report_frame_read_tcp_enhanced_triptime) = flag;
     HEADING_FLAG(report_sumcnt_bw_read_enhanced) = flag;
     HEADING_FLAG(report_sumcnt_bw_write_enhanced) = flag;
     HEADING_FLAG(report_udp_fullduplex) = flag;
@@ -253,6 +255,40 @@ void tcp_output_read_enhanced_triptime (struct TransferInfo *stats) {
 	histogram_print(stats->framelatency_histogram, stats->ts.iStart, stats->ts.iEnd);
     }
 }
+void tcp_output_frame_read (struct TransferInfo *stats) {
+    HEADING_PRINT_COND(report_frame_tcp_enhanced);
+    _print_stats_common(stats);
+    printf(report_bw_read_enhanced_format,
+	   stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
+	   outbuffer, outbufferext,
+	   stats->sock_callstats.read.cntRead,
+	   stats->sock_callstats.read.bins[0],
+	   stats->sock_callstats.read.bins[1],
+	   stats->sock_callstats.read.bins[2],
+	   stats->sock_callstats.read.bins[3],
+	   stats->sock_callstats.read.bins[4],
+	   stats->sock_callstats.read.bins[5],
+	   stats->sock_callstats.read.bins[6],
+	   stats->sock_callstats.read.bins[7]);
+}
+void tcp_output_frame_read_triptime (struct TransferInfo *stats) {
+    HEADING_PRINT_COND(report_frame_read_tcp_enhanced_triptime);
+    _print_stats_common(stats);
+    printf(report_frame_read_triptime_format,
+	   stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
+	   outbuffer, outbufferext,
+	   stats->tripTime,
+	   stats->sock_callstats.read.cntRead,
+	   stats->sock_callstats.read.bins[0],
+	   stats->sock_callstats.read.bins[1],
+	   stats->sock_callstats.read.bins[2],
+	   stats->sock_callstats.read.bins[3],
+	   stats->sock_callstats.read.bins[4],
+	   stats->sock_callstats.read.bins[5],
+	   stats->sock_callstats.read.bins[6],
+	   stats->sock_callstats.read.bins[7]);
+}
+
 
 //TCP write or client output
 void tcp_output_write (struct TransferInfo *stats) {
@@ -839,7 +875,11 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
 		((1e3 * report->common->RXbinsize) / pow(10,report->common->RXunits)), report->common->RXbins);
     }
     if (isFrameInterval(report->common)) {
-	fprintf(stdout, "Frame or burst interval reporting feature is experimental - suggest fast-sampling as well\n");
+#if HAVE_FASTSAMPLING
+	fprintf(stdout, "Frame or burst interval reporting feature is experimental\n");
+#else
+	fprintf(stdout, "Frame or burst interval reporting feature is experimental (./configure --enable-fastsampling suggested)\n");
+#endif
     }
     output_window_size(report);
     printf("\n");

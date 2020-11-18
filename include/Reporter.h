@@ -430,8 +430,10 @@ void reporter_handle_packet_isochronous(struct ReporterData *data, struct Report
 
 // Reporter's conditional prints, right now have time and frame based sampling, possibly add packet based
 int reporter_condprint_time_interval_report(struct ReporterData *reporthdr, struct ReportStruct *packet);
-int reporter_condprint_frame_interval_report_udp(struct ReporterData *reporthdr, struct ReportStruct *packet);
-int reporter_condprint_frame_interval_report_tcp(struct ReporterData *reporthdr, struct ReportStruct *packet);
+int reporter_condprint_frame_interval_report_client_udp(struct ReporterData *reporthdr, struct ReportStruct *packet);
+int reporter_condprint_frame_interval_report_server_udp(struct ReporterData *reporthdr, struct ReportStruct *packet);
+int reporter_condprint_frame_interval_report_server_tcp(struct ReporterData *reporthdr, struct ReportStruct *packet);
+int reporter_condprint_frame_interval_report_client_tcp(struct ReporterData *reporthdr, struct ReportStruct *packet);
 //void reporter_set_timestamps_time(struct ReporterData *stats, enum TimestampType);
 
 // Reporter's interval ouput specialize routines
@@ -461,6 +463,8 @@ void tcp_output_sum_read(struct TransferInfo *stats);
 void tcp_output_sum_read_enhanced(struct TransferInfo *stats);
 void tcp_output_sumcnt_read(struct TransferInfo *stats);
 void tcp_output_sumcnt_read_enhanced (struct TransferInfo *stats);
+void tcp_output_frame_read(struct TransferInfo *stats);
+void tcp_output_frame_read_triptime(struct TransferInfo *stats);
 // TCP client
 void tcp_output_write(struct TransferInfo *stats);
 void tcp_output_sum_write(struct TransferInfo *stats);
