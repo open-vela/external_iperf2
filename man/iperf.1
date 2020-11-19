@@ -683,6 +683,15 @@ ct=<value> in the connected message, e.g.in '[ 3] local 192.168.1.4
 port 48736 connected with 192.168.1.1 port 5001 \fB(ct=1.84 ms)\fR'
 shows the 3WHS took 1.84 milliseconds.
 .P
+.B Packet per xecond (pps) calculation
+The packets per second calculation is done as a derivative, i.e. number of packets divided by
+time. The time is taken from the previous last packet to the current last packet. It is not
+the sample interval time. The last packet can land at different times within an interval.
+This means that pps does not have to match rx bytes divided by the sample interval.
+Also, with --trip-times set, the packet time on receive is set by the sender's write
+time so pps indicates the end to end pps with --trip-times. The RX pps calculation is receive
+side only when -e is set and --trip-times is not set.
+.P
 \fBLittle's Law\fR in queueing theory is a theorem that determines the average number of items (L) in a stationary queuing system based on the average waiting time (W) of an item within a system and the average number of items arriving at the system per unit of time (lambda). Mathematically, it's L = lambda * W. As used here, the units are bytes. The arrival rate is taken from the writes.
 .P
 .B Network power:
