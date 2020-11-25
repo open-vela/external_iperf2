@@ -1,24 +1,5 @@
 $Id: INSTALL,v 1.1.1.1 2004/05/18 01:50:44 kgibbs Exp $
 
-Briefly:
-
-Do one-time if needed:
-  dnf install gcc
-  dnf install gcc-c++
-  dnf install automake
-
-then to build do:
-  ./configure      -- configure for your machine
-  make             -- compile Iperf
-  make install     -- install Iperf, if desired, from root
-
-and to use:
-  iperf -s               (on machine "foo.bar.edu")
-  iperf -c foo.bar.edu   (on some other machine)
-  iperf -h               (for help screen)
-  iperf -v               (for version information)
-
-
 Platform Specific Notes
 
 FreeBSD
@@ -81,21 +62,3 @@ Windows (MinGW + Msys)
   MinGW+Msys on client machines.
 
 ---
-
-Other configure and compile options
-
-      ./configure --enable-thread-debug - used for tool debug
-      ./configure --enable-fastsampling - sub millisecond timestamping
-      ./configure --enable-packet-debug - show packet sequence numbers - very chatty
-      ./configure --enable-checkprograms - compile supplmentary test programs
-      ./configure --disable-ipv6
-      ./configure --disable-multicast
-      ./configure --disable-threads
-      ./configure --enable-debuginfo
----
-
-dnf installs needed for build:
-
-       dnf install gcc
-       dnf install gcc-c++
-       dnf install automake
