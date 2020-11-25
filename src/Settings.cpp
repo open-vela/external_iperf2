@@ -1360,6 +1360,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    } else {
 		fprintf(stderr, "WARNING: usage of ipv6 link-local requires a device specifier, e.g. %s%%eth0\n", mExtSettings->mHost);
 	    }
+	    SockAddr_zeroAddress(&mExtSettings->peer); // for link-local, force getaddrinfo() in the connect
 	}
 	if (SockAddr_isMulticast(&mExtSettings->peer)) {
 	    bail = false;
