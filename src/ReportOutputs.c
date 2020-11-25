@@ -876,9 +876,9 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
     }
     if (isFrameInterval(report->common)) {
 #if HAVE_FASTSAMPLING
-	fprintf(stdout, "Frame or burst interval reporting feature is experimental\n");
+	fprintf(stdout, "Frame or burst interval reporting (feature is experimental)\n");
 #else
-	fprintf(stdout, "Frame or burst interval reporting feature is experimental (./configure --enable-fastsampling suggested)\n");
+	fprintf(stdout, "Frame or burst interval reporting (feature is experimental, ./configure --enable-fastsampling suggested)\n");
 #endif
     }
     output_window_size(report);
