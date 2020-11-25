@@ -83,6 +83,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <getopt.h>
 #include <limits.h>
 
 #ifdef HAVE_STDBOOL_H
