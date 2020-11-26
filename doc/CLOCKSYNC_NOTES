@@ -1,0 +1,169 @@
+Many of iperf 2.0.14 latency features require the client's and server's clocks to be synchronized.
+This document will explain how to use Precision Time Protocol (PTP) found at https://sourceforge.net/projects/ptpd/
+Also, 'dnf install ptpd' will install on fedora systems
+
+First thing is find a PTP grandmaster. The configure it as master. Example /etc/ptpd.conf:
+
+; ==============================================================================
+; This is a recommended configuration for a PTPv2 slave
+; For a full list of options run ptpd2 -H or see the documentation and man pages
+; ==============================================================================
+
+; interface has to be specified
+ptpengine:interface=enp2s0
+
+; PTP domain
+ptpengine:domain=0
+
+; available presets are slaveonly, masteronly and masterslave (full IEEE 1588 implementation)
+ptpengine:preset=masteronly
+
+; multicast for both sync and delay requests - use hybrid for unicast delay requests
+ptpengine:ip_mode=multicast
+
+
+Then on the slaves:
+
+[root@localhost ptpd-code]# more /etc/ptpd2.conf
+; ==============================================================================
+; This is a recommended configuration for a PTPv2 slave
+; For a full list of options run ptpd2 -H or see the documentation and man pages
+; ==============================================================================
+
+; interface has to be specified
+ptpengine:interface=enp2s0
+clock:step_startup_force=y
+clock:set_rtc_on_step = y
+
+; PTP domain
+ptpengine:domain=0
+
+; available presets are slaveonly, masteronly and masterslave (full IEEE 1588 implementation)
+ptpengine:preset=slaveonly
+
+; multicast for both sync and delay requests - use hybrid for unicast delay requests
+ptpengine:ip_mode=multicast
+
+; when enabled, sniffing is used instead of sockets to send and receive packets
+ptpengine:use_libpcap=n
+
+; go into panic mode for 10 minutes instead of resetting the clock
+ptpengine:panic_mode=y
+ptpengine:panic_mode_duration=10
+
+; uncomment this to enable outlier filters
+ptpengine:sync_outlier_filter_enable=y
+ptpengine:delay_outlier_filter_enable=y
+
+; store observed drift in a file
+clock:drift_handling=file
+clock:drift_file=/var/log/ptpd2_kernelclock.drift
+
+; update online statistics every 5 seconds
+global:statistics_update_interval=5
+
+; wait 5 statistics intervals for one-way delay to stabilise
+ptpengine:calibration_delay=5
+
+; log file, event log only. if timing statistics are needed, see statistics_file
+global:log_file=/var/log/ptpd2.log
+global:log_level=LOG_ALL
+; log file up to 5M
+global:log_file_max_size=5000
+; rotate logs up to 5 files
+global:log_file_max_files=5
+
+; status file providing an overview of ptpd's operation and statistics
+global:log_status=y
+; required if ip_mode is set to hybrid
+;ptpengine:log_delayreq_interval=0
+
+; uncomment this to log a timing log like in previous ptpd versions
+global:statistics_file=/var/log/ptpd2.stats
+global:statistics_file_max_size=500
+
+; on multi-core systems it is recommended to bind ptpd to a single core
+global:cpuaffinity_cpucore=0
+
+; use DSCP 46 for expedited forwarding over ipv4 networks
+ptpengine:ip_dscp=46
+
+; always keep a new line in the end
+
+
+Cause PTP to send a SIGUSR1 as part of boot up:
+
+[root@localhost ptpd-code]# systemctl status ptpd2.service
+● ptpd2.service - ptpd time precision daemon
+     Loaded: loaded (/usr/lib/systemd/system/ptpd2.service; enabled; vendor preset: disabled)
+     Active: active (running) since Thu 2020-11-05 12:19:06 PST; 2 days ago
+   Main PID: 794 (ptpd2)
+      Tasks: 1 (limit: 11802)
+     Memory: 5.2M
+        CPU: 8min 36.406s
+     CGroup: /system.slice/ptpd2.service
+             └─794 /usr/bin/ptpd2 -c /etc/ptpd2.conf
+
+Nov 05 12:18:56 localhost.localdomain systemd[1]: Starting ptpd time precision daemon...
+Nov 05 12:18:56 localhost.localdomain ptpd2[786]: PTPd version 2.3.2 starting
+Nov 05 12:18:56 localhost.localdomain ptpd2[786]: Starting ptpd2 daemon with parameters:      /usr/bin/ptpd2 -c /etc/ptpd2.conf
+Nov 05 12:18:56 localhost.localdomain ptpd2[786]: Loading configuration file: /etc/ptpd2.conf
+Nov 05 12:18:56 localhost.localdomain ptpd2[786]: Checking configuration
+Nov 05 12:18:56 localhost.localdomain ptpd2[786]: Configuration OK
+Nov 05 12:18:56 localhost.localdomain ptpd2[786]: Successfully acquired lock on /var/run/ptpd2.lock
+Nov 05 12:19:06 localhost.localdomain systemd[1]: Started ptpd time precision daemon.
+
+[root@localhost ptpd-code]# more /usr/lib/systemd/system/ptpd2.service
+[Unit]
+Description=ptpd time precision daemon
+Wants=network-online.target
+After=network.target network-online.target
+[Service]
+Type=forking
+EnvironmentFile=-/etc/sysconfig/ptpd2
+ExecStart=/usr/bin/ptpd2 -c $PTPD_CONFIG_FILE $PTPD_EXTRA_OPTIONS
+ExecStartPost=/usr/bin/sleep 10
+ExecStartPost=/usr/bin/pkill ptpd --signal SIGUSR1
+[Install]
+WantedBy=multi-user.target
+
+
+Then use tcpdump to verify the clock packets are being recieved, e.g.
+
+[root@localhost ptpd-code]# tcpdump -i any host 224.0.1.129 -n -e
+dropped privs to tcpdump
+tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
+listening on any, link-type LINUX_SLL (Linux cooked v1), capture size 262144 bytes
+20:31:55.713992   M 00:11:32:be:ba:b2 ethertype IPv4 (0x0800), length 88: 192.168.1.10.ptp-event > 224.0.1.129.ptp-event: UDP, length 44
+20:31:55.715921   M 00:11:32:be:ba:b2 ethertype IPv4 (0x0800), length 88: 192.168.1.10.ptp-general > 224.0.1.129.ptp-general: UDP, length 44
+20:31:55.964001   M 00:11:32:be:ba:b2 ethertype IPv4 (0x0800), length 88: 192.168.1.10.ptp-event > 224.0.1.129.ptp-event: UDP, length 44
+20:31:55.965927   M 00:11:32:be:ba:b2 ethertype IPv4 (0x0800), length 88: 192.168.1.10.ptp-general > 224.0.1.129.ptp-general: UDP, length 44
+20:31:56.213993   M 00:11:32:be:ba:b2 ethertype IPv4 (0x0800), length 88: 192.168.1.10.ptp-event > 224.0.1.129.ptp-event: UDP, length 44
+20:31:56.215919   M 00:11:32:be:ba:b2 ethertype IPv4 (0x0800), length 88: 192.168.1.10.ptp-general > 224.0.1.129.ptp-general: UDP, length 44
+20:31:56.309369 Out 40:8d:5c:f7:5a:73 ethertype IPv4 (0x0800), length 88: 192.168.1.36.ptp-event > 224.0.1.129.ptp-event: UDP, length 44
+20:31:56.309831   M 00:11:32:be:ba:b2 ethertype IPv4 (0x0800), length 98: 192.168.1.10.ptp-general > 224.0.1.129.ptp-general: UDP, length 54
+
+
+Then look at the stats file for the corrections (units are nanonseconds) per the 5th columm, e.g.  -0.000001249
+
+[root@localhost ptpd-code]# tail -n 20 /var/log/ptpd2.stats 
+2020-11-07 20:33:23.966052, slv, 001132fffebebab2(unknown)/1,  0.000116807, -0.000001249,  0.000118058,  0.000116023, 124.005500000, S, 12346, 0.000116808, 19, -0.000000871, 1715, 128, 1,  0.000116023,  0.000118058
+2020-11-07 20:33:24.216067, slv, 001132fffebebab2(unknown)/1,  0.000116807, -0.000001249,  0.000118058,  0.000116023, 123.693250000, S, 12347, 0.000116808, 19, -0.000000871, 1715, 128, 1,  0.000123686,  0.000118058
+2020-11-07 20:33:24.466048, slv, 001132fffebebab2(unknown)/1,  0.000116807, -0.000000842,  0.000118058,  0.000115906, 123.693250000, S, 12348, 0.000116808, 19, -0.000000871, 1715, 128, 1,  0.000115906,  0.000118058
+2020-11-07 20:33:24.624053, slv, 001132fffebebab2(unknown)/1,  0.000116807, -0.000000842,  0.000118058,  0.000115906, 123.482750000, D, 05715, 0.000116808, 19, -0.000000871, 1715, 128, 1,  0.000115906,  0.000137903
+2020-11-07 20:33:24.716073, slv, 001132fffebebab2(unknown)/1,  0.000116807, -0.000000842,  0.000118058,  0.000115906, 123.482750000, S, 12349, 0.000116808, 19, -0.000000871, 1715, 128, 1,  0.000124509,  0.000137903
+2020-11-07 20:33:24.966073, slv, 001132fffebebab2(unknown)/1,  0.000116807, -0.000000842,  0.000118058,  0.000115906, 123.482750000, S, 12350, 0.000116808, 19, -0.000000871, 1715, 128, 1,  0.000092817,  0.000137903
+2020-11-07 20:33:25.215999, slv, 001132fffebebab2(unknown)/1,  0.000116807, -0.000000842,  0.000118058,  0.000115906, 123.482750000, S, 12351, 0.000116808, 19, -0.000000871, 1715, 128, 1,  0.000119022,  0.000137903
+2020-11-07 20:33:25.466070, slv, 001132fffebebab2(unknown)/1,  0.000116807, -0.000000842,  0.000118058,  0.000115906, 123.482750000, S, 12352, 0.000116808, 19, -0.000000871, 1715, 128, 1,  0.000118677,  0.000137903
+2020-11-07 20:33:25.548019, slv, 001132fffebebab2(unknown)/1,  0.000116807, -0.000000842,  0.000118058,  0.000115906, 123.482750000, D, 05716, 0.000116808, 19, -0.000000871, 1715, 128, 1,  0.000118677,  0.000085844
+2020-11-07 20:33:25.716014, slv, 001132fffebebab2(unknown)/1,  0.000116807, -0.000001047,  0.000118058,  0.000115612, 123.482750000, S, 12353, 0.000116808, 19, -0.000000871, 1715, 128, 1,  0.000115612,  0.000085844
+2020-11-07 20:33:25.966041, slv, 001132fffebebab2(unknown)/1,  0.000116807, -0.000001047,  0.000118058,  0.000115612, 123.221000000, S, 12354, 0.000116808, 19, -0.000000871, 1715, 128, 1,  0.000119447,  0.000085844
+2020-11-07 20:33:26.216004, slv, 001132fffebebab2(unknown)/1,  0.000116807, -0.000003106,  0.000118058,  0.000111789, 123.221000000, S, 12355, 0.000116808, 19, -0.000000871, 1715, 128, 1,  0.000111789,  0.000085844
+2020-11-07 20:33:26.466074, slv, 001132fffebebab2(unknown)/1,  0.000116807, -0.000003106,  0.000118058,  0.000111789, 122.444500000, S, 12356, 0.000116808, 19, -0.000000871, 1715, 128, 1,  0.000123317,  0.000085844
+2020-11-07 20:33:26.716085, slv, 001132fffebebab2(unknown)/1,  0.000116807, -0.000003106,  0.000118058,  0.000111789, 122.444500000, S, 12357, 0.000116808, 19, -0.000000871, 1715, 128, 1,  0.000122937,  0.000085844
+2020-11-07 20:33:26.882083, slv, 001132fffebebab2(unknown)/1,  0.000116796, -0.000003106,  0.000119652,  0.000111789, 122.444500000, D, 05717, 0.000116808, 19, -0.000000871, 1715, 128, 1,  0.000122937,  0.000119652
+2020-11-07 20:33:26.966076, slv, 001132fffebebab2(unknown)/1,  0.000116796, -0.000003106,  0.000119652,  0.000111789, 122.444500000, S, 12358, 0.000116808, 14, -0.000001537, 789, 124, 1,  0.000089006,  0.000119652
+2020-11-07 20:33:27.216040, slv, 001132fffebebab2(unknown)/1,  0.000116796, -0.000002701,  0.000119652,  0.000116412, 122.444500000, S, 12359, 0.000116808, 14, -0.000001537, 789, 124, 1,  0.000116412,  0.000119652
+2020-11-07 20:33:27.466054, slv, 001132fffebebab2(unknown)/1,  0.000116796, -0.000000944,  0.000119652,  0.000115291, 121.769250000, S, 12360, 0.000116808, 14, -0.000001537, 789, 124, 1,  0.000115291,  0.000119652
+2020-11-07 20:33:27.600076, slv, 001132fffebebab2(unknown)/1,  0.000116796, -0.000000944,  0.000119652,  0.000115291, 121.533250000, D, 05718, 0.000116808, 14, -0.000001537, 789, 124, 1,  0.000115291,  0.000134920
+2020-11-07 20:33:27.716072, slv, 001132fffebebab2(unknown)/1,  0.000116796, -0.000000944,  0.000119652,  0.000115291, 121.533250000, S, 12361, 0.000116808, 14, -0.000001537, 789, 124, 1,  0.000125607,  0.000134920
