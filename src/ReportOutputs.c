@@ -155,7 +155,7 @@ static inline void set_llawbuf_udp (int lambda, double meantransit, double varia
     } else {
 	Lvar = 0;
     }
-    snprintf(llaw_buf, sizeof(llaw_buf), "%ld/%d(%d) pkts", stats->cntIPG, L, Lvar);
+    snprintf(llaw_buf, sizeof(llaw_buf), "%" PRIdMAX "/%d(%d) pkts", stats->cntIPG, L, Lvar);
     llaw_buf[sizeof(llaw_buf) - 1] = '\0';
 }
 
