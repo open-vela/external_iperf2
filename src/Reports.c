@@ -507,7 +507,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 		    else
 			ireport->info.output_handler = udp_output_read_enhanced_triptime;
 		} else if (isEnhanced(inSettings)) {
-		    ireport->info.output_handler = udp_output_read_enhanced_triptime;
+		    ireport->info.output_handler = udp_output_read_enhanced;
 		} else if (isFullDuplex(inSettings)) {
 		    ireport->info.output_handler = udp_output_read;
 		} else {
