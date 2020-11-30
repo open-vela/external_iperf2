@@ -705,22 +705,16 @@ inline void reporter_handle_packet_isochronous (struct ReporterData *data, struc
 	// very first isochronous frame
 	if (!stats->isochstats.frameID) {
 	    stats->isochstats.framecnt=packet->frameID;
-	    stats->isochstats.framecnt=1;
-	    stats->isochstats.framecnt=1;
 	}
 	// perform client and server frame based accounting
 	if ((framedelta = (packet->frameID - stats->isochstats.frameID))) {
-	    stats->isochstats.framecnt++;
 	    stats->isochstats.framecnt++;
 	    if (framedelta > 1) {
 		if (stats->common->ThreadMode == kMode_Server) {
 		    int lost = framedelta - (packet->frameID - packet->prevframeID);
 		    stats->isochstats.framelostcnt += lost;
-		    stats->isochstats.framelostcnt += lost;
 		} else {
 		    stats->isochstats.framelostcnt += (framedelta-1);
-		    stats->isochstats.framelostcnt += (framedelta-1);
-		    stats->isochstats.slipcnt++;
 		    stats->isochstats.slipcnt++;
 		}
 	    }
