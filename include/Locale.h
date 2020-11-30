@@ -219,6 +219,14 @@ extern const char report_bw_jitter_loss_enhanced_isoch_header[];
 
 extern const char report_bw_jitter_loss_enhanced_isoch_format[];
 
+extern const char report_bw_jitter_loss_enhanced_triptime_header[];
+
+extern const char report_bw_jitter_loss_enhanced_triptime_format[];
+
+extern const char report_bw_jitter_loss_enhanced_isoch_triptime_header[];
+
+extern const char report_bw_jitter_loss_enhanced_isoch_triptime_format[];
+
 extern const char report_bw_jitter_loss_suppress_enhanced_format[];
 
 extern const char report_sum_bw_jitter_loss_enhanced_format[];
