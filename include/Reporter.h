@@ -142,19 +142,6 @@ struct WriteStats {
     int up_to_date;
 };
 
-struct IsochStats {
-    int mFPS; //frames per second
-    double mMean; //variable bit rate mean
-    double mVariance; //vbr variance
-    int mJitterBufSize; //Server jitter buffer size, units is frames
-    intmax_t slipcnt;
-    intmax_t framecnt;
-    intmax_t framelostcnt;
-    unsigned int mBurstInterval;
-    unsigned int mBurstIPG; //IPG of packets within the burst
-    uint32_t frameID;
-};
-
 /*
  * This struct contains all important information from the sending or
  * recieving thread.
@@ -262,6 +249,40 @@ struct ConnectionInfo {
     int MSS;
 };
 
+struct ShiftIntCounter {
+    intmax_t current;
+    intmax_t prev;
+};
+
+struct ShiftUintCounter {
+    uintmax_t current;
+    uintmax_t prev;
+};
+
+struct ShiftCounters {
+    struct ShiftUintCounter Bytes;
+    struct ShiftIntCounter Lost;
+    struct ShiftIntCounter OutofOrder;
+    struct ShiftIntCounter Datagrams;
+    struct ShiftIntCounter IPG;
+};
+
+struct IsochStats {
+    int mFPS; //frames per second
+    double mMean; //variable bit rate mean
+    double mVariance; //vbr variance
+    int mJitterBufSize; //Server jitter buffer size, units is frames
+    uintmax_t cntFrames;
+    uintmax_t cntFramesMissed;
+    uintmax_t cntSlips;
+    struct ShiftUintCounter slipcnt;
+    struct ShiftUintCounter framecnt;
+    struct ShiftUintCounter framelostcnt;
+    unsigned int mBurstInterval;
+    unsigned int mBurstIPG; //IPG of packets within the burst
+    uint32_t frameID;
+};
+
 struct ReportSettings {
     struct ReportCommon *common;
     iperf_sockaddr peer;
@@ -281,25 +302,6 @@ enum TimeStampType {
     FINALPARTIAL,
     TOTAL,
     FRAME
-};
-
-
-struct ShiftIntCounter {
-    intmax_t current;
-    intmax_t prev;
-};
-
-struct ShiftUintCounter {
-    uintmax_t current;
-    uintmax_t prev;
-};
-
-struct ShiftCounters {
-    struct ShiftUintCounter Bytes;
-    struct ShiftIntCounter Lost;
-    struct ShiftIntCounter OutofOrder;
-    struct ShiftIntCounter Datagrams;
-    struct ShiftIntCounter IPG;
 };
 
 struct ReportTimeStamps {
@@ -470,6 +472,7 @@ void tcp_output_write(struct TransferInfo *stats);
 void tcp_output_sum_write(struct TransferInfo *stats);
 void tcp_output_sumcnt_write(struct TransferInfo *stats);
 void tcp_output_write_enhanced (struct TransferInfo *stats);
+void tcp_output_write_enhanced_isoch (struct TransferInfo *stats);
 void tcp_output_sum_write_enhanced (struct TransferInfo *stats);
 void tcp_output_sumcnt_write_enhanced (struct TransferInfo *stats);
 // TCP fullduplex

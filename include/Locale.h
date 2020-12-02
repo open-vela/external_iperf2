@@ -167,6 +167,12 @@ extern const char server_read_size[];
 
 extern const char report_bw_enhanced_format[];
 
+extern const char report_write_enhanced_isoch_format[];
+
+extern const char report_write_enhanced_isoch_header[];
+
+extern const char report_write_enhanced_isoch_nocwnd_format[];
+
 extern const char report_sum_bw_enhanced_format[];
 
 extern const char report_bw_read_enhanced_header[];

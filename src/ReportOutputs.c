@@ -72,6 +72,7 @@ static int HEADING_FLAG(report_bw_pps_enhanced_isoch) = 0;
 static int HEADING_FLAG(report_bw_jitter_loss_pps) = 0;
 static int HEADING_FLAG(report_bw_jitter_loss_enhanced) = 0;
 static int HEADING_FLAG(report_bw_jitter_loss_enhanced_isoch) = 0;
+static int HEADING_FLAG(report_write_enhanced_isoch) = 0;
 static int HEADING_FLAG(report_frame_jitter_loss_enhanced) = 0;
 static int HEADING_FLAG(report_frame_tcp_enhanced) = 0;
 static int HEADING_FLAG(report_frame_read_tcp_enhanced_triptime) = 0;
@@ -91,6 +92,7 @@ void reporter_default_heading_flags (int flag) {
     HEADING_FLAG(report_bw_read_enhanced) = flag;
     HEADING_FLAG(report_bw_read_enhanced_netpwr) = flag;
     HEADING_FLAG(report_bw_write_enhanced) = flag;
+    HEADING_FLAG(report_write_enhanced_isoch) = flag;
     HEADING_FLAG(report_bw_write_enhanced_netpwr) = flag;
     HEADING_FLAG(report_bw_pps_enhanced) = flag;
     HEADING_FLAG(report_bw_pps_enhanced_isoch) = flag;
@@ -347,6 +349,44 @@ void tcp_output_write_enhanced (struct TransferInfo *stats) {
     }
 #endif
 }
+
+void tcp_output_write_enhanced_isoch (struct TransferInfo *stats) {
+    HEADING_PRINT_COND(report_write_enhanced_isoch);
+    _print_stats_common(stats);
+#ifndef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+    printf(report_write_enhanced_isoch_format,
+	   stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
+	   outbuffer, outbufferext,
+	   stats->sock_callstats.write.WriteCnt,
+	   stats->sock_callstats.write.WriteErr,
+	   stats->isochstats.cntFrames, stats->isochstats.cntFramesMissed, stats->isochstats.cntSlips);
+#else
+    set_netpowerbuf(stats->sock_callstats.write.rtt * 1e-6, stats);
+    if (stats->sock_callstats.write.cwnd > 0) {
+	printf(report_write_enhanced_isoch_format,
+	       stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
+	       outbuffer, outbufferext,
+	       stats->sock_callstats.write.WriteCnt,
+	       stats->sock_callstats.write.WriteErr,
+	       stats->sock_callstats.write.TCPretry,
+	       stats->sock_callstats.write.cwnd,
+	       stats->sock_callstats.write.rtt,
+	       stats->isochstats.cntFrames, stats->isochstats.cntFramesMissed, stats->isochstats.cntSlips,
+	       netpower_buf);
+    } else {
+	printf(report_write_enhanced_isoch_nocwnd_format,
+	       stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
+	       outbuffer, outbufferext,
+	       stats->sock_callstats.write.WriteCnt,
+	       stats->sock_callstats.write.WriteErr,
+	       stats->sock_callstats.write.TCPretry,
+	       stats->sock_callstats.write.rtt,
+	       stats->isochstats.cntFrames, stats->isochstats.cntFramesMissed, stats->isochstats.cntSlips,
+	       netpower_buf);
+    }
+#endif
+}
+
 
 //UDP output
 void udp_output_fullduplex (struct TransferInfo *stats) {

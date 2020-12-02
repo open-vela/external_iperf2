@@ -228,7 +228,7 @@ void Server::RunTCP (void) {
 #ifdef HAVE_THREAD_DEBUG
 		    thread_debug("TCP burst partial read of %d wanted %d", n, sizeof(struct TCP_burst_payload));
 #endif
-		    goto end;
+		    goto Done;
 		}
 	    }
 	    if (!reportstruct->transit_ready) {
@@ -276,7 +276,7 @@ void Server::RunTCP (void) {
 	    delay_loop(4);
 	}
     }
-  end:
+  Done:
     disarm_itimer();
     // stop timing
     now.setnow();
