@@ -492,10 +492,10 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
     switch (inSettings->mThreadMode) {
     case kMode_Server :
 	if (isUDP(inSettings)) {
+	    ireport->packet_handler = reporter_handle_packet_server_udp;
 	    if ((inSettings->mIntervalMode == kInterval_Frames) && isIsochronous(inSettings)) {
 		ireport->transfer_interval_handler = reporter_condprint_frame_interval_report_server_udp;
 	    } else {
-		ireport->packet_handler = reporter_handle_packet_server_udp;
 		ireport->transfer_protocol_handler = reporter_transfer_protocol_server_udp;
 		if (inSettings->mReportMode == kReport_CSV) {
 		    ireport->info.output_handler = udp_output_basic_csv;
@@ -515,11 +515,11 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 		}
 	    }
 	} else {  // TCP case
+	    ireport->packet_handler = reporter_handle_packet_server_tcp;
 	    if ((inSettings->mIntervalMode == kInterval_Frames) && (isTripTime(inSettings) || isIsochronous(inSettings))) {
 		ireport->transfer_interval_handler = reporter_condprint_frame_interval_report_server_tcp;
 		ireport->info.output_handler = tcp_output_frame_read_triptime;
 	    } else {
-		ireport->packet_handler = reporter_handle_packet_server_tcp;
 		ireport->transfer_protocol_handler = reporter_transfer_protocol_server_tcp;
 		if (inSettings->mReportMode == kReport_CSV) {
 		    ireport->info.output_handler = tcp_output_basic_csv;
@@ -560,7 +560,9 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 		ireport->info.output_handler = tcp_output_basic_csv;
 	    } else if (isSumOnly(inSettings)) {
 		ireport->info.output_handler = NULL;
-	    } else if (isEnhanced(inSettings) || isIsochronous(inSettings)) {
+	    } else if (isIsochronous(inSettings)) {
+		ireport->info.output_handler = tcp_output_write_enhanced_isoch;
+	    } else if (isEnhanced(inSettings)) {
 		ireport->info.output_handler = tcp_output_write_enhanced;
 	    } else if (isFullDuplex(inSettings)) {
 		ireport->info.output_handler = tcp_output_write;

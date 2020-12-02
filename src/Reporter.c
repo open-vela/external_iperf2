@@ -700,22 +700,22 @@ static inline void reporter_handle_burst_tcp_transit (struct ReporterData *data,
 inline void reporter_handle_packet_isochronous (struct ReporterData *data, struct ReportStruct *packet) {
     struct TransferInfo *stats = &data->info;
     // printf("fid=%lu bs=%lu remain=%lu\n", packet->frameID, packet->burstsize, packet->remaining);
-    if (packet->frameID && packet->burstsize && packet->remaining) {
+    if (packet->frameID && packet->transit_ready) {
 	int framedelta=0;
 	// very first isochronous frame
 	if (!stats->isochstats.frameID) {
-	    stats->isochstats.framecnt=packet->frameID;
+	    stats->isochstats.framecnt.current=packet->frameID;
 	}
 	// perform client and server frame based accounting
 	if ((framedelta = (packet->frameID - stats->isochstats.frameID))) {
-	    stats->isochstats.framecnt++;
+	    stats->isochstats.framecnt.current++;
 	    if (framedelta > 1) {
 		if (stats->common->ThreadMode == kMode_Server) {
 		    int lost = framedelta - (packet->frameID - packet->prevframeID);
-		    stats->isochstats.framelostcnt += lost;
+		    stats->isochstats.framelostcnt.current += lost;
 		} else {
-		    stats->isochstats.framelostcnt += (framedelta-1);
-		    stats->isochstats.slipcnt++;
+		    stats->isochstats.framelostcnt.current += (framedelta-1);
+		    stats->isochstats.slipcnt.current++;
 		}
 	    }
 	}
@@ -819,6 +819,7 @@ void reporter_handle_packet_client (struct ReporterData *data, struct ReportStru
 	// These are valid packets that need standard iperf accounting
 	stats->sock_callstats.write.WriteCnt++;
 	stats->sock_callstats.write.totWriteCnt++;
+
 	if (isIsochronous(stats->common)) {
 	    reporter_handle_packet_isochronous(data, packet);
 	}
@@ -932,6 +933,9 @@ static inline void reporter_reset_transfer_stats_client_tcp (struct TransferInfo
     stats->total.Bytes.prev = stats->total.Bytes.current;
     stats->sock_callstats.write.WriteCnt = 0;
     stats->sock_callstats.write.WriteErr = 0;
+    stats->isochstats.framecnt.prev = stats->isochstats.framecnt.current;
+    stats->isochstats.framelostcnt.prev = stats->isochstats.framelostcnt.current;
+    stats->isochstats.slipcnt.prev = stats->isochstats.slipcnt.current;
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
     stats->sock_callstats.write.TCPretry = 0;
     stats->sock_callstats.write.up_to_date = 0;
@@ -948,9 +952,9 @@ static inline void reporter_reset_transfer_stats_client_udp (struct TransferInfo
     stats->total.IPG.prev = stats->total.IPG.current;
     stats->sock_callstats.write.WriteCnt = 0;
     stats->sock_callstats.write.WriteErr = 0;
-    stats->isochstats.framecnt = 0;
-    stats->isochstats.framelostcnt = 0;
-    stats->isochstats.slipcnt = 0;
+    stats->isochstats.framecnt.prev = stats->isochstats.framecnt.current;
+    stats->isochstats.framelostcnt.prev = stats->isochstats.framelostcnt.current;
+    stats->isochstats.slipcnt.prev = stats->isochstats.slipcnt.current;
     if (stats->cntDatagrams)
 	stats->IPGsum = 0;
 }
@@ -971,6 +975,7 @@ static inline void reporter_reset_transfer_stats_server_tcp (struct TransferInfo
     stats->transit.m2Transit = 0;
     stats->IPGsum = 0;
 }
+
 static inline void reporter_reset_transfer_stats_server_udp (struct TransferInfo *stats) {
     // Reset the enhanced stats for the next report interval
     stats->total.Bytes.prev = stats->total.Bytes.current;
@@ -985,9 +990,9 @@ static inline void reporter_reset_transfer_stats_server_udp (struct TransferInfo
     stats->transit.vdTransit = 0;
     stats->transit.meanTransit = 0;
     stats->transit.m2Transit = 0;
-    stats->isochstats.framecnt = 0;
-    stats->isochstats.framelostcnt = 0;
-    stats->isochstats.slipcnt = 0;
+    stats->isochstats.framecnt.prev = stats->isochstats.framecnt.current;
+    stats->isochstats.framelostcnt.prev = stats->isochstats.framelostcnt.current;
+    stats->isochstats.slipcnt.prev = stats->isochstats.slipcnt.current;
     stats->l2counts.cnt = 0;
     stats->l2counts.unknown = 0;
     stats->l2counts.udpcsumerr = 0;
@@ -1219,6 +1224,11 @@ void reporter_transfer_protocol_server_tcp (struct ReporterData *data, int final
 	if ((stats->cntBytes > 0) && stats->output_handler && !TimeZero(stats->ts.intervalTime)) {
 	    // print a partial interval report if enable and this a final
 	    if ((stats->output_handler) && !(stats->filter_this_sample_ouput)) {
+		if (isIsochronous(stats->common)) {
+		    stats->isochstats.cntFrames = stats->isochstats.framecnt.current - stats->isochstats.framecnt.prev;
+		    stats->isochstats.cntFramesMissed = stats->isochstats.framelostcnt.current - stats->isochstats.framelostcnt.prev;
+		    stats->isochstats.cntSlips = stats->isochstats.slipcnt.current - stats->isochstats.slipcnt.prev;
+		}
 		reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
 		if ((stats->ts.iEnd - stats->ts.iStart) > stats->ts.significant_partial)
 		    (*stats->output_handler)(stats);
@@ -1232,6 +1242,11 @@ void reporter_transfer_protocol_server_tcp (struct ReporterData *data, int final
         for (ix = 0; ix < TCPREADBINCOUNT; ix++) {
 	    stats->sock_callstats.read.bins[ix] = stats->sock_callstats.read.totbins[ix];
         }
+	if (isIsochronous(stats->common)) {
+	    stats->isochstats.cntFrames = stats->isochstats.framecnt.current;
+	    stats->isochstats.cntFramesMissed = stats->isochstats.framelostcnt.current;
+	    stats->isochstats.cntSlips = stats->isochstats.slipcnt.current;
+	}
 	stats->transit.sumTransit = stats->transit.totsumTransit;
 	stats->transit.cntTransit = stats->transit.totcntTransit;
 	stats->transit.minTransit = stats->transit.totminTransit;
@@ -1240,6 +1255,10 @@ void reporter_transfer_protocol_server_tcp (struct ReporterData *data, int final
 	if (stats->framelatency_histogram) {
 	    stats->framelatency_histogram->final = 1;
 	}
+    } else if (isIsochronous(stats->common)) {
+	stats->isochstats.cntFrames = stats->isochstats.framecnt.current - stats->isochstats.framecnt.prev;
+	stats->isochstats.cntFramesMissed = stats->isochstats.framelostcnt.current - stats->isochstats.framelostcnt.prev;
+	stats->isochstats.cntSlips = stats->isochstats.slipcnt.current - stats->isochstats.slipcnt.prev;
     }
     if ((stats->output_handler) && !stats->filter_this_sample_ouput) {
 	(*stats->output_handler)(stats);
@@ -1256,6 +1275,17 @@ void reporter_transfer_protocol_client_tcp (struct ReporterData *data, int final
     struct TransferInfo *sumstats = (data->GroupSumReport != NULL) ? &data->GroupSumReport->info : NULL;
     struct TransferInfo *fullduplexstats = (data->FullDuplexReport != NULL) ? &data->FullDuplexReport->info : NULL;
     stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
+    if (isIsochronous(stats->common)) {
+	if (final) {
+	    stats->isochstats.cntFrames = stats->isochstats.framecnt.current;
+	    stats->isochstats.cntFramesMissed = stats->isochstats.framelostcnt.current;
+	    stats->isochstats.cntSlips = stats->isochstats.slipcnt.current;
+	} else {
+	    stats->isochstats.cntFrames = stats->isochstats.framecnt.current - stats->isochstats.framecnt.prev;
+	    stats->isochstats.cntFramesMissed = stats->isochstats.framelostcnt.current - stats->isochstats.framelostcnt.prev;
+	    stats->isochstats.cntSlips = stats->isochstats.slipcnt.current - stats->isochstats.slipcnt.prev;
+	}
+    }
     if (sumstats) {
 	sumstats->total.Bytes.current += stats->cntBytes;
 	sumstats->sock_callstats.write.WriteErr += stats->sock_callstats.write.WriteErr;
@@ -1273,18 +1303,33 @@ void reporter_transfer_protocol_client_tcp (struct ReporterData *data, int final
 	if ((stats->cntBytes > 0) && stats->output_handler && !TimeZero(stats->ts.intervalTime)) {
 	    // print a partial interval report if enable and this a final
 	    if ((stats->output_handler) && !(stats->filter_this_sample_ouput)) {
+		if (isIsochronous(stats->common)) {
+		    stats->isochstats.cntFrames = stats->isochstats.framecnt.current - stats->isochstats.framecnt.prev;
+		    stats->isochstats.cntFramesMissed = stats->isochstats.framelostcnt.current - stats->isochstats.framelostcnt.prev;
+		    stats->isochstats.cntSlips = stats->isochstats.slipcnt.current - stats->isochstats.slipcnt.prev;
+		}
 		reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
 		if ((stats->ts.iEnd - stats->ts.iStart) > stats->ts.significant_partial)
 		    (*stats->output_handler)(stats);
 		reporter_reset_transfer_stats_client_tcp(stats);
 	    }
         }
+	if (isIsochronous(stats->common)) {
+	    stats->isochstats.cntFrames = stats->isochstats.framecnt.current;
+	    stats->isochstats.cntFramesMissed = stats->isochstats.framelostcnt.current;
+	    stats->isochstats.cntSlips = stats->isochstats.slipcnt.current;
+	}
 	stats->sock_callstats.write.WriteErr = stats->sock_callstats.write.totWriteErr;
 	stats->sock_callstats.write.WriteCnt = stats->sock_callstats.write.totWriteCnt;
 	stats->sock_callstats.write.TCPretry = stats->sock_callstats.write.totTCPretry;
 	stats->cntBytes = stats->total.Bytes.current;
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
+    } else if (isIsochronous(stats->common)) {
+	stats->isochstats.cntFrames = stats->isochstats.framecnt.current - stats->isochstats.framecnt.prev;
+	stats->isochstats.cntFramesMissed = stats->isochstats.framelostcnt.current - stats->isochstats.framelostcnt.prev;
+	stats->isochstats.cntSlips = stats->isochstats.slipcnt.current - stats->isochstats.slipcnt.prev;
     }
+
     if ((stats->output_handler) && !(stats->filter_this_sample_ouput))
 	(*stats->output_handler)(stats);
     if (!final)

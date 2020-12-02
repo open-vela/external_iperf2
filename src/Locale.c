@@ -332,6 +332,15 @@ const char report_bw_write_enhanced_format[] =
 const char report_bw_write_enhanced_nocwnd_format[] =
 "%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %10d       NA/%u us  %s\n";
 
+const char report_write_enhanced_isoch_header[] =
+"[ ID] Interval" IPERFTimeSpace "Transfer     Bandwidth      Write/Err  Rtry     Cwnd/RTT     isoch:tx/miss/slip  NetPwr\n";
+
+const char report_write_enhanced_isoch_format[] =
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %8d %8dK/%u us  %9u/%u/%u        %s\n";
+
+const char report_write_enhanced_isoch_nocwnd_format[] =
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %10d    NA/%u us  %9u/%u/%u %s\n";
+
 #else
 const char report_bw_write_enhanced_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth       Write/Err\n";
@@ -341,6 +350,12 @@ const char report_bw_write_enhanced_format[] =
 
 const char report_sum_bw_write_enhanced_format[] =
 "[SUM] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d\n";
+
+const char report_write_enhanced_isoch_header[] =
+"[ ID] Interval" IPERFTimeSpace "Transfer     Bandwidth      Write/Err  isoch:tx/miss/slip\n";
+
+const char report_write_enhanced_isoch_format[] =
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %9u/%u/%u\n";
 
 #endif
 
@@ -357,7 +372,7 @@ const char report_bw_pps_enhanced_format[] =
 "%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %8.0f pps\n";
 
 const char report_bw_pps_enhanced_isoch_header[] =
-"[ ID] Interval" IPERFTimeSpace "Transfer     Bandwidth      Write/Err  PPS  frames:tx/missed/slips\n";
+"[ ID] Interval" IPERFTimeSpace "Transfer     Bandwidth      Write/Err  PPS  frames:tx/slips\n";
 
 const char report_bw_pps_enhanced_isoch_format[] =
 "%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %8.0f pps  %3d/%d/%d\n";
