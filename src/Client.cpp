@@ -510,7 +510,7 @@ void Client::RunTCP (void) {
 		myReport->info.ts.prevsendTime = reportstruct->packetTime;
 		// perform write
 		int writelen = (mSettings->mBufLen > burst_remaining) ? burst_remaining : mSettings->mBufLen;
-		reportstruct->packetLen = writen(mySocket, mBuf, writelen);
+		reportstruct->packetLen = write(mySocket, mBuf, writelen);
 		assert(reportstruct->packetLen >= sizeof(struct TCP_burst_payload));
 		goto ReportNow;
 	    }
