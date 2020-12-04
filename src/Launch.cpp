@@ -264,6 +264,7 @@ static void serverside_client_bidir (struct thread_Settings *thread, Client *the
     thread_debug("Listener spawn client thread (bidir sock=%d)", thread->mSock);
 #endif
     setTransferID(thread, 1);
+    SockAddr_zeroAddress(&thread->peer);
     SockAddr_remoteAddr(thread);
     unsetNoSettReport(thread);
     setReport(thread);
