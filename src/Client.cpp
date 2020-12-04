@@ -514,7 +514,7 @@ void Client::RunTCP (void) {
 		// perform write
 		int writelen = (mSettings->mBufLen > burst_remaining) ? burst_remaining : mSettings->mBufLen;
 		reportstruct->packetLen = write(mySocket, mBuf, writelen);
-		assert(reportstruct->packetLen >= sizeof(struct TCP_burst_payload));
+		assert(reportstruct->packetLen >= (intmax_t) sizeof(struct TCP_burst_payload));
 		goto ReportNow;
 	    }
 	    if (reportstruct->packetLen > burst_remaining) {
