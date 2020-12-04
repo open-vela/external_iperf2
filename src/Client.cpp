@@ -173,10 +173,8 @@ int Client::my_connect (int exit_on_fail) {
 		if ((--trycnt) <= 0) {
 		    if (exit_on_fail) {
 			close(mySocket);
-			_exit(1);
-		    } else {
-			return 0;
 		    }
+		    return 0;
 		} else {
 		    delay_loop(200000);
 		}

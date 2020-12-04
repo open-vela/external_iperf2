@@ -267,7 +267,7 @@ static void serverside_client_bidir (struct thread_Settings *thread, Client *the
     SockAddr_remoteAddr(thread);
     unsetNoSettReport(thread);
     setReport(thread);
-    theClient->my_connect(1);
+    theClient->my_connect(0);
     if (theClient->isConnected()) {
 	Iperf_push_host(&thread->peer, thread);
 	if (theClient->StartSynch() != -1) {
