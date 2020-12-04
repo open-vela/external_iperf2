@@ -485,6 +485,9 @@ void Client::RunTCP (void) {
     if (isIsochronous(mSettings)) {
 	framecounter = new Isochronous::FrameCounter(mSettings->mFPS);
     }
+    now.setnow();
+    reportstruct->packetTime.tv_sec = now.getSecs();
+    reportstruct->packetTime.tv_usec = now.getUsecs();
     while (InProgress()) {
         if (isModeAmount(mSettings)) {
 	    reportstruct->packetLen = ((mSettings->mAmount < (unsigned) mSettings->mBufLen) ? mSettings->mAmount : mSettings->mBufLen);
@@ -578,6 +581,10 @@ void Client::RunRateLimitedTCP (void) {
 
     long var_rate = mSettings->mAppRate;
     int fatalwrite_err = 0;
+
+    now.setnow();
+    reportstruct->packetTime.tv_sec = now.getSecs();
+    reportstruct->packetTime.tv_usec = now.getUsecs();
     while (InProgress() && !fatalwrite_err) {
 	// Add tokens per the loop time
 	// clock_gettime is much cheaper than gettimeofday() so
