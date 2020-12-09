@@ -134,9 +134,9 @@ run in single threaded UDP mode
 Enable IPv6 reception by setting the domain and socket to AF_INET6 (Can receive on both IPv4 and IPv6)
 .SH "CLIENT SPECIFIC OPTIONS"
 .TP
-.BR -b ", " --bandwidth " \fIn\fR[kmgKMG] | \fIn\fRpps"
+.BR -b ", " --bandwidth " \fIn\fR[kmgKMG][,\fIn\fR[kmgKMG]] | \fIn\fR\fR[kmgKMG]pps"
 set target bandwidth to \fIn\fR bits/sec (default 1 Mbit/sec) or
-\fIn\fR packets per sec. This may be used with TCP or UDP. For variable loads use format mean,standard deviation
+\fIn\fR packets per sec. This may be used with TCP or UDP. Optionally, for variable loads, use format of  mean,standard deviation
 .TP
 .BR -c ", " --client " \fI\fIhost\fR | \fIhost\fR%\fIdevice\fR"
 run in client mode, connecting to \fIhost\fR  where the optional %dev will SO_BINDTODEVICE that output interface (requires root and see NOTES)
