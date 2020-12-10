@@ -915,6 +915,10 @@ void Client::RunUDPIsochronous (void) {
 		}
 	    } else {
 		bytecnt -= currLen;
+		if (!bytecnt)
+		    reportstruct->transit_ready = 1;
+		else
+		    reportstruct->transit_ready = 0;
 		// adjust bytecnt so last packet of burst is greater or equal to min packet
 		if ((bytecnt > 0) && (bytecnt < udp_payload_minimum)) {
 		    bytecnt = udp_payload_minimum;

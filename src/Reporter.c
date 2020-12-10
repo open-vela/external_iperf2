@@ -1020,6 +1020,11 @@ void reporter_transfer_protocol_server_udp (struct ReporterData *data, int final
 	stats->cntError = 0;
     stats->cntDatagrams = stats->PacketID - stats->total.Datagrams.prev;
     stats->cntIPG = stats->total.IPG.current - stats->total.IPG.prev;
+    if (isIsochronous(stats->common)) {
+	stats->isochstats.cntFrames = stats->isochstats.framecnt.current - stats->isochstats.framecnt.prev;
+	stats->isochstats.cntFramesMissed = stats->isochstats.framelostcnt.current - stats->isochstats.framelostcnt.prev;
+	stats->isochstats.cntSlips = stats->isochstats.slipcnt.current - stats->isochstats.slipcnt.prev;
+    }
     if (stats->total.Datagrams.current == 1)
 	stats->jitter = 0;
     if (sumstats) {
@@ -1081,6 +1086,11 @@ void reporter_transfer_protocol_server_udp (struct ReporterData *data, int final
 	stats->transit.meanTransit = stats->transit.totmeanTransit;
 	stats->transit.m2Transit = stats->transit.totm2Transit;
 	stats->transit.vdTransit = stats->transit.totvdTransit;
+	if (isIsochronous(stats->common)) {
+	    stats->isochstats.cntFrames = stats->isochstats.framecnt.current;
+	    stats->isochstats.cntFramesMissed = stats->isochstats.framelostcnt.current;
+	    stats->isochstats.cntSlips = stats->isochstats.slipcnt.current;
+	}
 	if (stats->latency_histogram) {
 	    stats->latency_histogram->final = 1;
 	}
@@ -1159,6 +1169,11 @@ void reporter_transfer_protocol_client_udp (struct ReporterData *data, int final
     stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
     stats->cntDatagrams = stats->total.Datagrams.current - stats->total.Datagrams.prev;
     stats->cntIPG = stats->total.IPG.current - stats->total.IPG.prev;
+    if (isIsochronous(stats->common)) {
+	stats->isochstats.cntFrames = stats->isochstats.framecnt.current - stats->isochstats.framecnt.prev;
+	stats->isochstats.cntFramesMissed = stats->isochstats.framelostcnt.current - stats->isochstats.framelostcnt.prev;
+	stats->isochstats.cntSlips = stats->isochstats.slipcnt.current - stats->isochstats.slipcnt.prev;
+    }
     if (sumstats) {
 	sumstats->total.Bytes.current += stats->cntBytes;
 	sumstats->sock_callstats.write.WriteErr += stats->sock_callstats.write.WriteErr;
@@ -1186,6 +1201,11 @@ void reporter_transfer_protocol_client_udp (struct ReporterData *data, int final
 	stats->cntIPG = stats->total.IPG.current;
 	stats->cntDatagrams = stats->PacketID;
 	stats->IPGsum = TimeDifference(stats->ts.packetTime, stats->ts.startTime);
+	if (isIsochronous(stats->common)) {
+	    stats->isochstats.cntFrames = stats->isochstats.framecnt.current;
+	    stats->isochstats.cntFramesMissed = stats->isochstats.framelostcnt.current;
+	    stats->isochstats.cntSlips = stats->isochstats.slipcnt.current;
+	}
     } else {
 	if (stats->ts.iEnd > 0) {
 	    stats->cntIPG = (stats->total.IPG.current - stats->total.IPG.prev);
