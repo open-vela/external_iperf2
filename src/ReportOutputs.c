@@ -548,7 +548,7 @@ void udp_output_read_enhanced_triptime_isoch (struct TransferInfo *stats) {
 		   (stats->cntIPG / stats->IPGsum),
 		   llaw_buf,
 		   netpower_buf,
-		   stats->isochstats.framecnt, stats->isochstats.framelostcnt);
+		   stats->isochstats.cntFrames, stats->isochstats.cntFramesMissed);
 	}
     }
     if (stats->latency_histogram) {
@@ -586,8 +586,7 @@ void udp_output_write_enhanced_isoch (struct TransferInfo *stats) {
 	   stats->sock_callstats.write.WriteCnt,
 	   stats->sock_callstats.write.WriteErr,
 	   (stats->cntIPG ? (stats->cntIPG / stats->IPGsum) : 0.0),
-	   stats->isochstats.framecnt,
-	   stats->isochstats.framelostcnt, stats->isochstats.slipcnt);
+	   stats->isochstats.cntFrames, stats->isochstats.cntFramesMissed, stats->isochstats.cntSlips);
 }
 
 // Sum reports

@@ -372,7 +372,7 @@ const char report_bw_pps_enhanced_format[] =
 "%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %8.0f pps\n";
 
 const char report_bw_pps_enhanced_isoch_header[] =
-"[ ID] Interval" IPERFTimeSpace "Transfer     Bandwidth      Write/Err  PPS  frames:tx/slips\n";
+"[ ID] Interval" IPERFTimeSpace "Transfer     Bandwidth      Write/Err  PPS  isoch:tx/miss/slip\n";
 
 const char report_bw_pps_enhanced_isoch_format[] =
 "%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %8.0f pps  %3d/%d/%d\n";
@@ -402,11 +402,11 @@ const char report_bw_jitter_loss_enhanced_triptime_format[] =
 
 const char report_bw_jitter_loss_enhanced_isoch_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer     Bandwidth        Jitter   Lost/Total \
- Latency avg/min/max/stdev PPS  NetPwr  Frames/Lost\n";
+ Latency avg/min/max/stdev PPS  NetPwr  Isoch:rx/lost\n";
 
 const char report_bw_jitter_loss_enhanced_isoch_triptime_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer     Bandwidth        Jitter   Lost/Total \
- Latency avg/min/max/stdev PPS  Rx/inP NetPwr  Frames/Lost\n";
+ Latency avg/min/max/stdev PPS  Rx/inP NetPwr  Isoch:rx/lost\n";
 
 const char report_bw_jitter_loss_enhanced_isoch_format[] =
 "%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %" PRIdMAX "/%" PRIdMAX " (%.2g%%) %.3f/%.3f/%.3f/%.3f ms %.0f pps %s %s  %3d/%d\n";
