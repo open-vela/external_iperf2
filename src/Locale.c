@@ -278,10 +278,10 @@ const char report_sumcnt_bw_header[] =
 "[SUM-cnt] Interval       Transfer     Bandwidth\n";
 
 const char client_report_epoch_start[] =
-"[%3d] Client traffic to start at %s (%ld.%ld in epoch/unix format)\n";
+"[%3d] Client traffic to start at %s (%" PRIdMAX ".%" PRIdMAX " in epoch/unix format)\n";
 
 const char client_report_epoch_start_current[] =
-"[%3d] Client traffic to start at %s (%ld.%ld) current time %s\n";
+"[%3d] Client traffic to start at %s (%" PRIdMAX ".%" PRIdMAX ") current time %s\n";
 
 const char client_write_size[] =
 "Write buffer size";
@@ -433,7 +433,7 @@ const char report_frame_jitter_loss_enhanced_format[] =
 "%s" IPERFFTimeFrmt "(%0.4f) sec %ss  %ss/sec %" PRIdMAX "   %6.3f ms %" PRIdMAX "/%" PRIdMAX " (%.2g%%) %.3f/%.3f/%.3f/%.3f ms %.0f pps %2.0f pkts %s\n";
 
 const char report_frame_jitter_loss_suppress_enhanced_format[] =
-"%s" IPERFTimeFrmt "(%0.4f) sec %ld %ss  %ss/sec %" PRIdMAX "   %6.3f ms %" PRIdMAX "/%" PRIdMAX " (%.2g%%) -/-/-/- ms %.0f pps\n";
+"%s" IPERFTimeFrmt "(%0.4f) sec %" PRIdMAX " %ss  %ss/sec %" PRIdMAX "   %6.3f ms %" PRIdMAX "/%" PRIdMAX " (%.2g%%) -/-/-/- ms %.0f pps\n";
 
 const char report_frame_tcp_enhanced_header[] =
 "[ ID] Interval(f-transit)" IPERFFTimeSpace "Transfer     Bandwidth    FrameID\n";

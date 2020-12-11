@@ -1049,18 +1049,42 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    fprintf(stderr, "ERROR: option of --sum-only requires -P greater than 1\n");
 	    bail = true;
 	}
-        if (isTxStartTime(mExtSettings)) {
-	    Timestamp now;
-	    long nowsecs = now.getSecs();
-	    if (((nowsecs - mExtSettings->txstart_epoch.tv_sec) > 0) \
-		|| ((nowsecs == mExtSettings->txstart_epoch.tv_sec) && (now.getUsecs() > mExtSettings->txstart_epoch.tv_usec))) {
-		fprintf(stderr, "WARNING: --txstart-time of before now ignored\n");
-		unsetTxStartTime(mExtSettings);
-	    }
-	}
 	if (isTxHoldback(mExtSettings) && isTxStartTime(mExtSettings)) {
 	    fprintf(stdout,"ERROR: options of --txstart-time and --txdelay-time are mutually exclusive\n");
 	    bail = true;
+	} else if (isTxStartTime(mExtSettings) || isTxHoldback(mExtSettings)) {
+	    Timestamp now;
+	    long nowsecs = now.getSecs();
+	    // fill out the formats in the event they are needed per an time error
+	    char start_timebuf[80];
+	    struct tm ts = *localtime(&mExtSettings->txstart_epoch.tv_sec);
+	    strftime(start_timebuf, sizeof(start_timebuf), "(%Y-%m-%d %H:%M:%S %Z)", &ts);
+	    char now_timebuf[80];
+	    ts = *localtime(&nowsecs);
+	    strftime(now_timebuf, sizeof(now_timebuf), "%Y-%m-%d %H:%M:%S %Z", &ts);
+	    if (isTxStartTime(mExtSettings)) {
+		if (mExtSettings->txstart_epoch.tv_sec < 0) {
+		    fprintf(stderr, "ERROR: --txstart-time must be a postive value\n");
+		    unsetTxStartTime(mExtSettings);
+		    bail = true;
+		} else {
+		    if (((nowsecs - mExtSettings->txstart_epoch.tv_sec) > 0) \
+			|| ((nowsecs == mExtSettings->txstart_epoch.tv_sec) && (now.getUsecs() > mExtSettings->txstart_epoch.tv_usec))) {
+			// Format time, "ddd yyyy-mm-dd hh:mm:ss zzz"
+			fprintf(stderr, "WARN: --txstart-time %" PRIdMAX ".%" PRIdMAX " %s is before now %s\n", \
+				mExtSettings->txstart_epoch.tv_sec, mExtSettings->txstart_epoch.tv_usec, start_timebuf, now_timebuf);
+			unsetTxStartTime(mExtSettings);
+			bail = false;
+		    } else if ((mExtSettings->txstart_epoch.tv_sec- now.getSecs()) > MAXDIFFTXSTART) {
+			fprintf(stdout,"ERROR: --txstart-time %" PRIdMAX ".%" PRIdMAX " %s more than %d seconds from now %s\n", \
+				mExtSettings->txstart_epoch.tv_sec, mExtSettings->txstart_epoch.tv_usec, start_timebuf, MAXDIFFTXSTART, now_timebuf);
+			bail = true;
+		    }
+		}
+	    } else if (mExtSettings->txholdback_timer.tv_sec > MAXDIFFTXDELAY) {
+		fprintf(stdout,"ERROR: --txdelay-time of more than %d seconds not supported\n", MAXDIFFTXDELAY);
+		bail = true;
+	    }
 	}
 	if (isUDP(mExtSettings)) {
 	    if (isPeerVerDetect(mExtSettings)) {
@@ -1116,23 +1140,9 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		fprintf(stderr, "ERROR: option --no-udp-fin requires -u UDP\n");
 		bail = true;
 	    }
-	    if (isTxHoldback(mExtSettings)) {
-		Timestamp now;
-		if (mExtSettings->txholdback_timer.tv_sec > MAXDIFFTXDELAY) {
-		    fprintf(stdout,"ERROR: Fail because --txdelay-time is not within %d seconds of now\n", MAXDIFFTXDELAY);
-		    bail = true;
-		}
-		if (isConnectOnly(mExtSettings)) {
-		    fprintf(stdout,"ERROR: Fail because --txdelay-time and --connect-only cannot be applied together\n");
-		    bail = true;			;
-		}
-	    }
-	}
-	if (isTxStartTime(mExtSettings)) {
-	    Timestamp now;
-	    if ((mExtSettings->txstart_epoch.tv_sec- now.getSecs()) > MAXDIFFTXSTART) {
-		fprintf(stdout,"ERROR: Fail because --txstart-time is not within %d seconds of now\n", MAXDIFFTXSTART);
-		bail = true;
+	    if (isTxHoldback(mExtSettings) && isConnectOnly(mExtSettings)) {
+		fprintf(stdout,"ERROR: Fail because --txdelay-time and --connect-only cannot be applied together\n");
+		bail = true;			;
 	    }
 	}
 	if (isRxHistogram(mExtSettings)) {
