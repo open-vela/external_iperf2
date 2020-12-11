@@ -605,6 +605,15 @@ const char warn_len_too_small_peer_exchange[] =
 const char warn_compat_and_peer_exchange[] =
 "WARNING: Options of '-C' '--compatibility' AND '-X' '--peerdetect' are mutually exclusive, --peerdetect ignored\n";
 
+const char warn_start_before_now[] =
+"WARNING: --txstart-time %" PRIdMAX ".%" PRIdMAX " %s is before now %s\n";
+
+const char error_starttime_exceeds[] =
+"ERROR: --txstart-time %" PRIdMAX ".%" PRIdMAX " %s is before now %s\n";
+
+const char error_delaytime_exceeds[] =
+"ERROR: --txstart-time %" PRIdMAX ".%" PRIdMAX " %s more than %d seconds from now %s\n";
+
 #ifdef __cplusplus
 } /* end extern "C" */
 #endif

@@ -1071,18 +1071,18 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		    if (((nowsecs - mExtSettings->txstart_epoch.tv_sec) > 0) \
 			|| ((nowsecs == mExtSettings->txstart_epoch.tv_sec) && (now.getUsecs() > mExtSettings->txstart_epoch.tv_usec))) {
 			// Format time, "ddd yyyy-mm-dd hh:mm:ss zzz"
-			fprintf(stderr, "WARN: --txstart-time %" PRIdMAX ".%" PRIdMAX " %s is before now %s\n", \
-				mExtSettings->txstart_epoch.tv_sec, mExtSettings->txstart_epoch.tv_usec, start_timebuf, now_timebuf);
+			printf(warn_start_before_now, mExtSettings->txstart_epoch.tv_sec, mExtSettings->txstart_epoch.tv_usec, \
+			       start_timebuf, now_timebuf);
 			unsetTxStartTime(mExtSettings);
 			bail = false;
 		    } else if ((mExtSettings->txstart_epoch.tv_sec- now.getSecs()) > MAXDIFFTXSTART) {
-			fprintf(stdout,"ERROR: --txstart-time %" PRIdMAX ".%" PRIdMAX " %s more than %d seconds from now %s\n", \
-				mExtSettings->txstart_epoch.tv_sec, mExtSettings->txstart_epoch.tv_usec, start_timebuf, MAXDIFFTXSTART, now_timebuf);
+			printf(error_starttime_exceeds, mExtSettings->txstart_epoch.tv_sec, mExtSettings->txstart_epoch.tv_usec, \
+			       start_timebuf, MAXDIFFTXSTART, now_timebuf);
 			bail = true;
 		    }
 		}
 	    } else if (mExtSettings->txholdback_timer.tv_sec > MAXDIFFTXDELAY) {
-		fprintf(stdout,"ERROR: --txdelay-time of more than %d seconds not supported\n", MAXDIFFTXDELAY);
+		printf(error_delaytime_exceeds, MAXDIFFTXDELAY);
 		bail = true;
 	    }
 	}

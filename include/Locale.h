@@ -352,6 +352,13 @@ extern const char warn_len_too_small_peer_exchange[];
 extern const char warn_compat_and_peer_exchange[];
 
 extern const char warn_seqno_wrap[];
+
+extern const char warn_start_before_now[];
+
+extern const char error_starttime_exceeds[];
+
+extern const char error_delaytime_exceeds[];
+
 #ifdef __cplusplus
 } /* end extern "C" */
 #endif
