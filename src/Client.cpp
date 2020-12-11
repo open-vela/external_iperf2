@@ -256,12 +256,12 @@ int Client::StartSynch (void) {
     // o Second is a holdback, a relative amount of seconds between the connect and data xfers
     // check for an epoch based start time
     if (!isServerReverse(mSettings)) {
+	reportstruct->packetLen = SendFirstPayload();
 	if (isTxStartTime(mSettings)) {
 	    clock_usleep_abstime(&mSettings->txstart_epoch);
 	} else if (isTxHoldback(mSettings)) {
 	    TxDelay();
 	}
-	reportstruct->packetLen = SendFirstPayload();
     } else {
 	reportstruct->packetLen = 0;
     }
