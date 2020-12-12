@@ -1067,22 +1067,13 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		    fprintf(stderr, "ERROR: --txstart-time must be a postive value\n");
 		    unsetTxStartTime(mExtSettings);
 		    bail = true;
-		} else {
-		    if (((nowsecs - mExtSettings->txstart_epoch.tv_sec) > 0) \
-			|| ((nowsecs == mExtSettings->txstart_epoch.tv_sec) && (now.getUsecs() > mExtSettings->txstart_epoch.tv_usec))) {
-			// Format time, "ddd yyyy-mm-dd hh:mm:ss zzz"
-			printf(warn_start_before_now, mExtSettings->txstart_epoch.tv_sec, mExtSettings->txstart_epoch.tv_usec, \
-			       start_timebuf, now_timebuf);
-			unsetTxStartTime(mExtSettings);
-			bail = false;
-		    } else if ((mExtSettings->txstart_epoch.tv_sec- now.getSecs()) > MAXDIFFTXSTART) {
-			printf(error_starttime_exceeds, mExtSettings->txstart_epoch.tv_sec, mExtSettings->txstart_epoch.tv_usec, \
-			       start_timebuf, MAXDIFFTXSTART, now_timebuf);
-			bail = true;
-		    }
+		} else if ((mExtSettings->txstart_epoch.tv_sec - now.getSecs()) > MAXDIFFTXSTART) {
+		    printf(error_starttime_exceeds, mExtSettings->txstart_epoch.tv_sec, mExtSettings->txstart_epoch.tv_usec, \
+			   start_timebuf, MAXDIFFTXSTART);
+		    bail = true;
 		}
 	    } else if (mExtSettings->txholdback_timer.tv_sec > MAXDIFFTXDELAY) {
-		printf(error_delaytime_exceeds, MAXDIFFTXDELAY);
+		printf(error_delaytime_exceeds, mExtSettings->txholdback_timer.tv_sec, MAXDIFFTXDELAY);
 		bail = true;
 	    }
 	}

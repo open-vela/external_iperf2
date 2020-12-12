@@ -241,7 +241,7 @@ struct ReportCommon {
 struct ConnectionInfo {
     struct ReportCommon *common;
     double connecttime;
-    double txholdbacktime;
+    struct timeval txholdbacktime;
     struct timeval epochStartTime;
     int winsize;
     char peerversion[PEERVERBUFSIZE];

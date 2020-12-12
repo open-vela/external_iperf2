@@ -277,11 +277,8 @@ const char report_sumcnt_bw_jitter_loss_format[] =
 const char report_sumcnt_bw_header[] =
 "[SUM-cnt] Interval       Transfer     Bandwidth\n";
 
-const char client_report_epoch_start[] =
-"[%3d] Client traffic to start at %s (%" PRIdMAX ".%" PRIdMAX " in epoch/unix format)\n";
-
 const char client_report_epoch_start_current[] =
-"[%3d] Client traffic to start at %s (%" PRIdMAX ".%" PRIdMAX ") current time %s\n";
+"[%3d] Client traffic to start in %d seconds at %s current time is %s\n";
 
 const char client_write_size[] =
 "Write buffer size";
@@ -606,13 +603,13 @@ const char warn_compat_and_peer_exchange[] =
 "WARNING: Options of '-C' '--compatibility' AND '-X' '--peerdetect' are mutually exclusive, --peerdetect ignored\n";
 
 const char warn_start_before_now[] =
-"WARNING: --txstart-time %" PRIdMAX ".%" PRIdMAX " %s is before now %s\n";
+"[%3d] WARNING: --txstart-time (%" PRIdMAX ".%" PRIdMAX ") %s is before now %s\n";
 
 const char error_starttime_exceeds[] =
-"ERROR: --txstart-time %" PRIdMAX ".%" PRIdMAX " %s is before now %s\n";
+"ERROR: --txstart-time (%" PRIdMAX ".%" PRIdMAX ") %s exceeds max scheduled delay of %d secs\n";
 
 const char error_delaytime_exceeds[] =
-"ERROR: --txstart-time %" PRIdMAX ".%" PRIdMAX " %s more than %d seconds from now %s\n";
+"ERROR: --txdelay-time of %d seconds is more than the supported delay of %d seconds\n";
 
 #ifdef __cplusplus
 } /* end extern "C" */

@@ -315,6 +315,7 @@ struct ConnectionInfo * InitConnectOnlyReport (struct thread_Settings *thread) {
     creport->connect_times.vd = 0;
     creport->connect_times.m2 = 0;
     creport->connect_times.mean = 0;
+    creport->txholdbacktime = thread->txholdback_timer;
     return creport;
 }
 
@@ -663,6 +664,7 @@ struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, d
                   (inSettings->mThreadMode != kMode_Client ? 0 : 1) );
     }
     creport->common->winsize_requested = inSettings->mTCPWin;
+    creport->txholdbacktime = inSettings->txholdback_timer;
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Init connection report %p", reporthdr);
 #endif
