@@ -88,7 +88,7 @@ extern "C" {
 #define MAXDIFFTXSTART 3600
 // maximum difference in seconds to bound --txdelay-time,
 // if this is too large and w/o keep-alives the connect may drop
-#define MAXDIFFTXDELAY 60
+#define MAXDIFFTXDELAY 3600
 // maximum inter packet gap (or write delay) for UDP packets
 #define MAXIPGSECS 60
 #define CSVPEERLIMIT ((REPORT_ADDRLEN * 2) + 40)
