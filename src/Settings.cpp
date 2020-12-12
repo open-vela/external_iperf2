@@ -1117,6 +1117,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		    bail = true;
 		}
 	    }
+	    if (isTripTime(mExtSettings) && (mExtSettings->mBufLen < MINTRIPTIMEPLAYOAD)) {
+		fprintf(stderr, "ERROR: payload (-l) size of %d too small for --trip-times, must be %d or greater\n", mExtSettings->mBufLen, MINTRIPTIMEPLAYOAD);
+		bail = true;
+	    }
 	} else {
 	    if (isBWSet(mExtSettings) && ((mExtSettings->mAppRate / 8) < (uintmax_t) mExtSettings->mBufLen)) {
 		fprintf(stderr, "ERROR: option -b and -l of %d are incompatible, consider setting -l to %d or lower\n", \
