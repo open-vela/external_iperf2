@@ -1094,9 +1094,6 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 	    b += strlen(b);
 	}
     }
-    if (report->txholdbacktime > 0) {
-	snprintf(b, SNBUFFERSIZE-strlen(b), " (ht=%4.2f s)", report->txholdbacktime);;
-    }
     if (local->sa_family == AF_INET) {
 	inet_ntop(AF_INET, &((struct sockaddr_in*)local)->sin_addr, local_addr, REPORT_ADDRLEN);
     }
@@ -1140,26 +1137,45 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 	       outbuffer);
     }
 #endif
-    if ((report->epochStartTime.tv_sec) && (report->common->ThreadMode == kMode_Client) && !isServerReverse(report->common)) {
-	struct tm ts;
-	char start_timebuf[80];
+    if ((report->common->ThreadMode == kMode_Client) && !isServerReverse(report->common)) {
+	if (isTxHoldback(report->common) || isTxStartTime(report->common)) {
+	    struct tm ts;
+	    char start_timebuf[80];
+	    struct timeval now;
+	    struct timeval start;
 #ifdef HAVE_CLOCK_GETTIME
-	// Format time, "ddd yyyy-mm-dd hh:mm:ss zzz"
-	ts = *localtime(&report->epochStartTime.tv_sec);
-	strftime(start_timebuf, sizeof(start_timebuf), "%Y-%m-%d %H:%M:%S", &ts);
-	struct timespec t1;
-	clock_gettime(CLOCK_REALTIME, &t1);
-	ts = *localtime(&t1.tv_sec);
-	char now_timebuf[80];
-	strftime(now_timebuf, sizeof(now_timebuf), "%Y-%m-%d %H:%M:%S (%Z)", &ts);
-	printf(client_report_epoch_start_current, report->common->transferID, start_timebuf, report->epochStartTime.tv_sec, report->epochStartTime.tv_usec, now_timebuf);
+	    struct timespec t1;
+	    clock_gettime(CLOCK_REALTIME, &t1);
+	    now.tv_sec  = t1.tv_sec;
+	    now.tv_usec = t1.tv_nsec / 1000;
 #else
-	// Format time, "ddd yyyy-mm-dd hh:mm:ss zzz"
-	ts = *localtime(&report->epochStartTime.tv_sec);
-	strftime(start_timebuf, sizeof(start_timebuf), "%Y-%m-%d %H:%M:%S (%Z)", &ts);
-	printf(client_report_epoch_start, report->common->transferID, start_timebuf, report->epochStartTime.tv_sec, report->epochStartTime.tv_usec);
+	    gettimeofday(&now, NULL);
 #endif
-	fflush(stdout);
+	    ts = *localtime(&now.tv_sec);
+	    char now_timebuf[80];
+	    strftime(now_timebuf, sizeof(now_timebuf), "%Y-%m-%d %H:%M:%S (%Z)", &ts);
+	    // Format time, "ddd yyyy-mm-dd hh:mm:ss zzz"
+	    int seconds_from_now;
+	    if (isTxHoldback(report->common)) {
+		seconds_from_now = report->txholdbacktime.tv_sec;
+		if (report->txholdbacktime.tv_usec > 0)
+		    seconds_from_now++;
+		start.tv_sec = now.tv_sec + seconds_from_now;
+		ts = *localtime(&start.tv_sec);
+	    } else {
+		ts = *localtime(&report->epochStartTime.tv_sec);
+		seconds_from_now = ceil(TimeDifference(report->epochStartTime, now));
+	    }
+	    strftime(start_timebuf, sizeof(start_timebuf), "%Y-%m-%d %H:%M:%S", &ts);
+	    if (seconds_from_now > 0) {
+		printf(client_report_epoch_start_current, report->common->transferID, seconds_from_now, \
+		       start_timebuf, now_timebuf);
+	    } else {
+		printf(warn_start_before_now, report->common->transferID, report->epochStartTime.tv_sec, \
+		       report->epochStartTime.tv_usec, start_timebuf, now_timebuf);
+	    }
+	    fflush(stdout);
+	}
     }
 }
 

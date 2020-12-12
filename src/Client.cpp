@@ -585,8 +585,6 @@ void Client::RunRateLimitedTCP (void) {
     reportstruct->packetTime.tv_usec = now.getUsecs();
     while (InProgress() && !fatalwrite_err) {
 	// Add tokens per the loop time
-	// clock_gettime is much cheaper than gettimeofday() so
-	// use it if possible.
 	time2.setnow();
         if (isVaryLoad(mSettings)) {
 	    static Timestamp time3;
