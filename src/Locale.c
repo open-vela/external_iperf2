@@ -333,10 +333,10 @@ const char report_write_enhanced_isoch_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer     Bandwidth      Write/Err  Rtry     Cwnd/RTT     isoch:tx/miss/slip  NetPwr\n";
 
 const char report_write_enhanced_isoch_format[] =
-"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %8d %8dK/%u us  %9u/%u/%u        %s\n";
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %8d %8dK/%u us  %9" PRIuMAX "/%" PRIuMAX "/%" PRIuMAX "        %s\n";
 
 const char report_write_enhanced_isoch_nocwnd_format[] =
-"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %10d    NA/%u us  %9u/%u/%u %s\n";
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %10d    NA/%u us  %9" PRIuMAX "/%" PRIuMAX "/%" PRIuMAX " %s\n";
 
 #else
 const char report_bw_write_enhanced_header[] =
@@ -352,7 +352,7 @@ const char report_write_enhanced_isoch_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer     Bandwidth      Write/Err  isoch:tx/miss/slip\n";
 
 const char report_write_enhanced_isoch_format[] =
-"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %9u/%u/%u\n";
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %9" PRIuMAX "/%" PRIuMAX "/%" PRIuMAX "\n";
 
 #endif
 
@@ -372,7 +372,7 @@ const char report_bw_pps_enhanced_isoch_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer     Bandwidth      Write/Err  PPS  isoch:tx/miss/slip\n";
 
 const char report_bw_pps_enhanced_isoch_format[] =
-"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %8.0f pps  %3d/%d/%d\n";
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %8.0f pps  %3" PRIuMAX "/%" PRIuMAX "/%" PRIuMAX "\n";
 
 const char report_sum_bw_pps_enhanced_format[] =
 "[SUM] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %8.0f pps\n";
