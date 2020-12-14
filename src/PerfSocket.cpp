@@ -207,7 +207,8 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
     /* If socket pacing is specified try to enable it. */
     if (isDontRoute(inSettings)) {
 	int option = 1;
-	int rc = setsockopt(inSettings->mSock, SOL_SOCKET, SO_DONTROUTE, &option, sizeof(option));
+	Socklen_t len = sizeof(option);
+	int rc = setsockopt(inSettings->mSock, SOL_SOCKET, SO_DONTROUTE, (char*) &option, len);
         WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
     }
 #endif /* HAVE_DECL_SO_DONTROUTE */
