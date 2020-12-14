@@ -185,7 +185,6 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
         setsock_tcp_mss(inSettings->mSock, inSettings->mMSS);
 
 #ifdef TCP_NODELAY
-
         // set TCP nodelay option
         if (isNoDelay(inSettings)) {
             int nodelay = 1;
@@ -204,6 +203,14 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
         WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
     }
 #endif /* HAVE_SO_MAX_PACING_RATE */
+#if HAVE_DECL_SO_DONTROUTE
+    /* If socket pacing is specified try to enable it. */
+    if (isDontRoute(inSettings)) {
+	int option = 1;
+	int rc = setsockopt(inSettings->mSock, SOL_SOCKET, SO_DONTROUTE, &option, sizeof(option));
+        WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
+    }
+#endif /* HAVE_DECL_SO_DONTROUTE */
 }
 
 void SetSocketOptionsSendTimeout (struct thread_Settings *mSettings, int timer) {

@@ -41,6 +41,9 @@ AC_ARG_ENABLE(kalman, AC_HELP_STRING([--disable-kalman],
 AC_ARG_ENABLE(role_reversal_id, AC_HELP_STRING([--disable-role-reversal-id],
 	    [disable role reversal special characters (default is enable)]))
 
+AC_ARG_ENABLE(default_localonly, AC_HELP_STRING([--enable-default-localonly],
+	    [enforce limiting test traffic to local-only network (via socket SO_DONTROUTE) as the default mode]))
+
 AC_ARG_ENABLE(seqno64b, AC_HELP_STRING([--disable-seqno64b],
 	    [disable 64 bit sequence numer support (default is enable)]))
 
@@ -188,7 +191,7 @@ in_h='
 '
 
 AC_CHECK_DECLS([AF_INET6, SO_TIMESTAMP, SO_SNDTIMEO, SO_BINDTODEVICE, MSG_DONTWAIT,
-			  SO_MAX_PACING_RATE, IPV6_TCLASS, IP_MULTICAST_ALL,
+			  SO_MAX_PACING_RATE, SO_DONTROUTE, IPV6_TCLASS, IP_MULTICAST_ALL,
 			  MCAST_JOIN_GROUP, MCAST_JOIN_SOURCE_GROUP,
 			  IPV6_ADD_MEMBERSHIP, IPV6_MULTICAST_HOPS,
 			  IP_ADD_MEMBERSHIP, IP_ADD_SOURCE_MEMBERSHIP],[],[],[$in_h])
@@ -311,16 +314,16 @@ if test "$enable_role_reversal_id" != no; then
 AC_DEFINE([HAVE_ROLE_REVERSAL_ID], 1, [Define if role reversal ids are desired ])
 fi
 
+if test "$enable_default_localonly" = yes; then
+AC_DEFINE([HAVE_DEFAULT_DONTROUTE_ON], 1, [Define if limiting test traffic to the local-only network (via socket SO_DONTROUTE) should be the default])
+fi
+
 if test "$enable_seqno64b" != no; then
 AC_DEFINE([HAVE_SEQNO64b], 1, [Define if 64 bit sequence numbers are desired and available])
 fi
 
 if test "$enable_isochronous" != no; then
 AC_DEFINE([HAVE_ISOCHRONOUS], 1, [Define if isochronous traffic option is desired and available])
-fi
-
-if test "$enable_udptriggers" = yes; then
-AC_DEFINE([HAVE_UDPTRIGGERS], 1, [Define if udp triggers option is desired and available])
 fi
 
 if test "$enable_fastsampling" = yes; then

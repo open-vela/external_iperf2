@@ -1,7 +1,7 @@
 See doc/DESIGN_NOTES for some description around the software design
 See doc/CLOCKSYNC_NOTES for some description around synchronizing the realtime clocks
 
-2.0.14 change set (as of November 15th, 2020)
+2.0.14 change set (as of December 13th, 2020)
 ----------------------------------------
 o scaling improvements for -P, i.e. improved support for large numbers of traffic threads
 o major code refactoring (see doc/DESIGN_NOTES) for maintainability, extensibilty, performance, scaling, memory usage
@@ -41,6 +41,9 @@ o multicast listener no longer busy drops multicast packets during traffic test,
 o immediate bail out on mutually exclusive command line options
 o getaddrinfo bug with -static linkage workaround and DNS lookup one time in setttings context vs twice in Settings and client traffic thread
 o fix -o or --output using freopen to redirect stdout and stderr to a file
+o support for --local-only which sets SO_DONTROUTE on a socket to limit traffic to local hosts (default is off)
+o support compile time option of --local-only to set on by default via ./configure --enable-default-localonly
+
 o man page updates with examples
 o tested with 1000's of traffic streams, WiFi, 10G and 100G
 

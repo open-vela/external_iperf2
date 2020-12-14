@@ -92,6 +92,7 @@ Other configure and compile options
       ./configure --disable-multicast
       ./configure --disable-threads
       ./configure --enable-debuginfo
+      ./configure --enable-default-localonly - limit test traffic to the local network (off by default)
 ---
 
 dnf installs needed for build:

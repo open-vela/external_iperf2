@@ -91,6 +91,7 @@ static int isochronous = 0;
 static int noudpfin = 0;
 static int numreportstructs = 0;
 static int sumonly = 0;
+static int so_dontroute = 0;
 
 void Settings_Interpret(char option, const char *optarg, struct thread_Settings *mExtSettings);
 // apply compound settings after the command line has been fully parsed
@@ -170,6 +171,7 @@ const struct option long_options[] =
 {"ipg", required_argument, &burstipg, 1},
 {"isochronous", optional_argument, &isochronous, 1},
 {"sum-only", no_argument, &sumonly, 1},
+{"local-only", optional_argument, &so_dontroute, 1},
 {"NUM_REPORT_STRUCTS", required_argument, &numreportstructs, 1},
 #ifdef WIN32
 {"reverse", no_argument, &reversetest, 1},
@@ -288,6 +290,10 @@ void Settings_Initialize (struct thread_Settings *main) {
     main->mTTL          = -1;            // -T,  link-local TTL
     //main->mDomain     = kMode_IPv4;    // -V,
     //main->mSuggestWin = false;         // -W,  Suggest the window size.
+
+#if (HAVE_DECL_SO_DONTROUTE) && (HAVE_DEFAULT_DONTROUTE_ON)
+    setDontRoute(main);
+#endif
 
 } // end Settings
 
@@ -889,6 +895,24 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    if (sumonly) {
 		sumonly = 0;
 		setSumOnly(mExtSettings);
+	    }
+	    if (so_dontroute) {
+		so_dontroute = 0;
+#if HAVE_DECL_SO_DONTROUTE
+  #if HAVE_DEFAULT_DONTROUTE_ON
+		setDontRoute(mExtSettings);
+  #else
+		unsetDontRoute(mExtSettings);
+  #endif
+		if (optarg) {
+		    if (atoi(optarg))
+			setDontRoute(mExtSettings);
+		    else
+			unsetDontRoute(mExtSettings);
+		}
+#else
+		fprintf(stderr, "WARNING: The --local-only option is not supported on this platform\n");
+#endif
 	    }
 	    if (rxhistogram) {
 		rxhistogram = 0;
