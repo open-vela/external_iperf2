@@ -332,6 +332,7 @@ struct thread_Settings {
 #define FLAG_SUMONLY        0x00800000
 #define FLAG_FRAMEINTERVAL  0x01000000
 #define FLAG_IPG            0x02000000
+#define FLAG_DONTROUTE      0x04000000
 
 #define isBuflenSet(settings)      ((settings->flags & FLAG_BUFLENSET) != 0)
 #define isCompat(settings)         ((settings->flags & FLAG_COMPAT) != 0)
@@ -386,6 +387,7 @@ struct thread_Settings {
 #define isSumOnly(settings)        ((settings->flags_extend & FLAG_SUMONLY) != 0)
 #define isFrameInterval(settings)  ((settings->flags_extend & FLAG_FRAMEINTERVAL) != 0)
 #define isIPG(settings)  ((settings->flags_extend & FLAG_IPG) != 0)
+#define isDontRoute(settings)      ((settings->flags_extend & FLAG_DONTROUTE) != 0)
 
 #define setBuflenSet(settings)     settings->flags |= FLAG_BUFLENSET
 #define setCompat(settings)        settings->flags |= FLAG_COMPAT
@@ -436,7 +438,8 @@ struct thread_Settings {
 #define setNoConnectSync(settings) settings->flags_extend |= FLAG_NOCONNECTSYNC
 #define setSumOnly(settings)       settings->flags_extend |= FLAG_SUMONLY
 #define setFrameInterval(settings) settings->flags_extend |= FLAG_FRAMEINTERVAL
-#define setIPG(settings) settings->flags_extend |= FLAG_IPG
+#define setIPG(settings)           settings->flags_extend |= FLAG_IPG
+#define setDontRoute(settings)     settings->flags_extend |= FLAG_DONTROUTE
 
 #define unsetBuflenSet(settings)   settings->flags &= ~FLAG_BUFLENSET
 #define unsetCompat(settings)      settings->flags &= ~FLAG_COMPAT
@@ -485,9 +488,10 @@ struct thread_Settings {
 #define unsetWriteAck(settings)     settings->flags_extend &= ~FLAG_WRITEACK
 #define unsetNoUDPfin(settings)     settings->flags_extend &= ~FLAG_NOUDPFIN
 #define unsetNoConnectSync(settings) settings->flags_extend &= ~FLAG_NOCONNECTSYNC
-#define unsetSumOnly(settings) settings->flags_extend &= ~FLAG_SUMONLY
+#define unsetSumOnly(settings)       settings->flags_extend &= ~FLAG_SUMONLY
 #define unsetFrameInterval(settings) settings->flags_extend &= ~FLAG_FRAMEINTERVAL
-#define unsetIPG(settings) settings->flags_extend &= ~FLAG_IPG
+#define unsetIPG(settings)          settings->flags_extend &= ~FLAG_IPG
+#define unsetDontRoute(settings)    settings->flags_extend &= ~FLAG_DONTROUTE
 
 // set to defaults
 void Settings_Initialize(struct thread_Settings* main);

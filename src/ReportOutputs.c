@@ -1029,152 +1029,155 @@ void reporter_connect_printf_tcp_final (struct ConnectionInfo * report) {
 
 void reporter_print_connection_report (struct ConnectionInfo *report) {
     assert(report->common);
-    // copy the inet_ntop into temp buffers, to avoid overwriting
-    char local_addr[REPORT_ADDRLEN];
-    char remote_addr[REPORT_ADDRLEN];
-    struct sockaddr *local = ((struct sockaddr*)&report->common->local);
-    struct sockaddr *peer = ((struct sockaddr*)&report->common->peer);
-    outbuffer[0]='\0';
-    outbufferext[0]='\0';
-    outbufferext2[0]='\0';
-    char *b = &outbuffer[0];
-    if (!isUDP(report->common) && (report->common->socket > 0) && (isPrintMSS(report->common) || isEnhanced(report->common)))  {
-	if (isPrintMSS(report->common) && (report->MSS <= 0)) {
-	    printf(report_mss_unsupported, report->MSS);
-	} else {
-	    snprintf(b, SNBUFFERSIZE-strlen(b), " (%s%d)", "MSS=", report->MSS);
+    if (!(report->connecttime < 0)) {
+	// copy the inet_ntop into temp buffers, to avoid overwriting
+	char local_addr[REPORT_ADDRLEN];
+	char remote_addr[REPORT_ADDRLEN];
+	struct sockaddr *local = ((struct sockaddr*)&report->common->local);
+	struct sockaddr *peer = ((struct sockaddr*)&report->common->peer);
+	outbuffer[0]='\0';
+	outbufferext[0]='\0';
+	outbufferext2[0]='\0';
+	char *b = &outbuffer[0];
+	if (!isUDP(report->common) && (report->common->socket > 0) && (isPrintMSS(report->common) || isEnhanced(report->common)))  {
+	    if (isPrintMSS(report->common) && (report->MSS <= 0)) {
+		printf(report_mss_unsupported, report->MSS);
+	    } else {
+		snprintf(b, SNBUFFERSIZE-strlen(b), " (%s%d)", "MSS=", report->MSS);
+		b += strlen(b);
+	    }
+	}
+	if (isIsochronous(report->common)) {
+	    snprintf(b, SNBUFFERSIZE-strlen(b), " (isoch)");
 	    b += strlen(b);
 	}
-    }
-    if (isIsochronous(report->common)) {
-	snprintf(b, SNBUFFERSIZE-strlen(b), " (isoch)");
-	b += strlen(b);
-    }
-    if (isFullDuplex(report->common)) {
-	snprintf(b, SNBUFFERSIZE-strlen(b), " (full-duplex)");
-	b += strlen(b);
-    } else if (isServerReverse(report->common) || isReverse(report->common)) {
-	snprintf(b, SNBUFFERSIZE-strlen(b), " (reverse)");
-	b += strlen(b);
-	if (isFQPacing(report->common)) {
-	    snprintf(b, SNBUFFERSIZE-strlen(b), " (fq)");
+	if (isFullDuplex(report->common)) {
+	    snprintf(b, SNBUFFERSIZE-strlen(b), " (full-duplex)");
+	    b += strlen(b);
+	} else if (isServerReverse(report->common) || isReverse(report->common)) {
+	    snprintf(b, SNBUFFERSIZE-strlen(b), " (reverse)");
+	    b += strlen(b);
+	    if (isFQPacing(report->common)) {
+		snprintf(b, SNBUFFERSIZE-strlen(b), " (fq)");
+		b += strlen(b);
+	    }
+	}
+	if (isTxStartTime(report->common)) {
+	    snprintf(b, SNBUFFERSIZE-strlen(b), " (epoch-start)");
 	    b += strlen(b);
 	}
-    }
-    if (isTxStartTime(report->common)) {
-	snprintf(b, SNBUFFERSIZE-strlen(b), " (epoch-start)");
-	b += strlen(b);
-    }
-    if (isL2LengthCheck(report->common)) {
-	snprintf(b, SNBUFFERSIZE-strlen(b), " (l2mode)");
-	b += strlen(b);
-    }
-    if (isUDP(report->common) && isNoUDPfin(report->common)) {
-	snprintf(b, SNBUFFERSIZE-strlen(b), " (no-udp-fin)");
-	b += strlen(b);
-    }
-    if (isTripTime(report->common)) {
-	snprintf(b, SNBUFFERSIZE-strlen(b), " (trip-times)");
-	b += strlen(b);
-    }
+	if (isL2LengthCheck(report->common)) {
+	    snprintf(b, SNBUFFERSIZE-strlen(b), " (l2mode)");
+	    b += strlen(b);
+	}
+	if (isUDP(report->common) && isNoUDPfin(report->common)) {
+	    snprintf(b, SNBUFFERSIZE-strlen(b), " (no-udp-fin)");
+	    b += strlen(b);
+	}
+	if (isTripTime(report->common)) {
+	    snprintf(b, SNBUFFERSIZE-strlen(b), " (trip-times)");
+	    b += strlen(b);
+	}
 
-    if (isEnhanced(report->common)) {
-	snprintf(b, SNBUFFERSIZE-strlen(b), " (sock=%d)", report->common->socket);;
-	b += strlen(b);
-    }
-    if (isEnhanced(report->common) || isPeerVerDetect(report->common)) {
-	if (report->peerversion[0] != '\0') {
-	    snprintf(b, SNBUFFERSIZE-strlen(b), "%s", report->peerversion);
+	if (isEnhanced(report->common)) {
+	    snprintf(b, SNBUFFERSIZE-strlen(b), " (sock=%d)", report->common->socket);;
 	    b += strlen(b);
 	}
-    }
-    if (isEnhanced(report->common) || isConnectOnly(report->common)) {
-	if (report->connecttime > 0) {
-	    snprintf(b, SNBUFFERSIZE-strlen(b), " (ct=%4.2f ms)", report->connecttime);;
-	    b += strlen(b);
+	if (isEnhanced(report->common) || isPeerVerDetect(report->common)) {
+	    if (report->peerversion[0] != '\0') {
+		snprintf(b, SNBUFFERSIZE-strlen(b), "%s", report->peerversion);
+		b += strlen(b);
+	    }
 	}
-    }
-    if (local->sa_family == AF_INET) {
-	inet_ntop(AF_INET, &((struct sockaddr_in*)local)->sin_addr, local_addr, REPORT_ADDRLEN);
-    }
+	if (isEnhanced(report->common) || isConnectOnly(report->common)) {
+	    if (report->connecttime > 0) {
+		snprintf(b, SNBUFFERSIZE-strlen(b), " (ct=%4.2f ms)", report->connecttime);;
+		b += strlen(b);
+	    }
+	}
+	if (local->sa_family == AF_INET) {
+	    inet_ntop(AF_INET, &((struct sockaddr_in*)local)->sin_addr, local_addr, REPORT_ADDRLEN);
+	}
 #ifdef HAVE_IPV6
-    else {
-	inet_ntop(AF_INET6, &((struct sockaddr_in6*)local)->sin6_addr, local_addr, REPORT_ADDRLEN);
-    }
+	else {
+	    inet_ntop(AF_INET6, &((struct sockaddr_in6*)local)->sin6_addr, local_addr, REPORT_ADDRLEN);
+	}
 #endif
-    if (peer->sa_family == AF_INET) {
-	inet_ntop(AF_INET, &((struct sockaddr_in*)peer)->sin_addr, remote_addr, REPORT_ADDRLEN);
-    }
+	if (peer->sa_family == AF_INET) {
+	    inet_ntop(AF_INET, &((struct sockaddr_in*)peer)->sin_addr, remote_addr, REPORT_ADDRLEN);
+	}
 #ifdef HAVE_IPV6
-    else {
-	inet_ntop(AF_INET6, &((struct sockaddr_in6*)peer)->sin6_addr, remote_addr, REPORT_ADDRLEN);
-    }
+	else {
+	    inet_ntop(AF_INET6, &((struct sockaddr_in6*)peer)->sin6_addr, remote_addr, REPORT_ADDRLEN);
+	}
 #endif
 #ifdef HAVE_IPV6
-    if (isEnhanced(report->common) && report->common->Ifrname && (strlen(report->common->Ifrname) < SNBUFFERSIZE-strlen(b))) {
-	printf(report_peer_dev, report->common->transferID, local_addr, report->common->Ifrname, \
-	       (local->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)local)->sin_port) : \
-		ntohs(((struct sockaddr_in6*)local)->sin6_port)), \
-	       remote_addr, (peer->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)peer)->sin_port) : \
-			     ntohs(((struct sockaddr_in6*)peer)->sin6_port)), outbuffer);
-    } else {
-	printf(report_peer, report->common->transferID, local_addr, \
-	       (local->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)local)->sin_port) : \
-		ntohs(((struct sockaddr_in6*)local)->sin6_port)), \
-	       remote_addr, (peer->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)peer)->sin_port) : \
-			     ntohs(((struct sockaddr_in6*)peer)->sin6_port)), outbuffer);
-    }
+	if (isEnhanced(report->common) && report->common->Ifrname && (strlen(report->common->Ifrname) < SNBUFFERSIZE-strlen(b))) {
+	    printf(report_peer_dev, report->common->transferID, local_addr, report->common->Ifrname, \
+		   (local->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)local)->sin_port) : \
+		    ntohs(((struct sockaddr_in6*)local)->sin6_port)), \
+		   remote_addr, (peer->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)peer)->sin_port) : \
+				 ntohs(((struct sockaddr_in6*)peer)->sin6_port)), outbuffer);
+	} else {
+	    printf(report_peer, report->common->transferID, local_addr, \
+		   (local->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)local)->sin_port) : \
+		    ntohs(((struct sockaddr_in6*)local)->sin6_port)), \
+		   remote_addr, (peer->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)peer)->sin_port) : \
+				 ntohs(((struct sockaddr_in6*)peer)->sin6_port)), outbuffer);
+	}
 #else
-    if (isEnhanced(report->common) && report->common->Ifrname  && (strlen(report->common->Ifrname) < SNBUFFERSIZE-strlen(b))) {
-	printf(report_peer_dev, report->common->transferID, local_addr, report->common->Ifrname, \
-	       local_addr, (local->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)local)->sin_port) : 0), \
-	       remote_addr, (peer->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)peer)->sin_port) :  0), \
-	       outbuffer);
-    } else {
-	printf(report_peer, report->common->transferID, \
-	       local_addr, (local->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)local)->sin_port) : 0), \
-	       remote_addr, (peer->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)peer)->sin_port) :  0), \
-	       outbuffer);
-    }
+	if (isEnhanced(report->common) && report->common->Ifrname  && (strlen(report->common->Ifrname) < SNBUFFERSIZE-strlen(b))) {
+	    printf(report_peer_dev, report->common->transferID, local_addr, report->common->Ifrname, \
+		   local_addr, (local->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)local)->sin_port) : 0), \
+		   remote_addr, (peer->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)peer)->sin_port) :  0), \
+		   outbuffer);
+	} else {
+	    printf(report_peer, report->common->transferID, \
+		   local_addr, (local->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)local)->sin_port) : 0), \
+		   remote_addr, (peer->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)peer)->sin_port) :  0), \
+		   outbuffer);
+	}
 #endif
-    if ((report->common->ThreadMode == kMode_Client) && !isServerReverse(report->common)) {
-	if (isTxHoldback(report->common) || isTxStartTime(report->common)) {
-	    struct tm ts;
-	    char start_timebuf[80];
-	    struct timeval now;
-	    struct timeval start;
+	fflush(stdout);
+	if ((report->common->ThreadMode == kMode_Client) && !isServerReverse(report->common)) {
+	    if (isTxHoldback(report->common) || isTxStartTime(report->common)) {
+		struct tm ts;
+		char start_timebuf[80];
+		struct timeval now;
+		struct timeval start;
 #ifdef HAVE_CLOCK_GETTIME
-	    struct timespec t1;
-	    clock_gettime(CLOCK_REALTIME, &t1);
-	    now.tv_sec  = t1.tv_sec;
-	    now.tv_usec = t1.tv_nsec / 1000;
+		struct timespec t1;
+		clock_gettime(CLOCK_REALTIME, &t1);
+		now.tv_sec  = t1.tv_sec;
+		now.tv_usec = t1.tv_nsec / 1000;
 #else
-	    gettimeofday(&now, NULL);
+		gettimeofday(&now, NULL);
 #endif
-	    ts = *localtime(&now.tv_sec);
-	    char now_timebuf[80];
-	    strftime(now_timebuf, sizeof(now_timebuf), "%Y-%m-%d %H:%M:%S (%Z)", &ts);
-	    // Format time, "ddd yyyy-mm-dd hh:mm:ss zzz"
-	    int seconds_from_now;
-	    if (isTxHoldback(report->common)) {
-		seconds_from_now = report->txholdbacktime.tv_sec;
-		if (report->txholdbacktime.tv_usec > 0)
-		    seconds_from_now++;
-		start.tv_sec = now.tv_sec + seconds_from_now;
-		ts = *localtime(&start.tv_sec);
-	    } else {
-		ts = *localtime(&report->epochStartTime.tv_sec);
-		seconds_from_now = ceil(TimeDifference(report->epochStartTime, now));
+		ts = *localtime(&now.tv_sec);
+		char now_timebuf[80];
+		strftime(now_timebuf, sizeof(now_timebuf), "%Y-%m-%d %H:%M:%S (%Z)", &ts);
+		// Format time, "ddd yyyy-mm-dd hh:mm:ss zzz"
+		int seconds_from_now;
+		if (isTxHoldback(report->common)) {
+		    seconds_from_now = report->txholdbacktime.tv_sec;
+		    if (report->txholdbacktime.tv_usec > 0)
+			seconds_from_now++;
+		    start.tv_sec = now.tv_sec + seconds_from_now;
+		    ts = *localtime(&start.tv_sec);
+		} else {
+		    ts = *localtime(&report->epochStartTime.tv_sec);
+		    seconds_from_now = ceil(TimeDifference(report->epochStartTime, now));
+		}
+		strftime(start_timebuf, sizeof(start_timebuf), "%Y-%m-%d %H:%M:%S", &ts);
+		if (seconds_from_now > 0) {
+		    printf(client_report_epoch_start_current, report->common->transferID, seconds_from_now, \
+			   start_timebuf, now_timebuf);
+		} else {
+		    printf(warn_start_before_now, report->common->transferID, report->epochStartTime.tv_sec, \
+			   report->epochStartTime.tv_usec, start_timebuf, now_timebuf);
+		}
+		fflush(stdout);
 	    }
-	    strftime(start_timebuf, sizeof(start_timebuf), "%Y-%m-%d %H:%M:%S", &ts);
-	    if (seconds_from_now > 0) {
-		printf(client_report_epoch_start_current, report->common->transferID, seconds_from_now, \
-		       start_timebuf, now_timebuf);
-	    } else {
-		printf(warn_start_before_now, report->common->transferID, report->epochStartTime.tv_sec, \
-		       report->epochStartTime.tv_usec, start_timebuf, now_timebuf);
-	    }
-	    fflush(stdout);
 	}
     }
 }

@@ -168,13 +168,13 @@ int Client::my_connect (int exit_on_fail) {
 	    connect_start.setnow();
 	    rc = connect(mySocket, (sockaddr*) &mSettings->peer,
 			 SockAddr_get_sizeof_sockaddr(&mSettings->peer));
+	    WARN_errno((rc == SOCKET_ERROR), "tcp connect");
 	    if (rc == SOCKET_ERROR) {
-		WARN_errno(rc == SOCKET_ERROR, "tcp connect");
 		if ((--trycnt) <= 0) {
 		    if (exit_on_fail) {
 			close(mySocket);
+			mySocket = INVALID_SOCKET;
 		    }
-		    return 0;
 		} else {
 		    delay_loop(200000);
 		}
@@ -189,20 +189,22 @@ int Client::my_connect (int exit_on_fail) {
     } else {
 	rc = connect(mySocket, (sockaddr*) &mSettings->peer,
 		     SockAddr_get_sizeof_sockaddr(&mSettings->peer));
-	WARN_errno(rc == SOCKET_ERROR, "udp connect");
+        WARN_errno((rc == SOCKET_ERROR), "udp connect");
 	if (rc != SOCKET_ERROR)
 	    connected = true;
     }
-    if (mSettings->mInterval > 0) {
-	SetSocketOptionsSendTimeout(mSettings, (mSettings->mInterval * 1000000) / 2);
-    } else {
-	SetSocketOptionsSendTimeout(mSettings, (mSettings->mAmount * 10000) / 2);
-    }
     if (connected) {
+	if (mSettings->mInterval > 0) {
+	    SetSocketOptionsSendTimeout(mSettings, (mSettings->mInterval * 1000000) / 2);
+	} else {
+	    SetSocketOptionsSendTimeout(mSettings, (mSettings->mAmount * 10000) / 2);
+	}
 	getsockname(mySocket, (sockaddr*) &mSettings->local, &mSettings->size_local);
 	getpeername(mySocket, (sockaddr*) &mSettings->peer, &mSettings->size_peer);
 	SockAddr_Ifrname(mSettings);
-	connected = true;
+	if (isUDP(mSettings) && !isIsochronous(mSettings) && !isIPG(mSettings)) {
+	    mSettings->mBurstIPG = get_delay_target() / 1e3; // this is being set for the settings report only
+	}
     } else {
 	connecttime = -1;
 	if (mySocket != INVALID_SOCKET) {
@@ -211,9 +213,6 @@ int Client::my_connect (int exit_on_fail) {
 	    mySocket = INVALID_SOCKET;
 	}
     }
-    if (isUDP(mSettings) && !isIsochronous(mSettings) && !isIPG(mSettings)) {
-        mSettings->mBurstIPG = get_delay_target() / 1e3; // this is being set for the settings report only
-    }
     if (isReport(mSettings) && isSettingsReport(mSettings)) {
 	struct ReportHeader *tmp = InitSettingsReport(mSettings);
 	assert(tmp!=NULL);
@@ -221,8 +220,14 @@ int Client::my_connect (int exit_on_fail) {
 	setNoSettReport(mSettings);
     }
     // Post the connect report unless peer version exchange is set
-    if (connected && isConnectionReport(mSettings) && !isSumOnly(mSettings) && !isPeerVerDetect(mSettings))
-	PostReport(InitConnectionReport(mSettings, connecttime));
+    if (isConnectionReport(mSettings) && !isSumOnly(mSettings) && !isPeerVerDetect(mSettings)) {
+	if (connected) {
+	    PostReport(InitConnectionReport(mSettings, connecttime));
+	} else {
+	    PostReport(InitConnectionReport(mSettings, -1));
+
+	}
+    }
     return connected;
 } // end Connect
 

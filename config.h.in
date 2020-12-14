@@ -85,6 +85,10 @@
    you don't. */
 #undef HAVE_DECL_SO_BINDTODEVICE
 
+/* Define to 1 if you have the declaration of `SO_DONTROUTE', and to 0 if you
+   don't. */
+#undef HAVE_DECL_SO_DONTROUTE
+
 /* Define to 1 if you have the declaration of `SO_MAX_PACING_RATE', and to 0
    if you don't. */
 #undef HAVE_DECL_SO_MAX_PACING_RATE
@@ -96,6 +100,10 @@
 /* Define to 1 if you have the declaration of `SO_TIMESTAMP', and to 0 if you
    don't. */
 #undef HAVE_DECL_SO_TIMESTAMP
+
+/* Define if limiting test traffic to the local-only network (via socket
+   SO_DONTROUTE) should be the default */
+#undef HAVE_DEFAULT_DONTROUTE_ON
 
 /* Define to 1 if you don't have `vprintf' but do have `_doprnt.' */
 #undef HAVE_DOPRNT
@@ -307,9 +315,6 @@
 
 /* Define for thread level debugging of the code */
 #undef HAVE_THREAD_DEBUG
-
-/* Define if udp triggers option is desired and available */
-#undef HAVE_UDPTRIGGERS
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
