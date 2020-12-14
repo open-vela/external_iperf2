@@ -758,6 +758,7 @@ enable_debuginfo
 enable_web100
 enable_kalman
 enable_role_reversal_id
+enable_default_localonly
 enable_seqno64b
 enable_fastsampling
 enable_thread_debug
@@ -1411,6 +1412,9 @@ Optional Features:
   --disable-role-reversal-id
                           disable role reversal special characters (default is
                           enable)
+  --enable-default-localonly
+                          enforce limiting test traffic to local-only network
+                          (via socket SO_DONTROUTE) as the default mode
   --disable-seqno64b      disable 64 bit sequence numer support (default is
                           enable)
   --enable-fastsampling   enable support for 100 microsecond report intervals
@@ -3222,6 +3226,12 @@ fi
 # Check whether --enable-role_reversal_id was given.
 if test "${enable_role_reversal_id+set}" = set; then :
   enableval=$enable_role_reversal_id;
+fi
+
+
+# Check whether --enable-default_localonly was given.
+if test "${enable_default_localonly+set}" = set; then :
+  enableval=$enable_default_localonly;
 fi
 
 
@@ -7896,6 +7906,17 @@ fi
 cat >>confdefs.h <<_ACEOF
 #define HAVE_DECL_SO_MAX_PACING_RATE $ac_have_decl
 _ACEOF
+ac_fn_c_check_decl "$LINENO" "SO_DONTROUTE" "ac_cv_have_decl_SO_DONTROUTE" "$in_h
+"
+if test "x$ac_cv_have_decl_SO_DONTROUTE" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_SO_DONTROUTE $ac_have_decl
+_ACEOF
 ac_fn_c_check_decl "$LINENO" "IPV6_TCLASS" "ac_cv_have_decl_IPV6_TCLASS" "$in_h
 "
 if test "x$ac_cv_have_decl_IPV6_TCLASS" = xyes; then :
@@ -8645,6 +8666,12 @@ $as_echo "#define HAVE_ROLE_REVERSAL_ID 1" >>confdefs.h
 
 fi
 
+if test "$enable_default_localonly" = yes; then
+
+$as_echo "#define HAVE_DEFAULT_DONTROUTE_ON 1" >>confdefs.h
+
+fi
+
 if test "$enable_seqno64b" != no; then
 
 $as_echo "#define HAVE_SEQNO64b 1" >>confdefs.h
@@ -8654,12 +8681,6 @@ fi
 if test "$enable_isochronous" != no; then
 
 $as_echo "#define HAVE_ISOCHRONOUS 1" >>confdefs.h
-
-fi
-
-if test "$enable_udptriggers" = yes; then
-
-$as_echo "#define HAVE_UDPTRIGGERS 1" >>confdefs.h
 
 fi
 

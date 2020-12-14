@@ -165,6 +165,9 @@ set the inter-packet gap to \fIn\fR (units of seconds) for packets or within a f
 .BR "    --isochronous[=" \fIfps\fR:\fImean\fR,\fIstdev\fR "]"
 send isochronous traffic with frequency frames per second and load defined by mean and standard deviation using a log normal distribution, defaults to 60:20m,0. (Note: Here the suffixes indicate bytes/sec or bits/sec per use of uppercase or lowercase, respectively. Also the p suffix is supported to set the burst size in packets, e.g. isochronous=2:25p will send two 25 packet bursts every second, or one 25 packet burst every 0.5 seconds.)
 .TP
+.BR "    --local-only[=\fI1\fR|\fI0\fR]"
+Set 1 to limit traffic to the local network only (through the use of SO_DONTROUTE) set to zero otherwise with optional override of compile time default (see configure --default-localonly)
+.TP
 .BR "    --no-connect-sync "
 By default, parallel traffic threads (per -P greater than 1) will synchronize after their TCP connects and prior to each sending traffic, i.e. all the threads first complete (or error) the TCP 3WHS before any traffic thread will start sending. This option disables that synchronization such that each traffic thread will start sending immediately after completing its successful connect.
 .TP
