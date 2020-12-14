@@ -899,11 +899,7 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    if (so_dontroute) {
 		so_dontroute = 0;
 #if HAVE_DECL_SO_DONTROUTE
-  #if HAVE_DEFAULT_DONTROUTE_ON
 		setDontRoute(mExtSettings);
-  #else
-		unsetDontRoute(mExtSettings);
-  #endif
 		if (optarg) {
 		    if (atoi(optarg))
 			setDontRoute(mExtSettings);
