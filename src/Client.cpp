@@ -1137,7 +1137,8 @@ void Client::AwaitServerFinPacket (void) {
 	    // try to trigger another FIN by resending a negative seq no
 	    WritePacketID(-(++reportstruct->packetID));
 	    // write data
-	    write(mySocket, mBuf, mSettings->mBufLen);
+	    rc = write(mySocket, mBuf, mSettings->mBufLen);
+	    WARN_errno(rc < 0, "write-fin");
 #ifdef HAVE_THREAD_DEBUG
 	    thread_debug("UDP client retransmit final packet per negative seqno %ld", -reportstruct->packetID);
 #endif

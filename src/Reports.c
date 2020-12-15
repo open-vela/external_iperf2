@@ -855,10 +855,11 @@ void write_UDP_AckFIN (struct TransferInfo *stats) {
 #ifdef HAVE_THREAD_DEBUG
 	    thread_debug("UDP server send done-ack w/server-stats to client (sock=%d)", stats->common->socket);
 #endif
-	    write(((stats->common->socketdrop > 0) ? stats->common->socketdrop : stats->common->socket), ackPacket, ackpacket_length);
+	    rc = write(((stats->common->socketdrop > 0) ? stats->common->socketdrop : stats->common->socket), ackPacket, ackpacket_length);
 #else
-	    write(stats->common->socket, ackPacket, ackpacket_length);
+	    rc = write(stats->common->socket, ackPacket, ackpacket_length);
 #endif
+	    WARN_errno(rc < 0, "write-ackfin");
 	    // wait here is for silence, no more packets from the client
 	    fd_set readSet;
 	    FD_ZERO(&readSet);
