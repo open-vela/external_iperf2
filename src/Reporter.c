@@ -77,8 +77,6 @@ struct ReportHeader *ReportPendingHead = NULL;
 struct ReportHeader *ReportPendingTail = NULL;
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 static void gettcpistats(struct ReporterData *data, int final, struct tcp_info *tcp_stats);
-#else
-static void gettcpistats(struct ReporterData *data, int final);
 #endif
 
 // Reporter's reset of stats after a print occurs
