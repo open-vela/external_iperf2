@@ -873,39 +873,37 @@ void reporter_handle_packet_client (struct ReporterData *data, struct ReportStru
     struct TransferInfo *stats = &data->info;
     struct TransferInfo *sumstats = (data->GroupSumReport != NULL) ? &data->GroupSumReport->info : NULL;
     static int cnt = 0;
-
+    struct tcp_info tcp_info_buf;
+    struct tcp_info *this_tcp_stats = (tcp_stats != NULL) ? tcp_stats : &tcp_info_buf;
     int retry = 0;
     // Read the TCP retry stats for a client.  Do this
     // on  a report interval period.
     int rc = (stats->common->socket==INVALID_SOCKET) ? 0 : 1;
     if (rc) {
-	struct tcp_info tcp_internal_buf;
-	socklen_t tcp_info_length = sizeof(struct tcp_info);
-	if (!tcp_stats) {
-	    tcp_stats = &tcp_internal_buf;
-	}
-        rc = (getsockopt(stats->common->socket, IPPROTO_TCP, TCP_INFO, tcp_stats, &tcp_info_length) < 0) ? 0 : 1;
-	if (!rc)
+        socklen_t tcp_info_length = sizeof(struct tcp_info);
+        rc = (getsockopt(stats->common->socket, IPPROTO_TCP, TCP_INFO, this_tcp_stats, &tcp_info_length) < 0) ? 0 : 1;
+        if (!rc) {
 	    stats->common->socket = INVALID_SOCKET;
-	else
+	} else {
 	    // Mark stale now so next call at report interval will update
 	    stats->sock_callstats.write.up_to_date = 1;
+	}
     }
     if (!rc) {
         stats->sock_callstats.write.TCPretry = 0;
 	stats->sock_callstats.write.cwnd = -1;
 	stats->sock_callstats.write.rtt = 0;
     } else {
-        retry = tcp_stats->tcpi_total_retrans - stats->sock_callstats.write.lastTCPretry;
+        retry = this_tcp_stats->tcpi_total_retrans - stats->sock_callstats.write.lastTCPretry;
 	stats->sock_callstats.write.TCPretry = retry;
 	stats->sock_callstats.write.totTCPretry += retry;
-	stats->sock_callstats.write.lastTCPretry = tcp_stats->tcpi_total_retrans;
-	stats->sock_callstats.write.cwnd = tcp_stats->tcpi_snd_cwnd * tcp_stats->tcpi_snd_mss / 1024;
-	stats->sock_callstats.write.rtt = tcp_stats->tcpi_rtt;
+	stats->sock_callstats.write.lastTCPretry = this_tcp_stats->tcpi_total_retrans;
+	stats->sock_callstats.write.cwnd = this_tcp_stats->tcpi_snd_cwnd * this_tcp_stats->tcpi_snd_mss / 1024;
+	stats->sock_callstats.write.rtt = this_tcp_stats->tcpi_rtt;
 	// New average = old average * (n-1)/n + new value/n
 	cnt++;
-	stats->sock_callstats.write.meanrtt = (stats->sock_callstats.write.meanrtt * ((double) (cnt - 1) / (double) cnt)) + ((double) (tcp_stats->tcpi_rtt) / (double) cnt);
-	stats->sock_callstats.write.rtt = tcp_stats->tcpi_rtt;
+	stats->sock_callstats.write.meanrtt = (stats->sock_callstats.write.meanrtt * ((double) (cnt - 1) / (double) cnt)) + ((double) (this_tcp_stats->tcpi_rtt) / (double) cnt);
+	stats->sock_callstats.write.rtt = this_tcp_stats->tcpi_rtt;
 	if (sumstats) {
 	    sumstats->sock_callstats.write.TCPretry += retry;
 	    sumstats->sock_callstats.write.totTCPretry += retry;
