@@ -76,6 +76,8 @@ struct ReportHeader *ReportRoot = NULL;
 struct ReportHeader *ReportPendingHead = NULL;
 struct ReportHeader *ReportPendingTail = NULL;
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+static void gettcpistats(struct ReporterData *data, int final, struct tcp_info *tcp_stats);
+#else
 static void gettcpistats(struct ReporterData *data, int final);
 #endif
 
@@ -126,21 +128,21 @@ void PostReport (struct ReportHeader *reporthdr) {
  * be as simple and fast as possible as it gets called for
  * every "packet".
  */
-void ReportPacket (struct ReporterData* data, struct ReportStruct *packet) {
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+bool ReportPacket (struct ReporterData* data, struct ReportStruct *packet, struct tcp_info *tcp_stats) {
     assert(data != NULL);
     struct TransferInfo *stats = &data->info;
-#ifdef HAVE_THREAD_DEBUG
+    bool rc = false;
+  #ifdef HAVE_THREAD_DEBUG
     if (packet->packetID < 0) {
 	thread_debug("Reporting last packet for %p  qdepth=%d sock=%d", (void *) data, packetring_getcount(data->packetring), data->info.common->socket);
     }
-#endif
-#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+  #endif
     // tcpi stats are only sampled on the report interval
     if (isEnhanced(stats->common) && (stats->common->ThreadMode == kMode_Client) && \
 	(TimeDifference(stats->ts.nextTime, packet->packetTime) < 0)) {
-	gettcpistats(data, 0);
+	gettcpistats(data, 0, NULL);
     }
-#endif
     // Note for threaded operation all that needs
     // to be done is to enqueue the packet data
     // into the ring.
@@ -150,17 +152,48 @@ void ReportPacket (struct ReporterData* data, struct ReportStruct *packet) {
     // These defeats the puropse of separating
     // traffic i/o from user i/o and really
     // should be avoided.
-#ifdef HAVE_THREAD
+  #ifdef HAVE_THREAD
     // bypass the reporter thread here for single UDP
     if (isSingleUDP(stats->common))
         reporter_process_transfer_report(data);
-#else
+  #else
     /*
      * Process the report in this thread
      */
     reporter_process_transfer_report(data);
-#endif
+  #endif
+    return rc;
 }
+#else
+void ReportPacket (struct ReporterData* data, struct ReportStruct *packet) {
+    assert(data != NULL);
+    struct TransferInfo *stats = &data->info;
+  #ifdef HAVE_THREAD_DEBUG
+    if (packet->packetID < 0) {
+	thread_debug("Reporting last packet for %p  qdepth=%d sock=%d", (void *) data, packetring_getcount(data->packetring), data->info.common->socket);
+    }
+  #endif
+    // Note for threaded operation all that needs
+    // to be done is to enqueue the packet data
+    // into the ring.
+    packetring_enqueue(data->packetring, packet);
+    // The traffic thread calls the reporting process
+    // directly forr non-threaded operation
+    // These defeats the puropse of separating
+    // traffic i/o from user i/o and really
+    // should be avoided.
+  #ifdef HAVE_THREAD
+    // bypass the reporter thread here for single UDP
+    if (isSingleUDP(stats->common))
+        reporter_process_transfer_report(data);
+  #else
+    /*
+     * Process the report in this thread
+     */
+    reporter_process_transfer_report(data);
+  #endif
+}
+#endif
 
 /*
  * EndJob is called by a traffic thread to inform the reporter
@@ -188,7 +221,7 @@ int EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
     // tcpi stats are sampled on a final packet
     if (isEnhanced(stats->common) && (stats->common->ThreadMode == kMode_Client) && \
 	(TimeDifference(stats->ts.nextTime, finalpacket->packetTime) < 0)) {
-	gettcpistats(report, 0);
+	gettcpistats(report, 0, NULL);
     }
 #endif
     // clear the reporter done predicate
@@ -201,7 +234,11 @@ int EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
 	packetring_enqueue(report->packetring, &packet);
 	reporter_process_transfer_report(report);
     } else {
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+	ReportPacket(report, &packet, NULL);
+#else
 	ReportPacket(report, &packet);
+#endif
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug( "Traffic thread awaiting reporter to be done with %p and cond %p", (void *)report, (void *) report->packetring->awake_producer);
 #endif
@@ -831,19 +868,23 @@ void reporter_handle_packet_client (struct ReporterData *data, struct ReportStru
 }
 
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-static void gettcpistats (struct ReporterData *data, int final) {
+ static void gettcpistats (struct ReporterData *data, int final, struct tcp_info *tcp_stats) {
     assert(data!=NULL);
     struct TransferInfo *stats = &data->info;
     struct TransferInfo *sumstats = (data->GroupSumReport != NULL) ? &data->GroupSumReport->info : NULL;
     static int cnt = 0;
-    struct tcp_info tcp_internal;
-    socklen_t tcp_info_length = sizeof(struct tcp_info);
+
     int retry = 0;
     // Read the TCP retry stats for a client.  Do this
     // on  a report interval period.
     int rc = (stats->common->socket==INVALID_SOCKET) ? 0 : 1;
     if (rc) {
-        rc = (getsockopt(stats->common->socket, IPPROTO_TCP, TCP_INFO, &tcp_internal, &tcp_info_length) < 0) ? 0 : 1;
+	struct tcp_info tcp_internal_buf;
+	socklen_t tcp_info_length = sizeof(struct tcp_info);
+	if (!tcp_stats) {
+	    tcp_stats = &tcp_internal_buf;
+	}
+        rc = (getsockopt(stats->common->socket, IPPROTO_TCP, TCP_INFO, tcp_stats, &tcp_info_length) < 0) ? 0 : 1;
 	if (!rc)
 	    stats->common->socket = INVALID_SOCKET;
 	else
@@ -855,16 +896,16 @@ static void gettcpistats (struct ReporterData *data, int final) {
 	stats->sock_callstats.write.cwnd = -1;
 	stats->sock_callstats.write.rtt = 0;
     } else {
-        retry = tcp_internal.tcpi_total_retrans - stats->sock_callstats.write.lastTCPretry;
+        retry = tcp_stats->tcpi_total_retrans - stats->sock_callstats.write.lastTCPretry;
 	stats->sock_callstats.write.TCPretry = retry;
 	stats->sock_callstats.write.totTCPretry += retry;
-	stats->sock_callstats.write.lastTCPretry = tcp_internal.tcpi_total_retrans;
-	stats->sock_callstats.write.cwnd = tcp_internal.tcpi_snd_cwnd * tcp_internal.tcpi_snd_mss / 1024;
-	stats->sock_callstats.write.rtt = tcp_internal.tcpi_rtt;
+	stats->sock_callstats.write.lastTCPretry = tcp_stats->tcpi_total_retrans;
+	stats->sock_callstats.write.cwnd = tcp_stats->tcpi_snd_cwnd * tcp_stats->tcpi_snd_mss / 1024;
+	stats->sock_callstats.write.rtt = tcp_stats->tcpi_rtt;
 	// New average = old average * (n-1)/n + new value/n
 	cnt++;
-	stats->sock_callstats.write.meanrtt = (stats->sock_callstats.write.meanrtt * ((double) (cnt - 1) / (double) cnt)) + ((double) (tcp_internal.tcpi_rtt) / (double) cnt);
-	stats->sock_callstats.write.rtt = tcp_internal.tcpi_rtt;
+	stats->sock_callstats.write.meanrtt = (stats->sock_callstats.write.meanrtt * ((double) (cnt - 1) / (double) cnt)) + ((double) (tcp_stats->tcpi_rtt) / (double) cnt);
+	stats->sock_callstats.write.rtt = tcp_stats->tcpi_rtt;
 	if (sumstats) {
 	    sumstats->sock_callstats.write.TCPretry += retry;
 	    sumstats->sock_callstats.write.totTCPretry += retry;
