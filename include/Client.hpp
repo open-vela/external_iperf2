@@ -115,7 +115,11 @@ private:
     bool one_report;
     bool apply_first_udppkt_delay;
     int udp_payload_minimum;
-
+    void myReportPacket (void);
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+    struct tcp_info my_tcpi_stats;
+    bool myReportPacket (bool sample_tcpi);
+#endif
     // TCP plain
     void RunTCP(void);
     // TCP version which supports rate limiting per -b
@@ -126,7 +130,6 @@ private:
     void RunUDP(void);
     // client connect
     void PeerXchange(void);
-
     thread_Settings *mSettings;
 #if WIN32
     SOCKET mySocket;
