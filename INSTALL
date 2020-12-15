@@ -2,9 +2,10 @@ $Id: INSTALL,v 1.1.1.1 2004/05/18 01:50:44 kgibbs Exp $
 
 Briefly:
 
-Do one-time if needed:
+Do one-time if needed, e.g. for systems with dnf
   dnf install gcc
   dnf install gcc-c++
+  dnf install make
   dnf install automake
 
 then to build do:
