@@ -288,6 +288,8 @@ int Client::StartSynch (void) {
 	} else if (isTxHoldback(mSettings)) {
 	    TxDelay();
 	}
+    } else if (isTripTime(mSettings)) {
+	reportstruct->packetLen = SendFirstPayload();
     } else {
 	reportstruct->packetLen = 0;
     }
