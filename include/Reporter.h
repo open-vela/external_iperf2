@@ -401,7 +401,11 @@ struct ConnectionInfo* InitConnectOnlyReport(struct thread_Settings *inSettings)
 struct ReportHeader *InitSettingsReport(struct thread_Settings *inSettings);
 struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings, struct server_hdr *server);
 void PostReport(struct ReportHeader *reporthdr);
-void ReportPacket(struct ReporterData *reporthdr, struct ReportStruct *packet);
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+bool ReportPacket (struct ReporterData* data, struct ReportStruct *packet, struct tcp_info *tcp_stats);
+#else
+void ReportPacket (struct ReporterData* data, struct ReportStruct *packet);
+#endif
 int EndJob(struct ReportHeader *reporthdr,  struct ReportStruct *packet);
 void FreeReport(struct ReportHeader *reporthdr);
 void FreeSumReport (struct SumReport *sumreport);

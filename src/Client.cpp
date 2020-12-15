@@ -244,6 +244,27 @@ void Client::TxDelay (void) {
     }
 }
 
+// return true of tcpi stats were sampled
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+inline bool Client::myReportPacket (bool sample_tcpi) {
+    bool rc = false;
+    if (sample_tcpi) {
+	rc = ReportPacket(myReport, reportstruct, &my_tcpi_stats);
+    } else {
+	ReportPacket(myReport, reportstruct, NULL);
+    }
+    return rc;
+}
+inline void Client::myReportPacket (void) {
+    ReportPacket(myReport, reportstruct, NULL);
+}
+#else
+inline void Client::myReportPacket (void) {
+    ReportPacket(myReport, reportstruct);
+}
+#endif
+
+
 // There are multiple startup synchronizations, this code
 // handles them all. The caller decides to apply them
 // either before connect() or after connect() and before writes()
@@ -290,7 +311,7 @@ int Client::StartSynch (void) {
 	reportstruct->sentTime = reportstruct->packetTime;
 	reportstruct->prevSentTime = reportstruct->packetTime;
 	reportstruct->prevPacketTime = myReport->info.ts.prevpacketTime;
-	ReportPacket(myReport, reportstruct);
+	myReportPacket();
 	myReport->info.ts.prevpacketTime = reportstruct->packetTime;
 	reportstruct->packetID++;
     }
@@ -558,7 +579,7 @@ void Client::RunTCP (void) {
 	    }
 	}
 	if (!one_report) {
-	    ReportPacket(myReport, reportstruct);
+	    myReportPacket();
 	}
 	if (isModeAmount(mSettings) && !reportstruct->emptyreport) {
 	    /* mAmount may be unsigned, so don't let it underflow! */
@@ -656,7 +677,7 @@ void Client::RunRateLimitedTCP (void) {
 	    reportstruct->packetTime.tv_usec = time2.getUsecs();
 	    reportstruct->sentTime = reportstruct->packetTime;
 	    if (!one_report) {
-		ReportPacket(myReport, reportstruct);
+		myReportPacket();
 	    }
 	    if (isModeAmount(mSettings)) {
 		/* mAmount may be unsigned, so don't let it underflow! */
@@ -799,7 +820,7 @@ void Client::RunUDP (void) {
 	// report packets
 	reportstruct->packetLen = (unsigned long) currLen;
 	reportstruct->prevPacketTime = myReport->info.ts.prevpacketTime;
-	ReportPacket(myReport, reportstruct);
+	myReportPacket();
 	reportstruct->packetID++;
 	myReport->info.ts.prevpacketTime = reportstruct->packetTime;
 	// Insert delay here only if the running delay is greater than 100 usec,
@@ -942,7 +963,7 @@ void Client::RunUDPIsochronous (void) {
 	    reportstruct->frameID=frameid;
 	    reportstruct->packetLen = (unsigned long) currLen;
 	    reportstruct->prevPacketTime = myReport->info.ts.prevpacketTime;
-	    ReportPacket(myReport, reportstruct);
+	    myReportPacket();
 	    reportstruct->packetID++;
 	    myReport->info.ts.prevpacketTime = reportstruct->packetTime;
 	    // Insert delay here only if the running delay is greater than 1 usec,
@@ -1067,7 +1088,7 @@ void Client::FinishTrafficActions (void) {
 	     *
 	     */
 	    reportstruct->packetLen = totLen;
-	    ReportPacket(myReport, reportstruct);
+	    myReportPacket();
 	    reportstruct->packetLen = 0;
 	}
     } else {
@@ -1090,7 +1111,7 @@ void Client::FinishTrafficActions (void) {
 #endif
 	if (len > 0) {
 	    reportstruct->packetLen = len;
-	    ReportPacket(myReport, reportstruct);
+	    myReportPacket();
 	}
 	reportstruct->packetLen = 0;
     }
@@ -1175,7 +1196,7 @@ void Client::PostNullEvent (void) {
     emptypacket.packetTime.tv_sec = now.getSecs();
     emptypacket.packetTime.tv_usec = now.getUsecs();
     emptypacket.emptyreport=1;
-    ReportPacket(myReport, &emptypacket);
+    myReportPacket();
 }
 
 // The client end timer is based upon the final fin, fin-ack w/the server
