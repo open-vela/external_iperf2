@@ -1099,7 +1099,11 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 	}
 	if (isEnhanced(report->common) || isConnectOnly(report->common)) {
 	    if (report->connecttime > 0) {
-		snprintf(b, SNBUFFERSIZE-strlen(b), " (ct=%4.2f ms)", report->connecttime);;
+		struct tm ts;
+		ts = *localtime(&report->connect_start.tv_sec);
+		char now_timebuf[80];
+		strftime(now_timebuf, sizeof(now_timebuf), "%Y-%m-%d %H:%M:%S (%Z)", &ts);
+		snprintf(b, SNBUFFERSIZE-strlen(b), " (ct=%4.2f ms) on %s", report->connecttime, now_timebuf);
 		b += strlen(b);
 	    }
 	}
