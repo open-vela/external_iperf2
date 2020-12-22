@@ -1015,8 +1015,12 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
         printf(client_datagram_size, report->common->BufLen, report->common->pktIPG);
 #endif
     }
-    output_window_size(report);
-    printf("\n");
+    if (isConnectOnly(report->common)) {
+	fprintf(stdout, "TCP three-way-handshake (3WHS) only\n");
+    } else {
+	output_window_size(report);
+	printf("\n");
+    }
 }
 
 void reporter_connect_printf_tcp_final (struct ConnectionInfo * report) {
