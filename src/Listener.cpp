@@ -282,7 +282,7 @@ void Listener::Run (void) {
 	// This is required for accurate traffic statistics
 	if (!isCompat(server) && !apply_client_settings(server)) {
 	    if (isConnectionReport(server) && !isSumOnly(server)) {
-		struct ReportHeader *reporthdr = InitConnectionReport(mSettings, 0);
+		struct ReportHeader *reporthdr = InitConnectionReport(server, 0);
 		struct ConnectionInfo *cr = (struct ConnectionInfo *)(reporthdr->this_report);
 		cr->connect_timestamp.tv_sec = server->accept_time.tv_sec;
 		cr->connect_timestamp.tv_usec = server->accept_time.tv_usec;
@@ -319,7 +319,12 @@ void Listener::Run (void) {
 
 	setTransferID(server, isCompat(mSettings));
 	if (isConnectionReport(server) && !isSumOnly(server)) {
-	    PostReport(InitConnectionReport(server, 0));
+	    struct ReportHeader *reporthdr = InitConnectionReport(server, 0);
+	    struct ConnectionInfo *cr = (struct ConnectionInfo *)(reporthdr->this_report);
+	    cr->connect_timestamp.tv_sec = server->accept_time.tv_sec;
+	    cr->connect_timestamp.tv_usec = server->accept_time.tv_usec;
+	    assert(report);
+	    PostReport(reporthdr);
 	}
 	// Read any more test settings and test values (not just the flags) and instantiate
 	// any settings objects for client threads (e.g. bidir or full duplex)
