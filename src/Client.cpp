@@ -222,7 +222,12 @@ int Client::my_connect (int exit_on_fail) {
     // Post the connect report unless peer version exchange is set
     if (isConnectionReport(mSettings) && !isSumOnly(mSettings) && !isPeerVerDetect(mSettings)) {
 	if (connected) {
-	    PostReport(InitConnectionReport(mSettings, connecttime));
+	    struct ReportHeader *reporthdr = InitConnectionReport(mSettings, connecttime);
+	    struct ConnectionInfo *cr = (struct ConnectionInfo *)(reporthdr->this_report);
+	    cr->connect_start.tv_sec = connect_start.getSecs();
+	    cr->connect_start.tv_usec = connect_start.getUsecs();
+	    assert(report);
+	    PostReport(reporthdr);
 	} else {
 	    PostReport(InitConnectionReport(mSettings, -1));
 
