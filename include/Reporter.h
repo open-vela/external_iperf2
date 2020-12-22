@@ -240,7 +240,7 @@ struct ReportCommon {
 
 struct ConnectionInfo {
     struct ReportCommon *common;
-    struct timeval connect_start;
+    struct timeval connect_timestamp;
     double connecttime;
     struct timeval txholdbacktime;
     struct timeval epochStartTime;

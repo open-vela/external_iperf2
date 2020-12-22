@@ -282,7 +282,12 @@ void Listener::Run (void) {
 	// This is required for accurate traffic statistics
 	if (!isCompat(server) && !apply_client_settings(server)) {
 	    if (isConnectionReport(server) && !isSumOnly(server)) {
-		PostReport(InitConnectionReport(server, 0));
+		struct ReportHeader *reporthdr = InitConnectionReport(mSettings, 0);
+		struct ConnectionInfo *cr = (struct ConnectionInfo *)(reporthdr->this_report);
+		cr->connect_timestamp.tv_sec = server->accept_time.tv_sec;
+		cr->connect_timestamp.tv_usec = server->accept_time.tv_usec;
+		assert(report);
+		PostReport(reporthdr);
 	    }
 	    Iperf_remove_host(&server->peer);
 	    if (DecrSumReportRefCounter(server->mSumReport) <= 0) {

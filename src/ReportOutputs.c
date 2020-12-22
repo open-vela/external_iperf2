@@ -1098,12 +1098,16 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 	    }
 	}
 	if (isEnhanced(report->common) || isConnectOnly(report->common)) {
-	    if (report->connecttime > 0) {
+	    if (report->connect_timestamp.tv_sec > 0) {
 		struct tm ts;
-		ts = *localtime(&report->connect_start.tv_sec);
+		ts = *localtime(&report->connect_timestamp.tv_sec);
 		char now_timebuf[80];
 		strftime(now_timebuf, sizeof(now_timebuf), "%Y-%m-%d %H:%M:%S (%Z)", &ts);
-		snprintf(b, SNBUFFERSIZE-strlen(b), " (ct=%4.2f ms) on %s", report->connecttime, now_timebuf);
+		if (report->common->ThreadMode == kMode_Client) {
+		    snprintf(b, SNBUFFERSIZE-strlen(b), " (ct=%4.2f ms) on %s", report->connecttime, now_timebuf);
+		} else {
+		    snprintf(b, SNBUFFERSIZE-strlen(b), " on %s", now_timebuf);
+		}
 		b += strlen(b);
 	    }
 	}

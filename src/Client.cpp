@@ -224,8 +224,8 @@ int Client::my_connect (int exit_on_fail) {
 	if (connected) {
 	    struct ReportHeader *reporthdr = InitConnectionReport(mSettings, connecttime);
 	    struct ConnectionInfo *cr = (struct ConnectionInfo *)(reporthdr->this_report);
-	    cr->connect_start.tv_sec = connect_start.getSecs();
-	    cr->connect_start.tv_usec = connect_start.getUsecs();
+	    cr->connect_timestamp.tv_sec = connect_start.getSecs();
+	    cr->connect_timestamp.tv_usec = connect_start.getUsecs();
 	    assert(report);
 	    PostReport(reporthdr);
 	} else {
