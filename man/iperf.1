@@ -1,4 +1,4 @@
-.TH IPERF 1 "November 2020" NLANR/DAST "User Manuals"
+.TH IPERF 1 "December 2020" NLANR/DAST "User Manuals"
 .SH NAME
 iperf \- perform network traffic tests using network sockets. Metrics include throughput and latency.
 .SH SYNOPSIS
@@ -169,7 +169,7 @@ send isochronous traffic with frequency frames per second and load defined by me
 Set 1 to limit traffic to the local network only (through the use of SO_DONTROUTE) set to zero otherwise with optional override of compile time default (see configure --default-localonly)
 .TP
 .BR "    --near-congestion[=\fIn\fR]"
-Enable TCP write rate limiting per the sampled RTT. Requires --trip-times. Optional value is the multiple of the RTT per the delay. Values less than 1 supported but cannot be negative. Thi is an experimental feature.
+Enable TCP write rate limiting per the sampled RTT. Requires the --trip-times option. The optional value is the multiplier to the RTT to provide the time delay which defaults to 0.5. Values less than 1 are supported but cannot be negative. This is an experimental feature and is not likely stable on live networks. Suggested use is over controlled test networks.
 .TP
 .TP
 .BR "    --no-connect-sync "
