@@ -621,26 +621,25 @@ void Client::RunNearCongestionTCP (void) {
 	} else {
 	    reportstruct->packetLen = mSettings->mBufLen;
 	}
-	if (isTripTime(mSettings)) {
-	    if (!burst_remaining) {
-		burst_remaining = mSettings->mBufLen;
-		// mAmount check
-		now.setnow();
-		reportstruct->packetTime.tv_sec = now.getSecs();
-		reportstruct->packetTime.tv_usec = now.getUsecs();
-		WriteTcpTxHdr(reportstruct, burst_remaining, burst_id++);
-		reportstruct->sentTime = reportstruct->packetTime;
-		myReport->info.ts.prevsendTime = reportstruct->packetTime;
-		// perform write
-		int writelen = (mSettings->mBufLen > burst_remaining) ? burst_remaining : mSettings->mBufLen;
-		reportstruct->packetLen = write(mySocket, mBuf, writelen);
-		assert(reportstruct->packetLen >= (intmax_t) sizeof(struct TCP_burst_payload));
-		++nearcongestion_samplecounter;
-		goto ReportNow;
-	    }
-	    if (reportstruct->packetLen > burst_remaining) {
-		reportstruct->packetLen = burst_remaining;
-	    }
+	// Note that TripTime and NearCongestion are known to be set
+	if (!burst_remaining) {
+	    burst_remaining = mSettings->mBufLen;
+	    // mAmount check
+	    now.setnow();
+	    reportstruct->packetTime.tv_sec = now.getSecs();
+	    reportstruct->packetTime.tv_usec = now.getUsecs();
+	    WriteTcpTxHdr(reportstruct, burst_remaining, burst_id++);
+	    reportstruct->sentTime = reportstruct->packetTime;
+	    myReport->info.ts.prevsendTime = reportstruct->packetTime;
+	    // perform write
+	    int writelen = (mSettings->mBufLen > burst_remaining) ? burst_remaining : mSettings->mBufLen;
+	    reportstruct->packetLen = write(mySocket, mBuf, writelen);
+	    assert(reportstruct->packetLen >= (intmax_t) sizeof(struct TCP_burst_payload));
+	    ++nearcongestion_samplecounter;
+	    goto ReportNow;
+	}
+	if (reportstruct->packetLen > burst_remaining) {
+	    reportstruct->packetLen = burst_remaining;
 	}
 	// printf("pl=%ld\n",reportstruct->packetLen);
 	// perform write
@@ -685,9 +684,9 @@ void Client::RunNearCongestionTCP (void) {
 	    }
 	} else
 #endif
-	{
-	    myReportPacket();
-	}
+	    {
+		myReportPacket();
+	    }
 	if (isModeAmount(mSettings) && !reportstruct->emptyreport) {
 	    /* mAmount may be unsigned, so don't let it underflow! */
 	    if (mSettings->mAmount >= (unsigned long) (reportstruct->packetLen)) {
