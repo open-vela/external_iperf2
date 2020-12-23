@@ -1,7 +1,7 @@
 See doc/DESIGN_NOTES for some description around the software design
 See doc/CLOCKSYNC_NOTES for some description around synchronizing the realtime clocks
 
-2.0.14 change set (as of December 13th, 2020)
+2.0.14 change set (as of December 22nd, 2020)
 ----------------------------------------
 o scaling improvements for -P, i.e. improved support for large numbers of traffic threads
 o major code refactoring (see doc/DESIGN_NOTES) for maintainability, extensibilty, performance, scaling, memory usage
@@ -45,7 +45,7 @@ o support for --local-only which sets SO_DONTROUTE on a socket to limit traffic 
 o support compile time option of --local-only to set on by default via ./configure --enable-default-localonly
 o support for date and time of in connect messages,
   e.g. [  0] local 192.168.1.108%eth0 port 5001 connected with 192.168.1.62 port 36724 (MSS=453) (sock=5) on 2020-12-22 19:43:42 (PST)
-o experimental feature of --near-congestion (tcp only)
+o support for experimental feature of --near-congestion (tcp only)
 o man page updates with examples
 o tested with 1000's of traffic streams, WiFi, 10G and 100G
 
