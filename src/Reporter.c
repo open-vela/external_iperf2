@@ -136,10 +136,12 @@ bool ReportPacket (struct ReporterData* data, struct ReportStruct *packet, struc
 	thread_debug("Reporting last packet for %p  qdepth=%d sock=%d", (void *) data, packetring_getcount(data->packetring), data->info.common->socket);
     }
   #endif
-    // tcpi stats are only sampled on the report interval
-    if (isEnhanced(stats->common) && (stats->common->ThreadMode == kMode_Client) && \
-	(TimeDifference(stats->ts.nextTime, packet->packetTime) < 0)) {
-	gettcpistats(data, 0, NULL);
+    // tcpi stats are only sampled on the report interval or per near-congestion
+    if ((isEnhanced(stats->common) && (stats->common->ThreadMode == kMode_Client) && \
+	(TimeDifference(stats->ts.nextTime, packet->packetTime) < 0)) \
+	|| isNearCongest(stats->common)) {
+	gettcpistats(data, 0, tcp_stats);
+	rc = true;
     }
     // Note for threaded operation all that needs
     // to be done is to enqueue the packet data
@@ -866,7 +868,7 @@ void reporter_handle_packet_client (struct ReporterData *data, struct ReportStru
 }
 
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
- static void gettcpistats (struct ReporterData *data, int final, struct tcp_info *tcp_stats) {
+static void gettcpistats (struct ReporterData *data, int final, struct tcp_info *tcp_stats) {
     assert(data!=NULL);
     struct TransferInfo *stats = &data->info;
     struct TransferInfo *sumstats = (data->GroupSumReport != NULL) ? &data->GroupSumReport->info : NULL;

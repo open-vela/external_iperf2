@@ -45,6 +45,7 @@ o support for --local-only which sets SO_DONTROUTE on a socket to limit traffic 
 o support compile time option of --local-only to set on by default via ./configure --enable-default-localonly
 o support for date and time of in connect messages,
   e.g. [  0] local 192.168.1.108%eth0 port 5001 connected with 192.168.1.62 port 36724 (MSS=453) (sock=5) on 2020-12-22 19:43:42 (PST)
+o experimental feature of --near-congestion (tcp only)
 o man page updates with examples
 o tested with 1000's of traffic streams, WiFi, 10G and 100G
 

@@ -124,6 +124,7 @@ private:
     void RunTCP(void);
     // TCP version which supports rate limiting per -b
     void RunRateLimitedTCP(void);
+    void RunNearCongestionTCP(void);
     // UDP traffic with isochronous and vbr support
     void RunUDPIsochronous(void);
     // UDP plain

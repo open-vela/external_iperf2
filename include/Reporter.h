@@ -228,6 +228,7 @@ struct ReportCommon {
     char* Congestion;
     char* transferIDStr;
     int transferID;
+    double rtt_weight;
 #if WIN32
     SOCKET socket;
 #else

@@ -92,6 +92,7 @@ static int noudpfin = 0;
 static int numreportstructs = 0;
 static int sumonly = 0;
 static int so_dontroute = 0;
+static int nearcongest = 0;
 
 void Settings_Interpret(char option, const char *optarg, struct thread_Settings *mExtSettings);
 // apply compound settings after the command line has been fully parsed
@@ -172,6 +173,7 @@ const struct option long_options[] =
 {"isochronous", optional_argument, &isochronous, 1},
 {"sum-only", no_argument, &sumonly, 1},
 {"local-only", optional_argument, &so_dontroute, 1},
+{"near-congestion", optional_argument, &nearcongest, 1},
 {"NUM_REPORT_STRUCTS", required_argument, &numreportstructs, 1},
 #ifdef WIN32
 {"reverse", no_argument, &reversetest, 1},
@@ -910,6 +912,15 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		fprintf(stderr, "WARNING: The --local-only option is not supported on this platform\n");
 #endif
 	    }
+	    if (nearcongest) {
+		nearcongest = 0;
+		setNearCongest(mExtSettings);
+		if (optarg && (atof(optarg) >=  0.0)) {
+		    mExtSettings->rtt_nearcongest_divider = atof(optarg);
+		} else {
+		    mExtSettings->rtt_nearcongest_divider = NEARCONGEST_DEFAULT;
+		}
+	    }
 	    if (rxhistogram) {
 		rxhistogram = 0;
 		setRxHistogram(mExtSettings);
@@ -1106,6 +1117,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		fprintf(stderr, "ERROR: option of --connect-only not supported with -u UDP\n");
 		bail = true;
 	    }
+	    if (isNearCongest(mExtSettings)) {
+		fprintf(stderr, "ERROR: option of --near-congestion not supported with -u UDP\n");
+		bail = true;
+	    }
 	    if (isIPG(mExtSettings) && isBWSet(mExtSettings)) {
 		fprintf(stderr, "ERROR: options of --b and --ipg cannot be applied together\n");
 		bail = true;
@@ -1142,6 +1157,21 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		bail = true;
 	    }
 	} else {
+#ifndef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+	    if (isNearCongest(mExtSettings)) {
+		fprintf(stderr, "ERROR: option of --near-congestion not supported on this platform\n");
+		bail = true;
+	    }
+#else
+	    if ((mExtSettings->mAppRate > 0) && isNearCongest(mExtSettings)) {
+		fprintf(stderr, "ERROR: option of --near-congestion and -b rate limited are mutually exclusive\n");
+		bail = true;
+	    }
+	    if (!isTripTime(mExtSettings) && isNearCongest(mExtSettings)) {
+		fprintf(stderr, "ERROR: option of --near-congestion requires --trip-times option\n");
+		bail = true;
+	    }
+#endif
 	    if (isBWSet(mExtSettings) && ((mExtSettings->mAppRate / 8) < (uintmax_t) mExtSettings->mBufLen)) {
 		fprintf(stderr, "ERROR: option -b and -l of %d are incompatible, consider setting -l to %d or lower\n", \
 			mExtSettings->mBufLen, (int) (mExtSettings->mAppRate / 8));
@@ -1240,6 +1270,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	}
 	if (mExtSettings->mConnectRetries > 0) {
 	    fprintf(stderr, "ERROR: option --connect-retries not supported on the server\n");
+	    bail = true;
+	}
+	if (isNearCongest(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of --near-congestion not supported on the server\n");
 	    bail = true;
 	}
     }

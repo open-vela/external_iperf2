@@ -168,6 +168,10 @@ send isochronous traffic with frequency frames per second and load defined by me
 .BR "    --local-only[=\fI1\fR|\fI0\fR]"
 Set 1 to limit traffic to the local network only (through the use of SO_DONTROUTE) set to zero otherwise with optional override of compile time default (see configure --default-localonly)
 .TP
+.BR "    --near-congestion[=\fIn\fR]"
+Enable TCP write rate limiting per the sampled RTT. Requires --trip-times. Optional value is the multiple of the RTT per the delay. Values less than 1 supported but cannot be negative. Thi is an experimental feature.
+.TP
+.TP
 .BR "    --no-connect-sync "
 By default, parallel traffic threads (per -P greater than 1) will synchronize after their TCP connects and prior to each sending traffic, i.e. all the threads first complete (or error) the TCP 3WHS before any traffic thread will start sending. This option disables that synchronization such that each traffic thread will start sending immediately after completing its successful connect.
 .TP

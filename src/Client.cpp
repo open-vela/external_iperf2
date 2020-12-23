@@ -51,6 +51,7 @@
  * sending and receiving data, then closes the socket.
  * ------------------------------------------------------------------- */
 #include <time.h>
+#include <math.h>
 #include "headers.h"
 #include "Client.hpp"
 #include "Thread.h"
@@ -500,8 +501,11 @@ void Client::Run (void) {
 	// Launch the approprate TCP traffic loop
 	if (mSettings->mAppRate > 0)
 	    RunRateLimitedTCP();
-	else
+	else if (isNearCongest(mSettings)) {
+	    RunNearCongestionTCP();
+	} else {
 	    RunTCP();
+	}
     }
 }
 
@@ -586,6 +590,99 @@ void Client::RunTCP (void) {
 	    }
 	}
 	if (!one_report) {
+	    myReportPacket();
+	}
+	if (isModeAmount(mSettings) && !reportstruct->emptyreport) {
+	    /* mAmount may be unsigned, so don't let it underflow! */
+	    if (mSettings->mAmount >= (unsigned long) (reportstruct->packetLen)) {
+		mSettings->mAmount -= (unsigned long) (reportstruct->packetLen);
+	    } else {
+		mSettings->mAmount = 0;
+	    }
+	}
+    }
+    FinishTrafficActions();
+}
+
+
+/*
+ * TCP send loop
+ */
+void Client::RunNearCongestionTCP (void) {
+    int burst_remaining = 0;
+    int burst_id = 1;
+    now.setnow();
+    reportstruct->packetTime.tv_sec = now.getSecs();
+    reportstruct->packetTime.tv_usec = now.getUsecs();
+    int nearcongestion_samplecounter = 0;
+    while (InProgress()) {
+        if (isModeAmount(mSettings)) {
+	    reportstruct->packetLen = ((mSettings->mAmount < (unsigned) mSettings->mBufLen) ? mSettings->mAmount : mSettings->mBufLen);
+	} else {
+	    reportstruct->packetLen = mSettings->mBufLen;
+	}
+	if (isTripTime(mSettings)) {
+	    if (!burst_remaining) {
+		burst_remaining = mSettings->mBufLen;
+		// mAmount check
+		now.setnow();
+		reportstruct->packetTime.tv_sec = now.getSecs();
+		reportstruct->packetTime.tv_usec = now.getUsecs();
+		WriteTcpTxHdr(reportstruct, burst_remaining, burst_id++);
+		reportstruct->sentTime = reportstruct->packetTime;
+		myReport->info.ts.prevsendTime = reportstruct->packetTime;
+		// perform write
+		int writelen = (mSettings->mBufLen > burst_remaining) ? burst_remaining : mSettings->mBufLen;
+		reportstruct->packetLen = write(mySocket, mBuf, writelen);
+		assert(reportstruct->packetLen >= (intmax_t) sizeof(struct TCP_burst_payload));
+		++nearcongestion_samplecounter;
+		goto ReportNow;
+	    }
+	    if (reportstruct->packetLen > burst_remaining) {
+		reportstruct->packetLen = burst_remaining;
+	    }
+	}
+	// printf("pl=%ld\n",reportstruct->packetLen);
+	// perform write
+	reportstruct->packetLen = write(mySocket, mBuf, reportstruct->packetLen);
+	now.setnow();
+	reportstruct->packetTime.tv_sec = now.getSecs();
+	reportstruct->packetTime.tv_usec = now.getUsecs();
+	reportstruct->sentTime = reportstruct->packetTime;
+      ReportNow:
+	if (reportstruct->packetLen < 0) {
+	    if (NONFATALTCPWRITERR(errno)) {
+		reportstruct->errwrite=WriteErrAccount;
+	    } else if (FATALTCPWRITERR(errno)) {
+		reportstruct->errwrite=WriteErrFatal;
+		WARN_errno(1, "tcp write");
+		break;
+	    } else {
+		reportstruct->errwrite=WriteErrNoAccount;
+	    }
+	    reportstruct->packetLen = 0;
+	    reportstruct->emptyreport = 1;
+	} else {
+	    reportstruct->emptyreport = 0;
+	    totLen += reportstruct->packetLen;
+	    reportstruct->errwrite=WriteNoErr;
+	    if (isTripTime(mSettings)) {
+		burst_remaining -= reportstruct->packetLen;
+		if (burst_remaining > 0) {
+		    reportstruct->transit_ready = 0;
+		} else {
+		    reportstruct->transit_ready = 1;
+		}
+	    }
+	}
+	if (nearcongestion_samplecounter) {
+	    nearcongestion_samplecounter = 0;
+	    if (myReportPacket(true)) {
+		int delaytime = (int) ceil((double)my_tcpi_stats.tcpi_rtt * mSettings->rtt_nearcongest_divider);
+//		printf("**** delaytime = %d\n", delaytime);
+		delay_loop(delaytime);
+	    }
+	} else {
 	    myReportPacket();
 	}
 	if (isModeAmount(mSettings) && !reportstruct->emptyreport) {

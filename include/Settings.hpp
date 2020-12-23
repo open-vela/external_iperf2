@@ -92,6 +92,7 @@ extern "C" {
 // maximum inter packet gap (or write delay) for UDP packets
 #define MAXIPGSECS 60
 #define CSVPEERLIMIT ((REPORT_ADDRLEN * 2) + 40)
+#define NEARCONGEST_DEFAULT 0.5
 
 // server/client mode
 enum ThreadMode {
@@ -262,6 +263,7 @@ struct thread_Settings {
     int32_t peer_version_u;
     int32_t peer_version_l;
     double connecttime;
+    double rtt_nearcongest_divider;
 };
 
 /*
@@ -333,6 +335,7 @@ struct thread_Settings {
 #define FLAG_FRAMEINTERVAL  0x01000000
 #define FLAG_IPG            0x02000000
 #define FLAG_DONTROUTE      0x04000000
+#define FLAG_NEARCONGEST    0x08000000
 
 #define isBuflenSet(settings)      ((settings->flags & FLAG_BUFLENSET) != 0)
 #define isCompat(settings)         ((settings->flags & FLAG_COMPAT) != 0)
@@ -388,6 +391,7 @@ struct thread_Settings {
 #define isFrameInterval(settings)  ((settings->flags_extend & FLAG_FRAMEINTERVAL) != 0)
 #define isIPG(settings)  ((settings->flags_extend & FLAG_IPG) != 0)
 #define isDontRoute(settings)      ((settings->flags_extend & FLAG_DONTROUTE) != 0)
+#define isNearCongest(settings)    ((settings->flags_extend & FLAG_NEARCONGEST) != 0)
 
 #define setBuflenSet(settings)     settings->flags |= FLAG_BUFLENSET
 #define setCompat(settings)        settings->flags |= FLAG_COMPAT
@@ -440,6 +444,7 @@ struct thread_Settings {
 #define setFrameInterval(settings) settings->flags_extend |= FLAG_FRAMEINTERVAL
 #define setIPG(settings)           settings->flags_extend |= FLAG_IPG
 #define setDontRoute(settings)     settings->flags_extend |= FLAG_DONTROUTE
+#define setNearCongest(settings)   settings->flags_extend |= FLAG_NEARCONGEST
 
 #define unsetBuflenSet(settings)   settings->flags &= ~FLAG_BUFLENSET
 #define unsetCompat(settings)      settings->flags &= ~FLAG_COMPAT
@@ -492,6 +497,7 @@ struct thread_Settings {
 #define unsetFrameInterval(settings) settings->flags_extend &= ~FLAG_FRAMEINTERVAL
 #define unsetIPG(settings)          settings->flags_extend &= ~FLAG_IPG
 #define unsetDontRoute(settings)    settings->flags_extend &= ~FLAG_DONTROUTE
+#define unsetNearCongest(settings)  settings->flags_extend &= ~FLAG_NEARCONGEST
 
 // set to defaults
 void Settings_Initialize(struct thread_Settings* main);
