@@ -1003,6 +1003,13 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
     if (isCongestionControl(report->common) && report->common->Congestion) {
 	fprintf(stdout, "TCP congestion control set to %s\n", report->common->Congestion);
     }
+    if (isNearCongest(report->common)) {
+	if (report->common->rtt_weight == NEARCONGEST_DEFAULT) {
+	    fprintf(stdout, "TCP near-congestion delay weight set to %2.4f (use --near-congestion=<value> to change)\n", report->common->rtt_weight);
+	} else {
+	    fprintf(stdout, "TCP near-congestion delay weight set to %2.4f\n", report->common->rtt_weight);
+	}
+    }
     if (isSingleClient(report->common)) {
 	fprintf(stdout, "WARN: Client set to bypass reporter thread per -U (suggest use lower case -u instead)\n");
     }
