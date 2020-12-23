@@ -675,6 +675,7 @@ void Client::RunNearCongestionTCP (void) {
 		}
 	    }
 	}
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 	if (nearcongestion_samplecounter) {
 	    nearcongestion_samplecounter = 0;
 	    if (myReportPacket(true)) {
@@ -682,7 +683,9 @@ void Client::RunNearCongestionTCP (void) {
 //		printf("**** delaytime = %d\n", delaytime);
 		delay_loop(delaytime);
 	    }
-	} else {
+	} else
+#endif
+	{
 	    myReportPacket();
 	}
 	if (isModeAmount(mSettings) && !reportstruct->emptyreport) {
