@@ -206,6 +206,7 @@ struct thread_Settings {
         bool   mSinlgeClient;           // -1 */
     int flags;
     int flags_extend;
+    int flags_extend2;
     int skip;
     // enums (which should be special int's)
     enum ThreadMode mThreadMode;         // -s or -c
@@ -264,6 +265,7 @@ struct thread_Settings {
     int32_t peer_version_l;
     double connecttime;
     double rtt_nearcongest_divider;
+    char *mPermitKey;
 };
 
 /*
@@ -336,6 +338,8 @@ struct thread_Settings {
 #define FLAG_IPG            0x02000000
 #define FLAG_DONTROUTE      0x04000000
 #define FLAG_NEARCONGEST    0x08000000
+#define FLAG_PERMITKEY      0x10000000
+#define FLAG_SETTCPMSS      0x20000000
 
 #define isBuflenSet(settings)      ((settings->flags & FLAG_BUFLENSET) != 0)
 #define isCompat(settings)         ((settings->flags & FLAG_COMPAT) != 0)
@@ -392,6 +396,9 @@ struct thread_Settings {
 #define isIPG(settings)  ((settings->flags_extend & FLAG_IPG) != 0)
 #define isDontRoute(settings)      ((settings->flags_extend & FLAG_DONTROUTE) != 0)
 #define isNearCongest(settings)    ((settings->flags_extend & FLAG_NEARCONGEST) != 0)
+#define isPermitKey(settings)  ((settings->flags_extend & FLAG_PERMITKEY) != 0)
+#define isTCPMSS(settings)         ((settings->flags_extend & FLAG_SETTCPMSS) != 0)
+
 
 #define setBuflenSet(settings)     settings->flags |= FLAG_BUFLENSET
 #define setCompat(settings)        settings->flags |= FLAG_COMPAT
@@ -445,6 +452,8 @@ struct thread_Settings {
 #define setIPG(settings)           settings->flags_extend |= FLAG_IPG
 #define setDontRoute(settings)     settings->flags_extend |= FLAG_DONTROUTE
 #define setNearCongest(settings)   settings->flags_extend |= FLAG_NEARCONGEST
+#define setPermitKey(settings) settings->flags_extend |= FLAG_PERMITKEY
+#define setTCPMSS(settings) settings->flags_extend |= FLAG_SETTCPMSS
 
 #define unsetBuflenSet(settings)   settings->flags &= ~FLAG_BUFLENSET
 #define unsetCompat(settings)      settings->flags &= ~FLAG_COMPAT
@@ -495,9 +504,10 @@ struct thread_Settings {
 #define unsetNoConnectSync(settings) settings->flags_extend &= ~FLAG_NOCONNECTSYNC
 #define unsetSumOnly(settings)       settings->flags_extend &= ~FLAG_SUMONLY
 #define unsetFrameInterval(settings) settings->flags_extend &= ~FLAG_FRAMEINTERVAL
-#define unsetIPG(settings)          settings->flags_extend &= ~FLAG_IPG
-#define unsetDontRoute(settings)    settings->flags_extend &= ~FLAG_DONTROUTE
-#define unsetNearCongest(settings)  settings->flags_extend &= ~FLAG_NEARCONGEST
+#define unsetIPG(settings)           settings->flags_extend &= ~FLAG_IPG
+#define unsetDontRoute(settings)     settings->flags_extend &= ~FLAG_DONTROUTE
+#define unsetPermitKey(settings) settings->flags_extend &= ~FLAG_PERMITKEY
+#define unsetTCPMSS(settings) settings->flags_extend &= ~FLAG_SETTCPMSS
 
 // set to defaults
 void Settings_Initialize(struct thread_Settings* main);

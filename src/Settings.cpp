@@ -93,11 +93,14 @@ static int numreportstructs = 0;
 static int sumonly = 0;
 static int so_dontroute = 0;
 static int nearcongest = 0;
+static int permitkey = 0;
 
 void Settings_Interpret(char option, const char *optarg, struct thread_Settings *mExtSettings);
 // apply compound settings after the command line has been fully parsed
 void Settings_ModalOptions(struct thread_Settings *mExtSettings);
 
+#define DEFAULT_PERMITKEY_LEN 16
+static void generate_permit_key(struct thread_Settings *mExtSettings, int length);
 
 /* -------------------------------------------------------------------
  * command line options
@@ -174,6 +177,7 @@ const struct option long_options[] =
 {"sum-only", no_argument, &sumonly, 1},
 {"local-only", optional_argument, &so_dontroute, 1},
 {"near-congestion", optional_argument, &nearcongest, 1},
+{"permit-key", optional_argument, &permitkey, 1},
 {"NUM_REPORT_STRUCTS", required_argument, &numreportstructs, 1},
 #ifdef WIN32
 {"reverse", no_argument, &reversetest, 1},
@@ -255,6 +259,7 @@ void Settings_Initialize (struct thread_Settings *main) {
     // option, defaults
     main->flags         = FLAG_MODETIME | FLAG_STDOUT; // Default time and stdout
     main->flags_extend  = 0x0;           // Default all extend flags to off
+    main->flags_extend2 = 0x0;           // Default all extend flags to off
     //main->mAppRate      = 0;           // -b,  offered (or rate limited) load (both UDP and TCP)
     main->mAppRateUnits = kRate_BW;
     //main->mHost         = NULL;        // -c,  none, required for client
@@ -344,12 +349,16 @@ void Settings_Copy (struct thread_Settings *from, struct thread_Settings **into,
 	    strcpy((*into)->mIfrnametx, from->mIfrnametx);
 	}
 	if (from->mIsochronousStr != NULL) {
-	    (*into)->mIsochronousStr = new char[ strlen(from->mIsochronousStr) + 1];
+	    (*into)->mIsochronousStr = new char[strlen(from->mIsochronousStr) + 1];
 	    strcpy((*into)->mIsochronousStr, from->mIsochronousStr);
 	}
 	if (from->mCongestion != NULL) {
-	    (*into)->mCongestion = new char[ strlen(from->mCongestion) + 1];
+	    (*into)->mCongestion = new char[strlen(from->mCongestion) + 1];
 	    strcpy((*into)->mCongestion, from->mCongestion);
+	}
+	if (from->mPermitKey != NULL) {
+	    (*into)->mPermitKey = new char[strlen(from->mPermitKey) + 1];
+	    strcpy((*into)->mPermitKey, from->mPermitKey);
 	}
     } else {
 	(*into)->mHost = NULL;
@@ -363,6 +372,7 @@ void Settings_Copy (struct thread_Settings *from, struct thread_Settings **into,
 	(*into)->mIsochronousStr = NULL;
 	(*into)->mCongestion = NULL;
 	(*into)->mTransferIDStr = NULL;
+	(*into)->mPermitKey = NULL;
 	// apply the server side congestion setting to reverse clients
 	if (from->mIsochronousStr != NULL) {
 	    (*into)->mIsochronousStr = new char[ strlen(from->mIsochronousStr) + 1];
@@ -406,6 +416,7 @@ void Settings_Destroy (struct thread_Settings *mSettings) {
     FREE_ARRAY(mSettings->mIfrnametx);
     FREE_ARRAY(mSettings->mTransferIDStr);
     DELETE_ARRAY(mSettings->mIsochronousStr);
+    DELETE_ARRAY(mSettings->mPermitKey);
     DELETE_PTR(mSettings);
 } // end ~Settings
 
@@ -746,6 +757,7 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
         case 'M': // specify TCP MSS (maximum segment size)
             mExtSettings->mMSS = byte_atoi(optarg);
             setPrintMSS(mExtSettings);
+            setTCPMSS(mExtSettings);
             break;
 
         case 'N': // specify TCP nodelay option (disable Jacobson's Algorithm)
@@ -921,6 +933,16 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		    mExtSettings->rtt_nearcongest_divider = NEARCONGEST_DEFAULT;
 		}
 	    }
+	    if (permitkey) {
+		permitkey = 0;
+		if (optarg) {
+		    mExtSettings->mPermitKey = new char[strlen(optarg)+1];
+		    strcpy(mExtSettings->mPermitKey, optarg);
+		} else {
+		    mExtSettings->mPermitKey = NULL;
+		}
+		setPermitKey(mExtSettings);
+	    }
 	    if (rxhistogram) {
 		rxhistogram = 0;
 		setRxHistogram(mExtSettings);
@@ -987,6 +1009,19 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
             break;
     }
 } // end Interpret
+
+
+static void generate_permit_key (struct thread_Settings *mExtSettings, int length) {
+    mExtSettings->mPermitKey = (char *) calloc(1, (length + 1));
+    srand((unsigned int)(time(NULL)));
+    int index = 0;
+    char characters[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/,.-+=~<>:";
+    for(index = 0; index < length; index++) {
+	sprintf(mExtSettings->mPermitKey + index, "%c", characters[rand() % ((int) sizeof(characters) - 1)]);
+    }
+    mExtSettings->mPermitKey[length + 1] = '\0';
+}
+
 
 static void strip_v6_brackets (char *v6addr) {
     char * results;
@@ -1076,6 +1111,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	bail = true;
     }
     if (mExtSettings->mThreadMode == kMode_Client) {
+	if (isPermitKey(mExtSettings) && !mExtSettings->mPermitKey) {
+	    fprintf(stderr, "ERROR: option of --permit-key requires a value on the client\n");
+	    bail = true;
+	}
 	if (isSumOnly(mExtSettings) && !(mExtSettings->mThreads > 1)) {
 	    fprintf(stderr, "ERROR: option of --sum-only requires -P greater than 1\n");
 	    bail = true;
@@ -1442,6 +1481,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    mExtSettings->mIfrnametx=NULL;
 	}
 #endif
+    } else {
+	if (isPermitKey(mExtSettings) && !mExtSettings->mPermitKey) {
+	    generate_permit_key(mExtSettings, DEFAULT_PERMITKEY_LEN);
+	}
     }
 }
 
@@ -1838,7 +1881,12 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	}
 	hdr->base.flags = htonl(flags | ((len << 1) & 0xFFFE));
     } else { // TCP first write with test information
-	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) testhdr;
+	if (isPermitKey(client)) {
+	    flags |= HEADER_KEYCHECK;
+	    memcpy(testhdr, client->mPermitKey, 12);
+	    len = 12;
+	}
+	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) testhdr + len;
 	memset(hdr, 0, sizeof(struct client_tcp_testhdr));
 	flags |= HEADER_EXTEND;
 	hdr->extend.version_u = htonl(IPERF_VERSION_MAJORHEX);

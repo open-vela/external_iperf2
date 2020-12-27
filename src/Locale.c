@@ -485,16 +485,16 @@ const char report_sum_outoforder[] =
 "[SUM] " IPERFTimeFrmt " sec  %d datagrams received out-of-order\n";
 
 const char report_peer [] =
-"[%3d] local %s port %u connected with %s port %u%s\n";
+"%slocal %s port %u connected with %s port %u%s\n";
 
 const char report_peer_dev [] =
-"[%3d] local %s%%%s port %u connected with %s port %u%s\n";
+"%slocal %s%%%s port %u connected with %s port %u%s\n";
 
 const char report_mss_unsupported[] =
-"[%3d] MSS and MTU size unknown (TCP_MAXSEG not supported)\n";
+"%sMSS and MTU size unknown (TCP_MAXSEG not supported)\n";
 
 const char report_mss[] =
-"[%3d] MSS size %d bytes\n";
+"%sMSS size %d bytes\n";
 
 const char report_datagrams[] =
 "[%3d] Sent %d datagrams\n";

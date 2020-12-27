@@ -1036,6 +1036,12 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 	uint32_t flags = ntohl(hdr->base.flags);
 	uint16_t upperflags = 0;
 	int peeklen;
+	if (flags & HEADER_KEYCHECK) {
+	    recvn(server->mSock, mBuf, 16, 0);
+	    if (isPermitKey(mSettings) && (strncmp(server->mPermitKey, mBuf, 16) == 0)) {
+		printf("**** key match\n");
+	    }
+	}
 	if ((flags & HEADER_VERSION1) || (flags & HEADER_VERSION2) || (flags & HEADER_EXTEND)) {
 	    // figure out the length of the test header
 	    if ((peeklen = Settings_ClientHdrPeekLen(flags)) > 0) {
