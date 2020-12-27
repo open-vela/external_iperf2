@@ -181,9 +181,10 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
 #endif
 
     if (!isUDP(inSettings)) {
-        // set the TCP maximum segment size
-        setsock_tcp_mss(inSettings->mSock, inSettings->mMSS);
-
+	if (isTCPMSS(inSettings)) {
+	    // set the TCP maximum segment size
+	    setsock_tcp_mss(inSettings->mSock, inSettings->mMSS);
+	}
 #ifdef TCP_NODELAY
         // set TCP nodelay option
         if (isNoDelay(inSettings)) {

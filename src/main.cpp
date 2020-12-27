@@ -80,6 +80,8 @@
  * ------------------------------------------------------------------- */
 // Function called at exit to clean up as much as possible
 void cleanup(void);
+// signal handlers
+static void Sig_Interupt(int inSigno);
 
 /* -------------------------------------------------------------------
  * global variables
