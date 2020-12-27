@@ -89,6 +89,7 @@ static void common_copy (struct ReportCommon **common, struct thread_Settings *i
     my_str_copy(&(*common)->SSMMulticastStr, inSettings->mSSMMulticastStr);
     my_str_copy(&(*common)->Congestion, inSettings->mCongestion);
     my_str_copy(&(*common)->transferIDStr, inSettings->mTransferIDStr);
+    my_str_copy(&(*common)->PermitKey, inSettings->mPermitKey);
     // copy some relevant settings
     (*common)->flags = inSettings->flags;
     (*common)->flags_extend = inSettings->flags_extend;
@@ -144,6 +145,8 @@ static void free_common_copy (struct ReportCommon *common) {
 	free(common->Congestion);
     if (common->transferIDStr)
 	free(common->transferIDStr);
+    if (common->PermitKey)
+	free(common->PermitKey);
     free(common);
 }
 
@@ -151,8 +154,8 @@ static void free_common_copy (struct ReportCommon *common) {
 // on the setting object. If the current id is zero
 // this will get the next one. Otherwise it will use
 // the value.
-int setTransferID (struct thread_Settings *inSettings, int role_reversal) {
-    if (!inSettings->mTransferID) {
+void setTransferID (struct thread_Settings *inSettings, int role_reversal) {
+    if (!isPermitKey(inSettings) && !inSettings->mTransferID) {
 	Mutex_Lock(&transferid_mutex);
 	inSettings->mTransferID = ++transferid_counter;
 	Mutex_Unlock(&transferid_mutex);
@@ -160,30 +163,36 @@ int setTransferID (struct thread_Settings *inSettings, int role_reversal) {
     int len = 0;
     if (inSettings->mTransferIDStr)
 	free(inSettings->mTransferIDStr);
-    if (role_reversal)  {
-#ifdef HAVE_ROLE_REVERSAL_ID
-	if (inSettings->mTransferID < 10)
-	    len = snprintf(NULL, 0, "[ *%d] ", inSettings->mTransferID);
-	else
-	    len = snprintf(NULL, 0, "[*%d] ", inSettings->mTransferID);
-#endif
+    if (isPermitKey(inSettings) && inSettings->mPermitKey) {
+	len = snprintf(NULL, 0, "[%s] ", inSettings->mPermitKey);
+	len++;  // Trailing null byte + extra
+	inSettings->mTransferIDStr = (char *) calloc(1, len);
+	len = snprintf(inSettings->mTransferIDStr, len, "[%s] ", inSettings->mPermitKey);
     } else {
-	len = snprintf(NULL, 0, "[%3d] ", inSettings->mTransferID);
-    }
-    len++;  // Trailing null byte + extra
-    inSettings->mTransferIDStr = (char *) calloc(1, len);
-    if (role_reversal)  {
+	if (role_reversal)  {
 #ifdef HAVE_ROLE_REVERSAL_ID
-	if (inSettings->mTransferID < 10)
-	    len = snprintf(inSettings->mTransferIDStr, len, "[ *%d] ", inSettings->mTransferID);
-	else
-	    len = snprintf(inSettings->mTransferIDStr, len, "[*%d] ", inSettings->mTransferID);
+	    if (inSettings->mTransferID < 10)
+		len = snprintf(NULL, 0, "[ *%d] ", inSettings->mTransferID);
+	    else
+		len = snprintf(NULL, 0, "[*%d] ", inSettings->mTransferID);
 #endif
-    } else {
-	len = snprintf(inSettings->mTransferIDStr, len, "[%3d] ", inSettings->mTransferID);
+	} else {
+	    len = snprintf(NULL, 0, "[%3d] ", inSettings->mTransferID);
+	}
+	len++;  // Trailing null byte + extra
+	inSettings->mTransferIDStr = (char *) calloc(1, len);
+	if (role_reversal)  {
+#ifdef HAVE_ROLE_REVERSAL_ID
+	    if (inSettings->mTransferID < 10)
+		len = snprintf(inSettings->mTransferIDStr, len, "[ *%d] ", inSettings->mTransferID);
+	    else
+		len = snprintf(inSettings->mTransferIDStr, len, "[*%d] ", inSettings->mTransferID);
+#endif
+	} else {
+	    len = snprintf(inSettings->mTransferIDStr, len, "[%3d] ", inSettings->mTransferID);
+	}
     }
     inSettings->mTransferIDStr[len] = '\0';
-    return inSettings->mTransferID;
 }
 
 void SetFullDuplexHandlers (struct thread_Settings *inSettings, struct SumReport* sumreport) {
@@ -640,10 +649,12 @@ struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, d
 
     struct ConnectionInfo * creport = (struct ConnectionInfo *)(reporthdr->this_report);
     common_copy(&creport->common, inSettings);
-    if (!isUDP(inSettings) && (inSettings->mSock > 0) && !isDontRoute(inSettings))
+    if (!isUDP(inSettings) && (inSettings->mSock > 0) && !isDontRoute(inSettings) && \
+	!(ct <= 0.0 && (inSettings->mThreadMode == kMode_Client))) {
 	creport->MSS = getsock_tcp_mss(inSettings->mSock);
-    else
+    } else {
 	creport->MSS = -1;
+    }
     // Fill out known fields for the connection report
     reporter_peerversion(creport, inSettings->peer_version_u, inSettings->peer_version_l);
     creport->connecttime = ct;

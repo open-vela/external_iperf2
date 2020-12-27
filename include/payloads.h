@@ -53,13 +53,17 @@ extern "C" {
 #endif
 /*
  * Message header flags
- *
+ */
+/* key for permit */
+#define HEADER_KEYCHECK     0x10000000
+#define HEADER_KEYL1        0x01000000
+#define HEADER_KEYL2        0x02000000
+/*
  * base flags, keep compatible with older versions
  */
 #define HEADER_VERSION1     0x80000000
 #define HEADER_EXTEND       0x40000000
 #define HEADER_UDPTESTS     0x20000000
-#define HEADER_UNUSED       0x10000000
 #define HEADER_SEQNO64B     0x08000000
 #define HEADER_VERSION2     0x04000000
 #define HEADER_AVOID2       0x02000000

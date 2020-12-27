@@ -227,6 +227,7 @@ struct ReportCommon {
     char* SSMMulticastStr;
     char* Congestion;
     char* transferIDStr;
+    char* PermitKey;
     int transferID;
     double rtt_weight;
 #if WIN32
@@ -529,7 +530,7 @@ void write_UDP_AckFIN(struct TransferInfo *stats);
 int reporter_process_transfer_report (struct ReporterData *this_ireport);
 int reporter_process_report (struct ReportHeader *reporthdr);
 
-int setTransferID(struct thread_Settings *inSettings, int role_reversal);
+void setTransferID(struct thread_Settings *inSettings, int role_reversal);
 
 #ifdef __cplusplus
 } /* end extern "C" */

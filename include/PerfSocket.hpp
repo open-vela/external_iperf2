@@ -62,7 +62,5 @@
 void SetSocketOptions( struct thread_Settings *inSettings );
 void SetSocketOptionsSendTimeout( struct thread_Settings *inSettings, int timer);
 void SetSocketOptionsReceiveTimeout( struct thread_Settings *inSettings, int timer);
-// handle interupts
-void Sig_Interupt(int inSigno);
 
 #endif // PERFSOCKET_H
