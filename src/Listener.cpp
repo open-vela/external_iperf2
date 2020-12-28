@@ -1051,12 +1051,12 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 		fprintf(stderr, "REJECT: key length mismatch\n");
 		goto DONE;
 	    }
-	    char *mBufKey = mBuf + (int) sizeof(uint32_t);
-	    n = recvn(server->mSock, mBufKey, peeklen, 0);
+	    n = recvn(server->mSock, mBuf, peeklen + (int) sizeof(flags), 0);
 	    if (n < 0) {
 		fprintf(stderr, "REJECT: key read fail\n");
 		goto DONE;
 	    }
+	    char *mBufKey = mBuf + (int) sizeof(flags);
 	    if (memcmp(server->mPermitKey, mBufKey, peeklen) != 0) {
 		mBufKey[peeklen] = '\0';
 		fprintf(stderr, "REJECT: key value mismatch per %s\n", mBufKey);
