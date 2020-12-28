@@ -19,13 +19,13 @@ iperf_SOURCES = \
 		Extractor.c \
 	        isochronous.cpp \
 		Launch.cpp \
-		active_hosts.cpp \
+		List.cpp \
 		Listener.cpp \
 		Locale.c \
 		PerfSocket.cpp \
+		ReportCSV.c \
+		ReportDefault.c \
 		Reporter.c \
-		Reports.c \
-		ReportOutputs.c \
 		Server.cpp \
 		Settings.cpp \
 		SocketAddr.c \
@@ -36,7 +36,6 @@ iperf_SOURCES = \
 		service.c \
 		sockets.c \
 		stdio.c \
-		packet_ring.c \
 		tcp_window_size.c \
 		pdfs.c
 iperf_LDADD = $(LIBCOMPAT_LDADDS)
