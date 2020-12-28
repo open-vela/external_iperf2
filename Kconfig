@@ -14,10 +14,10 @@
 # limitations under the License.
 #
 
-menu "The ultimate speed test tool for TCP, UDP and SCTP"
+menu "Tools: iperf2"
 
 config TOOLS_IPERF2
-	tristate "iperf2 support"
+	tristate "iperf2: ultimate speed test tool for TCP, UDP and SCTP"
 	default n
 	select HAVE_CXX
 	select SCHED_EXIT_KILL_CHILDREN
