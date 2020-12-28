@@ -1896,11 +1896,11 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	if (isPermitKey(client)) {
 	    keylen = strlen(client->mPermitKey);
 	    flags |= HEADER_KEYCHECK;
-	    memcpy(testhdr, client->mPermitKey, keylen);
-	    flags |= keylen & 0x0000FF00; // set the key length in the header
+	    memcpy((char *) testhdr + (int) sizeof(flags), client->mPermitKey, keylen);
+	    flags |= ((keylen << 8) & 0x0000FF00); // set the key length in the header
 	    len = keylen;
 	}
-	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) testhdr + len;
+	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) testhdr;
 	memset(hdr, 0, sizeof(struct client_tcp_testhdr));
 	flags |= HEADER_EXTEND;
 	hdr->extend.version_u = htonl(IPERF_VERSION_MAJORHEX);
