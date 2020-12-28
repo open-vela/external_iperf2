@@ -71,6 +71,9 @@
     #endif
 #endif /* HAVE_CONFIG_H */
 
+/* turn off assert debugging */
+#define NDEBUG
+
 /* standard C headers */
 #include <stdlib.h>
 #include <stdio.h>
@@ -83,23 +86,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <inttypes.h>
-#include <limits.h>
-
-#ifdef HAVE_STDBOOL_H
-# include <stdbool.h>
-#else
-# ifndef HAVE__BOOL
-#  ifdef __cplusplus
-typedef bool _Bool;
-#  else
-#   define _Bool signed char
-#  endif
-# endif
-# define bool _Bool
-# define false 0
-# define true 1
-# define __bool_true_false_are_defined 1
-#endif
+#include <getopt.h>
 
 // AF_PACKET HEADERS
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
@@ -246,7 +233,40 @@ typedef struct sockaddr_in iperf_sockaddr;
     #endif
 //#endif
 
-// inttypes.h is already included
+// Rationalize stdint definitions and sizeof, thanks to ac_create_stdint_h.m4
+// from the gnu archive
+
+#include <iperf-int.h>
+// Override <stdint.h> PRIdMAX (hack for now, fix this to use <stdint.h> properly)
+#ifdef HAVE_QUAD_SUPPORT
+  #ifdef WIN32
+    #define IPERFdMAX "I64d"
+  #elif defined HAVE_PRINTF_QD
+    #define IPERFdMAX "qd"
+  #else
+    #define IPERFdMAX "lld"
+  #endif
+#else
+  #define IPERFdMAX "d"
+#endif
+
+#ifdef HAVE_QUAD_SUPPORT
+#  ifdef HAVE_INT64_T
+typedef int64_t max_size_t;
+typedef u_int64_t umax_size_t;
+#  else
+typedef long long max_size_t;
+typedef unsigned long long umax_size_t;
+#  endif // INT64
+#else
+#  ifdef HAVE_INT32_T
+typedef int32_t max_size_t;
+typedef u_int32_t umax_size_t;
+#  else
+typedef long max_size_t;
+typedef unsigned long umax_size_t;
+#  endif // INT32
+#endif
 
 #ifdef HAVE_FASTSAMPLING
 #define IPERFTimeFrmt "%4.4f-%4.4f"
@@ -266,10 +286,5 @@ typedef struct sockaddr_in iperf_sockaddr;
     #define SHUT_WR   1
     #define SHUT_RDWR 2
 #endif // SHUT_RD
-
-
-/* Internal debug */
-//#define INITIAL_PACKETID 0x7FFFFF00LL
-//#define SHOW_PACKETID
 
 #endif /* HEADERS_H */
