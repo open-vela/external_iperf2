@@ -1036,42 +1036,44 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 	uint32_t flags = ntohl(hdr->base.flags);
 	uint16_t upperflags = 0;
 	int peeklen;
-	if (isPermitKey(mSettings)) {
-	    rc = false;
-	    if (!(flags & HEADER_KEYCHECK)) {
-		fprintf(stderr, "REJECT: no key found\n");
-		goto DONE;
-	    }
-	    peeklen = (flags & HEADER_KEYLEN_MASK) >> 8;
-	    if ((peeklen < MIN_PERMITKEY_LEN) || (peeklen > MAX_PERMITKEY_LEN)) {
-		fprintf(stderr, "REJECT: invalid key length of %d\n", peeklen);
-		goto DONE;
-	    }
-	    if (peeklen != (int) strlen(server->mPermitKey)) {
-		fprintf(stderr, "REJECT: key length mismatch\n");
-		goto DONE;
-	    }
-	    n = recvn(server->mSock, mBuf, peeklen + (int) sizeof(flags), 0);
-	    if (n < 0) {
-		fprintf(stderr, "REJECT: key read fail\n");
-		goto DONE;
-	    }
-	    char *mBufKey = mBuf + (int) sizeof(flags);
-	    if (memcmp(server->mPermitKey, mBufKey, peeklen) != 0) {
-		mBufKey[peeklen] = '\0';
-		fprintf(stderr, "REJECT: key value mismatch per %s\n", mBufKey);
-		goto DONE;
-	    }
-	    rc = true;
-	    printf("**** key match\n");
-	}
-	if ((flags & HEADER_VERSION1) || (flags & HEADER_VERSION2) || (flags & HEADER_EXTEND)) {
+	if ((flags & HEADER_VERSION1) || (flags & HEADER_VERSION2) || (flags & HEADER_EXTEND) || isPermitKey(mSettings)) {
 	    // figure out the length of the test header
 	    if ((peeklen = Settings_ClientHdrPeekLen(flags)) > 0) {
+		int keylen = 0;
 		// read the test settings passed to the server by the client
 		int n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK);
 		FAIL_errno((n < peeklen), "read tcp test info", server);
-		struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) mBuf;
+		if (isPermitKey(mSettings)) {
+		    rc = false;
+		    if (!(flags & HEADER_KEYCHECK)) {
+			fprintf(stderr, "REJECT: no key found\n");
+			goto DONE;
+		    }
+		    peeklen = (flags & HEADER_KEYLEN_MASK) >> HEADER_KEYLEN_SHIFT;
+		    if ((peeklen < MIN_PERMITKEY_LEN) || (peeklen > MAX_PERMITKEY_LEN)) {
+			fprintf(stderr, "REJECT: invalid key length of %d\n", peeklen);
+			goto DONE;
+		    }
+		    if (peeklen != (int) strlen(server->mPermitKey)) {
+			fprintf(stderr, "REJECT: key length mismatch\n");
+			goto DONE;
+		    }
+		    n = recvn(server->mSock, mBuf, peeklen + (int) sizeof(flags), 0);
+		    if (n < 0) {
+			fprintf(stderr, "REJECT: key read fail\n");
+			goto DONE;
+		    }
+		    char *mBufKey = mBuf + (int) sizeof(flags);
+		    if (memcmp(server->mPermitKey, mBufKey, peeklen) != 0) {
+			mBufKey[peeklen] = '\0';
+			fprintf(stderr, "REJECT: key value mismatch per %s\n", mBufKey);
+			goto DONE;
+		    }
+		    rc = true;
+		    printf("**** key match\n");
+		}
+
+		struct client_tcp_testhdr_permitkey *hdr = (struct client_tcp_testhdr_permitkey *) (mBuf + keylen);
 		if ((flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2)) {
 		    if (flags & RUN_NOW)
 			server->mMode = kTest_DualTest;
