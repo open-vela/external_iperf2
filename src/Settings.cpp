@@ -1800,6 +1800,16 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
     if (isTxStartTime(client) && !TimeZero(startTime)) {
 	upperflags |= HEADER_EPOCH_START;
     }
+
+    int keylen = 0;
+    if (isPermitKey(client)) {
+	keylen = strlen(client->mPermitKey);
+	flags |= HEADER_KEYCHECK;
+	memcpy((char *) testhdr + (int) sizeof(flags), client->mPermitKey, keylen);
+	flags |= ((keylen << HEADER_KEYLEN_SHIFT) & 0x0000FC00); // set the permit key length in the header
+	len = keylen;
+    }
+
     // Now setup UDP and TCP specific passed settings from client to server
     if (isUDP(client)) { // UDP test information passed in every packet per being stateless
 	struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) testhdr;
@@ -1892,14 +1902,6 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	}
 	hdr->base.flags = htonl(flags | ((len << 1) & 0xFFFE));
     } else { // TCP first write with test information
-	int keylen = 0;
-	if (isPermitKey(client)) {
-	    keylen = strlen(client->mPermitKey);
-	    flags |= HEADER_KEYCHECK;
-	    memcpy((char *) testhdr + (int) sizeof(flags), client->mPermitKey, keylen);
-	    flags |= ((keylen << 8) & 0x0000FF00); // set the key length in the header
-	    len = keylen;
-	}
 	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) testhdr;
 	memset(hdr, 0, sizeof(struct client_tcp_testhdr));
 	flags |= HEADER_EXTEND;
@@ -1959,9 +1961,14 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	hdr->extend.upperflags = htons(upperflags);
 	hdr->extend.lowerflags = htons(lowerflags);
 	if (len > 0) {
-	    flags |= HEADER_LEN_BIT;
+	    if (len > 448) {
+		fprintf(stderr, "WARN: header length of %d too long\n", len);
+	    } else {
+		flags |= HEADER_LEN_BIT;
+		flags |= (len << 1);
+	    }
 	}
-	hdr->base.flags = htonl((flags | ((len << 1) & 0xFFFE)));
+	hdr->base.flags = htonl(flags);
     }
     return (len);
 }
@@ -1970,8 +1977,8 @@ int Settings_ClientHdrPeekLen (uint32_t flags) {
     //* determine peek length
     int peeklen = 0;
     if (flags & HEADER_LEN_BIT) {
-	peeklen = (flags & 0xFFFE) >> 1;
-	if (peeklen <= 0)
+	peeklen = (flags & 0x03FE) >> 1;
+	if ((peeklen <= 0) || (peeklen > MAX_HEADERWITHKEY_LEN))
 	    fprintf(stderr, "WARN: header length bit set and length invalid\n");
     } else {
 	peeklen = 0;
