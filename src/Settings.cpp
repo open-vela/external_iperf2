@@ -1020,7 +1020,7 @@ static void generate_permit_key (struct thread_Settings *mExtSettings, int lengt
     snprintf(mExtSettings->mPermitKey, (timelen+1), "%ld.%03d-", (long) mExtSettings->mPermitKeyTime.tv_sec, ms);
     srand((unsigned int)(time(NULL)));
     int index;
-    char characters[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/,.+<>%=:";
+    char characters[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/,.+%=:";
     for(index = timelen; index < (DEFAULT_PERMITKEY_LEN + timelen); index++) {
 	sprintf(mExtSettings->mPermitKey + index, "%c", characters[rand() % ((int) sizeof(characters) - 1)]);
     }
