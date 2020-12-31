@@ -58,12 +58,11 @@ extern "C" {
 #define HEADER_KEYCHECK     0x10000000
 #define HEADER_KEYL1        0x01000000
 #define HEADER_KEYL2        0x02000000
-#define HEADER_KEYLEN_MASK  0x0000FC00 // 6 bits max value of 64
-#define HEADER_KEYLEN_SHIFT 10
+#define HEADER_KEYLEN_MASK  0x0000FE00 // 6 bits max value of 64
+#define HEADER_KEYLEN_SHIFT 9
 #define DEFAULT_PERMITKEY_LEN 16
 #define MIN_PERMITKEY_LEN      4
-#define MAX_PERMITKEY_LEN     64
-#define MAX_HEADERWITHKEY_LEN (512 - MAX_PERMITKEY_LEN)
+#define MAX_PERMITKEY_LEN    128
 
 /*
  * base flags, keep compatible with older versions
@@ -77,8 +76,8 @@ extern "C" {
 #define HEADER_AVOID1        0x01000000
 #define HEADER_V2PEERDETECT  0x02000000
 #define HEADER_LEN_BIT       0x00010000
-// 9 bits max value of 512, max w/key is 448 and 64
-#define HEADER_LEN_MASK      0x000003FE
+#define HEADER_LEN_MASK      0x000001FE
+#define MAX_HEADER_LEN       256
 #define SERVER_HEADER_EXTEND 0x40000000
 #define RUN_NOW              0x00000001
 
@@ -168,14 +167,6 @@ struct client_hdr_v1 {
      * immediately or after the audience finishes.
      */
     int32_t flags;
-    int32_t numThreads;
-    int32_t mPort;
-    int32_t mBufLen;
-    int32_t mWinBand;
-    int32_t mAmount;
-};
-
-struct client_hdr_v1_permitkey {
     int32_t numThreads;
     int32_t mPort;
     int32_t mBufLen;
@@ -473,13 +464,6 @@ struct client_hdr_ack {
  */
 struct client_tcp_testhdr {
     struct client_hdr_v1 base;
-    struct client_hdrext extend;
-    struct client_hdrext_starttime_fq start_fq;
-    struct client_hdrext_isoch_settings isoch_settings;
-};
-
-struct client_tcp_testhdr_permitkey {
-    struct client_hdr_v1_permitkey base;
     struct client_hdrext extend;
     struct client_hdrext_starttime_fq start_fq;
     struct client_hdrext_isoch_settings isoch_settings;
