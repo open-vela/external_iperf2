@@ -58,8 +58,7 @@ extern "C" {
 #define HEADER_KEYCHECK     0x10000000
 #define HEADER_KEYL1        0x01000000
 #define HEADER_KEYL2        0x02000000
-#define HEADER_KEYLEN_MASK  0x0000FE00 // 6 bits max value of 64
-#define HEADER_KEYLEN_SHIFT 9
+#define HEADER_KEYLEN_MASK  0x0000FFFE // Lower bit used by V1 hdr
 #define DEFAULT_PERMITKEY_LEN 16
 #define MIN_PERMITKEY_LEN      4
 #define MAX_PERMITKEY_LEN    128
