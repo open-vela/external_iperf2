@@ -1020,7 +1020,7 @@ static void generate_permit_key (struct thread_Settings *mExtSettings, int lengt
     snprintf(mExtSettings->mPermitKey, (timelen+1), "%ld.%03d-", (long) mExtSettings->mPermitKeyTime.tv_sec, ms);
     srand((unsigned int)(time(NULL)));
     int index;
-    char characters[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/,.+%=:";
+    char characters[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     for(index = timelen; index < (DEFAULT_PERMITKEY_LEN + timelen); index++) {
 	sprintf(mExtSettings->mPermitKey + index, "%c", characters[rand() % ((int) sizeof(characters) - 1)]);
     }
@@ -1960,7 +1960,7 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 		uint32_t *mBufKeyLenField = (uint32_t *) ((char *) testhdr + len);
 		*mBufKeyLenField = htonl((uint32_t) keylen);
 		strcpy((char *) (mBufKeyLenField + 1), client->mPermitKey);
-		len += sizeof(uint32_t);
+		len += sizeof(uint32_t) + keylen;
 	    }
 	    flags |= (len << 1);
 	}
@@ -1974,13 +1974,12 @@ int Settings_ClientHdrPeekLen (uint32_t flags) {
     //* determine peek length and permit key
     int peeklen = 0;
     if (flags & HEADER_LEN_BIT) {
-	int peeklen = (int) (flags & HEADER_LEN_MASK) >> 1;
+	peeklen = (int) (flags & HEADER_LEN_MASK) >> 1;
 	if (peeklen > MAX_HEADER_LEN) {
 	    fprintf(stderr, "WARN: header of %d length too large\n", peeklen);
 	    peeklen = -1;
 	}
     } else {
-	peeklen = 0;
 	if (flags & (HEADER_VERSION1 | HEADER_EXTEND)) {
 	    peeklen = sizeof(struct client_hdr_v1);
 	}
