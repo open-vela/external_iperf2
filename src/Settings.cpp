@@ -1954,8 +1954,8 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	if (len > 0) {
 	    flags |= HEADER_LEN_BIT;
 	    int keylen = 0;
-	    if (isPermitKey(client)) {
-		keylen = strlen(client->mPermitKey);
+	    if (isPermitKey(client) && client->mPermitKey && \
+		(keylen = strlen(client->mPermitKey) > 0)) {
 		flags |= HEADER_KEYCHECK;
 		uint32_t *mBufKeyLenField = (uint32_t *) ((char *) testhdr + len);
 		*mBufKeyLenField = htonl((uint32_t) keylen);
