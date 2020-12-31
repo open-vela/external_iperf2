@@ -1801,15 +1801,6 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	upperflags |= HEADER_EPOCH_START;
     }
 
-    int keylen = 0;
-    if (isPermitKey(client)) {
-	keylen = strlen(client->mPermitKey);
-	flags |= HEADER_KEYCHECK;
-	memcpy((char *) testhdr + (int) sizeof(flags), client->mPermitKey, keylen);
-	flags |= ((keylen << HEADER_KEYLEN_SHIFT) & 0x0000FC00); // set the permit key length in the header
-	len = keylen;
-    }
-
     // Now setup UDP and TCP specific passed settings from client to server
     if (isUDP(client)) { // UDP test information passed in every packet per being stateless
 	struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) testhdr;
@@ -1961,25 +1952,33 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	hdr->extend.upperflags = htons(upperflags);
 	hdr->extend.lowerflags = htons(lowerflags);
 	if (len > 0) {
-	    if (len > 448) {
-		fprintf(stderr, "WARN: header length of %d too long\n", len);
-	    } else {
-		flags |= HEADER_LEN_BIT;
-		flags |= (len << 1);
+	    flags |= HEADER_LEN_BIT;
+	    int keylen = 0;
+	    if (isPermitKey(client)) {
+		keylen = strlen(client->mPermitKey);
+		flags |= HEADER_KEYCHECK;
+		uint32_t *mBufKeyLenField = (uint32_t *) ((char *) testhdr + len);
+		*mBufKeyLenField = htonl((uint32_t) keylen);
+		memcpy((mBufKeyLenField + 1), client->mPermitKey, keylen);
+		len += sizeof(uint32_t);
 	    }
+	    flags |= (len << 1);
 	}
 	hdr->base.flags = htonl(flags);
     }
+
     return (len);
 }
 
 int Settings_ClientHdrPeekLen (uint32_t flags) {
-    //* determine peek length
+    //* determine peek length and permit key
     int peeklen = 0;
     if (flags & HEADER_LEN_BIT) {
-	peeklen = (flags & 0x03FE) >> 1;
-	if ((peeklen <= 0) || (peeklen > MAX_HEADERWITHKEY_LEN))
-	    fprintf(stderr, "WARN: header length bit set and length invalid\n");
+	int peeklen = (int) (flags & HEADER_LEN_MASK) >> 1;
+	if (peeklen > MAX_HEADER_LEN) {
+	    fprintf(stderr, "WARN: header of %d length too large\n", peeklen);
+	    peeklen = -1;
+	}
     } else {
 	peeklen = 0;
 	if (flags & (HEADER_VERSION1 | HEADER_EXTEND)) {
