@@ -1043,7 +1043,7 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 		int n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK);
 		FAIL_errno((n < peeklen), "read tcp test info", server);
 		if (isPermitKey(mSettings)) {
-	    rc = false;
+		    rc = false;
 		    if (!(flags & HEADER_KEYCHECK)) {
 			fprintf(stderr, "REJECT: no key found\n");
 			goto DONE;
@@ -1057,7 +1057,7 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 		    n = recvn(server->mSock, mBuf, peeklen + keylen, MSG_PEEK);
 		    FAIL_errno((n < (peeklen + keylen)), "read key", server);
 		    char *mBufKey = mBuf + peeklen;
-		    if (memcmp(server->mPermitKey, mBufKey, keylen) != 0) {
+		    if (strncmp(server->mPermitKey, mBufKey, keylen) != 0) {
 			fprintf(stderr, "REJECT: key value mismatch per %s\n", mBufKey);
 			goto DONE;
 		    }

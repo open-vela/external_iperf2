@@ -1959,7 +1959,7 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 		flags |= HEADER_KEYCHECK;
 		uint32_t *mBufKeyLenField = (uint32_t *) ((char *) testhdr + len);
 		*mBufKeyLenField = htonl((uint32_t) keylen);
-		memcpy((mBufKeyLenField + 1), client->mPermitKey, keylen);
+		strcpy((char *) (mBufKeyLenField + 1), client->mPermitKey);
 		len += sizeof(uint32_t);
 	    }
 	    flags |= (len << 1);
