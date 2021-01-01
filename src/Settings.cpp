@@ -99,7 +99,7 @@ void Settings_Interpret(char option, const char *optarg, struct thread_Settings 
 // apply compound settings after the command line has been fully parsed
 void Settings_ModalOptions(struct thread_Settings *mExtSettings);
 
-static void generate_permit_key(struct thread_Settings *mExtSettings, int length);
+static void generate_permit_key(struct thread_Settings *mExtSettings);
 
 /* -------------------------------------------------------------------
  * command line options
@@ -308,6 +308,8 @@ void Settings_Copy (struct thread_Settings *from, struct thread_Settings **into,
     memset(*into, 0, sizeof(struct thread_Settings));
     memcpy(*into, from, sizeof(struct thread_Settings));
     (*into)->mSumReport = NULL;
+    (*into)->mTransferIDStr = NULL;
+
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Copy thread settings (malloc) from/to=%p/%p report/sum/fullduplex %p/%p/%p", \
 		 (void *)from, (void *)*into, (void *)(*into)->reporthdr, (void *)(*into)->mSumReport, (void *)(*into)->mFullDuplexReport);
@@ -355,10 +357,6 @@ void Settings_Copy (struct thread_Settings *from, struct thread_Settings **into,
 	    (*into)->mCongestion = new char[strlen(from->mCongestion) + 1];
 	    strcpy((*into)->mCongestion, from->mCongestion);
 	}
-	if (from->mPermitKey != NULL) {
-	    (*into)->mPermitKey = new char[strlen(from->mPermitKey) + 1];
-	    strcpy((*into)->mPermitKey, from->mPermitKey);
-	}
     } else {
 	(*into)->mHost = NULL;
 	(*into)->mOutputFileName = NULL;
@@ -370,8 +368,6 @@ void Settings_Copy (struct thread_Settings *from, struct thread_Settings **into,
 	(*into)->mIfrnametx = NULL;
 	(*into)->mIsochronousStr = NULL;
 	(*into)->mCongestion = NULL;
-	(*into)->mTransferIDStr = NULL;
-	(*into)->mPermitKey = NULL;
 	// apply the server side congestion setting to reverse clients
 	if (from->mIsochronousStr != NULL) {
 	    (*into)->mIsochronousStr = new char[ strlen(from->mIsochronousStr) + 1];
@@ -415,7 +411,6 @@ void Settings_Destroy (struct thread_Settings *mSettings) {
     FREE_ARRAY(mSettings->mIfrnametx);
     FREE_ARRAY(mSettings->mTransferIDStr);
     DELETE_ARRAY(mSettings->mIsochronousStr);
-    DELETE_ARRAY(mSettings->mPermitKey);
     DELETE_PTR(mSettings);
 } // end ~Settings
 
@@ -935,10 +930,9 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    if (permitkey) {
 		permitkey = 0;
 		if (optarg) {
-		    mExtSettings->mPermitKey = new char[strlen(optarg)+1];
-		    strcpy(mExtSettings->mPermitKey, optarg);
+		    strncpy(mExtSettings->mPermitKey, optarg,MAX_PERMITKEY_LEN + 1);
 		} else {
-		    mExtSettings->mPermitKey = NULL;
+		    mExtSettings->mPermitKey[0] = '\0';
 		}
 		setPermitKey(mExtSettings);
 	    }
@@ -1010,13 +1004,12 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 } // end Interpret
 
 
-static void generate_permit_key (struct thread_Settings *mExtSettings, int length) {
+static void generate_permit_key (struct thread_Settings *mExtSettings) {
     Timestamp now;
     mExtSettings->mPermitKeyTime.tv_sec = now.getSecs();
     mExtSettings->mPermitKeyTime.tv_usec = now.getUsecs();
     int ms = mExtSettings->mPermitKeyTime.tv_usec / 1000;
     int timelen = snprintf(NULL, 0, "%ld.%03d-", (long) mExtSettings->mPermitKeyTime.tv_sec, ms);
-    mExtSettings->mPermitKey = new char[DEFAULT_PERMITKEY_LEN + timelen + 1];
     snprintf(mExtSettings->mPermitKey, (timelen+1), "%ld.%03d-", (long) mExtSettings->mPermitKeyTime.tv_sec, ms);
     srand((unsigned int)(time(NULL)));
     int index;
@@ -1114,7 +1107,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	fprintf(stderr, "ERROR: compatibility mode not supported with the requested with options\n");
 	bail = true;
     }
-    if (isPermitKey(mExtSettings) && mExtSettings->mPermitKey) {
+    if (isPermitKey(mExtSettings) && (mExtSettings->mPermitKey[0] != '\0')) {
 	if (strlen(mExtSettings->mPermitKey) < MIN_PERMITKEY_LEN) {
 	    fprintf(stderr, "ERROR: value for --permit-key must have at least %d characters\n", MIN_PERMITKEY_LEN);
 	    bail = true;
@@ -1124,7 +1117,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	}
     }
     if (mExtSettings->mThreadMode == kMode_Client) {
-	if (isPermitKey(mExtSettings) && !mExtSettings->mPermitKey) {
+	if (isPermitKey(mExtSettings) && (mExtSettings->mPermitKey[0] == '\0')) {
 	    fprintf(stderr, "ERROR: option of --permit-key requires a value on the client\n");
 	    bail = true;
 	}
@@ -1494,8 +1487,8 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    mExtSettings->mIfrnametx=NULL;
 	}
 #endif
-    } else if (isPermitKey(mExtSettings) && !mExtSettings->mPermitKey) {
-	generate_permit_key(mExtSettings, DEFAULT_PERMITKEY_LEN);
+    } else if (isPermitKey(mExtSettings) && (mExtSettings->mPermitKey[0]=='\0')) {
+	generate_permit_key(mExtSettings);
     }
 }
 
@@ -1890,6 +1883,18 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	if (len > 0) {
 	    len += sizeof(struct UDP_datagram);
 	    flags |= HEADER_LEN_BIT;
+	    int keylen = 0;
+	    if (isPermitKey(client) && (client->mPermitKey[0] != '\0')) {
+		keylen = (int) strlen(client->mPermitKey);
+		if (keylen > 0) {
+		    flags |= HEADER_KEYCHECK;
+		    struct permitKey *thiskey = (struct permitKey *) ((char *)testhdr + len);
+		    thiskey->length = htons((uint16_t)keylen);
+		    strcpy(thiskey->value, client->mPermitKey);
+		    len += sizeof(thiskey->length) + keylen;
+		}
+	    }
+	    flags |= ((len - keylen) << 1); // this is also the key value offset passed to the server
 	}
 	hdr->base.flags = htonl(flags | ((len << 1) & 0xFFFE));
     } else { // TCP first write with test information
@@ -1955,14 +1960,16 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	    flags |= HEADER_LEN_BIT;
 	    int keylen = 0;
 	    if (isPermitKey(client) && client->mPermitKey) {
-		keylen = (int) strlen(client->mPermitKey);
-		if (keylen > 0) {
+		keylen = (int) strnlen(client->mPermitKey, MAX_PERMITKEY_LEN + 1);
+		if ((keylen >= MIN_PERMITKEY_LEN) && (keylen <= MAX_PERMITKEY_LEN)) {
 		    flags |= HEADER_KEYCHECK;
 		    struct permitKey *thiskey = (struct permitKey *) ((char *)testhdr + len);
 		    thiskey->length = htons((uint16_t)keylen);
 		    strcpy(thiskey->value, client->mPermitKey);
-		    len += sizeof(thiskey->length) + keylen;
-		    printf("***** thiskey=%p, length = %d/%d, value=%s\n:", (void *)thiskey, keylen, (int) strlen(client->mPermitKey),thiskey->value);
+		    len += sizeof(thiskey->length) + keylen + 1;
+		} else {
+		    fprintf(stderr, "WARNING: invalid key length in client header\n");
+		    keylen = 0;
 		}
 	    }
 	    flags |= ((len - keylen) << 1); // this is also the key value offset passed to the server
