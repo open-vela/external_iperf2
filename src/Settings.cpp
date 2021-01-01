@@ -1954,19 +1954,21 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	if (len > 0) {
 	    flags |= HEADER_LEN_BIT;
 	    int keylen = 0;
-	    if (isPermitKey(client) && client->mPermitKey && \
-		(keylen = strlen(client->mPermitKey) > 0)) {
-		flags |= HEADER_KEYCHECK;
-		uint32_t *mBufKeyLenField = (uint32_t *) ((char *) testhdr + len);
-		*mBufKeyLenField = htonl((uint32_t) keylen);
-		strcpy((char *) (mBufKeyLenField + 1), client->mPermitKey);
-		len += sizeof(uint32_t) + keylen;
+	    if (isPermitKey(client) && client->mPermitKey) {
+		keylen = (int) strlen(client->mPermitKey);
+		if (keylen > 0) {
+		    flags |= HEADER_KEYCHECK;
+		    struct permitKey *thiskey = (struct permitKey *) ((char *)testhdr + len);
+		    thiskey->length = htons((uint16_t)keylen);
+		    strcpy(thiskey->value, client->mPermitKey);
+		    len += sizeof(thiskey->length) + keylen;
+		    printf("***** thiskey=%p, length = %d/%d, value=%s\n:", (void *)thiskey, keylen, (int) strlen(client->mPermitKey),thiskey->value);
+		}
 	    }
-	    flags |= (len << 1);
+	    flags |= ((len - keylen) << 1); // this is also the key value offset passed to the server
 	}
 	hdr->base.flags = htonl(flags);
     }
-
     return (len);
 }
 

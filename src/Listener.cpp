@@ -1056,17 +1056,16 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 			fprintf(stderr, "REJECT: no key found\n");
 			goto DONE;
 		    }
-		    uint32_t *mBufKeyLenField = (uint32_t *) (mBuf + peeklen - (int) sizeof(uint32_t));
-		    int keylen = ntohl(*mBufKeyLenField);
+		    struct permitKey *thiskey = (struct permitKey *)(mBuf + (peeklen - sizeof(thiskey->length)));
+		    int keylen = ntohs(thiskey->length);
 		    if (keylen != (int) strlen(server->mPermitKey)) {
 			fprintf(stderr, "REJECT: key length mismatch\n");
 			goto DONE;
 		    }
 		    n = recvn(server->mSock, mBuf, peeklen + keylen, MSG_PEEK);
 		    FAIL_errno((n < (peeklen + keylen)), "read key", server);
-		    char *mBufKey = mBuf + peeklen;
-		    if (strncmp(server->mPermitKey, mBufKey, keylen) != 0) {
-			fprintf(stderr, "REJECT: key value mismatch per %s\n", mBufKey);
+		    if (strncmp(server->mPermitKey, thiskey->value, keylen+1) != 0) {
+			fprintf(stderr, "REJECT: key value mismatch per %s\n", thiskey->value);
 			goto DONE;
 		    }
 		    rc = true;
