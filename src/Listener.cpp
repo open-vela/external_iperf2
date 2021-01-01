@@ -368,7 +368,7 @@ void Listener::Run (void) {
 		}
 	    }
 	}
-	setTransferID(server, isCompat(mSettings));
+	setTransferID(server, 0);
 	if (isConnectionReport(server) && !isSumOnly(server)) {
 	    struct ReportHeader *reporthdr = InitConnectionReport(server, 0);
 	    struct ConnectionInfo *cr = (struct ConnectionInfo *)(reporthdr->this_report);
