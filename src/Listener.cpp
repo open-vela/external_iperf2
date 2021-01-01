@@ -1080,6 +1080,10 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 			goto DONE;
 		    }
 		    rc = true;
+		} else if (flags & HEADER_KEYCHECK) {
+		    fprintf(stderr, "REJECT: client request includes a permit-key but none set on the server\n");
+		    rc = false;
+		    goto DONE;
 		}
 		struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr*) mBuf;
 		if ((flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2)) {
