@@ -1059,7 +1059,7 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 		    struct permitKey *thiskey = (struct permitKey *)(mBuf + (peeklen - sizeof(thiskey->length)));
 		    int keylen = ntohs(thiskey->length);
 		    if ((keylen < MIN_PERMITKEY_LEN) || (keylen > MAX_PERMITKEY_LEN)) {
-			fprintf(stderr, "REJECT: key length error\n");
+			fprintf(stderr, "REJECT: key length error (%d)\n", keylen);
 			goto DONE;
 		    }
 		    if (keylen != (int) strlen(server->mPermitKey)) {
