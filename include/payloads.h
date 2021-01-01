@@ -381,6 +381,11 @@ struct isoch_payload {
     uint32_t reserved;
 };
 
+struct permitKey {
+    uint16_t length;
+    char value[MAX_PERMITKEY_LEN + 1];
+};
+
 struct client_udp_testhdr {
     struct UDP_datagram seqno_ts;
     struct client_hdr_v1 base;
@@ -388,6 +393,7 @@ struct client_udp_testhdr {
     struct isoch_payload isoch;
     struct client_hdrext_starttime_fq start_fq;
     struct client_hdrext_isoch_settings isoch_settings;
+    struct permitKey permitkey;
 };
 
 struct client_hdr_ack {
@@ -466,6 +472,7 @@ struct client_tcp_testhdr {
     struct client_hdrext extend;
     struct client_hdrext_starttime_fq start_fq;
     struct client_hdrext_isoch_settings isoch_settings;
+    struct permitKey permitkey;
 };
 
 /*
