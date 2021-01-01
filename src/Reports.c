@@ -155,44 +155,45 @@ static void free_common_copy (struct ReportCommon *common) {
 // this will get the next one. Otherwise it will use
 // the value.
 void setTransferID (struct thread_Settings *inSettings, int role_reversal) {
-    if (!isPermitKey(inSettings) && !inSettings->mTransferID) {
-	Mutex_Lock(&transferid_mutex);
-	inSettings->mTransferID = ++transferid_counter;
-	Mutex_Unlock(&transferid_mutex);
-    }
-    int len = 0;
-    if (inSettings->mTransferIDStr)
-	free(inSettings->mTransferIDStr);
-    if (isPermitKey(inSettings) && inSettings->mPermitKey) {
-	len = snprintf(NULL, 0, "[%s] ", inSettings->mPermitKey);
-	len++;  // Trailing null byte + extra
-	inSettings->mTransferIDStr = (char *) calloc(1, len);
-	len = snprintf(inSettings->mTransferIDStr, len, "[%s] ", inSettings->mPermitKey);
-    } else {
+    if (!inSettings->mTransferIDStr) {
+	if (!inSettings->mTransferID) {
+	    Mutex_Lock(&transferid_mutex);
+	    inSettings->mTransferID = ++transferid_counter;
+	    Mutex_Unlock(&transferid_mutex);
+	}
+	int len = 0;
 	if (role_reversal)  {
 #ifdef HAVE_ROLE_REVERSAL_ID
-	    if (inSettings->mTransferID < 10)
+	    if (isPermitKey(inSettings) && (inSettings->mPermitKey[0] != '\0')) {
+		len = snprintf(NULL, 0, "[%s(*%d)] ", \
+			       inSettings->mPermitKey, inSettings->mTransferID);
+		inSettings->mTransferIDStr = (char *) calloc(1, len + 1);
+		len = snprintf(inSettings->mTransferIDStr, len + 1, "[%s(*%d)] ", \
+			       inSettings->mPermitKey, inSettings->mTransferID);
+	    } else if (inSettings->mTransferID < 10) {
 		len = snprintf(NULL, 0, "[ *%d] ", inSettings->mTransferID);
-	    else
+		inSettings->mTransferIDStr = (char *) calloc(1, len + 1);
+		len = snprintf(inSettings->mTransferIDStr, len + 1, "[ *%d] ", inSettings->mTransferID);
+	    } else {
 		len = snprintf(NULL, 0, "[*%d] ", inSettings->mTransferID);
+		inSettings->mTransferIDStr = (char *) calloc(1, len + 1);
+		len = snprintf(inSettings->mTransferIDStr, len + 1, "[*%d] ", inSettings->mTransferID);
+	    }
 #endif
-	} else {
+	} else if (isPermitKey(inSettings) && (inSettings->mPermitKey[0] != '\0')) {
+	    len = snprintf(NULL, 0, "[%s(%d)] ", \
+			   inSettings->mPermitKey, inSettings->mTransferID);
+	    inSettings->mTransferIDStr = (char *) calloc(1, len + 1);
+	    len = snprintf(inSettings->mTransferIDStr, len + 1, "[%s(%d)] ", \
+			   inSettings->mPermitKey, inSettings->mTransferID);
+	} else  {
 	    len = snprintf(NULL, 0, "[%3d] ", inSettings->mTransferID);
+	    inSettings->mTransferIDStr = (char *) calloc(1, len + 1);
+	    len = snprintf(inSettings->mTransferIDStr, len + 1, "[%3d] ", inSettings->mTransferID);
 	}
-	len++;  // Trailing null byte + extra
-	inSettings->mTransferIDStr = (char *) calloc(1, len);
-	if (role_reversal)  {
-#ifdef HAVE_ROLE_REVERSAL_ID
-	    if (inSettings->mTransferID < 10)
-		len = snprintf(inSettings->mTransferIDStr, len, "[ *%d] ", inSettings->mTransferID);
-	    else
-		len = snprintf(inSettings->mTransferIDStr, len, "[*%d] ", inSettings->mTransferID);
-#endif
-	} else {
-	    len = snprintf(inSettings->mTransferIDStr, len, "[%3d] ", inSettings->mTransferID);
-	}
+	// force a null for string termination
+	inSettings->mTransferIDStr[len + 1] = '\0';
     }
-    inSettings->mTransferIDStr[len] = '\0';
 }
 
 void SetFullDuplexHandlers (struct thread_Settings *inSettings, struct SumReport* sumreport) {

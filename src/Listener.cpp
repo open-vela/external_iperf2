@@ -317,15 +317,6 @@ void Listener::Run (void) {
 	    setSeqNo64b(server);
 	}
 
-	setTransferID(server, isCompat(mSettings));
-	if (isConnectionReport(server) && !isSumOnly(server)) {
-	    struct ReportHeader *reporthdr = InitConnectionReport(server, 0);
-	    struct ConnectionInfo *cr = (struct ConnectionInfo *)(reporthdr->this_report);
-	    cr->connect_timestamp.tv_sec = server->accept_time.tv_sec;
-	    cr->connect_timestamp.tv_usec = server->accept_time.tv_usec;
-	    assert(report);
-	    PostReport(reporthdr);
-	}
 	// Read any more test settings and test values (not just the flags) and instantiate
 	// any settings objects for client threads (e.g. bidir or full duplex)
 	// This will set the listener_client_settings to NULL if
@@ -376,6 +367,15 @@ void Listener::Run (void) {
 		    }
 		}
 	    }
+	}
+	setTransferID(server, isCompat(mSettings));
+	if (isConnectionReport(server) && !isSumOnly(server)) {
+	    struct ReportHeader *reporthdr = InitConnectionReport(server, 0);
+	    struct ConnectionInfo *cr = (struct ConnectionInfo *)(reporthdr->this_report);
+	    cr->connect_timestamp.tv_sec = server->accept_time.tv_sec;
+	    cr->connect_timestamp.tv_usec = server->accept_time.tv_usec;
+	    assert(report);
+	    PostReport(reporthdr);
 	}
 	// Now start the server side traffic threads
 	thread_start_all(server);
@@ -1058,18 +1058,28 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 		    }
 		    struct permitKey *thiskey = (struct permitKey *)(mBuf + (peeklen - sizeof(thiskey->length)));
 		    int keylen = ntohs(thiskey->length);
-		    if (keylen != (int) strlen(server->mPermitKey)) {
-			fprintf(stderr, "REJECT: key length mismatch\n");
+		    if ((keylen < MIN_PERMITKEY_LEN) || (keylen > MAX_PERMITKEY_LEN)) {
+			fprintf(stderr, "REJECT: key length error\n");
 			goto DONE;
 		    }
-		    n = recvn(server->mSock, mBuf, peeklen + keylen, MSG_PEEK);
+		    if (keylen != (int) strlen(server->mPermitKey)) {
+			fprintf(stderr, "REJECT: key length mismatch (%d!=%d)\n", \
+				keylen, (int) strlen(server->mPermitKey));
+			goto DONE;
+		    }
+		    n = recvn(server->mSock, mBuf, peeklen + keylen + 1, MSG_PEEK);
 		    FAIL_errno((n < (peeklen + keylen)), "read key", server);
-		    if (strncmp(server->mPermitKey, thiskey->value, keylen+1) != 0) {
+		    int readkeylen = strnlen(thiskey->value, MAX_PERMITKEY_LEN + 1);
+		    if ((readkeylen < MIN_PERMITKEY_LEN) || (readkeylen > MAX_PERMITKEY_LEN)) {
+			fprintf(stderr, "REJECT: key length read error\n");
+			goto DONE;
+		    }
+		    strncpy(server->mPermitKey, thiskey->value, MAX_PERMITKEY_LEN + 1);
+		    if (strncmp(server->mPermitKey, mSettings->mPermitKey, keylen) != 0) {
 			fprintf(stderr, "REJECT: key value mismatch per %s\n", thiskey->value);
 			goto DONE;
 		    }
 		    rc = true;
-		    printf("**** key match\n");
 		}
 		struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr*) mBuf;
 		if ((flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2)) {
