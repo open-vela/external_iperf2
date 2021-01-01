@@ -1968,11 +1968,11 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 		    strcpy(thiskey->value, client->mPermitKey);
 		    len += sizeof(thiskey->length) + keylen + 1;
 		} else {
-		    fprintf(stderr, "WARNING: invalid key length in client header\n");
+		    fprintf(stderr, "WARNING: invalid key length %d in client header\n", keylen);
 		    keylen = 0;
 		}
 	    }
-	    flags |= ((len - keylen) << 1); // this is also the key value offset passed to the server
+	    flags |= ((len - (keylen + 1)) << 1); // this is also the key value offset passed to the server
 	}
 	hdr->base.flags = htonl(flags);
     }
