@@ -1958,7 +1958,7 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	if (len > 0) {
 	    flags |= HEADER_LEN_BIT;
 	    int keylen = 0;
-	    if (isPermitKey(client) && (client->mPermitKey[0] != '\0')) {
+	    if (!isServerReverse(client) && isPermitKey(client) && (client->mPermitKey[0] != '\0')) {
 		keylen = (int) strnlen(client->mPermitKey, MAX_PERMITKEY_LEN);
 		flags |= HEADER_KEYCHECK;
 		struct permitKey *thiskey = (struct permitKey *) ((char *)testhdr + len);
