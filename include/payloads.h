@@ -383,7 +383,7 @@ struct isoch_payload {
 
 struct permitKey {
     uint16_t length;
-    char value[MAX_PERMITKEY_LEN + 1];
+    char value[MAX_PERMITKEY_LEN];
 };
 
 struct client_udp_testhdr {
