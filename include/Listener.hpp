@@ -90,6 +90,7 @@ private:
     int udp_accept(thread_Settings *server);
     bool L2_setup(thread_Settings *server, int sockfd);
     void UDPSingleServer(thread_Settings *server);
+    bool test_permit_key(uint32_t flags, thread_Settings *server, int keyoffset);
 #if WIN32
     SOCKET ListenSocket;
 #else

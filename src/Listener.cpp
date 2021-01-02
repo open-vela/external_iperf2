@@ -831,12 +831,9 @@ int Listener::udp_accept (thread_Settings *server) {
     assert(server != NULL);
     int rc;
     assert(ListenSocket > 0);
-    // Start with a thread_rest - this allows the server thread
-    // a shot at processing the
     // Preset the server socket to INVALID, hang recvfrom on the Listener's socket
     // The INVALID socket is used to keep the while loop going
     server->mSock = INVALID_SOCKET;
-    // Hang a 0 byte read with MSG_PEEK to get the sock addr struct populated
     rc = recvfrom(ListenSocket, mBuf, mBufLen, MSG_PEEK, \
 		  (struct sockaddr*) &server->peer, &server->size_peer);
 #if HAVE_THREAD_DEBUG
@@ -956,6 +953,40 @@ bool Listener::apply_client_settings (thread_Settings *server) {
     return rc;
 }
 
+inline bool Listener::test_permit_key(uint32_t flags, thread_Settings *server, int keyoffset) {
+    if (!(flags & HEADER_KEYCHECK)) {
+	fprintf(stderr, "REJECT: no key found\n");
+	return false;
+    }
+    struct permitKey *thiskey = (struct permitKey *)(mBuf + (keyoffset - sizeof(thiskey->length)));
+    int keylen = ntohs(thiskey->length);
+    if ((keylen < MIN_PERMITKEY_LEN) || (keylen > MAX_PERMITKEY_LEN)) {
+	fprintf(stderr, "REJECT: key length error (%d)\n", keylen);
+	return false;
+    }
+    if (keylen != (int) strlen(server->mPermitKey)) {
+	fprintf(stderr, "REJECT: key length mismatch (%d!=%d)\n", \
+		keylen, (int) strlen(server->mPermitKey));
+	return false;
+    }
+    if (!isUDP(server)) {
+	int n = recvn(server->mSock, mBuf, keyoffset + keylen, MSG_PEEK);
+	FAIL_errno((n < (keyoffset + keylen)), "read key", server);
+	server->skip = n;
+    }
+    int readkeylen = strnlen(thiskey->value, MAX_PERMITKEY_LEN + 1);
+    if ((readkeylen < MIN_PERMITKEY_LEN) || (readkeylen > MAX_PERMITKEY_LEN)) {
+	fprintf(stderr, "REJECT: key length read error\n");
+	return false;
+    }
+    strncpy(server->mPermitKey, thiskey->value, MAX_PERMITKEY_LEN + 1);
+    if (strncmp(server->mPermitKey, mSettings->mPermitKey, keylen) != 0) {
+	fprintf(stderr, "REJECT: key value mismatch per %s\n", thiskey->value);
+	return false;
+    }
+    return true;
+}
+
 bool Listener::apply_client_settings_udp (thread_Settings *server) {
     struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) mBuf;
     uint32_t flags = ntohl(hdr->base.flags);
@@ -1050,36 +1081,12 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 		// read the test settings passed to the server by the client
 		int n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK);
 		FAIL_errno((n < peeklen), "read tcp test info", server);
+		server->skip = n;
 		if (isPermitKey(mSettings)) {
-		    rc = false;
-		    if (!(flags & HEADER_KEYCHECK)) {
-			fprintf(stderr, "REJECT: no key found\n");
+		    if (!test_permit_key(flags, server, peeklen)) {
+			rc = false;
 			goto DONE;
 		    }
-		    struct permitKey *thiskey = (struct permitKey *)(mBuf + (peeklen - sizeof(thiskey->length)));
-		    int keylen = ntohs(thiskey->length);
-		    if ((keylen < MIN_PERMITKEY_LEN) || (keylen > MAX_PERMITKEY_LEN)) {
-			fprintf(stderr, "REJECT: key length error (%d)\n", keylen);
-			goto DONE;
-		    }
-		    if (keylen != (int) strlen(server->mPermitKey)) {
-			fprintf(stderr, "REJECT: key length mismatch (%d!=%d)\n", \
-				keylen, (int) strlen(server->mPermitKey));
-			goto DONE;
-		    }
-		    n = recvn(server->mSock, mBuf, peeklen + keylen + 1, MSG_PEEK);
-		    FAIL_errno((n < (peeklen + keylen)), "read key", server);
-		    int readkeylen = strnlen(thiskey->value, MAX_PERMITKEY_LEN + 1);
-		    if ((readkeylen < MIN_PERMITKEY_LEN) || (readkeylen > MAX_PERMITKEY_LEN)) {
-			fprintf(stderr, "REJECT: key length read error\n");
-			goto DONE;
-		    }
-		    strncpy(server->mPermitKey, thiskey->value, MAX_PERMITKEY_LEN + 1);
-		    if (strncmp(server->mPermitKey, mSettings->mPermitKey, keylen) != 0) {
-			fprintf(stderr, "REJECT: key value mismatch per %s\n", thiskey->value);
-			goto DONE;
-		    }
-		    rc = true;
 		} else if (flags & HEADER_KEYCHECK) {
 		    fprintf(stderr, "REJECT: client request includes a permit-key but none set on the server\n");
 		    rc = false;
@@ -1112,7 +1119,6 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 			}
 		    }
 		    if (upperflags & HEADER_TRIPTIME) {
-			server->skip = peeklen;
 			server->triptime_start.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
 			server->triptime_start.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
 			Timestamp now;
