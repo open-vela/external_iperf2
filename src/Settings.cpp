@@ -1009,9 +1009,9 @@ static void generate_permit_key (struct thread_Settings *mExtSettings) {
     Timestamp now;
     mExtSettings->mPermitKeyTime.tv_sec = now.getSecs();
     mExtSettings->mPermitKeyTime.tv_usec = now.getUsecs();
-    int ms = mExtSettings->mPermitKeyTime.tv_usec / 1000;
-    int timestrlength = snprintf(NULL, 0, "%ld.%03d-", (long) mExtSettings->mPermitKeyTime.tv_sec, ms);
-    snprintf(mExtSettings->mPermitKey, (timestrlength+1), "%ld.%03d-", (long) mExtSettings->mPermitKeyTime.tv_sec, ms);
+    int usecs = mExtSettings->mPermitKeyTime.tv_usec;
+    int timestrlength = snprintf(NULL, 0, "%ld.%06d-", (long) mExtSettings->mPermitKeyTime.tv_sec, usecs);
+    snprintf(mExtSettings->mPermitKey, (timestrlength+1), "%ld.%06d-", (long) mExtSettings->mPermitKeyTime.tv_sec, usecs);
     srand((unsigned int)(time(NULL)));
     int index;
     char characters[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
