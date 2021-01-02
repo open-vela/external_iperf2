@@ -930,7 +930,8 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    if (permitkey) {
 		permitkey = 0;
 		if (optarg) {
-		    strncpy(mExtSettings->mPermitKey, optarg,MAX_PERMITKEY_LEN + 1);
+		    strncpy(mExtSettings->mPermitKey, optarg, MAX_PERMITKEY_LEN);
+		    mExtSettings->mPermitKey[MAX_PERMITKEY_LEN] = '\0';		    
 		} else {
 		    mExtSettings->mPermitKey[0] = '\0';
 		}
@@ -1112,7 +1113,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    fprintf(stderr, "ERROR: Option of --permit-key not supported with UDP\n");
 	    bail = true;
 	} else if (mExtSettings->mPermitKey[0] != '\0') {
-	    int keylen = strlen(mExtSettings->mPermitKey, MAX_PERMITKEY_LEN + 1);
+	    int keylen = strnlen(mExtSettings->mPermitKey, MAX_PERMITKEY_LEN + 1);
 	    if (keylen < MIN_PERMITKEY_LEN) {
 		fprintf(stderr, "ERROR: value for --permit-key must have at least %d characters\n", MIN_PERMITKEY_LEN);
 		bail = true;
@@ -1953,12 +1954,12 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	if (len > 0) {
 	    flags |= HEADER_LEN_BIT;
 	    int keylen = 0;
-	    if (isPermitKey(client) && client->mPermitKey) {
+	    if (isPermitKey(client) && (client->mPermitKey[0] != '\0')) {
 		keylen = (int) strnlen(client->mPermitKey, MAX_PERMITKEY_LEN);
 		flags |= HEADER_KEYCHECK;
 		struct permitKey *thiskey = (struct permitKey *) ((char *)testhdr + len);
 		thiskey->length = htons((uint16_t)keylen);
-		strncpy(thiskey->value, client->mPermitKey, MAX_PERMITKEY_LEN);
+		memcpy(thiskey->value, client->mPermitKey, keylen);
 		len += sizeof(thiskey->length);
 	    }
 	    flags |= ((len << 1) & HEADER_KEYLEN_MASK); // this is the key value offset passed to the server
