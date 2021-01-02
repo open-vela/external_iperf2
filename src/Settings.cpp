@@ -931,7 +931,7 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		permitkey = 0;
 		if (optarg) {
 		    strncpy(mExtSettings->mPermitKey, optarg, MAX_PERMITKEY_LEN);
-		    mExtSettings->mPermitKey[MAX_PERMITKEY_LEN] = '\0';		    
+		    mExtSettings->mPermitKey[MAX_PERMITKEY_LEN] = '\0';
 		} else {
 		    mExtSettings->mPermitKey[0] = '\0';
 		}
@@ -1010,15 +1010,19 @@ static void generate_permit_key (struct thread_Settings *mExtSettings) {
     mExtSettings->mPermitKeyTime.tv_sec = now.getSecs();
     mExtSettings->mPermitKeyTime.tv_usec = now.getUsecs();
     int ms = mExtSettings->mPermitKeyTime.tv_usec / 1000;
-    int timelen = snprintf(NULL, 0, "%ld.%03d-", (long) mExtSettings->mPermitKeyTime.tv_sec, ms);
-    snprintf(mExtSettings->mPermitKey, (timelen+1), "%ld.%03d-", (long) mExtSettings->mPermitKeyTime.tv_sec, ms);
+    int timestrlength = snprintf(NULL, 0, "%ld.%03d-", (long) mExtSettings->mPermitKeyTime.tv_sec, ms);
+    snprintf(mExtSettings->mPermitKey, (timestrlength+1), "%ld.%03d-", (long) mExtSettings->mPermitKeyTime.tv_sec, ms);
     srand((unsigned int)(time(NULL)));
     int index;
     char characters[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    for(index = timelen; index < (DEFAULT_PERMITKEY_LEN + timelen); index++) {
+    for(index = timestrlength; index < (DEFAULT_PERMITKEY_LEN + timestrlength); index++) {
 	sprintf(mExtSettings->mPermitKey + index, "%c", characters[rand() % ((int) sizeof(characters) - 1)]);
     }
-    mExtSettings->mPermitKey[DEFAULT_PERMITKEY_LEN + timelen] = '\0';
+    mExtSettings->mPermitKey[DEFAULT_PERMITKEY_LEN + timestrlength] = '\0';
+    if (strlen(mExtSettings->mPermitKey) > MAX_PERMITKEY_LEN) {
+	fprintf(stderr, "ERROR: permit key too long\n");
+	exit(1);
+    }
 }
 
 static void strip_v6_brackets (char *v6addr) {
