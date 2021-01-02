@@ -266,7 +266,7 @@ struct thread_Settings {
     int32_t peer_version_l;
     double connecttime;
     double rtt_nearcongest_divider;
-    char mPermitKey[MAX_PERMITKEY_LEN + 1 + 64]; //add some space for timestamp
+    char mPermitKey[MAX_PERMITKEY_LEN + 1]; //add some space for timestamp
     struct timeval mPermitKeyTime;
 };
 
