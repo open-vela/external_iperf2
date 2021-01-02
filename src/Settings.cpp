@@ -1107,13 +1107,19 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	fprintf(stderr, "ERROR: compatibility mode not supported with the requested with options\n");
 	bail = true;
     }
-    if (isPermitKey(mExtSettings) && (mExtSettings->mPermitKey[0] != '\0')) {
-	if (strlen(mExtSettings->mPermitKey) < MIN_PERMITKEY_LEN) {
-	    fprintf(stderr, "ERROR: value for --permit-key must have at least %d characters\n", MIN_PERMITKEY_LEN);
+    if (isPermitKey(mExtSettings)) {
+	if (isUDP(mExtSettings)) {
+	    fprintf(stderr, "ERROR: Option of --permit-key not supported with UDP\n");
 	    bail = true;
-	} else if (strlen(mExtSettings->mPermitKey) > MAX_PERMITKEY_LEN) {
-	    fprintf(stderr, "ERROR: value for --permit-key can't be more than %d characters \n", MAX_PERMITKEY_LEN);
-	    bail = true;
+	} else if (mExtSettings->mPermitKey[0] != '\0') {
+	    int keylen = strlen(mExtSettings->mPermitKey, MAX_PERMITKEY_LEN + 1);
+	    if (keylen < MIN_PERMITKEY_LEN) {
+		fprintf(stderr, "ERROR: value for --permit-key must have at least %d characters\n", MIN_PERMITKEY_LEN);
+		bail = true;
+	    } else if (keylen > MAX_PERMITKEY_LEN) {
+		fprintf(stderr, "ERROR: value for --permit-key can't be more than %d characters \n", MAX_PERMITKEY_LEN);
+		bail = true;
+	    }
 	}
     }
     if (mExtSettings->mThreadMode == kMode_Client) {
@@ -1882,21 +1888,9 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 
 	if (len > 0) {
 	    len += sizeof(struct UDP_datagram);
-	    flags |= HEADER_LEN_BIT;
-	    int keylen = 0;
-	    if (isPermitKey(client) && (client->mPermitKey[0] != '\0')) {
-		keylen = (int) strlen(client->mPermitKey);
-		if (keylen > 0) {
-		    flags |= HEADER_KEYCHECK;
-		    struct permitKey *thiskey = (struct permitKey *) ((char *)testhdr + len);
-		    thiskey->length = htons((uint16_t)keylen);
-		    strcpy(thiskey->value, client->mPermitKey);
-		    len += sizeof(thiskey->length) + keylen;
-		}
-	    }
-	    flags |= ((len - keylen) << 1); // this is also the key value offset passed to the server
+	    flags |= ((len << 1) & HEADER_KEYLEN_MASK) | HEADER_LEN_BIT;
 	}
-	hdr->base.flags = htonl(flags | ((len << 1) & 0xFFFE));
+	hdr->base.flags = htonl(flags);
     } else { // TCP first write with test information
 	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) testhdr;
 	memset(hdr, 0, sizeof(struct client_tcp_testhdr));
@@ -1960,19 +1954,15 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	    flags |= HEADER_LEN_BIT;
 	    int keylen = 0;
 	    if (isPermitKey(client) && client->mPermitKey) {
-		keylen = (int) strnlen(client->mPermitKey, MAX_PERMITKEY_LEN + 1);
-		if ((keylen >= MIN_PERMITKEY_LEN) && (keylen <= MAX_PERMITKEY_LEN)) {
-		    flags |= HEADER_KEYCHECK;
-		    struct permitKey *thiskey = (struct permitKey *) ((char *)testhdr + len);
-		    thiskey->length = htons((uint16_t)keylen);
-		    strcpy(thiskey->value, client->mPermitKey);
-		    len += sizeof(thiskey->length) + keylen + 1;
-		} else {
-		    fprintf(stderr, "WARNING: invalid key length %d in client header\n", keylen);
-		    keylen = 0;
-		}
+		keylen = (int) strnlen(client->mPermitKey, MAX_PERMITKEY_LEN);
+		flags |= HEADER_KEYCHECK;
+		struct permitKey *thiskey = (struct permitKey *) ((char *)testhdr + len);
+		thiskey->length = htons((uint16_t)keylen);
+		strncpy(thiskey->value, client->mPermitKey, MAX_PERMITKEY_LEN);
+		len += sizeof(thiskey->length);
 	    }
-	    flags |= ((len - (keylen + 1)) << 1); // this is also the key value offset passed to the server
+	    flags |= ((len << 1) & HEADER_KEYLEN_MASK); // this is the key value offset passed to the server
+	    len += keylen;
 	}
 	hdr->base.flags = htonl(flags);
     }
@@ -1983,7 +1973,7 @@ int Settings_ClientHdrPeekLen (uint32_t flags) {
     //* determine peek length and permit key
     int peeklen = 0;
     if (flags & HEADER_LEN_BIT) {
-	peeklen = (int) (flags & HEADER_LEN_MASK) >> 1;
+	peeklen = (int) ((flags & HEADER_LEN_MASK) >> 1);
 	if (peeklen > MAX_HEADER_LEN) {
 	    fprintf(stderr, "WARN: header of %d length too large\n", peeklen);
 	    peeklen = -1;
