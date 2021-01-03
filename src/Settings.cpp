@@ -836,7 +836,7 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		txstarttime = 0;
 		setTxStartTime(mExtSettings);
 		setEnhanced(mExtSettings);
-		match = sscanf(optarg,"%ld.%6" PRIdMAX, &seconds, &usecs);
+		match = sscanf(optarg,"%ld.%6ld", &seconds, &usecs);
 		mExtSettings->txstart_epoch.tv_usec = 0;
 		switch (match) {
 		case 2:
