@@ -97,7 +97,7 @@ OpenWRT cross compile (example only)
           Target System: MediaTek Ralink MIPS
 	  Subtarget system: MT7620 based boards
 	  Target profile: NETGEAR R6350
-	  Select openwrt SDK (for shared libraries)
+
   Set environment variables (via any editor or manual exports to get)
       [rjmcmahon@localhost iperf2-code]$ more ../openwrt.config
       export STAGING_DIR=/home/usernmae/Code/openwrt/staging_dir
