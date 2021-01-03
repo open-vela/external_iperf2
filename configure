@@ -669,6 +669,10 @@ CPPFLAGS
 LDFLAGS
 CFLAGS
 CC
+DEBUG_SYMBOLS_FALSE
+DEBUG_SYMBOLS_TRUE
+ENABLE_STATIC_BIN_FALSE
+ENABLE_STATIC_BIN_TRUE
 CHECKPROGRAMS_FALSE
 CHECKPROGRAMS_TRUE
 PACKET_DEBUG_FALSE
@@ -764,6 +768,8 @@ enable_fastsampling
 enable_thread_debug
 enable_packet_debug
 enable_checkprograms
+enable_static_bin
+enable_debug_symbols
 enable_af_packet
 enable_dependency_tracking
 '
@@ -1425,6 +1431,8 @@ Optional Features:
                           is disable)
   --enable-checkprograms  enable support for building support programs such as
                           checkdelay, checkpdfs, etc. (default is disable)
+  --enable-static-bin     link iperf binary statically
+  --enable-debug-symbols  enable debugging with symbols, default: no
   --enable-af-packet      Enable AF_PACKET support [default=yes]
   --enable-dependency-tracking
                           do not reject slow dependency extractors
@@ -3296,6 +3304,47 @@ else
   CHECKPROGRAMS_FALSE=
 fi
 
+
+# Check whether --enable-static-bin was given.
+if test "${enable_static_bin+set}" = set; then :
+  enableval=$enable_static_bin; enable_static_bin=yes
+else
+  :
+fi
+
+ if test x$enable_static_bin = xno; then
+  ENABLE_STATIC_BIN_TRUE=
+  ENABLE_STATIC_BIN_FALSE='#'
+else
+  ENABLE_STATIC_BIN_TRUE='#'
+  ENABLE_STATIC_BIN_FALSE=
+fi
+
+
+if test "x$enable_static_bin" == xyes; then :
+  CFLAGS="$CFLAGS --static"; CXXFLAGS="$CXXFLAGS --static"; LDFLAGS="$LDFLAGS --static"
+
+fi
+
+# Check whether --enable-debug_symbols was given.
+if test "${enable_debug_symbols+set}" = set; then :
+  enableval=$enable_debug_symbols; case "${enableval}" in
+             yes) debug_symbols=true ;;
+             no)  debug_symbols=false ;;
+             *)   as_fn_error $? "bad value ${enableval} for --enable-debug-symbols" "$LINENO" 5 ;;
+esac
+else
+  debug_symbols=false
+fi
+
+
+ if test x"$debug_symbols" = x"true"; then
+  DEBUG_SYMBOLS_TRUE=
+  DEBUG_SYMBOLS_FALSE='#'
+else
+  DEBUG_SYMBOLS_TRUE='#'
+  DEBUG_SYMBOLS_FALSE=
+fi
 
 
 # Check whether --enable-af-packet was given.
@@ -8868,6 +8917,14 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${CHECKPROGRAMS_TRUE}" && test -z "${CHECKPROGRAMS_FALSE}"; then
   as_fn_error $? "conditional \"CHECKPROGRAMS\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${ENABLE_STATIC_BIN_TRUE}" && test -z "${ENABLE_STATIC_BIN_FALSE}"; then
+  as_fn_error $? "conditional \"ENABLE_STATIC_BIN\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${DEBUG_SYMBOLS_TRUE}" && test -z "${DEBUG_SYMBOLS_FALSE}"; then
+  as_fn_error $? "conditional \"DEBUG_SYMBOLS\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${AMDEP_TRUE}" && test -z "${AMDEP_FALSE}"; then
