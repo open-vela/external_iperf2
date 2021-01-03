@@ -63,6 +63,27 @@ AC_ARG_ENABLE(checkprograms, AC_HELP_STRING([--enable-checkprograms],
 	    [enable support for building support programs such as checkdelay, checkpdfs, etc. (default is disable)]))
 AM_CONDITIONAL([CHECKPROGRAMS], [test "x$enable_checkprograms" = "xyes"])
 
+AC_ARG_ENABLE([static-bin],
+    AS_HELP_STRING([--enable-static-bin], [link iperf binary statically]),
+    [enable_static_bin=yes],
+    [:])
+AM_CONDITIONAL([ENABLE_STATIC_BIN], [test x$enable_static_bin = xno])
+
+AS_IF([test "x$enable_static_bin" == xyes],
+ [CFLAGS="$CFLAGS --static"; CXXFLAGS="$CXXFLAGS --static"; LDFLAGS="$LDFLAGS --static"]
+ [])
+
+AC_ARG_ENABLE(debug_symbols,
+AS_HELP_STRING([--enable-debug-symbols],
+               [enable debugging with symbols, default: no]),
+[case "${enableval}" in
+             yes) debug_symbols=true ;;
+             no)  debug_symbols=false ;;
+             *)   AC_MSG_ERROR([bad value ${enableval} for --enable-debug-symbols]) ;;
+esac],
+[debug_symbols=false])
+
+AM_CONDITIONAL(DEBUG_SYMBOLS, test x"$debug_symbols" = x"true")
 
 dnl AF_PACKET support
 AC_ARG_ENABLE(af-packet,

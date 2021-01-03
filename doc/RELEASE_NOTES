@@ -45,7 +45,7 @@ o support for --local-only which sets SO_DONTROUTE on a socket to limit traffic 
 o support compile time option of --local-only to set on by default via ./configure --enable-default-localonly
 o support for date and time of in connect messages,
   e.g. [  0] local 192.168.1.108%eth0 port 5001 connected with 192.168.1.62 port 36724 (MSS=453) (sock=5) on 2020-12-22 19:43:42 (PST)
-o support for feature of --permit-key which must match for the server to set the client's traffic. It also sets the transfer id.
+o support for feature of --permit-key which must match for the server to set the client's traffic. It also sets the transfer id. TCP only. This will not protect a public server running UDP and TCP protection is use at your own risk. (suggested is to use with -1 or --single-client, -P 1 on the server, -t is very short, where both the iperf client and servers are controlled by a python controller, e.g. flows such that the key is limited in life and is one-time use.)
 o support for experimental feature of --near-congestion (tcp only)
 o man page updates with examples
 o tested with 1000's of traffic streams, WiFi, 10G and 100G
@@ -54,7 +54,7 @@ o tested with 1000's of traffic streams, WiFi, 10G and 100G
 ----------------------------------------
 o Set the listening socket backlog to a large value, let os control the max, better operations with FreeBSD
 o Fix breakage to -r and -d options
-o Fix so ctrl-c works with -r and -d 
+o Fix so ctrl-c works with -r and -d
 o Fix ctrl-c on server to have a graceful exit including print report
 o Fix freebsd compile breakage per multicast support
 o The UDP final server report may be larger than the client's -l length, fix the client to read maximum packet length for that instead of using -l as the read size
@@ -98,14 +98,14 @@ o support for --vary-load with optional weight, uses log normal distribution (re
 o support for --l2checks to detect L2 length errors not detected by v4 or v6 payload length errors (requires linux, berkeley packet filters BPFs and AF_PACKET socket support)
 o support for server joining mulitcast source specific multicast (S,G) and (*,G) for both v4 and v6 on platforms that support it
 o improved write counters (requires -e)
-o accounting bug fix on client when write fails, this bug was introduced in 2.0.10 
+o accounting bug fix on client when write fails, this bug was introduced in 2.0.10
 o slight restructure client/server traffic thread code for maintainability
 o python: flow example script updates
 o python: ssh node object using asyncio
 o python: histograms in flows with plotting (assumed gnuplot available)
 o python: hierarchical clustering of latency histograms (early code)
 o man pages updates
-o Note: latency histograms require client and server system clock synchronization.   A GPS disciplined oscillator using Precision Time Protocol works well for this.  
+o Note: latency histograms require client and server system clock synchronization.   A GPS disciplined oscillator using Precision Time Protocol works well for this.
 
 2.0.10 change set (as of August 11, 2017)
 -----------------------------------------
@@ -191,5 +191,3 @@ o Suggest a quality reference for the PTP grandmaster such as a GPS disciplined 
 2.0.6 change set (rjmcmahon@rjmcmahon.com) March 2014
 -----------------------------------------------------
 o Increase the shared memory for report headers reducing mutex contention.  Needed to increase performance.  Minor code change that should be platform/os independent
-
-

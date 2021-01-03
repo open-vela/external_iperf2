@@ -89,10 +89,14 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 bin_PROGRAMS = iperf$(EXEEXT)
+@DEBUG_SYMBOLS_TRUE@am__append_1 = -g3 -O0
+@DEBUG_SYMBOLS_TRUE@am__append_2 = -g3 -O0
+@DEBUG_SYMBOLS_FALSE@am__append_3 = -O2
+@DEBUG_SYMBOLS_FALSE@am__append_4 = -O2
 @CHECKPROGRAMS_TRUE@noinst_PROGRAMS = checkdelay$(EXEEXT) \
 @CHECKPROGRAMS_TRUE@	checkpdfs$(EXEEXT) checkisoch$(EXEEXT) \
 @CHECKPROGRAMS_TRUE@	igmp_querier$(EXEEXT)
-@AF_PACKET_TRUE@am__append_1 = checksums.c
+@AF_PACKET_TRUE@am__append_5 = checksums.c
 subdir = src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_create_stdint_h.m4 \
@@ -356,15 +360,15 @@ AM_CPPFLAGS = @STRIP_BEGIN@ \
 	      -I$(top_builddir)/include \
 	      @STRIP_END@
 
-AM_CXXFLAGS = -Wall
-AM_CFLAGS = -Wall
+AM_CXXFLAGS = -Wall $(am__append_2) $(am__append_4)
+AM_CFLAGS = -Wall $(am__append_1) $(am__append_3)
 iperf_LDFLAGS = @CFLAGS@ @PTHREAD_CFLAGS@ @WEB100_CFLAGS@ @DEFS@
 iperf_SOURCES = Client.cpp Extractor.c isochronous.cpp Launch.cpp \
 	active_hosts.cpp Listener.cpp Locale.c PerfSocket.cpp \
 	Reporter.c Reports.c ReportOutputs.c Server.cpp Settings.cpp \
 	SocketAddr.c gnu_getopt.c gnu_getopt_long.c histogram.c \
 	main.cpp service.c sockets.c stdio.c packet_ring.c \
-	tcp_window_size.c pdfs.c $(am__append_1)
+	tcp_window_size.c pdfs.c $(am__append_5)
 iperf_LDADD = $(LIBCOMPAT_LDADDS)
 @CHECKPROGRAMS_TRUE@checkdelay_SOURCES = checkdelay.c
 @CHECKPROGRAMS_TRUE@checkdelay_LDADD = $(LIBCOMPAT_LDADDS)
