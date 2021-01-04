@@ -1009,7 +1009,11 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
     output_window_size(report);
     printf("\n");
     if (isPermitKey(report->common) && report->common->PermitKey) {
-	fprintf(stdout, "Permit key is '%s'\n", report->common->PermitKey);
+	if (report->common->ListenerTimeout > 0) {
+	    fprintf(stdout, "Permit key is '%s' (timeout in %0.1f seconds)\n", report->common->PermitKey, report->common->ListenerTimeout);
+	} else {
+	    fprintf(stdout, "Permit key is '%s' (WARN: no timeout)\n", report->common->PermitKey);
+	}
     }
 }
 static void reporter_output_client_settings (struct ReportSettings *report) {

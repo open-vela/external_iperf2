@@ -152,6 +152,9 @@ void Listener::Run (void) {
     if (mMode_Time) {
 	mEndTime.setnow();
 	mEndTime.add(mSettings->mAmount / 100.0);
+    } else if (isPermitKey(mSettings) && (mSettings->mListenerTimeout > 0)) {
+	mEndTime.setnow();
+	mEndTime.add(mSettings->mListenerTimeout);
     }
     Timestamp now;
 #define SINGLECLIENTDELAY_DURATION 50000 // units is microseconds
@@ -160,7 +163,7 @@ void Listener::Run (void) {
 	thread_debug("Listener main loop port %d ", mSettings->mPort);
 #endif
 	now.setnow();
-	if(mMode_Time && mEndTime.before(now)) {
+	if ((mMode_Time || (mSettings->mListenerTimeout > 0)) && mEndTime.before(now)) {
 #ifdef HAVE_THREAD_DEBUG
 	    thread_debug("Listener port %d (loop timer expired)", mSettings->mPort);
 #endif
@@ -168,7 +171,7 @@ void Listener::Run (void) {
 	}
 	// Serialize in the event the -1 option or --singleclient is set
 	int tc;
-	if ((isSingleClient(mSettings) ||  isMulticast(mSettings)) && \
+	if ((isSingleClient(mSettings) || isMulticast(mSettings)) && \
 	    mCount && (tc = (thread_numtrafficthreads()) > 0)) {
 	    // Start with a delay in the event some traffic
 	    // threads are pending to be scheduled and haven't
@@ -188,11 +191,16 @@ void Listener::Run (void) {
 	}
 	// Use a select() with a timeout if -t is set or if this is a v1 -r or -d test
 	fd_set set;
-	if ((mMode_Time) || isCompat(mSettings)) {
+	if ((mMode_Time) || isCompat(mSettings) || isPermitKey(mSettings)) {
 	    // Hang a select w/timeout on the listener socket
 	    struct timeval timeout;
-	    timeout.tv_sec = mSettings->mAmount / 100;
-	    timeout.tv_usec = (mSettings->mAmount % 100) * 10000;
+	    if (!isPermitKey(mSettings)) {
+		timeout.tv_sec = mSettings->mAmount / 100;
+		timeout.tv_usec = (mSettings->mAmount % 100) * 10000;
+	    } else {
+		timeout.tv_sec = (long) mSettings->mListenerTimeout;
+		timeout.tv_usec = ((long) mSettings->mListenerTimeout * 1000000) % 1000000;
+	    }
 	    if (isTxStartTime(mSettings)) {
 		now.setnow();
 		long adjsecs = (mSettings->txstart_epoch.tv_sec - now.getSecs());

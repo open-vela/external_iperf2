@@ -230,6 +230,7 @@ struct ReportCommon {
     char* PermitKey;
     int transferID;
     double rtt_weight;
+    double ListenerTimeout;
 #if WIN32
     SOCKET socket;
 #else

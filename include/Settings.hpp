@@ -93,6 +93,7 @@ extern "C" {
 #define MAXIPGSECS 60
 #define CSVPEERLIMIT ((REPORT_ADDRLEN * 2) + 40)
 #define NEARCONGEST_DEFAULT 0.5
+#define DEFAULT_PERMITKEY_LIFE 20.0 // units is seconds
 
 // server/client mode
 enum ThreadMode {
@@ -268,6 +269,7 @@ struct thread_Settings {
     double rtt_nearcongest_divider;
     char mPermitKey[MAX_PERMITKEY_LEN + 1]; //add some space for timestamp
     struct timeval mPermitKeyTime;
+    double mListenerTimeout;
 };
 
 /*

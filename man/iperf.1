@@ -188,6 +188,9 @@ sent from client to server and if it's lost then the server will continue to run
 .BR -n ", " --num " \fIn\fR[kmKM]"
 number of bytes to transmit (instead of -t)
 .TP
+.BR "    --permit-key-timeout " \fI<value>\fR
+Set the lifetime of the permit key in seconds. Defaults to 20 seconds if not set. A value of zero will disable the timer.
+.TP
 .BR -r ", " --tradeoff " "
 Do a bidirectional test individually - client-to-server, followed by
 a reversed test, server-to-client
