@@ -463,12 +463,8 @@ void Listener::my_listen (void) {
     // listen for connections (TCP only).
     // use large (INT_MAX) backlog allowing multiple simultaneous connections
     if (!isUDP(mSettings)) {
-	if (isSingleClient(mSettings)) {
-	    if (mSettings->mThreads > 0) {
-		rc = listen(ListenSocket, (mSettings->mThreads + 1));
-	    } else {
-		rc = listen(ListenSocket, 2);
-	    }
+	if (isSingleClient(mSettings) || isPermitKey(mSettings)) {
+	    rc = listen(ListenSocket, 0 + mSettings->mThreads);
 	} else {
 	    rc = listen(ListenSocket, INT_MAX);
 	}
