@@ -123,6 +123,7 @@ static void common_copy (struct ReportCommon **common, struct thread_Settings *i
     (*common)->RXunits =inSettings->mRXunits;
     (*common)->pktIPG =inSettings->mBurstIPG;
     (*common)->rtt_weight =inSettings->rtt_nearcongest_divider;
+    (*common)->ListenerTimeout =inSettings->mListenerTimeout;
 }
 
 static void free_common_copy (struct ReportCommon *common) {
