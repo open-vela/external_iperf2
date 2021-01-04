@@ -227,7 +227,7 @@ int Client::my_connect (int exit_on_fail) {
 	    struct ConnectionInfo *cr = (struct ConnectionInfo *)(reporthdr->this_report);
 	    cr->connect_timestamp.tv_sec = connect_start.getSecs();
 	    cr->connect_timestamp.tv_usec = connect_start.getUsecs();
-	    assert(report);
+	    assert(reporthdr);
 	    PostReport(reporthdr);
 	} else {
 	    PostReport(InitConnectionReport(mSettings, -1));

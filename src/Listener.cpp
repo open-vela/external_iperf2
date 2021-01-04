@@ -294,7 +294,7 @@ void Listener::Run (void) {
 		struct ConnectionInfo *cr = (struct ConnectionInfo *)(reporthdr->this_report);
 		cr->connect_timestamp.tv_sec = server->accept_time.tv_sec;
 		cr->connect_timestamp.tv_usec = server->accept_time.tv_usec;
-		assert(report);
+		assert(reporthdr);
 		PostReport(reporthdr);
 	    }
 	    Iperf_remove_host(&server->peer);
@@ -382,7 +382,7 @@ void Listener::Run (void) {
 	    struct ConnectionInfo *cr = (struct ConnectionInfo *)(reporthdr->this_report);
 	    cr->connect_timestamp.tv_sec = server->accept_time.tv_sec;
 	    cr->connect_timestamp.tv_usec = server->accept_time.tv_usec;
-	    assert(report);
+	    assert(reporthdr);
 	    PostReport(reporthdr);
 	}
 	// Now start the server side traffic threads
