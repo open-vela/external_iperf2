@@ -94,6 +94,7 @@ static int sumonly = 0;
 static int so_dontroute = 0;
 static int nearcongest = 0;
 static int permitkey = 0;
+static int permitkeytimeout = 0;
 
 void Settings_Interpret(char option, const char *optarg, struct thread_Settings *mExtSettings);
 // apply compound settings after the command line has been fully parsed
@@ -177,6 +178,7 @@ const struct option long_options[] =
 {"local-only", optional_argument, &so_dontroute, 1},
 {"near-congestion", optional_argument, &nearcongest, 1},
 {"permit-key", optional_argument, &permitkey, 1},
+{"permit-key-timeout", required_argument, &permitkeytimeout, 1},
 {"NUM_REPORT_STRUCTS", required_argument, &numreportstructs, 1},
 #ifdef WIN32
 {"reverse", no_argument, &reversetest, 1},
@@ -296,7 +298,7 @@ void Settings_Initialize (struct thread_Settings *main) {
     main->mTTL          = -1;            // -T,  link-local TTL
     //main->mDomain     = kMode_IPv4;    // -V,
     //main->mSuggestWin = false;         // -W,  Suggest the window size.
-
+    main->mListenerTimeout = -1;         //
 #if (HAVE_DECL_SO_DONTROUTE) && (HAVE_DEFAULT_DONTROUTE_ON)
     setDontRoute(main);
 #endif
@@ -937,6 +939,11 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		}
 		setPermitKey(mExtSettings);
 	    }
+	    if (permitkeytimeout) {
+		permitkeytimeout = 0;
+		if (atof(optarg) >= 0.0)
+		    mExtSettings->mListenerTimeout = (size_t) (atof(optarg));
+	    }
 	    if (rxhistogram) {
 		rxhistogram = 0;
 		setRxHistogram(mExtSettings);
@@ -1272,6 +1279,14 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    bail = true;
 	}
     } else {
+	if (isPermitKey(mExtSettings)) {
+	    if (mExtSettings->mPermitKey[0]=='\0')  {
+		generate_permit_key(mExtSettings);
+	    }
+	    if (mExtSettings->mListenerTimeout < 0) {
+		mExtSettings->mListenerTimeout = DEFAULT_PERMITKEY_LIFE;
+	    }
+	}
         if (isTripTime(mExtSettings)) {
             fprintf(stderr, "ERROR: setting of option --trip-times is not supported on the server\n");
 	    bail = true;
@@ -1498,8 +1513,6 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    mExtSettings->mIfrnametx=NULL;
 	}
 #endif
-    } else if (isPermitKey(mExtSettings) && (mExtSettings->mPermitKey[0]=='\0')) {
-	generate_permit_key(mExtSettings);
     }
 }
 
