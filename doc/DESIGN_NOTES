@@ -1,7 +1,7 @@
 Overview of Iperf 2 design
 By Robert McMahon
-October 2020
-Code at rev 2.0.14
+January 2021
+Code at rev 2.1.0
 
 This document helps to describe the iperf 2 design. It's quite complicated. It's
 hoped this overview will help someone to understand the code. As with any open

@@ -5,7 +5,7 @@ dnl ===================================================================
 
 
 AC_PREREQ(2.59)
-AC_INIT(Iperf,2.0.14a)
+AC_INIT(Iperf,2.1.0b)
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE()
 
