@@ -125,7 +125,7 @@ enum TestMode {
 enum IntervalMode {
     kInterval_None = 0,
     kInterval_Time,
-    kInterval_Frames,
+    kInterval_Frames
 };
 
 // rate request units
@@ -269,6 +269,7 @@ struct thread_Settings {
     double rtt_nearcongest_divider;
     char mPermitKey[MAX_PERMITKEY_LEN + 1]; //add some space for timestamp
     struct timeval mPermitKeyTime;
+    bool mKeyCheck;
     double mListenerTimeout;
 };
 
