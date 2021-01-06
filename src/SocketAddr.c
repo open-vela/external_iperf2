@@ -87,6 +87,7 @@ void SockAddr_remoteAddr (struct thread_Settings *inSettings) {
 	    inSettings->size_peer = sizeof(struct sockaddr_in);
 	}
 #else
+	}
         ((struct sockaddr*)&inSettings->peer)->sa_family = AF_INET;
 	inSettings->size_peer = sizeof(struct sockaddr_in);
 #endif
