@@ -616,7 +616,7 @@ void udp_output_sum_read (struct TransferInfo *stats) {
     printf(report_sum_bw_jitter_loss_format,
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext,
-	   stats->jitter*1000.0, stats->cntError, stats->cntDatagrams,
+	   stats->cntError, stats->cntDatagrams,
 	   (100.0 * stats->cntError) / stats->cntDatagrams);
     if (stats->cntOutofOrder > 0) {
 	printf(report_sum_outoforder,
