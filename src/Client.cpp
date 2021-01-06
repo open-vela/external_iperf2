@@ -190,6 +190,7 @@ int Client::my_connect (int exit_on_fail) {
     } else {
 	rc = connect(mySocket, (sockaddr*) &mSettings->peer,
 		     SockAddr_get_sizeof_sockaddr(&mSettings->peer));
+	connecttime = 0.0; // UDP doesn't have a 3WHS
         WARN_errno((rc == SOCKET_ERROR), "udp connect");
 	if (rc != SOCKET_ERROR)
 	    connected = true;
@@ -231,7 +232,6 @@ int Client::my_connect (int exit_on_fail) {
 	    PostReport(reporthdr);
 	} else {
 	    PostReport(InitConnectionReport(mSettings, -1));
-
 	}
     }
     return connected;
