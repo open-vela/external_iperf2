@@ -770,26 +770,24 @@ struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings
 	stats->cntOutofOrder = ntohl(server->base.outorder_cnt);
 	stats->cntDatagrams = ntohl(server->base.datagrams);
     }
-    if (isEnhanced(stats->common)) {
-	if ((flags & SERVER_HEADER_EXTEND) != 0) {
-	    stats->transit.minTransit = ntohl(server->extend.minTransit1);
-	    stats->transit.minTransit += ntohl(server->extend.minTransit2) / (double)rMillion;
-	    stats->transit.maxTransit = ntohl(server->extend.maxTransit1);
-	    stats->transit.maxTransit += ntohl(server->extend.maxTransit2) / (double)rMillion;
-	    stats->transit.sumTransit = ntohl(server->extend.sumTransit1);
-	    stats->transit.sumTransit += ntohl(server->extend.sumTransit2) / (double)rMillion;
-	    stats->transit.meanTransit = ntohl(server->extend.meanTransit1);
-	    stats->transit.meanTransit += ntohl(server->extend.meanTransit2) / (double)rMillion;
-	    stats->transit.m2Transit = ntohl(server->extend.m2Transit1);
-	    stats->transit.m2Transit += ntohl(server->extend.m2Transit2) / (double)rMillion;
-	    stats->transit.vdTransit = ntohl(server->extend.vdTransit1);
-	    stats->transit.vdTransit += ntohl(server->extend.vdTransit2) / (double)rMillion;
-	    stats->transit.cntTransit = ntohl(server->extend.cntTransit);
-	    stats->cntIPG = ntohl(server->extend.cntIPG);
-	    stats->IPGsum = ntohl(server->extend.IPGsum);
-	} else {
-	    unsetEnhanced(stats->common);
-	}
+    if ((flags & SERVER_HEADER_EXTEND) != 0) {
+	stats->transit.minTransit = ntohl(server->extend.minTransit1);
+	stats->transit.minTransit += ntohl(server->extend.minTransit2) / (double)rMillion;
+	stats->transit.maxTransit = ntohl(server->extend.maxTransit1);
+	stats->transit.maxTransit += ntohl(server->extend.maxTransit2) / (double)rMillion;
+	stats->transit.sumTransit = ntohl(server->extend.sumTransit1);
+	stats->transit.sumTransit += ntohl(server->extend.sumTransit2) / (double)rMillion;
+	stats->transit.meanTransit = ntohl(server->extend.meanTransit1);
+	stats->transit.meanTransit += ntohl(server->extend.meanTransit2) / (double)rMillion;
+	stats->transit.m2Transit = ntohl(server->extend.m2Transit1);
+	stats->transit.m2Transit += ntohl(server->extend.m2Transit2) / (double)rMillion;
+	stats->transit.vdTransit = ntohl(server->extend.vdTransit1);
+	stats->transit.vdTransit += ntohl(server->extend.vdTransit2) / (double)rMillion;
+	stats->transit.cntTransit = ntohl(server->extend.cntTransit);
+	stats->cntIPG = ntohl(server->extend.cntIPG);
+	stats->IPGsum = ntohl(server->extend.IPGsum);
+    } else {
+	unsetEnhanced(stats->common);
     }
     sr_report->peer = inSettings->local;
     sr_report->size_peer = inSettings->size_local;
@@ -818,6 +816,8 @@ void write_UDP_AckFIN (struct TransferInfo *stats) {
 
 	UDP_Hdr = (struct UDP_datagram*) ackPacket;
 	int flags = HEADER_VERSION1;
+	if (isEnhanced(stats->common) || isTripTime(stats->common))
+	    flags |= SERVER_HEADER_EXTEND;
 #ifdef HAVE_INT64_T
 	flags |=  HEADER_SEQNO64B;
 #endif
@@ -840,7 +840,7 @@ void write_UDP_AckFIN (struct TransferInfo *stats) {
 	}
 	hdr->base.jitter1      = htonl((long) stats->jitter);
 	hdr->base.jitter2      = htonl((long) ((stats->jitter - (long)stats->jitter) * rMillion));
-	flags |=  SERVER_HEADER_EXTEND;
+
 	hdr->extend.minTransit1  = htonl((long) stats->transit.totminTransit);
 	hdr->extend.minTransit2  = htonl((long) ((stats->transit.totminTransit - (long)stats->transit.totminTransit) * rMillion));
 	hdr->extend.maxTransit1  = htonl((long) stats->transit.totmaxTransit);
