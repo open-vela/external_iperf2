@@ -299,6 +299,7 @@ void Settings_Initialize (struct thread_Settings *main) {
     //main->mDomain     = kMode_IPv4;    // -V,
     //main->mSuggestWin = false;         // -W,  Suggest the window size.
     main->mListenerTimeout = -1;         //
+    main->mKeyCheck = true;
 #if (HAVE_DECL_SO_DONTROUTE) && (HAVE_DEFAULT_DONTROUTE_ON)
     setDontRoute(main);
 #endif
