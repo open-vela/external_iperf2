@@ -61,6 +61,7 @@
 // forward declarations found in Settings.hpp
 struct thread_Settings;
 struct server_hdr;
+
 #include "Settings.hpp"
 
 #define NUM_REPORT_STRUCTS 10000
@@ -197,6 +198,7 @@ union SendReadStats {
 struct ReportCommon {
     enum ThreadMode ThreadMode;
     enum ReportMode ReportMode;
+    bool KeyCheck;
     int flags;
     int flags_extend;
     int threads;
