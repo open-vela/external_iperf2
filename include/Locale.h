@@ -283,6 +283,8 @@ extern const char report_peer[];
 
 extern const char report_peer_dev[];
 
+extern const char report_peer_fail[];
+
 extern const char report_mss_unsupported[];
 
 extern const char report_mss[];

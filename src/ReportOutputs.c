@@ -1180,28 +1180,43 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 	}
 #endif
 #ifdef HAVE_IPV6
-	if (isEnhanced(report->common) && report->common->Ifrname && (strlen(report->common->Ifrname) < SNBUFFERSIZE-strlen(b))) {
-	    printf(report_peer_dev, report->common->transferIDStr, local_addr, report->common->Ifrname, \
-		   (local->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)local)->sin_port) : \
-		    ntohs(((struct sockaddr_in6*)local)->sin6_port)), \
-		   remote_addr, (peer->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)peer)->sin_port) : \
-				 ntohs(((struct sockaddr_in6*)peer)->sin6_port)), outbuffer);
+	if (report->common->KeyCheck) {
+	    if (isEnhanced(report->common) && report->common->Ifrname && (strlen(report->common->Ifrname) < SNBUFFERSIZE-strlen(b))) {
+		printf(report_peer_dev, report->common->transferIDStr, local_addr, report->common->Ifrname, \
+		       (local->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)local)->sin_port) : \
+			ntohs(((struct sockaddr_in6*)local)->sin6_port)), \
+		       remote_addr, (peer->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)peer)->sin_port) : \
+				     ntohs(((struct sockaddr_in6*)peer)->sin6_port)), outbuffer);
+	    } else {
+		printf(report_peer, report->common->transferIDStr, local_addr, \
+		       (local->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)local)->sin_port) : \
+			ntohs(((struct sockaddr_in6*)local)->sin6_port)), \
+		       remote_addr, (peer->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)peer)->sin_port) : \
+				     ntohs(((struct sockaddr_in6*)peer)->sin6_port)), outbuffer);
+	    }
 	} else {
-	    printf(report_peer, report->common->transferIDStr, local_addr, \
+	    printf(report_peer_fail, local_addr, \
 		   (local->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)local)->sin_port) : \
 		    ntohs(((struct sockaddr_in6*)local)->sin6_port)), \
 		   remote_addr, (peer->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)peer)->sin_port) : \
 				 ntohs(((struct sockaddr_in6*)peer)->sin6_port)), outbuffer);
 	}
+
 #else
-	if (isEnhanced(report->common) && report->common->Ifrname  && (strlen(report->common->Ifrname) < SNBUFFERSIZE-strlen(b))) {
-	    printf(report_peer_dev, report->common->transferIDStr, local_addr, report->common->Ifrname, \
-		   local_addr, (local->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)local)->sin_port) : 0), \
-		   remote_addr, (peer->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)peer)->sin_port) :  0), \
-		   outbuffer);
+	if (report->common->KeyCheck) {
+	    if (isEnhanced(report->common) && report->common->Ifrname  && (strlen(report->common->Ifrname) < SNBUFFERSIZE-strlen(b))) {
+		printf(report_peer_dev, report->common->transferIDStr, local_addr, report->common->Ifrname, \
+		       local_addr, (local->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)local)->sin_port) : 0), \
+		       remote_addr, (peer->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)peer)->sin_port) :  0), \
+		       outbuffer);
+	    } else {
+		printf(report_peer, report->common->transferIDStr, \
+		       local_addr, (local->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)local)->sin_port) : 0), \
+		       remote_addr, (peer->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)peer)->sin_port) :  0), \
+		       outbuffer);
+	    }
 	} else {
-	    printf(report_peer, report->common->transferIDStr, \
-		   local_addr, (local->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)local)->sin_port) : 0), \
+	    printf(report_peer_fail, local_addr, (local->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)local)->sin_port) : 0), \
 		   remote_addr, (peer->sa_family == AF_INET ? ntohs(((struct sockaddr_in*)peer)->sin_port) :  0), \
 		   outbuffer);
 	}

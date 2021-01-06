@@ -95,6 +95,7 @@ static void common_copy (struct ReportCommon **common, struct thread_Settings *i
     (*common)->flags_extend = inSettings->flags_extend;
     (*common)->ThreadMode = inSettings->mThreadMode;
     (*common)->ReportMode = inSettings->mReportMode;
+    (*common)->KeyCheck = inSettings->mKeyCheck;
     (*common)->Format = inSettings->mFormat;
     (*common)->TTL = inSettings->mTTL;
     // copy some traffic related settings
@@ -506,6 +507,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
     case kMode_Server :
 	if (isUDP(inSettings)) {
 	    ireport->packet_handler = reporter_handle_packet_server_udp;
+	    ireport->transfer_protocol_handler = reporter_transfer_protocol_server_udp;
 	    if ((inSettings->mIntervalMode == kInterval_Frames) && isIsochronous(inSettings)) {
 		ireport->transfer_interval_handler = reporter_condprint_frame_interval_report_server_udp;
 	    } else {

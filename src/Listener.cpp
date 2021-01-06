@@ -959,18 +959,19 @@ bool Listener::apply_client_settings (thread_Settings *server) {
 
 inline bool Listener::test_permit_key(uint32_t flags, thread_Settings *server, int keyoffset) {
     if (!(flags & HEADER_KEYCHECK)) {
-	fprintf(stderr, "REJECT: no key found\n");
+	server->mKeyCheck= false;
 	return false;
     }
     struct permitKey *thiskey = (struct permitKey *)(mBuf + (keyoffset - sizeof(thiskey->length)));
     int keylen = ntohs(thiskey->length);
     if ((keylen < MIN_PERMITKEY_LEN) || (keylen > MAX_PERMITKEY_LEN)) {
-	fprintf(stderr, "REJECT: key length error (%d)\n", keylen);
+	server->mKeyCheck= false;
+//	fprintf(stderr, "REJECT: key length bounds error (%d)\n", keylen);
 	return false;
     }
     if (keylen != (int) strlen(server->mPermitKey)) {
-	fprintf(stderr, "REJECT: key length mismatch (%d!=%d)\n", \
-		keylen, (int) strlen(server->mPermitKey));
+	server->mKeyCheck= false;
+//	fprintf(stderr, "REJECT: key length mismatch (%d!=%d)\n", keylen, (int) strlen(server->mPermitKey));
 	return false;
     }
     if (!isUDP(server)) {
@@ -978,16 +979,13 @@ inline bool Listener::test_permit_key(uint32_t flags, thread_Settings *server, i
 	FAIL_errno((n < (keyoffset + keylen)), "read key", server);
 	server->skip = n;
     }
-    int readkeylen = strnlen(thiskey->value, MAX_PERMITKEY_LEN + 1);
-    if ((readkeylen < MIN_PERMITKEY_LEN) || (readkeylen > MAX_PERMITKEY_LEN)) {
-	fprintf(stderr, "REJECT: key length read error\n");
-	return false;
-    }
     strncpy(server->mPermitKey, thiskey->value, MAX_PERMITKEY_LEN + 1);
     if (strncmp(server->mPermitKey, mSettings->mPermitKey, keylen) != 0) {
-	fprintf(stderr, "REJECT: key value mismatch per %s\n", thiskey->value);
+	server->mKeyCheck= false;
+//	fprintf(stderr, "REJECT: key value mismatch per %s\n", thiskey->value);
 	return false;
     }
+    server->mKeyCheck= true;
     return true;
 }
 
@@ -1092,8 +1090,8 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 			goto DONE;
 		    }
 		} else if (flags & HEADER_KEYCHECK) {
-		    fprintf(stderr, "REJECT: client request includes a permit-key but none set on the server\n");
 		    rc = false;
+		    server->mKeyCheck = false;
 		    goto DONE;
 		}
 		struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr*) mBuf;

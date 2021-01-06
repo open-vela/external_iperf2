@@ -490,6 +490,9 @@ const char report_peer [] =
 const char report_peer_dev [] =
 "%slocal %s%%%s port %u connected with %s port %u%s\n";
 
+const char report_peer_fail [] =
+"[drop] local %s port %u connection with %s port %u%s (permit key fail)\n";
+
 const char report_mss_unsupported[] =
 "%sMSS and MTU size unknown (TCP_MAXSEG not supported)\n";
 
