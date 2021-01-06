@@ -771,6 +771,7 @@ struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings
 	stats->cntDatagrams = ntohl(server->base.datagrams);
     }
     if ((flags & SERVER_HEADER_EXTEND) != 0) {
+	setEnhanced(stats->common);
 	stats->transit.minTransit = ntohl(server->extend.minTransit1);
 	stats->transit.minTransit += ntohl(server->extend.minTransit2) / (double)rMillion;
 	stats->transit.maxTransit = ntohl(server->extend.maxTransit1);

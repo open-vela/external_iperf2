@@ -1293,6 +1293,10 @@ void reporter_peerversion (struct ConnectionInfo *report, uint32_t upper, uint32
 
 void reporter_print_server_relay_report (struct ServerRelay *report) {
     printf(server_reporting, report->info.common->transferID);
-    udp_output_read(&report->info);
+    if (!isEnhanced(report->info.common)) {
+	udp_output_read(&report->info);
+    } else {
+	udp_output_read_enhanced(&report->info);
+    }
     fflush(stdout);
 }
