@@ -552,7 +552,11 @@ void Client::RunTCP (void) {
 	if (isTripTime(mSettings) || isIsochronous(mSettings)) {
 	    if (!burst_remaining) {
 		if (framecounter) {
-		    burst_remaining = (int) (lognormal(mSettings->mMean,mSettings->mVariance)) / (mSettings->mFPS * 8);
+		    if (mSettings->mMean > 0) {
+			burst_remaining = (int) (lognormal(mSettings->mMean,mSettings->mVariance)) / (mSettings->mFPS * 8);
+		    } else {
+			burst_remaining = mSettings->mBufLen;
+		    }
 		    if (burst_remaining < (int) sizeof(struct TCP_burst_payload))
 			burst_remaining = (int) sizeof(struct TCP_burst_payload);
 		    burst_id = framecounter->wait_tick();
