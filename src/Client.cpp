@@ -289,6 +289,26 @@ int Client::StartSynch (void) {
     // check for an epoch based start time
     if (!isServerReverse(mSettings)) {
 	reportstruct->packetLen = SendFirstPayload();
+	// Reverse UDP tests need to retry "first sends" a few times
+	// before going to server or read mode
+	if (isReverse(mSettings) && isUDP(mSettings)) {
+	    reportstruct->packetLen = 0;
+	    fd_set set;
+	    struct timeval timeout;
+	    int resend_udp = 100;
+	    while (--resend_udp > 0) {
+		FD_ZERO(&set);
+		FD_SET(mySocket, &set);
+		timeout.tv_sec = 0;
+		timeout.tv_usec = rand() % 20000; // randomize IPG a bit
+		if (select(mySocket + 1, &set, NULL, NULL, &timeout) == 0) {
+		    SendFirstPayload();
+		    // printf("**** resend sock=%d count=%d\n", mySocket, resend_udp);
+		} else {
+		    break;
+		}
+	    }
+	}
 	if (isTxStartTime(mSettings)) {
 	    clock_usleep_abstime(&mSettings->txstart_epoch);
 	} else if (isTxHoldback(mSettings)) {
