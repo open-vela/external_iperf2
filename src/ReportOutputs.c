@@ -1026,7 +1026,7 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
 	       (isUDP(report->common) ? "UDP" : "TCP"), report->common->Port, report->pid, \
 	       report->common->Ifrnametx, (!report->common->threads ? 1 : report->common->threads));
     }
-    if (isEnhanced(report->common) && !isUDP(report->common)) {
+    if ((isEnhanced(report->common) || isNearCongest(report->common)) && !isUDP(report->common)) {
 	byte_snprintf(outbuffer, sizeof(outbuffer), report->common->BufLen, 'B');
 	outbuffer[(sizeof(outbuffer)-1)] = '\0';
 	printf("%s: %s\n", client_write_size, outbuffer);

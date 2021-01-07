@@ -172,7 +172,7 @@ send isochronous traffic with frequency frames per second and load defined by me
 Set 1 to limit traffic to the local network only (through the use of SO_DONTROUTE) set to zero otherwise with optional override of compile time default (see configure --default-localonly)
 .TP
 .BR "    --near-congestion[=\fIn\fR]"
-Enable TCP write rate limiting per the sampled RTT. The delay is applied after the -l number of bytes have completed. The optional value is the multiplier to the RTT and defines the time delay. This value defaults to 0.5 if it is not set. Values less than 1 are supported but the value cannot be negative. This is an experimental feature. It is not likely stable on live networks. Suggested use is over controlled test networks.
+Enable TCP write rate limiting per the sampled RTT. The delay is applied after the -l number of bytes have completed. The optional value is the multiplier to the RTT and defines the time delay. This value defaults to 0.5 if it is not set. Values less than 1 are supported but the value cannot be negative. This is an experimental feature. It is not likely stable on live networks. Suggested use is over controlled test networks. Requires --trip-times.
 .TP
 .TP
 .BR "    --no-connect-sync "
