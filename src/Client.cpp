@@ -634,7 +634,6 @@ void Client::RunNearCongestionTCP (void) {
     now.setnow();
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
-    int nearcongestion_samplecounter = 0;
     while (InProgress()) {
         if (isModeAmount(mSettings)) {
 	    reportstruct->packetLen = ((mSettings->mAmount < (unsigned) mSettings->mBufLen) ? mSettings->mAmount : mSettings->mBufLen);
@@ -655,7 +654,6 @@ void Client::RunNearCongestionTCP (void) {
 	    int writelen = (mSettings->mBufLen > burst_remaining) ? burst_remaining : mSettings->mBufLen;
 	    reportstruct->packetLen = write(mySocket, mBuf, writelen);
 	    assert(reportstruct->packetLen >= (intmax_t) sizeof(struct TCP_burst_payload));
-	    ++nearcongestion_samplecounter;
 	    goto ReportNow;
 	}
 	if (reportstruct->packetLen > burst_remaining) {
@@ -669,6 +667,7 @@ void Client::RunNearCongestionTCP (void) {
 	reportstruct->packetTime.tv_usec = now.getUsecs();
 	reportstruct->sentTime = reportstruct->packetTime;
       ReportNow:
+	reportstruct->transit_ready = 0;
 	if (reportstruct->packetLen < 0) {
 	    if (NONFATALTCPWRITERR(errno)) {
 		reportstruct->errwrite=WriteErrAccount;
@@ -685,28 +684,22 @@ void Client::RunNearCongestionTCP (void) {
 	    reportstruct->emptyreport = 0;
 	    totLen += reportstruct->packetLen;
 	    reportstruct->errwrite=WriteNoErr;
-	    if (isTripTime(mSettings)) {
-		burst_remaining -= reportstruct->packetLen;
-		if (burst_remaining > 0) {
-		    reportstruct->transit_ready = 0;
-		} else {
-		    reportstruct->transit_ready = 1;
-		}
+	    burst_remaining -= reportstruct->packetLen;
+	    if (burst_remaining <= 0) {
+		reportstruct->transit_ready = 1;
 	    }
 	}
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-	if (nearcongestion_samplecounter) {
-	    nearcongestion_samplecounter = 0;
-	    if (myReportPacket(true)) {
-		int delaytime = (int) ceil((double)my_tcpi_stats.tcpi_rtt * mSettings->rtt_nearcongest_divider);
+	// apply placing after write burst completes
+	if (reportstruct->transit_ready && myReportPacket(true)) {
+	    int pacing_timer = (int) ceil((double)my_tcpi_stats.tcpi_rtt * mSettings->rtt_nearcongest_divider);
 //		printf("**** delaytime = %d\n", delaytime);
-		delay_loop(delaytime);
-	    }
+	    delay_loop(pacing_timer);
 	} else
 #endif
-	    {
-		myReportPacket();
-	    }
+        {
+	   myReportPacket();
+        }
 	if (isModeAmount(mSettings) && !reportstruct->emptyreport) {
 	    /* mAmount may be unsigned, so don't let it underflow! */
 	    if (mSettings->mAmount >= (unsigned long) (reportstruct->packetLen)) {
