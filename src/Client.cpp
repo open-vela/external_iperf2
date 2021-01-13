@@ -287,7 +287,9 @@ int Client::StartSynch (void) {
     // o First is an absolute start time per unix epoch format
     // o Second is a holdback, a relative amount of seconds between the connect and data xfers
     // check for an epoch based start time
-    if (!isServerReverse(mSettings)) {
+
+    if (!isServerReverse(mSettings) && \
+	(isReverse(mSettings) || isTxStartTime(mSettings) || isTxHoldback(mSettings))) {
 	reportstruct->packetLen = SendFirstPayload();
 	// Reverse UDP tests need to retry "first sends" a few times
 	// before going to server or read mode
@@ -601,7 +603,7 @@ void Client::RunTCP (void) {
 	    reportstruct->packetLen = 0;
 	    reportstruct->emptyreport = 1;
 	} else {
-	    reportstruct->emptyreport = 0;
+	    reportstruct->emptyreport = reportstruct->packetLen ? 0 : 1;
 	    totLen += reportstruct->packetLen;
 	    reportstruct->errwrite=WriteNoErr;
 	    if (isTripTime(mSettings) || isIsochronous(mSettings)) {
@@ -1334,8 +1336,8 @@ void Client::AwaitServerCloseEvent (void) {
     if (amount_usec < MINAWAITCLOSEUSECS)
 	amount_usec = MINAWAITCLOSEUSECS;
     SetSocketOptionsReceiveTimeout(mSettings, amount_usec);
-    char x;
-    int rc = recv(mySocket, &x, 1, MSG_PEEK);
+    int rc;
+    while ((rc = recv(mySocket, mBuf, mSettings->mBufLen, 0) > 0)) {};
     if (rc < 0)
 	WARN_errno(1, "client await server close");
 #ifdef HAVE_THREAD_DEBUG
