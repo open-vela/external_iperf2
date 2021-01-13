@@ -345,11 +345,11 @@ void Settings_Copy (struct thread_Settings *from, struct thread_Settings **into,
 	    strcpy((*into)->mSSMMulticastStr, from->mSSMMulticastStr);
 	}
 	if (from->mIfrname != NULL) {
-	    (*into)->mIfrname = (char *) calloc(1, strlen(from->mIfrname) + 1);
+	    (*into)->mIfrname = (char *) calloc(strlen(from->mIfrname) + 1, sizeof(char));
 	    strcpy((*into)->mIfrname, from->mIfrname);
 	}
 	if (from->mIfrnametx != NULL) {
-	    (*into)->mIfrnametx = (char *) calloc(1, strlen(from->mIfrnametx) + 1);
+	    (*into)->mIfrnametx = (char *) calloc(strlen(from->mIfrnametx) + 1, sizeof(char));
 	    strcpy((*into)->mIfrnametx, from->mIfrnametx);
 	}
 	if (from->mIsochronousStr != NULL) {
@@ -1431,7 +1431,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
     // Parse -B addresses
     if (mExtSettings->mLocalhost) {
 	if (((results = strtok(mExtSettings->mLocalhost, "%")) != NULL) && ((results = strtok(NULL, "%")) != NULL)) {
-	    mExtSettings->mIfrname = (char *) calloc(1,strlen(results) + 1);
+	    mExtSettings->mIfrname = (char *) calloc(strlen(results) + 1, sizeof(char));
 	    strcpy(mExtSettings->mIfrname, results);
 	    if (mExtSettings->mThreadMode == kMode_Client) {
 	        fprintf(stderr, "WARNING: Client cannot set bind device %s via -B consider using -c\n", mExtSettings->mIfrname);
@@ -1468,7 +1468,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
     if (mExtSettings->mThreadMode == kMode_Client) {
 	mExtSettings->mIfrnametx = NULL; // default off SO_BINDTODEVICE
 	if (((results = strtok(mExtSettings->mHost, "%")) != NULL) && ((results = strtok(NULL, "%")) != NULL)) {
-	    mExtSettings->mIfrnametx = (char *) calloc(1,strlen(results) + 1);
+	    mExtSettings->mIfrnametx = (char *) calloc(strlen(results) + 1, sizeof(char));
 	    strcpy(mExtSettings->mIfrnametx, results);
 	}
 	if (isIPV6(mExtSettings))
