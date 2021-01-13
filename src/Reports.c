@@ -170,28 +170,28 @@ void setTransferID (struct thread_Settings *inSettings, int role_reversal) {
 		len = snprintf(NULL, 0, "[%s(*%d)] ", \
 			       inSettings->mPermitKey, inSettings->mTransferID);
 		inSettings->mTransferIDStr = (char *) calloc(len + 1, sizeof(char));
-		len = snprintf(inSettings->mTransferIDStr, len, "[%s(*%d)] ", \
+		len = sprintf(inSettings->mTransferIDStr, "[%s(*%d)] ", \
 			       inSettings->mPermitKey, inSettings->mTransferID);
 	    } else if (inSettings->mTransferID < 10) {
 		len = snprintf(NULL, 0, "[ *%d] ", inSettings->mTransferID);
 		inSettings->mTransferIDStr = (char *) calloc(len + 1, sizeof(char));
-		len = snprintf(inSettings->mTransferIDStr, len, "[ *%d] ", inSettings->mTransferID);
+		len = sprintf(inSettings->mTransferIDStr, "[ *%d] ", inSettings->mTransferID);
 	    } else {
 		len = snprintf(NULL, 0, "[*%d] ", inSettings->mTransferID);
 		inSettings->mTransferIDStr = (char *) calloc(len + 1, sizeof(char));
-		len = snprintf(inSettings->mTransferIDStr, len, "[*%d] ", inSettings->mTransferID);
+		len = sprintf(inSettings->mTransferIDStr, "[*%d] ", inSettings->mTransferID);
 	    }
 #endif
 	} else if (isPermitKey(inSettings) && (inSettings->mPermitKey[0] != '\0')) {
 	    len = snprintf(NULL, 0, "[%s(%d)] ", \
 			   inSettings->mPermitKey, inSettings->mTransferID);
 	    inSettings->mTransferIDStr = (char *) calloc(len + 1, sizeof(char));
-	    len = snprintf(inSettings->mTransferIDStr, len, "[%s(%d)] ", \
+	    len = sprintf(inSettings->mTransferIDStr, "[%s(%d)] ", \
 			   inSettings->mPermitKey, inSettings->mTransferID);
 	} else  {
 	    len = snprintf(NULL, 0, "[%3d] ", inSettings->mTransferID);
-	    inSettings->mTransferIDStr = (char *) calloc(len + 1, sizeof(char));
-	    len = snprintf(inSettings->mTransferIDStr, len, "[%3d] ", inSettings->mTransferID);
+	    inSettings->mTransferIDStr = (char *) calloc(len+1, sizeof(char));
+	    len = sprintf(inSettings->mTransferIDStr, "[%3d] ", inSettings->mTransferID);
 	}
     }
 }
