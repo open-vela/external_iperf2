@@ -1231,10 +1231,6 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		fprintf(stderr, "ERROR: option of --near-congestion and -b rate limited are mutually exclusive\n");
 		bail = true;
 	    }
-	    if (!isTripTime(mExtSettings) && isNearCongest(mExtSettings)) {
-		fprintf(stderr, "ERROR: option of --near-congestion requires --trip-times option\n");
-		bail = true;
-	    }
 #endif
 	    if (isBWSet(mExtSettings) && ((mExtSettings->mAppRate / 8) < (uintmax_t) mExtSettings->mBufLen)) {
 		fprintf(stderr, "ERROR: option -b and -l of %d are incompatible, consider setting -l to %d or lower\n", \

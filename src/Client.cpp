@@ -644,7 +644,6 @@ void Client::RunNearCongestionTCP (void) {
 	} else {
 	    reportstruct->packetLen = mSettings->mBufLen;
 	}
-	// Note that TripTime and NearCongestion are known to be set
 	if (!burst_remaining) {
 	    burst_remaining = mSettings->mBufLen;
 	    // mAmount check
