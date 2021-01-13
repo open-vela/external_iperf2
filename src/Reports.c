@@ -62,7 +62,7 @@ static int transferid_counter = 0;
 
 static inline void my_str_copy(char **dst, char *src) {
     if (src) {
-	*dst = (char *) calloc(1, (strlen(src) + 1));
+        *dst = (char *) calloc(strlen(src) + 1, sizeof(char));
 	if (*dst == NULL) {
 	    fprintf(stderr, "Out of Memory!!\n");
 	    exit(1);
@@ -169,32 +169,30 @@ void setTransferID (struct thread_Settings *inSettings, int role_reversal) {
 	    if (isPermitKey(inSettings) && (inSettings->mPermitKey[0] != '\0')) {
 		len = snprintf(NULL, 0, "[%s(*%d)] ", \
 			       inSettings->mPermitKey, inSettings->mTransferID);
-		inSettings->mTransferIDStr = (char *) calloc(1, len + 1);
-		len = snprintf(inSettings->mTransferIDStr, len + 1, "[%s(*%d)] ", \
+		inSettings->mTransferIDStr = (char *) calloc(len + 1, sizeof(char));
+		len = snprintf(inSettings->mTransferIDStr, len, "[%s(*%d)] ", \
 			       inSettings->mPermitKey, inSettings->mTransferID);
 	    } else if (inSettings->mTransferID < 10) {
 		len = snprintf(NULL, 0, "[ *%d] ", inSettings->mTransferID);
-		inSettings->mTransferIDStr = (char *) calloc(1, len + 1);
-		len = snprintf(inSettings->mTransferIDStr, len + 1, "[ *%d] ", inSettings->mTransferID);
+		inSettings->mTransferIDStr = (char *) calloc(len + 1, sizeof(char));
+		len = snprintf(inSettings->mTransferIDStr, len, "[ *%d] ", inSettings->mTransferID);
 	    } else {
 		len = snprintf(NULL, 0, "[*%d] ", inSettings->mTransferID);
-		inSettings->mTransferIDStr = (char *) calloc(1, len + 1);
-		len = snprintf(inSettings->mTransferIDStr, len + 1, "[*%d] ", inSettings->mTransferID);
+		inSettings->mTransferIDStr = (char *) calloc(len + 1, sizeof(char));
+		len = snprintf(inSettings->mTransferIDStr, len, "[*%d] ", inSettings->mTransferID);
 	    }
 #endif
 	} else if (isPermitKey(inSettings) && (inSettings->mPermitKey[0] != '\0')) {
 	    len = snprintf(NULL, 0, "[%s(%d)] ", \
 			   inSettings->mPermitKey, inSettings->mTransferID);
-	    inSettings->mTransferIDStr = (char *) calloc(1, len + 1);
-	    len = snprintf(inSettings->mTransferIDStr, len + 1, "[%s(%d)] ", \
+	    inSettings->mTransferIDStr = (char *) calloc(len + 1, sizeof(char));
+	    len = snprintf(inSettings->mTransferIDStr, len, "[%s(%d)] ", \
 			   inSettings->mPermitKey, inSettings->mTransferID);
 	} else  {
 	    len = snprintf(NULL, 0, "[%3d] ", inSettings->mTransferID);
-	    inSettings->mTransferIDStr = (char *) calloc(1, len + 1);
-	    len = snprintf(inSettings->mTransferIDStr, len + 1, "[%3d] ", inSettings->mTransferID);
+	    inSettings->mTransferIDStr = (char *) calloc(len + 1, sizeof(char));
+	    len = snprintf(inSettings->mTransferIDStr, len, "[%3d] ", inSettings->mTransferID);
 	}
-	// force a null for string termination
-	inSettings->mTransferIDStr[len + 1] = '\0';
     }
 }
 
