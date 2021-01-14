@@ -259,14 +259,17 @@ inline bool Client::myReportPacket (bool sample_tcpi) {
     } else {
 	ReportPacket(myReport, reportstruct, NULL);
     }
+    reportstruct->packetLen = 0;
     return rc;
 }
 inline void Client::myReportPacket (void) {
     ReportPacket(myReport, reportstruct, NULL);
+    reportstruct->packetLen = 0;
 }
 #else
 inline void Client::myReportPacket (void) {
     ReportPacket(myReport, reportstruct);
+    reportstruct->packetLen = 0;
 }
 #endif
 
@@ -369,7 +372,6 @@ inline void Client::SetFullDuplexReportStartTime (void) {
     thread_debug("Client fullduplex report start=%ld.%ld next=%ld.%ld", fullduplexstats->ts.startTime.tv_sec, fullduplexstats->ts.startTime.tv_usec, fullduplexstats->ts.nextTime.tv_sec, fullduplexstats->ts.nextTime.tv_usec);
 #endif
 }
-
 inline void Client::SetReportStartTime (void) {
     assert(myReport!=NULL);
     now.setnow();
@@ -615,9 +617,6 @@ void Client::RunTCP (void) {
 		}
 	    }
 	}
-	if (!one_report) {
-	    myReportPacket();
-	}
 	if (isModeAmount(mSettings) && !reportstruct->emptyreport) {
 	    /* mAmount may be unsigned, so don't let it underflow! */
 	    if (mSettings->mAmount >= (unsigned long) (reportstruct->packetLen)) {
@@ -625,6 +624,9 @@ void Client::RunTCP (void) {
 	    } else {
 		mSettings->mAmount = 0;
 	    }
+	}
+	if (!one_report) {
+	    myReportPacket();
 	}
     }
     FinishTrafficActions();
@@ -694,6 +696,14 @@ void Client::RunNearCongestionTCP (void) {
 		reportstruct->transit_ready = 1;
 	    }
 	}
+	if (isModeAmount(mSettings) && !reportstruct->emptyreport) {
+	    /* mAmount may be unsigned, so don't let it underflow! */
+	    if (mSettings->mAmount >= (unsigned long) (reportstruct->packetLen)) {
+		mSettings->mAmount -= (unsigned long) (reportstruct->packetLen);
+	    } else {
+		mSettings->mAmount = 0;
+	    }
+	}
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 	// apply placing after write burst completes
 	if (reportstruct->transit_ready && myReportPacket(true)) {
@@ -705,14 +715,6 @@ void Client::RunNearCongestionTCP (void) {
         {
 	   myReportPacket();
         }
-	if (isModeAmount(mSettings) && !reportstruct->emptyreport) {
-	    /* mAmount may be unsigned, so don't let it underflow! */
-	    if (mSettings->mAmount >= (unsigned long) (reportstruct->packetLen)) {
-		mSettings->mAmount -= (unsigned long) (reportstruct->packetLen);
-	    } else {
-		mSettings->mAmount = 0;
-	    }
-	}
     }
     FinishTrafficActions();
 }
@@ -800,9 +802,6 @@ void Client::RunRateLimitedTCP (void) {
 	    reportstruct->packetTime.tv_sec = time2.getSecs();
 	    reportstruct->packetTime.tv_usec = time2.getUsecs();
 	    reportstruct->sentTime = reportstruct->packetTime;
-	    if (!one_report) {
-		myReportPacket();
-	    }
 	    if (isModeAmount(mSettings)) {
 		/* mAmount may be unsigned, so don't let it underflow! */
 		if (mSettings->mAmount >= (unsigned long) reportstruct->packetLen) {
@@ -810,6 +809,9 @@ void Client::RunRateLimitedTCP (void) {
 		} else {
 		    mSettings->mAmount = 0;
 		}
+	    }
+	    if (!one_report) {
+		myReportPacket();
 	    }
         } else {
 	    // Use a 4 usec delay to fill tokens
@@ -1197,6 +1199,9 @@ void Client::FinishTrafficActions (void) {
     // Shutdown the TCP socket's writes as the event for the server to end its traffic loop
     if (!isUDP(mSettings)) {
 	if ((mySocket != INVALID_SOCKET) && isConnected()) {
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+	  // gettcpistats(myReport, true, NULL);
+#endif
 	    int rc = shutdown(mySocket, SHUT_WR);
 #ifdef HAVE_THREAD_DEBUG
 	    thread_debug("Client calls shutdown() SHUTW_WR on tcp socket %d", mySocket);
@@ -1205,6 +1210,9 @@ void Client::FinishTrafficActions (void) {
 	    if (!rc && !isFullDuplex(mSettings))
 		AwaitServerCloseEvent();
 	}
+	now.setnow();
+	reportstruct->packetTime.tv_sec = now.getSecs();
+	reportstruct->packetTime.tv_usec = now.getUsecs();
 	if (one_report) {
 	    /*
 	     *  For TCP and if not doing interval or enhanced reporting (needed for write accounting),
@@ -1212,8 +1220,6 @@ void Client::FinishTrafficActions (void) {
 	     *
 	     */
 	    reportstruct->packetLen = totLen;
-	    myReportPacket();
-	    reportstruct->packetLen = 0;
 	}
     } else {
 	// stop timing

@@ -76,7 +76,7 @@ struct ReportHeader *ReportRoot = NULL;
 struct ReportHeader *ReportPendingHead = NULL;
 struct ReportHeader *ReportPendingTail = NULL;
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-static void gettcpistats(struct ReporterData *data, int final, struct tcp_info *tcp_stats);
+void gettcpistats(struct ReporterData *data, int final, struct tcp_info *tcp_stats);
 #endif
 
 // Reporter's reset of stats after a print occurs
@@ -219,8 +219,7 @@ int EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
      */
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
     // tcpi stats are sampled on a final packet
-    if (isEnhanced(stats->common) && (stats->common->ThreadMode == kMode_Client) && \
-	(TimeDifference(stats->ts.nextTime, finalpacket->packetTime) < 0)) {
+    if (isEnhanced(stats->common) && (stats->common->ThreadMode == kMode_Client)) {
 	gettcpistats(report, 0, NULL);
     }
 #endif
@@ -868,7 +867,7 @@ void reporter_handle_packet_client (struct ReporterData *data, struct ReportStru
 }
 
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-static void gettcpistats (struct ReporterData *data, int final, struct tcp_info *tcp_stats) {
+void gettcpistats (struct ReporterData *data, int final, struct tcp_info *tcp_stats) {
     assert(data!=NULL);
     struct TransferInfo *stats = &data->info;
     struct TransferInfo *sumstats = (data->GroupSumReport != NULL) ? &data->GroupSumReport->info : NULL;

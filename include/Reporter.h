@@ -535,6 +535,10 @@ int reporter_process_report (struct ReportHeader *reporthdr);
 
 void setTransferID(struct thread_Settings *inSettings, int role_reversal);
 
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+void gettcpistats(struct ReporterData *data, int final, struct tcp_info *tcp_stats);
+#endif
+
 #ifdef __cplusplus
 } /* end extern "C" */
 #endif
