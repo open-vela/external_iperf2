@@ -411,7 +411,7 @@ bool Server::InitTrafficLoop (void) {
 	    n = recvn(mSettings->mSock, mBuf, mBufLen, MSG_PEEK);
 	    if (n == 0) {
 		//peer closed the socket, with no writes e.g. a connect-only test
-		return -1;
+		return false;
 	    }
 	    struct client_udp_testhdr *udp_pkt = (struct client_udp_testhdr *) mBuf;
 	    flags = ntohl(udp_pkt->base.flags);
@@ -423,7 +423,7 @@ bool Server::InitTrafficLoop (void) {
 	    if (n == 0) {
 		fprintf(stderr, "WARN: zero read on header flags\n");
 		//peer closed the socket, with no writes e.g. a connect-only test
-		return -1;
+		return false;
 	    }
 	    FAIL_errno((n < (int) sizeof(uint32_t)), "read tcp flags", mSettings);
 	    struct client_tcp_testhdr *tcp_pkt = (struct client_tcp_testhdr *) mBuf;
@@ -437,7 +437,9 @@ bool Server::InitTrafficLoop (void) {
 		mSettings->triptime_start.tv_sec = ntohl(tcp_pkt->start_fq.start_tv_sec);
 		mSettings->triptime_start.tv_usec = ntohl(tcp_pkt->start_fq.start_tv_usec);
 		reportstruct->packetLen = n;
-		reportstruct->packetID = n;
+		if (n == 0)
+		    return false;
+		reportstruct->packetID = (n > 0) ? 1 : 0;
 	    }
 	}
     } else if (isTripTime(mSettings)) {
