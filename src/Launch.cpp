@@ -161,7 +161,7 @@ void server_spawn(struct thread_Settings *thread) {
 static void clientside_client_basic (struct thread_Settings *thread, Client *theClient) {
     setTransferID(thread, 0);
     SockAddr_remoteAddr(thread);
-    theClient->my_connect(1);
+    theClient->my_connect(true);
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Client spawn thread basic (sock=%d)", thread->mSock);
 #endif
@@ -179,7 +179,7 @@ static void clientside_client_basic (struct thread_Settings *thread, Client *the
 static void clientside_client_reverse (struct thread_Settings *thread, Client *theClient) {
     setTransferID(thread, 0);
     SockAddr_remoteAddr(thread);
-    theClient->my_connect(1);
+    theClient->my_connect(true);
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Client spawn thread reverse (sock=%d)", thread->mSock);
 #endif
@@ -226,7 +226,7 @@ static void clientside_client_fullduplex (struct thread_Settings *thread, Client
     }
     assert(reverse_client != NULL);
     setTransferID(reverse_client, 1);
-    theClient->my_connect(1);
+    theClient->my_connect(true);
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Client spawn thread fullduplex (sock=%d)", thread->mSock);
 #endif
@@ -268,7 +268,7 @@ static void serverside_client_bidir (struct thread_Settings *thread, Client *the
     SockAddr_remoteAddr(thread);
     unsetNoSettReport(thread);
     setReport(thread);
-    theClient->my_connect(0);
+    theClient->my_connect(false);
     if (theClient->isConnected()) {
 	Iperf_push_host(&thread->peer, thread);
 	if (theClient->StartSynch() != -1) {
