@@ -134,7 +134,7 @@ Client::~Client () {
  * If inLocalhost is not null, bind to that address, specifying
  * which outgoing interface to use.
  * ------------------------------------------------------------------- */
-int Client::my_connect (int exit_on_fail) {
+int Client::my_connect (bool close_on_fail) {
     int rc;
     double connecttime = -1.0;
     // create an internet socket
@@ -172,7 +172,7 @@ int Client::my_connect (int exit_on_fail) {
 	    WARN_errno((rc == SOCKET_ERROR), "tcp connect");
 	    if (rc == SOCKET_ERROR) {
 		if ((--trycnt) <= 0) {
-		    if (exit_on_fail) {
+		    if (close_on_fail) {
 			close(mySocket);
 			mySocket = INVALID_SOCKET;
 		    }
@@ -421,7 +421,7 @@ void Client::ConnectPeriodic (void) {
     }
 
     do {
-	if (my_connect(0)){
+	if (my_connect(false)){
 	    int rc = close(mySocket);
 	    WARN_errno(rc == SOCKET_ERROR, "client close");
 	    mySocket = INVALID_SOCKET;

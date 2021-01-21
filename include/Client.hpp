@@ -89,7 +89,7 @@ public:
     int StartSynch(void);
     void TxDelay(void);
     void ConnectPeriodic(void);
-    int my_connect(int exit_on_fail);
+    int my_connect(bool close_on_fail);
     bool isConnected(void);
     int SendFirstPayload(void);
     int BarrierClient(struct BarrierMutex *);
