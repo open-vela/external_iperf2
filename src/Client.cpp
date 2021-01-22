@@ -134,7 +134,7 @@ Client::~Client () {
  * If inLocalhost is not null, bind to that address, specifying
  * which outgoing interface to use.
  * ------------------------------------------------------------------- */
-int Client::my_connect (bool close_on_fail) {
+bool Client::my_connect (bool close_on_fail) {
     int rc;
     double connecttime = -1.0;
     // create an internet socket
