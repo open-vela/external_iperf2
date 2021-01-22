@@ -69,7 +69,7 @@ Usage: iperf [-s|-c host] [options]\n\
        iperf [-h|--help] [-v|--version]\n\
 \n\
 Client/Server:\n\
-  -b, --bandwidth #[kmgKMG | pps]  bandwidth to send at in bits/sec or packets per second\n\
+  -b, --bandwidth #[kmgKMG | pps]  bandwidth to read/send at in bits/sec or packets/sec\n\
   -e, --enhanced    use enhanced reporting giving more tcp/udp and traffic information\n\
   -f, --format    [kmgKMG]   format to report: Kbits, Mbits, KBytes, MBytes\n\
   -i, --interval  #        seconds between periodic bandwidth reports\n\
@@ -92,7 +92,6 @@ Client/Server:\n\
 Server specific:\n\
   -s, --server             run in server mode\n\
   -1, --singleclient       run one server at a time\n\
-  -b, --bandwidth #[kmgKMG]  bandwidth to read at in bits/sec or packets per second\n\
       --histograms         enable latency histograms\n\
   -t, --time      #        time in seconds to listen for new connections as well as to receive traffic (default not set)\n\
       --udp-histogram #,#  enable UDP latency histogram(s) with bin width and count, e.g. 1,1000=1(ms),1000(bins)\n\
