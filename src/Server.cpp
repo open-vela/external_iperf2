@@ -63,7 +63,6 @@
 #include "Locale.h"
 #include "delay.h"
 #include "PerfSocket.hpp"
-#include "Write_ack.hpp"
 #include "SocketAddr.h"
 #include "payloads.h"
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
