@@ -1297,15 +1297,26 @@ void Client::AwaitServerFinPacket (void) {
             // socket ready to read, this packet size
 	    // is set by the server.  Assume it's large enough
 	    // to contain the final server packet
-            rc = read(mySocket, mBuf, MAXUDPBUF);
+	    rc = read(mySocket, mBuf, MAXUDPBUF);
+
+	    // dump any 2.0.13 client acks sent at the start of traffic
+	    if (rc == sizeof(client_hdr_ack)) {
+		struct client_hdr_ack *ack =  (struct client_hdr_ack *) mBuf;
+		if (ntohl(ack->typelen.type) == CLIENTHDRACK) {
+		    // printf("**** dump stale ack \n");
+		    continue;
+		}
+	    }
+
 	    WARN_errno(rc < 0, "read");
 	    if (rc > 0) {
 		ack_success = 1;
 #ifdef HAVE_THREAD_DEBUG
 		thread_debug("UDP client received server relay report ack (%d)", -reportstruct->packetID);
 #endif
-		if (mSettings->mReportMode != kReport_CSV)
+		if (mSettings->mReportMode != kReport_CSV) {
 		    PostReport(InitServerRelayUDPReport(mSettings, (server_hdr*) ((UDP_datagram*)mBuf + 1)));
+		}
 		break;
 	    }
         }
