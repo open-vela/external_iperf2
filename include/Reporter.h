@@ -330,7 +330,7 @@ struct TransferInfo {
     void (*output_handler) (struct TransferInfo *stats);
     int groupID;
     int threadcnt;
-    int filter_this_sample_ouput;
+    int filter_this_sample_output;
     uintmax_t cntBytes;
     intmax_t cntError;
     intmax_t cntOutofOrder;
@@ -448,7 +448,7 @@ int reporter_condprint_frame_interval_report_server_tcp(struct ReporterData *rep
 int reporter_condprint_frame_interval_report_client_tcp(struct ReporterData *reporthdr, struct ReportStruct *packet);
 //void reporter_set_timestamps_time(struct ReporterData *stats, enum TimestampType);
 
-// Reporter's interval ouput specialize routines
+// Reporter's interval output specialize routines
 void reporter_transfer_protocol_null(struct ReporterData *stats, int final);
 //void reporter_transfer_protocol_reports(struct ReporterData *stats, struct ReportStruct *packet);
 //void reporter_transfer_protocol_multireports(struct ReporterData *stats, struct ReportStruct *packet);
@@ -457,7 +457,7 @@ void reporter_transfer_protocol_client_udp(struct ReporterData *stats, int final
 void reporter_transfer_protocol_server_tcp(struct ReporterData *stats, int final);
 void reporter_transfer_protocol_server_udp(struct ReporterData *stats, int final);
 
-// Reporter's sum ouput routines (per -P > 1)
+// Reporter's sum output routines (per -P > 1)
 void reporter_transfer_protocol_sum_client_tcp(struct TransferInfo *stats, int final);
 void reporter_transfer_protocol_sum_server_tcp(struct TransferInfo *stats, int final);
 void reporter_transfer_protocol_sum_client_udp(struct TransferInfo *stats, int final);
