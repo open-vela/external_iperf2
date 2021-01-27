@@ -223,7 +223,7 @@ void SockAddr_setHostname (const char* inHostname, iperf_sockaddr *inSockAddr, i
 		    if (itr->ai_family == AF_INET) {
 			memcpy(inSockAddr, (itr->ai_addr), (itr->ai_addrlen));
 			freeaddrinfo(res);
-			found = 1;
+			found = true;
 			break;
 		    } else {
 			itr = itr->ai_next;
