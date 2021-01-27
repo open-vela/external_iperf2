@@ -169,7 +169,7 @@ static void clientside_client_basic (struct thread_Settings *thread, Client *the
 	// When -P > 1 then all threads finish connect before starting traffic
 	theClient->BarrierClient(thread->connects_done);
     if (theClient->isConnected()) {
-	if (thread->mThreads > 1)
+        if ((thread->mThreads > 1) || isSumOnly(thread))
 	    Iperf_push_host(&thread->peer, thread);
 	theClient->StartSynch();
 	theClient->Run();
@@ -196,7 +196,7 @@ static void clientside_client_reverse (struct thread_Settings *thread, Client *t
 	reverse_client->mThreadMode = kMode_Server;
 	setReverse(reverse_client);
 	setNoUDPfin(reverse_client); // disable the fin report - no need
-	if (thread->mThreads > 1)
+        if ((thread->mThreads > 1) || isSumOnly(thread))
 	    Iperf_push_host(&reverse_client->peer, reverse_client);
 	thread_start(reverse_client);
 	if (!thread_equalid(reverse_client->mTID, thread_zeroid()) && \
@@ -220,7 +220,8 @@ static void clientside_client_fullduplex (struct thread_Settings *thread, Client
     SockAddr_remoteAddr(thread);
     thread->mFullDuplexReport = InitSumReport(thread, -1, 1);
     Settings_Copy(thread, &reverse_client, 0);
-    if ((thread->mThreads > 1) || (!(thread->mThreads > 1) && !isEnhanced(thread))) {
+    if ((thread->mThreads > 1) || isSumOnly(thread) || \
+	(!(thread->mThreads > 1) && !isEnhanced(thread))) {
 	Iperf_push_host(&thread->peer, thread);
 	Iperf_push_host(&reverse_client->peer, reverse_client);
     }
