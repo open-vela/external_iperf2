@@ -179,8 +179,7 @@ void SockAddr_localAddr (struct thread_Settings *inSettings) {
 
 void SockAddr_setHostname (const char* inHostname, iperf_sockaddr *inSockAddr, int isIPv6) {
     // ..I think this works for both ipv6 & ipv4... we'll see
-#if HAVE_GETADDRINFO
-    int found = 0;
+    bool found = false;
     int ret_ga;
     struct addrinfo *res = NULL, *itr;
     struct addrinfo hints;
@@ -197,7 +196,7 @@ void SockAddr_setHostname (const char* inHostname, iperf_sockaddr *inSockAddr, i
 		    if (itr->ai_family == AF_INET6) {
 			memcpy(inSockAddr, (itr->ai_addr), (itr->ai_addrlen));
 			freeaddrinfo(res);
-			found = 1;
+			found = true;
 			break;
 		    } else {
 			itr = itr->ai_next;
@@ -240,45 +239,42 @@ void SockAddr_setHostname (const char* inHostname, iperf_sockaddr *inSockAddr, i
 	    exit(1);
 	}
     }
-#else
-    if (isIPv6) {
-	fprintf(stderr, "ERROR: gethostbyname doesn't support ipv6 (per the use of -V)\n");
-	exit(1);
+    // getaddrinfo didn't find an address, fallback to gethostbyname for v4
+    if (!found && !isIPv6) {
+	// first try just converting dotted decimal
+	// on Windows gethostbyname doesn't understand dotted decimal
+	struct sockaddr_in *sockaddr = (struct sockaddr_in *)inSockAddr;
+	int rc = inet_pton(AF_INET, inHostname, &sockaddr->sin_addr);
+	sockaddr->sin_family = AF_INET;
+	if (rc == 0) {
+	    struct hostent *hostP = gethostbyname(inHostname);
+	    if (hostP == NULL) {
+		/* this is the same as herror() but works on more systems */
+		const char* format;
+		switch (h_errno) {
+		case HOST_NOT_FOUND:
+		    format = "%s: Unknown host\n";
+		    break;
+		case NO_ADDRESS:
+		    format = "%s: No address associated with name\n";
+		    break;
+		case NO_RECOVERY:
+		    format = "%s: Unknown server error\n";
+		    break;
+		case TRY_AGAIN:
+		    format = "%s: Host name lookup failure\n";
+		    break;
+		default:
+		    format = "%s: Unknown resolver error\n";
+		    break;
+		}
+		fprintf(stderr, format, inHostname);
+		exit(1);
+		return; // TODO throw
+	    }
+	    memcpy(&sockaddr->sin_addr, *(hostP->h_addr_list), (hostP->h_length));
+	}
     }
-    // first try just converting dotted decimal
-    // on Windows gethostbyname doesn't understand dotted decimal
-    struct sockaddr_in *sockaddr = (struct sockaddr_in *)inSockAddr;
-    int rc = inet_pton(AF_INET, inHostname, &sockaddr->sin_addr);
-    sockaddr->sin_family = AF_INET;
-    if (rc == 0) {
-        struct hostent *hostP = gethostbyname(inHostname);
-        if (hostP == NULL) {
-            /* this is the same as herror() but works on more systems */
-            const char* format;
-            switch (h_errno) {
-	    case HOST_NOT_FOUND:
-		format = "%s: Unknown host\n";
-		break;
-	    case NO_ADDRESS:
-		format = "%s: No address associated with name\n";
-		break;
-	    case NO_RECOVERY:
-		format = "%s: Unknown server error\n";
-		break;
-	    case TRY_AGAIN:
-		format = "%s: Host name lookup failure\n";
-		break;
-	    default:
-		format = "%s: Unknown resolver error\n";
-		break;
-            }
-            fprintf(stderr, format, inHostname);
-            exit(1);
-            return; // TODO throw
-        }
-        memcpy(&sockaddr->sin_addr, *(hostP->h_addr_list), (hostP->h_length));
-    }
-#endif // ADDRINFO
 }
 // end setHostname
 
