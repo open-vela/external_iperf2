@@ -1140,10 +1140,6 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    fprintf(stderr, "ERROR: option of --permit-key requires a value on the client\n");
 	    bail = true;
 	}
-	if (isSumOnly(mExtSettings) && !(mExtSettings->mThreads > 1)) {
-	    fprintf(stderr, "ERROR: option of --sum-only requires -P greater than 1\n");
-	    bail = true;
-	}
 	if (isTxHoldback(mExtSettings) && isTxStartTime(mExtSettings)) {
 	    fprintf(stdout,"ERROR: options of --txstart-time and --txdelay-time are mutually exclusive\n");
 	    bail = true;

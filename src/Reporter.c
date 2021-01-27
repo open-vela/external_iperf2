@@ -554,8 +554,8 @@ int reporter_process_transfer_report (struct ReporterData *this_ireport) {
 		    sumstats->ts.packetTime = packet->packetTime;
 		}
 		if (DecrSumReportRefCounter(this_ireport->GroupSumReport) == 0) {
-		    if ((this_ireport->GroupSumReport->transfer_protocol_sum_handler) && \
-			(this_ireport->GroupSumReport->reference.maxcount > 1)) {
+		    if (this_ireport->GroupSumReport->transfer_protocol_sum_handler && \
+			((this_ireport->GroupSumReport->reference.maxcount > 1) || isSumOnly(this_ireport->info.common))) {
 			(*this_ireport->GroupSumReport->transfer_protocol_sum_handler)(&this_ireport->GroupSumReport->info, 1);
 		    }
 		    FreeSumReport(this_ireport->GroupSumReport);
@@ -1535,7 +1535,8 @@ int reporter_condprint_time_interval_report (struct ReporterData *data, struct R
 	if (sumstats) {
 	    if ((++data->GroupSumReport->threads) == data->GroupSumReport->reference.count)   {
 		data->GroupSumReport->threads = 0;
-		if (data->GroupSumReport->reference.count > 1) {
+		if ((data->GroupSumReport->reference.count > 1) || \
+		    isSumOnly(data->info.common)) {
 		    sumstats->filter_this_sample_output = 0;
 		} else {
 		    sumstats->filter_this_sample_output = 1;
