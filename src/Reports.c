@@ -216,8 +216,7 @@ void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport* sumre
 	if (isUDP(inSettings)) {
 	    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_udp;
 	    if (isSumOnly(inSettings)) {
-		sumreport->info.output_handler = (isEnhanced(inSettings) \
-						  ? udp_output_sumcnt_enhanced : udp_output_sumcnt);
+		sumreport->info.output_handler = udp_output_sumcnt_enhanced;
 	    } else if (isFullDuplex(inSettings)) {
 		sumreport->info.output_handler = udp_output_fullduplex_sum;
 	    } else {

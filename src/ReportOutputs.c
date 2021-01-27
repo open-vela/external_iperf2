@@ -83,6 +83,7 @@ static int HEADING_FLAG(report_sumcnt_bw_read_enhanced) = 0;
 static int HEADING_FLAG(report_sumcnt_bw_write_enhanced) = 0;
 static int HEADING_FLAG(report_bw_jitter_loss_enhanced_triptime) = 0;
 static int HEADING_FLAG(report_bw_jitter_loss_enhanced_isoch_triptime) = 0;
+static int HEADING_FLAG(report_sumcnt_bw_jitter_loss) = 0;
 
 void reporter_default_heading_flags (int flag) {
     HEADING_FLAG(report_bw) = flag;
@@ -105,6 +106,7 @@ void reporter_default_heading_flags (int flag) {
     HEADING_FLAG(report_sumcnt_bw_read_enhanced) = flag;
     HEADING_FLAG(report_sumcnt_bw_write_enhanced) = flag;
     HEADING_FLAG(report_udp_fullduplex) = flag;
+    HEADING_FLAG(report_sumcnt_bw_jitter_loss) = flag;
 }
 static inline void _print_stats_common (struct TransferInfo *stats) {
     assert(stats!=NULL);
@@ -646,10 +648,10 @@ void udp_output_sumcnt (struct TransferInfo *stats) {
     fflush(stdout);
 }
 void udp_output_sumcnt_enhanced (struct TransferInfo *stats) {
-    HEADING_PRINT_COND(report_sumcnt_udp_fullduplex);
+    HEADING_PRINT_COND(report_sumcnt_bw_jitter_loss);
     _print_stats_common(stats);
-    printf(report_sumcnt_udp_fullduplex_format, stats->threadcnt, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext, \
-	   stats->cntDatagrams, (stats->cntIPG && (stats->IPGsum > 0.0) ? (stats->cntIPG / stats->IPGsum) : 0.0));
+    printf(report_sumcnt_bw_jitter_loss_format, stats->threadcnt, stats->ts.iStart, stats->ts.iEnd, outbuffer, outbufferext, \
+	   stats->cntError, stats->cntDatagrams, (stats->cntIPG && (stats->IPGsum > 0.0) ? (stats->cntIPG / stats->IPGsum) : 0.0));
     if (stats->cntOutofOrder > 0) {
 	if (isSumOnly(stats->common)) {
 	    printf(report_sumcnt_outoforder,

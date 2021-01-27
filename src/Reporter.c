@@ -1172,6 +1172,8 @@ void reporter_transfer_protocol_sum_server_udp (struct TransferInfo *stats, int 
 	(*stats->output_handler)(stats);
     if (!final) {
 	stats->threadcnt = 0;
+	// there is no packet ID for sum server reports, set it to total cnt for calculation
+	stats->PacketID = stats->total.Datagrams.current;
 	reporter_reset_transfer_stats_server_udp(stats);
     }
 }
