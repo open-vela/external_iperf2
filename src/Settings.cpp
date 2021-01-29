@@ -160,6 +160,7 @@ const struct option long_options[] =
 {"peer-detect",      no_argument, NULL, 'X'},
 {"tcp-congestion", required_argument, NULL, 'Z'},
 {"histograms", optional_argument, &rxhistogram, 1},
+{"udp-histograms", optional_argument, &rxhistogram, 1}, // keep support per 2.0.13 usage
 {"l2checks", no_argument, &l2checks, 1},
 {"incr-dstip", no_argument, &incrdstip, 1},
 {"txstart-time", required_argument, &txstarttime, 1},
