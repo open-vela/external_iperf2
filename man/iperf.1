@@ -32,7 +32,7 @@ set the target bandwidth and optional standard deviation per
 .TP
 .BR -e ", " --enhanced " "
 Display enhanced output in reports otherwise use legacy report (ver
-2.0.5) formatting (see notes)
+2.0.5) formatting (see NOTES)
 .TP
 .BR -f ", " --format " " [abkmgBKMG]
 format to report: adaptive, bits, Bytes, Kbits, Mbits, Gbits, KBytes,
@@ -41,8 +41,8 @@ MBytes, GBytes (see NOTES for more)
 .BR -h ", " --help " "
 print a help synopsis
 .TP
-.BR -i ", " --interval " < \fIn\fR[p] | f >"
-sample or display interval reports every \fIn\fR seconds (default) or \fIn\fR packets (per optional p suffix.) If f is used then the interval will be each frame or burst. The frame interval reporting is experimental.  Also suggest a compile with fast-sampling, i.e. ./configure --enable-fastsampling
+.BR -i ", " --interval " < \fIt\fR | f >"
+sample or display interval reports every \fIt\fR seconds (default) or every frame or burst, i.e. if f is used then the interval will be each frame or burst. The frame interval reporting is experimental.  Also suggest a compile with fast-sampling, i.e. ./configure --enable-fastsampling
 .TP
 .BR -l ", " --len " \fIn\fR[kmKM]"
 set read/write buffer size (TCP) or length (UDP) to \fIn\fR (TCP default 128K, UDP default 1470)
@@ -214,7 +214,7 @@ time in seconds to hold back or delay after the TCP connect and prior to the soc
 set the txstart-time to \fIn\fR.\fIn\fR using unix or epoch time format (supports microsecond resolution, e.g 1536014418.123456) An example to delay one second using command substitution is iperf -c 192.168.1.10 --txstart-time $(expr $(date +%s) + 1).$(date +%N)
 .TP
 .BR -B ", " --bind " \fIip\fR | \fIip\fR:\fIport\fR | \fIipv6 -V\fR | \fI[ipv6]\fR:\fIport -V\fR"
-bind src ip addr and optional port as the source of traffic (see notes)
+bind src ip addr and optional port as the source of traffic (see NOTES)
 .TP
 .BR -F ", " --fileinput " \fIname\fR"
 input the data to be transmitted from a file
