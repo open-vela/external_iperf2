@@ -91,7 +91,16 @@ unsigned int FrameCounter::wait_tick(void) {
 #else
     int rc = clock_nanosleep(0, TIMER_ABSTIME, &txtime_ts, NULL);
 #endif
-    WARN_errno((rc!=0), "wait_tick failed per clock_nanosleep error");
+    if (rc!=0) {
+	char *warnmsg;
+	int len = snprintf(NULL, 0, "wait_tick failed (rc=%d) per clock_nanosleep error", rc);
+	if ((warnmsg = (char *) calloc((len+1), sizeof(char)))) {
+	    sprintf(warnmsg, "wait_tick failed (rc=%d) per clock_nanosleep error", rc);
+	    WARN_errno(1, warnmsg);
+	} else {
+	    WARN_errno((rc!=0), "wait_tick failed per clock_nanosleep error");
+	}
+    }
 #ifdef HAVE_THREAD_DEBUG
     // thread_debug("Client tick occurred per %ld.%ld", txtime_ts.tv_sec, txtime_ts.tv_nsec / 1000);
 #endif
