@@ -70,40 +70,43 @@ unsigned int FrameCounter::wait_tick(void) {
     Timestamp now;
     if (!slot_counter) {
       slot_counter = 1;
+      now.setnow();
       nextslotTime = now;
     } else {
       while (!now.before(nextslotTime)) {
         nextslotTime.add(period);
 	slot_counter++;
       }
-    }
-    timespec txtime_ts;
-    txtime_ts.tv_sec = nextslotTime.getSecs();
-    txtime_ts.tv_nsec = nextslotTime.getUsecs() * 1000;
-    if (lastcounter && ((slot_counter - lastcounter) > 1)) {
+      timespec txtime_ts;
+      txtime_ts.tv_sec = nextslotTime.getSecs();
+      txtime_ts.tv_nsec = nextslotTime.getUsecs() * 1000;
+      if (lastcounter && ((slot_counter - lastcounter) > 1)) {
 #ifdef HAVE_THREAD_DEBUG
-      thread_debug("Client tick slip occurred per %ld.%ld %d %d", txtime_ts.tv_sec, txtime_ts.tv_nsec / 1000, lastcounter, slot_counter);
+	thread_debug("Client tick slip occurred per %ld.%ld %d %d", txtime_ts.tv_sec, txtime_ts.tv_nsec / 1000, lastcounter, slot_counter);
 #endif
 	slip++;
-    }
+      }
 #ifndef WIN32
-    int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &txtime_ts, NULL);
+      int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &txtime_ts, NULL);
 #else
-    int rc = clock_nanosleep(0, TIMER_ABSTIME, &txtime_ts, NULL);
+      int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &txtime_ts, NULL);
 #endif
-    if (rc!=0) {
+      if (rc!=0) {
+	fprintf(stderr, "\n***Wait for %ld.%ld\n", txtime_ts.tv_sec, txtime_ts.tv_nsec);
+      
 	char *warnmsg;
 	int len = snprintf(NULL, 0, "wait_tick failed (rc=%d) per clock_nanosleep error", rc);
 	if ((warnmsg = (char *) calloc((len+1), sizeof(char)))) {
-	    sprintf(warnmsg, "wait_tick failed (rc=%d) per clock_nanosleep error", rc);
-	    WARN_errno(1, warnmsg);
+	  sprintf(warnmsg, "wait_tick failed (rc=%d) per clock_nanosleep error", rc);
+	  WARN_errno(1, warnmsg);
 	} else {
-	    WARN_errno((rc!=0), "wait_tick failed per clock_nanosleep error");
+	  WARN_errno((rc!=0), "wait_tick failed per clock_nanosleep error");
 	}
-    }
+      }
 #ifdef HAVE_THREAD_DEBUG
-    // thread_debug("Client tick occurred per %ld.%ld", txtime_ts.tv_sec, txtime_ts.tv_nsec / 1000);
+      // thread_debug("Client tick occurred per %ld.%ld", txtime_ts.tv_sec, txtime_ts.tv_nsec / 1000);
 #endif
+    }
     lastcounter = slot_counter;
     return(slot_counter);
 }
