@@ -95,8 +95,9 @@ unsigned int FrameCounter::wait_tick(void) {
 	    char *warnmsg;
 	    int len = snprintf(NULL, 0, "wait_tick failed (rc=%d) per clock_nanosleep error", rc);
 	    if ((warnmsg = (char *) calloc((len+1), sizeof(char)))) {
-		sprintf(warnmsg, "wait_tick failed (rc=%d) per clock_nanosleep error", rc);
+		sprintf(warnmsg, "wait_tick failed (rc %d) per clock_nanosleep error", rc);
 		WARN_errno(1, warnmsg);
+		free(warnmsg);
 	    } else {
 		WARN_errno((rc!=0), "wait_tick failed per clock_nanosleep error");
 	    }
