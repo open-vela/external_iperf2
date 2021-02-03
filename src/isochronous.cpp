@@ -138,7 +138,7 @@ unsigned int FrameCounter::wait_tick (void) {
     rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &txtime_ts, NULL);
   #else
     long duration = nextslotTime.subUsec(now);
-    rc = mySetWaitableTimer(10 * duration); // convert ms to 100ns
+    rc = mySetWaitableTimer(10 * duration); // convert us to 100ns
     //int rc = clock_nanosleep(0, TIMER_ABSTIME, &txtime_ts, NULL);
   #endif
     WARN_errno((rc==false), "wait_tick failed");
