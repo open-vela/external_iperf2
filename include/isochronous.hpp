@@ -57,6 +57,7 @@ namespace Isochronous {
     public :
         FrameCounter(double, Timestamp start);
         FrameCounter(double);
+        ~FrameCounter();
 	unsigned int get(void);
 	unsigned int get(long *);
 	unsigned int get(Timestamp);
@@ -68,14 +69,19 @@ namespace Isochronous {
 	void reset(void);
         Timestamp next_slot(void);
 	unsigned int slip;
-
     private :
 	double frequency;
 	Timestamp startTime;
 	Timestamp nextslotTime;
-	unsigned int period;  // units microseconds
+	unsigned int period;  // units microseconds or 100 ns
 	unsigned int lastcounter;
 	unsigned int slot_counter;
+#ifdef WIN32
+	bool mySetWaitableTimer (long delay_time);
+	HANDLE my_timer;	// Timer handle
+	LARGE_INTEGER delay;    // units is 100 nanoseconds
+#endif
+
     }; // end class FrameCounter
 }
 #endif // ISOCHRONOUS_H

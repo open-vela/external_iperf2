@@ -64,7 +64,7 @@
 static void posttimestamp(int, int);
 
 int main (int argc, char **argv) {
-    int c, count=61, frequency=60;
+    int c, count=100, frequency=100;
     float mean=1e8;
     float variance=3e7;
     bool forceslip = false;
@@ -110,6 +110,7 @@ int main (int argc, char **argv) {
 	    fc->slip = 0;
 	}
     }
+    DELETE_PTR(fc);
 }
 
 void posttimestamp (int count, int bytes) {
