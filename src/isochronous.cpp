@@ -73,13 +73,16 @@ FrameCounter::FrameCounter (double value) : frequency(value) {
     slip = 0;
 }
 
-#ifdef WIN32
+
 FrameCounter::~FrameCounter () {
+#ifdef WIN32
     /* Clean resources */
     if (my_timer)
 	CloseHandle(my_timer);
+#endif
 }
 
+#ifdef WIN32
 /* Windows sleep in 100ns units */
 bool FrameCounter::mySetWaitableTimer (long delay_time) {
     bool rc = false;
