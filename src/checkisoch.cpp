@@ -67,10 +67,11 @@ int main (int argc, char **argv) {
     int c, count=61, frequency=60;
     float mean=1e8;
     float variance=3e7;
+    bool forceslip = false;
 
     Isochronous::FrameCounter *fc = NULL;
     
-    while ((c = getopt(argc, argv, "c:f:m:v:")) != -1) {
+    while ((c = getopt(argc, argv, "c:f:m:sv:")) != -1) {
         switch (c) {
         case 'c':
             count = atoi(optarg);
@@ -80,6 +81,9 @@ int main (int argc, char **argv) {
             break;
 	case 'm':
 	    mean=byte_atof(optarg);
+	    break;
+	case 's':
+	    forceslip = true;
 	    break;
 	case 'v':
 	    variance=byte_atof(optarg);
@@ -96,7 +100,7 @@ int main (int argc, char **argv) {
     fprintf(stdout,"Timestamping %d times at %d fps\n", count, frequency);
     fflush(stdout);
     while (count-- > 0) {
-	if (count == 8) {
+	if (forceslip && count == 8) {
 	    delay_loop (1000000/frequency + 10);
 	}
 	fc->wait_tick();

@@ -393,7 +393,6 @@ struct client_udp_testhdr {
     struct isoch_payload isoch;
     struct client_hdrext_starttime_fq start_fq;
     struct client_hdrext_isoch_settings isoch_settings;
-    struct permitKey permitkey;
 };
 
 struct client_hdr_ack {
@@ -540,7 +539,7 @@ struct server_hdr {
 #define SIZEOF_UDPHDRMSG_EXT (sizeof(struct client_udp_testhdr))
 #define SIZEOF_TCPHDRMSG_V1 (sizeof(struct client_hdr_v1))
 #define SIZEOF_TCPHDRMSG_EXT (sizeof(struct client_tcp_testhdr))
-#define MINMBUFALLOCSIZE ((int) sizeof(struct client_udp_testhdr) + MAX_PERMITKEY_LEN + 1)
+#define MINMBUFALLOCSIZE (int) (sizeof(struct client_udp_testhdr))
 #define MINTRIPTIMEPLAYOAD (int) (sizeof(struct client_udp_testhdr) - sizeof(struct client_hdrext_isoch_settings))
 #ifdef __cplusplus
 } /* end extern "C" */
