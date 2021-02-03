@@ -180,7 +180,6 @@ public:
      * ------------------------------------------------------------------- */
     long delta_usec(void) {
         struct timeval previous = mTime;
-
         setnow();
         return subUsec(previous);
     }

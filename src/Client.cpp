@@ -82,6 +82,7 @@ Client::Client (thread_Settings *inSettings) {
     mBuf = NULL;
     myJob = NULL;
     myReport = NULL;
+    framecounter = NULL;
     one_report = false;
     udp_payload_minimum = 1;
     apply_first_udppkt_delay = false;
@@ -1262,6 +1263,8 @@ void Client::FinishTrafficActions (void) {
     }
     Iperf_remove_host(&mSettings->peer);
     FreeReport(myJob);
+    if (framecounter)
+	DELETE_PTR(framecounter);
 }
 
 /* -------------------------------------------------------------------
