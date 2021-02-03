@@ -101,7 +101,7 @@ bool FrameCounter::mySetWaitableTimer (long delay_time) {
 	    CloseHandle(my_timer);
 	    my_timer = NULL;
 	} else {
-	    // Wait for timer with 10 sec timeout (units ms)
+	    // Wait for timer
 	    if (WaitForSingleObject(my_timer, INFINITE)) { // 10 second timeout, units ms
 		WARN_errno(1, "WaitForSingleObject");
 	    } else {
