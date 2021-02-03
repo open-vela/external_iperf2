@@ -94,8 +94,7 @@ bin_PROGRAMS = iperf$(EXEEXT)
 @DEBUG_SYMBOLS_FALSE@am__append_3 = -O2
 @DEBUG_SYMBOLS_FALSE@am__append_4 = -O2
 @CHECKPROGRAMS_TRUE@noinst_PROGRAMS = checkdelay$(EXEEXT) \
-@CHECKPROGRAMS_TRUE@	checkpdfs$(EXEEXT) checkisoch$(EXEEXT) \
-@CHECKPROGRAMS_TRUE@	igmp_querier$(EXEEXT)
+@CHECKPROGRAMS_TRUE@	checkpdfs$(EXEEXT) checkisoch$(EXEEXT)
 @AF_PACKET_TRUE@am__append_5 = checksums.c
 subdir = src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -128,10 +127,6 @@ am__checkpdfs_SOURCES_DIST = pdfs.c checkpdfs.c stdio.c
 @CHECKPROGRAMS_TRUE@	checkpdfs.$(OBJEXT) stdio.$(OBJEXT)
 checkpdfs_OBJECTS = $(am_checkpdfs_OBJECTS)
 checkpdfs_DEPENDENCIES =
-am__igmp_querier_SOURCES_DIST = igmp_querier.c
-@CHECKPROGRAMS_TRUE@am_igmp_querier_OBJECTS = igmp_querier.$(OBJEXT)
-igmp_querier_OBJECTS = $(am_igmp_querier_OBJECTS)
-igmp_querier_LDADD = $(LDADD)
 am__iperf_SOURCES_DIST = Client.cpp Extractor.c isochronous.cpp \
 	Launch.cpp active_hosts.cpp Listener.cpp Locale.c \
 	PerfSocket.cpp Reporter.c Reports.c ReportOutputs.c Server.cpp \
@@ -177,11 +172,10 @@ am__depfiles_remade = ./$(DEPDIR)/Client.Po ./$(DEPDIR)/Extractor.Po \
 	./$(DEPDIR)/checkisoch.Po ./$(DEPDIR)/checkpdfs.Po \
 	./$(DEPDIR)/checksums.Po ./$(DEPDIR)/gnu_getopt.Po \
 	./$(DEPDIR)/gnu_getopt_long.Po ./$(DEPDIR)/histogram.Po \
-	./$(DEPDIR)/igmp_querier.Po ./$(DEPDIR)/isochronous.Po \
-	./$(DEPDIR)/main.Po ./$(DEPDIR)/packet_ring.Po \
-	./$(DEPDIR)/pdfs.Po ./$(DEPDIR)/service.Po \
-	./$(DEPDIR)/sockets.Po ./$(DEPDIR)/stdio.Po \
-	./$(DEPDIR)/tcp_window_size.Po
+	./$(DEPDIR)/isochronous.Po ./$(DEPDIR)/main.Po \
+	./$(DEPDIR)/packet_ring.Po ./$(DEPDIR)/pdfs.Po \
+	./$(DEPDIR)/service.Po ./$(DEPDIR)/sockets.Po \
+	./$(DEPDIR)/stdio.Po ./$(DEPDIR)/tcp_window_size.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -209,10 +203,10 @@ am__v_CXXLD_ = $(am__v_CXXLD_@AM_DEFAULT_V@)
 am__v_CXXLD_0 = @echo "  CXXLD   " $@;
 am__v_CXXLD_1 = 
 SOURCES = $(checkdelay_SOURCES) $(checkisoch_SOURCES) \
-	$(checkpdfs_SOURCES) $(igmp_querier_SOURCES) $(iperf_SOURCES)
+	$(checkpdfs_SOURCES) $(iperf_SOURCES)
 DIST_SOURCES = $(am__checkdelay_SOURCES_DIST) \
 	$(am__checkisoch_SOURCES_DIST) $(am__checkpdfs_SOURCES_DIST) \
-	$(am__igmp_querier_SOURCES_DIST) $(am__iperf_SOURCES_DIST)
+	$(am__iperf_SOURCES_DIST)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -468,10 +462,6 @@ checkpdfs$(EXEEXT): $(checkpdfs_OBJECTS) $(checkpdfs_DEPENDENCIES) $(EXTRA_check
 	@rm -f checkpdfs$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(checkpdfs_OBJECTS) $(checkpdfs_LDADD) $(LIBS)
 
-igmp_querier$(EXEEXT): $(igmp_querier_OBJECTS) $(igmp_querier_DEPENDENCIES) $(EXTRA_igmp_querier_DEPENDENCIES) 
-	@rm -f igmp_querier$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(igmp_querier_OBJECTS) $(igmp_querier_LDADD) $(LIBS)
-
 iperf$(EXEEXT): $(iperf_OBJECTS) $(iperf_DEPENDENCIES) $(EXTRA_iperf_DEPENDENCIES) 
 	@rm -f iperf$(EXEEXT)
 	$(AM_V_CXXLD)$(iperf_LINK) $(iperf_OBJECTS) $(iperf_LDADD) $(LIBS)
@@ -502,7 +492,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gnu_getopt.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gnu_getopt_long.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/histogram.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/igmp_querier.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isochronous.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/packet_ring.Po@am__quote@ # am--include-marker
@@ -694,7 +683,6 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/gnu_getopt.Po
 	-rm -f ./$(DEPDIR)/gnu_getopt_long.Po
 	-rm -f ./$(DEPDIR)/histogram.Po
-	-rm -f ./$(DEPDIR)/igmp_querier.Po
 	-rm -f ./$(DEPDIR)/isochronous.Po
 	-rm -f ./$(DEPDIR)/main.Po
 	-rm -f ./$(DEPDIR)/packet_ring.Po
@@ -768,7 +756,6 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/gnu_getopt.Po
 	-rm -f ./$(DEPDIR)/gnu_getopt_long.Po
 	-rm -f ./$(DEPDIR)/histogram.Po
-	-rm -f ./$(DEPDIR)/igmp_querier.Po
 	-rm -f ./$(DEPDIR)/isochronous.Po
 	-rm -f ./$(DEPDIR)/main.Po
 	-rm -f ./$(DEPDIR)/packet_ring.Po
