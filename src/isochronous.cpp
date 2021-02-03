@@ -58,8 +58,13 @@ FrameCounter::FrameCounter(double value, Timestamp start)  : frequency(value) {
     nextslotTime=start;
     lastcounter = 0;
     slot_counter = 0;
+    slip = 0;
 }
 FrameCounter::FrameCounter(double value)  : frequency(value) {
+#ifdef WIN32
+    if (!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL))
+	WARN_errno(1, "SetThreadPriority");
+#endif
     period = (unsigned int) (1000000 / frequency);
     lastcounter = 0;
     slot_counter = 0;
@@ -74,38 +79,28 @@ unsigned int FrameCounter::wait_tick(void) {
 	nextslotTime = now;
     } else {
 	while (!now.before(nextslotTime)) {
+	    now.setnow();
 	    nextslotTime.add(period);
 	    slot_counter++;
 	}
-	timespec txtime_ts;
-	txtime_ts.tv_sec = nextslotTime.getSecs();
-	txtime_ts.tv_nsec = nextslotTime.getUsecs() * 1000;
-	if (lastcounter && ((slot_counter - lastcounter) > 1)) {
-#ifdef HAVE_THREAD_DEBUG
-	    thread_debug("Client tick slip occurred per %ld.%ld %d %d", txtime_ts.tv_sec, txtime_ts.tv_nsec / 1000, lastcounter, slot_counter);
-#endif
-	    slip++;
-	}
-#ifndef WIN32
-	int rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &txtime_ts, NULL);
-#else
-	int rc = clock_nanosleep(0, TIMER_ABSTIME, &txtime_ts, NULL);
-#endif
-	if (rc!=0) {
-	    char *warnmsg;
-	    int len = snprintf(NULL, 0, "wait_tick failed (rc=%d) per clock_nanosleep error", rc);
-	    if ((warnmsg = (char *) calloc((len+1), sizeof(char)))) {
-		sprintf(warnmsg, "wait_tick failed (rc %d) per clock_nanosleep error", rc);
-		WARN_errno(1, warnmsg);
-		free(warnmsg);
-	    } else {
-		WARN_errno((rc!=0), "wait_tick failed per clock_nanosleep error");
-	    }
-	}
-#ifdef HAVE_THREAD_DEBUG
-	// thread_debug("Client tick occurred per %ld.%ld", txtime_ts.tv_sec, txtime_ts.tv_nsec / 1000);
-#endif
     }
+    timespec txtime_ts;
+    txtime_ts.tv_sec = nextslotTime.getSecs();
+    txtime_ts.tv_nsec = nextslotTime.getUsecs() * 1000;
+    if (lastcounter && ((slot_counter - lastcounter) > 1)) {
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug("Client tick slip occurred per %ld.%ld %d %d", txtime_ts.tv_sec, txtime_ts.tv_nsec / 1000, lastcounter, slot_counter);
+#endif
+	slip++;
+    }
+#ifndef WIN32
+    clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &txtime_ts, NULL);
+#else
+    clock_nanosleep(0, TIMER_ABSTIME, &txtime_ts, NULL);
+#endif
+#ifdef HAVE_THREAD_DEBUG
+    // thread_debug("Client tick occurred per %ld.%ld", txtime_ts.tv_sec, txtime_ts.tv_nsec / 1000);
+#endif
     lastcounter = slot_counter;
     return(slot_counter);
 }
