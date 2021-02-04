@@ -1291,13 +1291,13 @@ void reporter_peerversion (struct ConnectionInfo *report, uint32_t upper, uint32
 	snprintf(report->peerversion, (PEERVERBUFSIZE-10), " (peer %d.%d.%d)", rel, major, minor);
 	switch(alpha) {
 	case 0:
-	    sprintf(report->peerversion + strlen(report->peerversion) - 1,"-alpha)");
+	    sprintf(report->peerversion + strlen(report->peerversion) - 1,"-dev)");
 	    break;
 	case 1:
-	    sprintf(report->peerversion + strlen(report->peerversion) - 1,"-beta)");
+	    sprintf(report->peerversion + strlen(report->peerversion) - 1,"-rc1)");
 	    break;
 	case 2:
-	    sprintf(report->peerversion + strlen(report->peerversion) - 1,"-rc)");
+	    sprintf(report->peerversion + strlen(report->peerversion) - 1,"-rc2)");
 	    break;
 	case 3:
 	    break;
