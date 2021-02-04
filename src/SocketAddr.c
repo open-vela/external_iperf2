@@ -148,27 +148,27 @@ void SockAddr_localAddr (struct thread_Settings *inSettings) {
 	     SockAddr_setPort(&inSettings->local, inSettings->mPort);
 	 }
      } else {
-	 /* -B was set (required to receive IP multicast) */
-	  if (inSettings->mThreadMode == kMode_Client) {
-	       /* Client thread */
-	       if (inSettings->mBindPort) {
-		   /*
-		    * User specified port so use it
-		    */
-		    SockAddr_setPort(&inSettings->local, inSettings->mBindPort);
-	       } else {
-		   /*
-		    * No user specified port, let OS assign a free one
-		    */
-		    SockAddr_setPortAny (&inSettings->local);
-	       }
-	  } else {
-	      /*
-	       * Server or Listener thread, both always use -p port
-	       * any -B port will be ignored
-	       */
-	      SockAddr_setPort(&inSettings->local, inSettings->mPort);
-	  }
+	 // -B was set
+	 if (inSettings->mThreadMode == kMode_Client) {
+	     /* Client thread */
+	     if (inSettings->mBindPort) {
+		 /*
+		  * User specified port so use it
+		  */
+		 SockAddr_setPort(&inSettings->local, (inSettings->mBindPort + inSettings->incrsrcport));
+	     } else {
+		 /*
+		  * No user specified port, let OS assign a free one
+		  */
+		 SockAddr_setPortAny (&inSettings->local);
+	     }
+	 } else {
+	     /*
+	      * Server or Listener thread, both always use -p port
+	      * any -B port will be ignored
+	      */
+	     SockAddr_setPort(&inSettings->local, inSettings->mPort);
+	 }
      }
 }
 // end SocketAddr
