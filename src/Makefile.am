@@ -52,7 +52,7 @@ iperf_LDADD = $(LIBCOMPAT_LDADDS)
 
 
 if CHECKPROGRAMS
-noinst_PROGRAMS = checkdelay checkpdfs checkisoch
+noinst_PROGRAMS = checkdelay checkpdfs checkisoch igmp_querier
 checkdelay_SOURCES = checkdelay.c
 checkdelay_LDADD = $(LIBCOMPAT_LDADDS)
 checkpdfs_SOURCES = pdfs.c checkpdfs.c stdio.c
