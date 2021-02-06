@@ -8,7 +8,5 @@
 # results returned in $results
 
 run_iperf    \
-    -s --ipv6_domain -P 1 -i 1 -t 3     \
-    -c $ip6 -V -P 1 -i 1 -t 2
-
-
+    -s -P 1 -i 1 -t 3     \
+    -c $ip -P 1 --dualtest -L $lport -i 1 -t 2
