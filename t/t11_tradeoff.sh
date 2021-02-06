@@ -9,4 +9,4 @@
 
 run_iperf    \
     -s -P 1 -i 1 -t 3     \
-    -c $ip -P 1 -d -L $lport -i 1 -t 2
+    -c $ip -P 1 --tradeoff -L $lport -i 1 -t 2

@@ -9,4 +9,4 @@
 
 run_iperf    \
     -s --parallel 4 -i 1 -t 3     \
-    -c $ip --parallel 4 -i 1 -t 2
+    -c $ip -P 4 -i 1 -t 2
