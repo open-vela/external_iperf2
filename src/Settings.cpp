@@ -82,7 +82,6 @@ static int noconnectsync = 0;
 static int txholdback = 0;
 static int fqrate = 0;
 static int triptime = 0;
-static int writeack = 0;
 static int infinitetime = 0;
 static int connectonly = 0;
 static int connectretry = 0;
@@ -167,7 +166,6 @@ const struct option long_options[] =
 {"txdelay-time", required_argument, &txholdback, 1},
 {"fq-rate", required_argument, &fqrate, 1},
 {"trip-times", no_argument, &triptime, 1},
-{"write-ack", optional_argument, &writeack, 1},
 {"no-udp-fin", no_argument, &noudpfin, 1},
 {"connect-only", optional_argument, &connectonly, 1},
 {"connect-retries", required_argument, &connectretry, 1},
@@ -879,13 +877,6 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		triptime = 0;
 		setTripTime(mExtSettings);
 	    }
-	    if (writeack) {
-		writeack = 0;
-		setWriteAck(mExtSettings);
-		if (optarg) {
-		    mExtSettings->mWriteAckLen = byte_atoi(optarg);
-		}
-	    }
 	    if (noudpfin) {
 		noudpfin = 0;
 		setNoUDPfin(mExtSettings);
@@ -1417,10 +1408,6 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    }
 	}
     }
-    // See if the Write ack size should equal the write size (vs a configured or a burst size)
-    if (isWriteAck(mExtSettings) && !mExtSettings->mWriteAckLen && \
-	(mExtSettings->mThreadMode == kMode_Client) && !isIsochronous(mExtSettings))
-	mExtSettings->mWriteAckLen = mExtSettings->mBufLen;
 
     // Check for further mLocalhost (-B) and <dev> requests
     // full addresses look like 192.168.1.1:6001%eth0 or [2001:e30:1401:2:d46e:b891:3082:b939]:6001%eth0
