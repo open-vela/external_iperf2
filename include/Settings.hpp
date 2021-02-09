@@ -236,6 +236,7 @@ struct thread_Settings {
     Socklen_t size_local;
     nthread_t mTID;
     int incrdstip;
+    int incrsrcport;
     int connectonly_count;
     char* mCongestion;
     int mRXbins;
