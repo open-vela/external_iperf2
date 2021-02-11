@@ -249,7 +249,7 @@ void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport* sumre
 	    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_tcp;
 	    if (isSumOnly(inSettings)) {
 		sumreport->info.output_handler = ((isEnhanced(inSettings) && !isFullDuplex(inSettings)) ? \
-						  tcp_output_sumcnt_read_enhanced : tcp_output_sumcnt_read);
+						  tcp_output_sumcnt_write_enhanced : tcp_output_sumcnt_write);
 	    } else if (isFullDuplex(inSettings)) {
 		sumreport->info.output_handler = tcp_output_fullduplex_sum;
 	    } else {
