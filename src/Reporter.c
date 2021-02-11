@@ -1390,8 +1390,9 @@ void reporter_transfer_protocol_client_tcp (struct ReporterData *data, int final
 	stats->isochstats.cntSlips = stats->isochstats.slipcnt.current - stats->isochstats.slipcnt.prev;
     }
 
-    if ((stats->output_handler) && !(stats->filter_this_sample_output))
+    if ((stats->output_handler) && !(stats->filter_this_sample_output)) {
 	(*stats->output_handler)(stats);
+    }
     if (!final)
 	reporter_reset_transfer_stats_client_tcp(stats);
 }
