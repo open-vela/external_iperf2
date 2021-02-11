@@ -200,13 +200,13 @@ void SetFullDuplexHandlers (struct thread_Settings *inSettings, struct SumReport
     if (isUDP(inSettings)) {
 	sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_fullduplex_udp;
 	sumreport->info.output_handler = ((inSettings->mReportMode == kReport_CSV) ? NULL : \
-					  (isEnhanced(inSettings) ? udp_output_fullduplex_enhanced : \
-					   (isSumOnly(inSettings) ? udp_output_fullduplex : NULL)));
+					  (isSumOnly(inSettings) ? NULL : \
+					   (isEnhanced(inSettings) ? udp_output_fullduplex_enhanced : udp_output_fullduplex)));
     } else {
 	sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_fullduplex_tcp;
 	sumreport->info.output_handler = ((inSettings->mReportMode == kReport_CSV) ? NULL : \
-					  (isEnhanced(inSettings) ? tcp_output_fullduplex_enhanced :
-					   (isSumOnly(inSettings) ? tcp_output_fullduplex : NULL)));
+					      (isSumOnly(inSettings) ? NULL : \
+					       (isEnhanced(inSettings) ? tcp_output_fullduplex_enhanced : tcp_output_fullduplex)));
     }
 }
 
@@ -225,8 +225,7 @@ void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport* sumre
 	} else {
 	    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_server_tcp;
 	    if (isSumOnly(inSettings)) {
-		sumreport->info.output_handler = ((isEnhanced(inSettings) && !isFullDuplex(inSettings)) ? \
-						  tcp_output_sumcnt_read_enhanced : tcp_output_sumcnt_read);
+		sumreport->info.output_handler = (isEnhanced(inSettings) ? tcp_output_sumcnt_read_enhanced : tcp_output_sumcnt_read);
 	    } else if (isFullDuplex(inSettings)) {
 		sumreport->info.output_handler = tcp_output_sum_read;
 	    } else {
@@ -248,8 +247,7 @@ void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport* sumre
 	} else {
 	    sumreport->transfer_protocol_sum_handler = reporter_transfer_protocol_sum_client_tcp;
 	    if (isSumOnly(inSettings)) {
-		sumreport->info.output_handler = ((isEnhanced(inSettings) && !isFullDuplex(inSettings)) ? \
-						  tcp_output_sumcnt_write_enhanced : tcp_output_sumcnt_write);
+		sumreport->info.output_handler = (isEnhanced(inSettings) ? tcp_output_sumcnt_write_enhanced : tcp_output_sumcnt_write);
 	    } else if (isFullDuplex(inSettings)) {
 		sumreport->info.output_handler = tcp_output_fullduplex_sum;
 	    } else {
