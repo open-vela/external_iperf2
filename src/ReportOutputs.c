@@ -81,6 +81,7 @@ static int HEADING_FLAG(report_sumcnt_bw) = 0;
 static int HEADING_FLAG(report_sumcnt_udp_fullduplex) = 0;
 static int HEADING_FLAG(report_sumcnt_bw_read_enhanced) = 0;
 static int HEADING_FLAG(report_sumcnt_bw_write_enhanced) = 0;
+static int HEADING_FLAG(report_sumcnt_bw_pps_enhanced) = 0;
 static int HEADING_FLAG(report_bw_jitter_loss_enhanced_triptime) = 0;
 static int HEADING_FLAG(report_bw_jitter_loss_enhanced_isoch_triptime) = 0;
 static int HEADING_FLAG(report_sumcnt_bw_jitter_loss) = 0;
@@ -107,6 +108,7 @@ void reporter_default_heading_flags (int flag) {
     HEADING_FLAG(report_sumcnt_bw_write_enhanced) = flag;
     HEADING_FLAG(report_udp_fullduplex) = flag;
     HEADING_FLAG(report_sumcnt_bw_jitter_loss) = flag;
+    HEADING_FLAG(report_sumcnt_bw_pps_enhanced) = flag;
 }
 static inline void _print_stats_common (struct TransferInfo *stats) {
     assert(stats!=NULL);
@@ -723,9 +725,9 @@ void udp_output_sum_write_enhanced (struct TransferInfo *stats) {
     fflush(stdout);
 }
 void udp_output_sumcnt_write_enhanced (struct TransferInfo *stats) {
-    HEADING_PRINT_COND(report_sumcnt_bw_write_enhanced);
+    HEADING_PRINT_COND(report_sumcnt_bw_pps_enhanced);
     _print_stats_common(stats);
-    printf(report_sumcnt_bw_write_enhanced_format, stats->threadcnt,
+    printf(report_sumcnt_bw_pps_enhanced_format, stats->threadcnt,
 	    stats->ts.iStart, stats->ts.iEnd,
 	    outbuffer, outbufferext,
 	    stats->sock_callstats.write.WriteCnt,
