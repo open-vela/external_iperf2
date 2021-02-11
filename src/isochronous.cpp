@@ -83,9 +83,9 @@ FrameCounter::~FrameCounter () {
 }
 
 #ifdef WIN32
-/* Windows sleep in 100ns units */
-bool FrameCounter::mySetWaitableTimer (long delay_time) {
-    bool rc = false;
+/* Windows sleep in 100ns units returns 0 on success as does clock_nanosleep*/
+int FrameCounter::mySetWaitableTimer (long delay_time) {
+    int rc = -1;
     if (!my_timer) {
 	if ((my_timer = CreateWaitableTimer(NULL, TRUE, NULL))) {
 	    /* Set timer properties */
@@ -105,10 +105,10 @@ bool FrameCounter::mySetWaitableTimer (long delay_time) {
 	    my_timer = NULL;
 	} else {
 	    // Wait for timer
-	    if (WaitForSingleObject(my_timer, INFINITE)) { // 10 second timeout, units ms
+	    if (WaitForSingleObject(my_timer, INFINITE)) {
 		WARN_errno(1, "WaitForSingleObject");
 	    } else {
-		rc = true;
+		rc = 0;
 	    }
 	}
     }
@@ -119,7 +119,7 @@ bool FrameCounter::mySetWaitableTimer (long delay_time) {
 #if defined(HAVE_CLOCK_NANOSLEEP)
 unsigned int FrameCounter::wait_tick (void) {
     Timestamp now;
-    bool rc = true;
+    int rc = true;
     if (!slot_counter) {
 	slot_counter = 1;
 	now.setnow();
@@ -144,7 +144,7 @@ unsigned int FrameCounter::wait_tick (void) {
     rc = mySetWaitableTimer(10 * duration); // convert us to 100ns
     //int rc = clock_nanosleep(0, TIMER_ABSTIME, &txtime_ts, NULL);
   #endif
-    WARN_errno((rc==false), "wait_tick failed");
+    WARN_errno((rc!=0), "wait_tick failed");
   #ifdef HAVE_THREAD_DEBUG
     // thread_debug("Client tick occurred per %ld.%ld", txtime_ts.tv_sec, txtime_ts.tv_nsec / 1000);
   #endif

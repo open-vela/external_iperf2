@@ -77,7 +77,7 @@ namespace Isochronous {
 	unsigned int lastcounter;
 	unsigned int slot_counter;
 #ifdef WIN32
-	bool mySetWaitableTimer (long delay_time);
+	int mySetWaitableTimer (long delay_time);
 	HANDLE my_timer;	// Timer handle
 	LARGE_INTEGER delay;    // units is 100 nanoseconds
 #endif
