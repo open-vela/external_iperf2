@@ -155,9 +155,11 @@ void SockAddr_localAddr (struct thread_Settings *inSettings) {
 		 /*
 		  * User specified port so use it
 		  */
+#if HAVE_DECL_SO_REUSEPORT
 		 int boolean = 1;
 		 Socklen_t len = sizeof(boolean);
 		 setsockopt(inSettings->mSock, SOL_SOCKET, SO_REUSEPORT, (char*) &boolean, len);
+#endif
 		 SockAddr_setPort(&inSettings->local, (inSettings->mBindPort + inSettings->incrsrcport));
 	     } else {
 		 /*
