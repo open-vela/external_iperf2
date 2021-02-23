@@ -71,6 +71,8 @@
 #include "isochronous.hpp"
 #include "pdfs.h"
 #include "payloads.h"
+#include <math.h>
+
 
 static int reversetest = 0;
 static int fullduplextest = 0;
@@ -546,7 +548,7 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 			fprintf (stderr, "Too large value of '%s' for -i interval, max is %f\n", optarg, (UINT_MAX / 1e6));
 			exit(1);
 		    }
-		    mExtSettings->mInterval = (unsigned int) (itime * 1e6);
+		    mExtSettings->mInterval = (unsigned int) (ceil(itime * 1e6));
 		    if (!mExtSettings->mInterval) {
 			fprintf (stderr, "Interval per -i cannot be zero\n");
 			exit(1);
@@ -554,9 +556,7 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		    mExtSettings->mIntervalMode = kInterval_Time;
 		    if (mExtSettings->mInterval < SMALLEST_INTERVAL) {
 			mExtSettings->mInterval = SMALLEST_INTERVAL;
-#ifndef HAVE_FASTSAMPLING
-			fprintf (stderr, report_interval_small, mExtSettings->mInterval);
-#endif
+			fprintf (stderr, report_interval_small, (double) mExtSettings->mInterval / 1e3);
 		    }
 		}
 		delete [] tmp;
