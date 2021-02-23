@@ -197,8 +197,11 @@ bool Client::my_connect (bool close_on_fail) {
 	    connected = true;
     }
     if (connected) {
+	// mInterval units are microseconds, mAmount units is 10 ms
+	// SetSocketOptionsSendTimeout takes microrseconds
+	// Set the timeout value to 1/2 the interval (per -i) or 1/2 the -t value
 	if (mSettings->mInterval > 0) {
-	    SetSocketOptionsSendTimeout(mSettings, (mSettings->mInterval * 1000000) / 2);
+	    SetSocketOptionsSendTimeout(mSettings, mSettings->mInterval / 2);
 	} else {
 	    SetSocketOptionsSendTimeout(mSettings, (mSettings->mAmount * 10000) / 2);
 	}
