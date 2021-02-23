@@ -1198,8 +1198,10 @@ void reporter_transfer_protocol_sum_client_udp (struct TransferInfo *stats, int 
     if (!final) {
 	stats->threadcnt = 0;
 	reporter_reset_transfer_stats_client_udp(stats);
-    } else if ((stats->common->ReportMode != kReport_CSV) && !(stats->filter_this_sample_output))
+    } else if ((stats->common->ReportMode != kReport_CSV) && !(stats->filter_this_sample_output)) {
 	printf(report_sumcnt_datagrams, stats->threadcnt, stats->total.Datagrams.current);
+	fflush(stdout);
+    }
 }
 
 void reporter_transfer_protocol_client_udp (struct ReporterData *data, int final) {
@@ -1255,8 +1257,10 @@ void reporter_transfer_protocol_client_udp (struct ReporterData *data, int final
     }
     if ((stats->output_handler) && !(stats->filter_this_sample_output)) {
 	(*stats->output_handler)(stats);
-	if (final && (stats->common->ReportMode != kReport_CSV))
+	if (final && (stats->common->ReportMode != kReport_CSV)) {
 	    printf(report_datagrams, stats->common->transferID, stats->total.Datagrams.current);
+	    fflush(stdout);
+	}
     }
     reporter_reset_transfer_stats_client_udp(stats);
 }

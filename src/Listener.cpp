@@ -1176,7 +1176,7 @@ int Listener::client_test_ack(thread_Settings *server) {
     if (!isUDP(server)) {
 	// sotimer units microseconds convert
 	if (server->mInterval) {
-	    sotimer = (int) ((server->mInterval / 4);
+	    sotimer = (int) (server->mInterval / 4);
 	} else if (isModeTime(server)) {
 	    sotimer = (int) ((server->mAmount * 10000) / 4);
 	}

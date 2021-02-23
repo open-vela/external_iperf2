@@ -939,6 +939,7 @@ static void output_window_size (struct ReportSettings *report) {
 	outbuffer[(sizeof(outbuffer)-1)] = '\0';
 	printf(warn_window_requested, outbuffer);
     }
+    fflush(stdout);
 }
 static void reporter_output_listener_settings (struct ReportSettings *report) {
     printf(isEnhanced(report->common) ? server_pid_port : server_port,
@@ -1019,6 +1020,7 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
 	    fprintf(stdout, "Permit key is '%s' (WARN: no timeout)\n", report->common->PermitKey);
 	}
     }
+    fflush(stdout);
 }
 static void reporter_output_client_settings (struct ReportSettings *report) {
     if (!report->common->Ifrnametx) {
@@ -1076,6 +1078,7 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
 	output_window_size(report);
 	printf("\n");
     }
+    fflush(stdout);
 }
 
 void reporter_connect_printf_tcp_final (struct ConnectionInfo * report) {
