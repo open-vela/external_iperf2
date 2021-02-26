@@ -99,7 +99,6 @@ Server specific:\n\
   -t, --time      #        time in seconds to listen for new connections as well as to receive traffic (default not set)\n\
       --udp-histogram #,#  enable UDP latency histogram(s) with bin width and count, e.g. 1,1000=1(ms),1000(bins)\n\
   -B, --bind <ip>[%<dev>]  bind to multicast address and optional device\n\
-  -H, --ssm-host <ip>      set the SSM source, use with -B for (S,G) \n\
   -U, --single_udp         run in single threaded UDP mode\n\
   -D, --daemon             run the server as a daemon\n"
 #ifdef WIN32
@@ -132,6 +131,7 @@ Client specific:\n\
       --txstart-time       unix epoch time to schedule first write and start traffic\n\
   -B, --bind [<ip> | <ip:port>] bind ip (and optional port) from which to source traffic\n\
   -F, --fileinput <name>   input the data to be transmitted from a file\n\
+  -H, --ssm-host <ip>      set the SSM source, use with -B for (S,G) \n\
   -I, --stdin              input the data to be transmitted from stdin\n\
   -L, --listenport #       port to receive fullduplexectional tests back on\n\
   -P, --parallel  #        number of parallel client threads to run\n"
