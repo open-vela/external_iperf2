@@ -942,8 +942,13 @@ static void output_window_size (struct ReportSettings *report) {
     fflush(stdout);
 }
 static void reporter_output_listener_settings (struct ReportSettings *report) {
-    printf(isEnhanced(report->common) ? server_pid_port : server_port,
-	   (isUDP(report->common) ? "UDP" : "TCP"), report->common->Port, report->pid);
+    if (report->common->PortLast > report->common->Port) {
+	printf(server_pid_portrange, (isUDP(report->common) ? "UDP" : "TCP"), \
+	       report->common->Port, report->common->PortLast, report->pid);
+    } else {
+	printf(isEnhanced(report->common) ? server_pid_port : server_port,
+	       (isUDP(report->common) ? "UDP" : "TCP"), report->common->Port, report->pid);
+    }
     if (report->common->Localhost != NULL) {
 	if (isEnhanced(report->common) && !SockAddr_isMulticast(&report->local)) {
 	    if (report->common->Ifrname)

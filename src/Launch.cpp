@@ -388,3 +388,18 @@ void client_init(struct thread_Settings *clients) {
     }
 #endif
 }
+
+void listeners_init(struct thread_Settings *listener) {
+    struct thread_Settings *itr = listener;
+    struct thread_Settings *next = NULL;
+    for (int ix = 1; ix < (listener->mPortLast - listener->mPort + 1); ix++)  {
+	Settings_Copy(listener, &next, 1);
+	if (next != NULL) {
+	    setNoSettReport(next);
+	    next->mPort = listener->mPort + ix;
+	    next->mThreadMode = kMode_Listener;
+	    itr->runNow = next;
+	    itr = next;
+	}
+    }
+}
