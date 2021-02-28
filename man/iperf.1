@@ -710,7 +710,7 @@ port 48736 connected with 192.168.1.1 port 5001 \fB(ct=1.84 ms)\fR'
 shows the 3WHS took 1.84 milliseconds.
 .P
 .B Port-range
-Port ranges are supported using the hyphen notation, e.g. 6001-6009. This will cause multiple threads, one per port, on either the listener/server or the client. The user needs to take care that the ports in the port range are available and not already in use per the operating system. Also note, this can be used for a workaround for Windows UDP and -P > 1 as Windows doesn't dispatch UDP per a server's connect and the quintuple.
+Port ranges are supported using the hyphen notation, e.g. 6001-6009. This will cause multiple threads, one per port, on either the listener/server or the client. The user needs to take care that the ports in the port range are available and not already in use per the operating system. The -P is supported on the client and will apply to each destination port within the port range. Finally, this can be used for a workaround for Windows UDP and -P > 1 as Windows doesn't dispatch UDP per a server's connect and the quintuple.
 .P
 .B Packet per second (pps) calculation
 The packets per second calculation is done as a derivative, i.e. number of packets divided by
