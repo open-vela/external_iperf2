@@ -76,7 +76,7 @@ Client/Server:\n\
   -l, --len       #[kmKM]    length of buffer in bytes to read or write (Defaults: TCP=128K, v4 UDP=1470, v6 UDP=1450)\n\
   -m, --print_mss          print TCP maximum segment size (MTU - TCP/IP header)\n\
   -o, --output    <filename> output the report or error message to this specified file\n\
-  -p, --port      #        server port to listen on/connect to\n\
+  -p, --port      #        client/server port to listen/send on and to connect\n\
       --permit-key         permit key to be used to verify client and server (TCP only)\n\
       --sum-only           output sum only reports\n\
   -u, --udp                use UDP rather than TCP\n\
