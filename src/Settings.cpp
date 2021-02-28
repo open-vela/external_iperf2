@@ -79,7 +79,6 @@ static int fullduplextest = 0;
 static int rxhistogram = 0;
 static int l2checks = 0;
 static int incrdstip = 0;
-static int incrdstport = 0;
 static int txstarttime = 0;
 static int noconnectsync = 0;
 static int txholdback = 0;
@@ -165,7 +164,6 @@ const struct option long_options[] =
 {"udp-histograms", optional_argument, &rxhistogram, 1}, // keep support per 2.0.13 usage
 {"l2checks", no_argument, &l2checks, 1},
 {"incr-dstip", no_argument, &incrdstip, 1},
-{"incr-dstport", no_argument, &incrdstport, 1},
 {"txstart-time", required_argument, &txstarttime, 1},
 {"txdelay-time", required_argument, &txholdback, 1},
 {"fq-rate", required_argument, &fqrate, 1},
@@ -596,8 +594,10 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    strcpy(tmp, optarg);
 	    if ((results = strtok(tmp, "-")) != NULL) {
 		mExtSettings->mPort = atoi(results);
-		if (strcmp(results,optarg))
+		if (strcmp(results,optarg)) {
 		    mExtSettings->mPortLast = atoi(strtok(NULL, "-"));
+		    setIncrDstPort(mExtSettings);
+		}
 	    }
 	    delete [] tmp;
             break;
@@ -840,10 +840,6 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    if (incrdstip) {
 		incrdstip = 0;
 		setIncrDstIP(mExtSettings);
-	    }
-	    if (incrdstport) {
-		incrdstport = 0;
-		setIncrDstPort(mExtSettings);
 	    }
 	    if (txstarttime) {
 		long seconds;
@@ -1096,6 +1092,9 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    mExtSettings->mBufLen = kDefault_TCPBufLen;
 	}
     }
+    if (!mExtSettings->mPortLast)
+	mExtSettings->mPortLast = mExtSettings->mPort;
+
     // Handle default UDP offered load (TCP will be max, i.e. no read() or write() rate limiting)
     if (!isBWSet(mExtSettings) && isUDP(mExtSettings)) {
 	mExtSettings->mAppRate = kDefault_UDPRate;
@@ -1142,10 +1141,6 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	}
     }
     if (mExtSettings->mThreadMode == kMode_Client) {
-	if (mExtSettings->mPortLast && (mExtSettings->mThreads != 1)) {
-	    fprintf(stderr, "ERROR: port range and -P are mutually exclusive\n");
-	    bail = true;
-	}
 	if (isPermitKey(mExtSettings) && (mExtSettings->mPermitKey[0] == '\0')) {
 	    fprintf(stderr, "ERROR: option of --permit-key requires a value on the client\n");
 	    bail = true;
@@ -1357,11 +1352,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
     }
     if (bail)
 	exit(1);
-    if ((mExtSettings->mPortLast && mExtSettings->mThreads && (mExtSettings->mThreadMode == kMode_Client)) \
-	&& (mExtSettings->mThreads == 1)) {
-	setIncrDstPort(mExtSettings);
-	mExtSettings->mThreads = 1 + mExtSettings->mPortLast - mExtSettings->mPort;
-    }
+
     // UDP histogram optional settings
     if (isRxHistogram(mExtSettings) && (mExtSettings->mThreadMode != kMode_Client) && mExtSettings->mRxHistogramStr) {
 	// check for optional arguments to change histogram settings
