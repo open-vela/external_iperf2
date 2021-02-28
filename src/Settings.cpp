@@ -1142,8 +1142,8 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	}
     }
     if (mExtSettings->mThreadMode == kMode_Client) {
-	if (mExtSettings->mPortLast) {
-	    fprintf(stderr, "ERROR: port ranges not supported on the client (consider --incr-dstport and -P)\n");
+	if (mExtSettings->mPortLast && (mExtSettings->mThreads != 1)) {
+	    fprintf(stderr, "ERROR: port range and -P are mutually exclusive\n");
 	    bail = true;
 	}
 	if (isPermitKey(mExtSettings) && (mExtSettings->mPermitKey[0] == '\0')) {
@@ -1357,6 +1357,11 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
     }
     if (bail)
 	exit(1);
+    if ((mExtSettings->mPortLast && mExtSettings->mThreads && (mExtSettings->mThreadMode == kMode_Client)) \
+	&& (mExtSettings->mThreads == 1)) {
+	setIncrDstPort(mExtSettings);
+	mExtSettings->mThreads = 1 + mExtSettings->mPortLast - mExtSettings->mPort;
+    }
     // UDP histogram optional settings
     if (isRxHistogram(mExtSettings) && (mExtSettings->mThreadMode != kMode_Client) && mExtSettings->mRxHistogramStr) {
 	// check for optional arguments to change histogram settings
