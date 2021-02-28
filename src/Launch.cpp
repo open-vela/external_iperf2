@@ -378,6 +378,7 @@ void client_init(struct thread_Settings *clients) {
 	    }
 	    if (isIncrDstPort(clients)) {
 		next->mPort += i;
+		SockAddr_zeroAddress(&next->peer);
 	    }
 	}
         itr->runNow = next;
