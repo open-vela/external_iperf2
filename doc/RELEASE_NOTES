@@ -1,6 +1,13 @@
 See doc/DESIGN_NOTES for some description around the software design
 See doc/CLOCKSYNC_NOTES for some description around synchronizing the realtime clocks
 
+2.1.1 change set (as of February 28th, 2021)
+----------------------------------------
+o isochronous bug fix
+o -P and -B src port increment
+o support for --incr-dstport on client
+o support for port ranges, e.g. -p 6000-6008
+
 2.1.0 change set (as of January 5th, 2021)
 ----------------------------------------
 o scaling improvements for -P, i.e. improved support for large numbers of traffic threads
