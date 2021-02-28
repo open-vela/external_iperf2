@@ -376,6 +376,9 @@ void client_init(struct thread_Settings *clients) {
 		// case -B with src port and -P > 1
 		next->incrsrcport = i;
 	    }
+	    if (isIncrDstPort(clients)) {
+		next->mPort += i;
+	    }
 	}
         itr->runNow = next;
         itr = next;

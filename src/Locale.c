@@ -92,6 +92,7 @@ Client/Server:\n\
   -Z, --tcp-congestion <algo>  set TCP congestion control algorithm (Linux only)\n\
 \n\
 Server specific:\n\
+  -p, --port      #[-#]    server port(s) to listen on/connect to\n\
   -s, --server             run in server mode\n\
   -1, --singleclient       run one server at a time\n\
       --histograms         enable latency histograms\n\
@@ -119,6 +120,7 @@ Client specific:\n\
       --ipg                set the the interpacket gap (milliseconds) for packets within an isochronous frame\n\
       --isochronous <frames-per-second>:<mean>,<stddev> send traffic in bursts (frames - emulate video traffic)\n\
       --incr-dstip         Increment the destination ip with parallel (-P) traffic threads\n\
+      --incr-dstport       Increment the destination port with parallel (-P) traffic threads\n\
       --local-only         Set don't route on socket\n\
       --near-congestion=[w] Use a weighted write delay per the sampled TCP RTT (experimental)\n\
       --no-connect-sync    No sychronization after connect when -P or parallel traffic threads\n\
