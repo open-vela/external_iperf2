@@ -224,6 +224,7 @@ struct thread_Settings {
     // shorts
     unsigned short mListenPort;     // -L
     unsigned short mPort;           // -p
+    unsigned short mPortLast;       // -p last port, e.g. when -p 6001-6010
     unsigned short mBindPort;      // -B
     // chars
     char   mFormat;                 // -f

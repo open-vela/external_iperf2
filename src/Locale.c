@@ -191,6 +191,9 @@ const char client_port[] =
 const char server_pid_port[] =
 "Server listening on %s port %d with pid %d\n";
 
+const char server_pid_portrange[] =
+"Server listening on %s ports %d-%d with pid %d\n";
+
 const char client_pid_port[] =
 "Client connecting to %s, %s port %d with pid %d (%d flows)\n";
 

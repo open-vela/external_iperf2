@@ -589,9 +589,17 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
             break;
 
         case 'p': // server port
-            mExtSettings->mPort = atoi(optarg);
+	{
+	    char *tmp= new char [strlen(optarg) + 1];
+	    strcpy(tmp, optarg);
+	    if ((results = strtok(tmp, "-")) != NULL) {
+		mExtSettings->mPort = atoi(results);
+		if (strcmp(results,optarg))
+		    mExtSettings->mPortLast = atoi(strtok(NULL, "-"));
+	    }
+	    delete [] tmp;
             break;
-
+	}
         case 'r': // test mode tradeoff
             if (mExtSettings->mThreadMode != kMode_Client) {
                 fprintf(stderr, warn_invalid_server_option, option);
@@ -1128,6 +1136,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	}
     }
     if (mExtSettings->mThreadMode == kMode_Client) {
+	if (mExtSettings->mPortLast) {
+	    fprintf(stderr, "ERROR: port ranges not supported on the client (consider --incr-dstport and -P)\n");
+	    bail = true;
+	}
 	if (isPermitKey(mExtSettings) && (mExtSettings->mPermitKey[0] == '\0')) {
 	    fprintf(stderr, "ERROR: option of --permit-key requires a value on the client\n");
 	    bail = true;
@@ -1264,6 +1276,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    bail = true;
 	}
     } else {
+	if (mExtSettings->mPortLast && (!(mExtSettings->mPortLast >= mExtSettings->mPort))) {
+            fprintf(stderr, "ERROR: invalid port range of %d-%d\n",mExtSettings->mPort, mExtSettings->mPortLast);
+	    bail = true;
+	}
 	if (isPermitKey(mExtSettings)) {
 	    if (mExtSettings->mPermitKey[0]=='\0')  {
 		generate_permit_key(mExtSettings);
