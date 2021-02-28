@@ -79,6 +79,7 @@ static int fullduplextest = 0;
 static int rxhistogram = 0;
 static int l2checks = 0;
 static int incrdstip = 0;
+static int incrdstport = 0;
 static int txstarttime = 0;
 static int noconnectsync = 0;
 static int txholdback = 0;
@@ -164,6 +165,7 @@ const struct option long_options[] =
 {"udp-histograms", optional_argument, &rxhistogram, 1}, // keep support per 2.0.13 usage
 {"l2checks", no_argument, &l2checks, 1},
 {"incr-dstip", no_argument, &incrdstip, 1},
+{"incr-dstport", no_argument, &incrdstport, 1},
 {"txstart-time", required_argument, &txstarttime, 1},
 {"txdelay-time", required_argument, &txholdback, 1},
 {"fq-rate", required_argument, &fqrate, 1},
@@ -838,6 +840,10 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    if (incrdstip) {
 		incrdstip = 0;
 		setIncrDstIP(mExtSettings);
+	    }
+	    if (incrdstport) {
+		incrdstport = 0;
+		setIncrDstPort(mExtSettings);
 	    }
 	    if (txstarttime) {
 		long seconds;
