@@ -103,10 +103,10 @@ extern "C" {
 #ifdef HAVE_LINUX_FILTER_H
     int SockAddr_Accept_BPF(int socket, uint16_t port);
     int SockAddr_Drop_All_BPF(int socket);
-    int SockAddr_v4_Connect_BPF(int socket, uint32_t srcip, uint32_t dstip, uint16_t srcport, uint16_t dstport);
-    int SockAddr_v4_Connect_BPF_Drop(int socket, uint32_t srcip, uint32_t dstip, uint16_t srcport, uint16_t dstport);
+    int SockAddr_v4_Connect_BPF(int socket, uint32_t dstip, uint32_t srcip, uint16_t dstport, uint16_t srcport);
+    int SockAddr_v4_Connect_BPF_Drop(int socket, uint32_t dstip, uint32_t srcip, uint16_t dstport, uint16_t srcport);
 #  ifdef HAVE_IPV6
-    int SockAddr_v6_Connect_BPF (int sock, struct in6_addr *src, struct in6_addr *dst, uint16_t dstport, uint16_t srcport);
+    int SockAddr_v6_Connect_BPF (int sock, struct in6_addr *dst, struct in6_addr *src, uint16_t dstport, uint16_t srcport);
 #  endif // v6
 #endif // linux_filter
 

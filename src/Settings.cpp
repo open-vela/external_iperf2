@@ -71,8 +71,6 @@
 #include "isochronous.hpp"
 #include "pdfs.h"
 #include "payloads.h"
-#include <math.h>
-
 
 static int reversetest = 0;
 static int fullduplextest = 0;
@@ -84,6 +82,7 @@ static int noconnectsync = 0;
 static int txholdback = 0;
 static int fqrate = 0;
 static int triptime = 0;
+static int writeack = 0;
 static int infinitetime = 0;
 static int connectonly = 0;
 static int connectretry = 0;
@@ -168,6 +167,7 @@ const struct option long_options[] =
 {"txdelay-time", required_argument, &txholdback, 1},
 {"fq-rate", required_argument, &fqrate, 1},
 {"trip-times", no_argument, &triptime, 1},
+{"write-ack", optional_argument, &writeack, 1},
 {"no-udp-fin", no_argument, &noudpfin, 1},
 {"connect-only", optional_argument, &connectonly, 1},
 {"connect-retries", required_argument, &connectretry, 1},
@@ -548,7 +548,7 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 			fprintf (stderr, "Too large value of '%s' for -i interval, max is %f\n", optarg, (UINT_MAX / 1e6));
 			exit(1);
 		    }
-		    mExtSettings->mInterval = (unsigned int) (ceil(itime * 1e6));
+		    mExtSettings->mInterval = (unsigned int) (itime * 1e6);
 		    if (!mExtSettings->mInterval) {
 			fprintf (stderr, "Interval per -i cannot be zero\n");
 			exit(1);
@@ -556,7 +556,9 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		    mExtSettings->mIntervalMode = kInterval_Time;
 		    if (mExtSettings->mInterval < SMALLEST_INTERVAL) {
 			mExtSettings->mInterval = SMALLEST_INTERVAL;
-			fprintf (stderr, report_interval_small, (double) mExtSettings->mInterval / 1e3);
+#ifndef HAVE_FASTSAMPLING
+			fprintf (stderr, report_interval_small, mExtSettings->mInterval);
+#endif
 		    }
 		}
 		delete [] tmp;
@@ -589,19 +591,9 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
             break;
 
         case 'p': // server port
-	{
-	    char *tmp= new char [strlen(optarg) + 1];
-	    strcpy(tmp, optarg);
-	    if ((results = strtok(tmp, "-")) != NULL) {
-		mExtSettings->mPort = atoi(results);
-		if (strcmp(results,optarg)) {
-		    mExtSettings->mPortLast = atoi(strtok(NULL, "-"));
-		    setIncrDstPort(mExtSettings);
-		}
-	    }
-	    delete [] tmp;
+            mExtSettings->mPort = atoi(optarg);
             break;
-	}
+
         case 'r': // test mode tradeoff
             if (mExtSettings->mThreadMode != kMode_Client) {
                 fprintf(stderr, warn_invalid_server_option, option);
@@ -887,6 +879,13 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		triptime = 0;
 		setTripTime(mExtSettings);
 	    }
+	    if (writeack) {
+		writeack = 0;
+		setWriteAck(mExtSettings);
+		if (optarg) {
+		    mExtSettings->mWriteAckLen = byte_atoi(optarg);
+		}
+	    }
 	    if (noudpfin) {
 		noudpfin = 0;
 		setNoUDPfin(mExtSettings);
@@ -1092,9 +1091,6 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    mExtSettings->mBufLen = kDefault_TCPBufLen;
 	}
     }
-    if (!mExtSettings->mPortLast)
-	mExtSettings->mPortLast = mExtSettings->mPort;
-
     // Handle default UDP offered load (TCP will be max, i.e. no read() or write() rate limiting)
     if (!isBWSet(mExtSettings) && isUDP(mExtSettings)) {
 	mExtSettings->mAppRate = kDefault_UDPRate;
@@ -1277,10 +1273,6 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    bail = true;
 	}
     } else {
-	if (mExtSettings->mPortLast && (!(mExtSettings->mPortLast >= mExtSettings->mPort))) {
-            fprintf(stderr, "ERROR: invalid port range of %d-%d\n",mExtSettings->mPort, mExtSettings->mPortLast);
-	    bail = true;
-	}
 	if (isPermitKey(mExtSettings)) {
 	    if (mExtSettings->mPermitKey[0]=='\0')  {
 		generate_permit_key(mExtSettings);
@@ -1352,7 +1344,6 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
     }
     if (bail)
 	exit(1);
-
     // UDP histogram optional settings
     if (isRxHistogram(mExtSettings) && (mExtSettings->mThreadMode != kMode_Client) && mExtSettings->mRxHistogramStr) {
 	// check for optional arguments to change histogram settings
@@ -1426,6 +1417,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    }
 	}
     }
+    // See if the Write ack size should equal the write size (vs a configured or a burst size)
+    if (isWriteAck(mExtSettings) && !mExtSettings->mWriteAckLen && \
+	(mExtSettings->mThreadMode == kMode_Client) && !isIsochronous(mExtSettings))
+	mExtSettings->mWriteAckLen = mExtSettings->mBufLen;
 
     // Check for further mLocalhost (-B) and <dev> requests
     // full addresses look like 192.168.1.1:6001%eth0 or [2001:e30:1401:2:d46e:b891:3082:b939]:6001%eth0

@@ -96,8 +96,6 @@ extern const char client_report_epoch_start_current[];
 
 extern const char server_pid_port[];
 
-extern const char server_pid_portrange[];
-
 extern const char client_pid_port[];
 
 extern const char client_pid_port_dev[];
@@ -192,10 +190,6 @@ extern const char report_sum_bw_read_enhanced_format[];
 extern const char report_sumcnt_bw_read_enhanced_header[];
 
 extern const char report_sumcnt_bw_read_enhanced_format[];
-
-extern const char report_sumcnt_bw_pps_enhanced_header[];
-
-extern const char report_sumcnt_bw_pps_enhanced_format[];
 
 extern const char report_triptime_enhanced_format[];
 
