@@ -93,7 +93,7 @@ extern "C" {
      * @arg block     Pointer to the data read
      * @return        Number of bytes read
      */
-    int Extractor_getNextDataBlock( char *block, struct thread_Settings *mSettings );
+    int Extractor_getNextDataBlock( char *data, struct thread_Settings *mSettings );
 
 
     /**

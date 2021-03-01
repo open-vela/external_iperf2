@@ -81,7 +81,6 @@ static int HEADING_FLAG(report_sumcnt_bw) = 0;
 static int HEADING_FLAG(report_sumcnt_udp_fullduplex) = 0;
 static int HEADING_FLAG(report_sumcnt_bw_read_enhanced) = 0;
 static int HEADING_FLAG(report_sumcnt_bw_write_enhanced) = 0;
-static int HEADING_FLAG(report_sumcnt_bw_pps_enhanced) = 0;
 static int HEADING_FLAG(report_bw_jitter_loss_enhanced_triptime) = 0;
 static int HEADING_FLAG(report_bw_jitter_loss_enhanced_isoch_triptime) = 0;
 static int HEADING_FLAG(report_sumcnt_bw_jitter_loss) = 0;
@@ -108,7 +107,6 @@ void reporter_default_heading_flags (int flag) {
     HEADING_FLAG(report_sumcnt_bw_write_enhanced) = flag;
     HEADING_FLAG(report_udp_fullduplex) = flag;
     HEADING_FLAG(report_sumcnt_bw_jitter_loss) = flag;
-    HEADING_FLAG(report_sumcnt_bw_pps_enhanced) = flag;
 }
 static inline void _print_stats_common (struct TransferInfo *stats) {
     assert(stats!=NULL);
@@ -725,9 +723,9 @@ void udp_output_sum_write_enhanced (struct TransferInfo *stats) {
     fflush(stdout);
 }
 void udp_output_sumcnt_write_enhanced (struct TransferInfo *stats) {
-    HEADING_PRINT_COND(report_sumcnt_bw_pps_enhanced);
+    HEADING_PRINT_COND(report_sumcnt_bw_write_enhanced);
     _print_stats_common(stats);
-    printf(report_sumcnt_bw_pps_enhanced_format, stats->threadcnt,
+    printf(report_sumcnt_bw_write_enhanced_format, stats->threadcnt,
 	    stats->ts.iStart, stats->ts.iEnd,
 	    outbuffer, outbufferext,
 	    stats->sock_callstats.write.WriteCnt,
@@ -939,16 +937,10 @@ static void output_window_size (struct ReportSettings *report) {
 	outbuffer[(sizeof(outbuffer)-1)] = '\0';
 	printf(warn_window_requested, outbuffer);
     }
-    fflush(stdout);
 }
 static void reporter_output_listener_settings (struct ReportSettings *report) {
-    if (report->common->PortLast > report->common->Port) {
-	printf(server_pid_portrange, (isUDP(report->common) ? "UDP" : "TCP"), \
-	       report->common->Port, report->common->PortLast, report->pid);
-    } else {
-	printf(isEnhanced(report->common) ? server_pid_port : server_port,
-	       (isUDP(report->common) ? "UDP" : "TCP"), report->common->Port, report->pid);
-    }
+    printf(isEnhanced(report->common) ? server_pid_port : server_port,
+	   (isUDP(report->common) ? "UDP" : "TCP"), report->common->Port, report->pid);
     if (report->common->Localhost != NULL) {
 	if (isEnhanced(report->common) && !SockAddr_isMulticast(&report->local)) {
 	    if (report->common->Ifrname)
@@ -1025,7 +1017,6 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
 	    fprintf(stdout, "Permit key is '%s' (WARN: no timeout)\n", report->common->PermitKey);
 	}
     }
-    fflush(stdout);
 }
 static void reporter_output_client_settings (struct ReportSettings *report) {
     if (!report->common->Ifrnametx) {
@@ -1083,7 +1074,6 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
 	output_window_size(report);
 	printf("\n");
     }
-    fflush(stdout);
 }
 
 void reporter_connect_printf_tcp_final (struct ConnectionInfo * report) {
@@ -1301,13 +1291,13 @@ void reporter_peerversion (struct ConnectionInfo *report, uint32_t upper, uint32
 	snprintf(report->peerversion, (PEERVERBUFSIZE-10), " (peer %d.%d.%d)", rel, major, minor);
 	switch(alpha) {
 	case 0:
-	    sprintf(report->peerversion + strlen(report->peerversion) - 1,"-dev)");
+	    sprintf(report->peerversion + strlen(report->peerversion) - 1,"-alpha)");
 	    break;
 	case 1:
-	    sprintf(report->peerversion + strlen(report->peerversion) - 1,"-rc1)");
+	    sprintf(report->peerversion + strlen(report->peerversion) - 1,"-beta)");
 	    break;
 	case 2:
-	    sprintf(report->peerversion + strlen(report->peerversion) - 1,"-rc2)");
+	    sprintf(report->peerversion + strlen(report->peerversion) - 1,"-rc)");
 	    break;
 	case 3:
 	    break;

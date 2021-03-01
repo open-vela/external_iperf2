@@ -215,7 +215,6 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
 #endif /* HAVE_DECL_SO_DONTROUTE */
 }
 
-// Note that timer units are microseconds, be careful
 void SetSocketOptionsSendTimeout (struct thread_Settings *mSettings, int timer) {
     assert (timer > 0);
 #ifdef WIN32
