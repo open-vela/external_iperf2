@@ -203,7 +203,6 @@ struct ReportCommon {
     int flags_extend;
     int threads;
     unsigned short Port;
-    unsigned short PortLast;
     unsigned short BindPort;
     unsigned short ListenPort;
     intmax_t AppRate;            // -b or -u
@@ -404,7 +403,7 @@ void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport* sumre
 struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, int fullduplex);
 struct ReportHeader* InitIndividualReport(struct thread_Settings *inSettings);
 struct ReportHeader* InitConnectionReport(struct thread_Settings *inSettings, double ct);
-struct ConnectionInfo* InitConnectOnlyReport(struct thread_Settings *inSettings);
+struct ConnectionInfo* InitConnectOnlyReport(struct thread_Settings *thread);
 struct ReportHeader *InitSettingsReport(struct thread_Settings *inSettings);
 struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings, struct server_hdr *server);
 void PostReport(struct ReportHeader *reporthdr);
@@ -420,8 +419,8 @@ void FreeConnectionReport(struct ConnectionInfo *reporthdr);
 void ReportServerUDP(struct thread_Settings *inSettings, struct server_hdr *server);
 void ReportConnections(struct thread_Settings *inSettings );
 void reporter_dump_job_queue(void);
-void IncrSumReportRefCounter(struct SumReport *multihdr);
-int DecrSumReportRefCounter(struct SumReport *multihdr);
+void IncrSumReportRefCounter(struct SumReport *sumreport);
+int DecrSumReportRefCounter(struct SumReport *sumreport);
 
 extern struct AwaitMutex reporter_state;
 extern struct AwaitMutex threads_start;
@@ -435,17 +434,17 @@ extern report_statistics multiple_reports[];
 
 // Packet accounting routines
 void reporter_handle_packet_null(struct ReporterData *report, struct ReportStruct *packet);
-void reporter_handle_packet_server_udp(struct ReporterData *report, struct ReportStruct *packet);
-void reporter_handle_packet_server_tcp(struct ReporterData *report, struct ReportStruct *packet);
-void reporter_handle_packet_client(struct ReporterData *report, struct ReportStruct *packet);
+void reporter_handle_packet_server_udp(struct ReporterData *data, struct ReportStruct *packet);
+void reporter_handle_packet_server_tcp(struct ReporterData *data, struct ReportStruct *packet);
+void reporter_handle_packet_client(struct ReporterData *data, struct ReportStruct *packet);
 void reporter_handle_packet_pps(struct ReporterData *data, struct ReportStruct *packet);
 void reporter_handle_packet_isochronous(struct ReporterData *data, struct ReportStruct *packet);
 
 // Reporter's conditional prints, right now have time and frame based sampling, possibly add packet based
-int reporter_condprint_time_interval_report(struct ReporterData *reporthdr, struct ReportStruct *packet);
+int reporter_condprint_time_interval_report(struct ReporterData *data, struct ReportStruct *packet);
 int reporter_condprint_frame_interval_report_client_udp(struct ReporterData *reporthdr, struct ReportStruct *packet);
-int reporter_condprint_frame_interval_report_server_udp(struct ReporterData *reporthdr, struct ReportStruct *packet);
-int reporter_condprint_frame_interval_report_server_tcp(struct ReporterData *reporthdr, struct ReportStruct *packet);
+int reporter_condprint_frame_interval_report_server_udp(struct ReporterData *data, struct ReportStruct *packet);
+int reporter_condprint_frame_interval_report_server_tcp(struct ReporterData *data, struct ReportStruct *packet);
 int reporter_condprint_frame_interval_report_client_tcp(struct ReporterData *reporthdr, struct ReportStruct *packet);
 //void reporter_set_timestamps_time(struct ReporterData *stats, enum TimestampType);
 
@@ -453,10 +452,10 @@ int reporter_condprint_frame_interval_report_client_tcp(struct ReporterData *rep
 void reporter_transfer_protocol_null(struct ReporterData *stats, int final);
 //void reporter_transfer_protocol_reports(struct ReporterData *stats, struct ReportStruct *packet);
 //void reporter_transfer_protocol_multireports(struct ReporterData *stats, struct ReportStruct *packet);
-void reporter_transfer_protocol_client_tcp(struct ReporterData *stats, int final);
-void reporter_transfer_protocol_client_udp(struct ReporterData *stats, int final);
-void reporter_transfer_protocol_server_tcp(struct ReporterData *stats, int final);
-void reporter_transfer_protocol_server_udp(struct ReporterData *stats, int final);
+void reporter_transfer_protocol_client_tcp(struct ReporterData *data, int final);
+void reporter_transfer_protocol_client_udp(struct ReporterData *data, int final);
+void reporter_transfer_protocol_server_tcp(struct ReporterData *data, int final);
+void reporter_transfer_protocol_server_udp(struct ReporterData *data, int final);
 
 // Reporter's sum output routines (per -P > 1)
 void reporter_transfer_protocol_sum_client_tcp(struct TransferInfo *stats, int final);

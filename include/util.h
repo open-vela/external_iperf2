@@ -70,7 +70,7 @@ extern int sInterupted;
 int setsock_tcp_windowsize(int inSock, int inTCPWin, int inSend);
 int getsock_tcp_windowsize(int inSock, int inSend);
 
-void setsock_tcp_mss(int inSock, int inTCPWin);
+void setsock_tcp_mss(int inSock, int inMSS);
 int  getsock_tcp_mss(int inSock);
 bool setsock_blocking(int fd, bool blocking);
 

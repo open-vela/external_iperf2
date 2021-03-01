@@ -76,9 +76,7 @@ Client/Server:\n\
   -l, --len       #[kmKM]    length of buffer in bytes to read or write (Defaults: TCP=128K, v4 UDP=1470, v6 UDP=1450)\n\
   -m, --print_mss          print TCP maximum segment size (MTU - TCP/IP header)\n\
   -o, --output    <filename> output the report or error message to this specified file\n\
-  -p, --port      #        client/server port to listen/send on and to connect\n\
-      --permit-key         permit key to be used to verify client and server (TCP only)\n\
-      --sum-only           output sum only reports\n\
+  -p, --port      #        server port to listen on/connect to\n\
   -u, --udp                use UDP rather than TCP\n\
   -w, --window    #[KM]    TCP window size (socket buffer size)\n"
 #ifdef HAVE_SCHED_SETSCHEDULER
@@ -92,14 +90,13 @@ Client/Server:\n\
   -Z, --tcp-congestion <algo>  set TCP congestion control algorithm (Linux only)\n\
 \n\
 Server specific:\n\
-  -p, --port      #[-#]    server port(s) to listen on/connect to\n\
   -s, --server             run in server mode\n\
   -1, --singleclient       run one server at a time\n\
       --histograms         enable latency histograms\n\
-      --permit-key-timeout set the timeout for a permit key in seconds\n\
   -t, --time      #        time in seconds to listen for new connections as well as to receive traffic (default not set)\n\
       --udp-histogram #,#  enable UDP latency histogram(s) with bin width and count, e.g. 1,1000=1(ms),1000(bins)\n\
   -B, --bind <ip>[%<dev>]  bind to multicast address and optional device\n\
+  -H, --ssm-host <ip>      set the SSM source, use with -B for (S,G) \n\
   -U, --single_udp         run in single threaded UDP mode\n\
   -D, --daemon             run the server as a daemon\n"
 #ifdef WIN32
@@ -113,16 +110,12 @@ const char usage_long2[] = "\
 Client specific:\n\
   -c, --client    <host>   run in client mode, connecting to <host>\n\
       --connect-only       run a connect only test\n\
-      --connect-retries #  number of times to retry tcp connect\n\
   -d, --dualtest           Do a bidirectional test simultaneously (multiple sockets)\n\
       --fq-rate #[kmgKMG]  bandwidth to socket pacing\n\
       --full-duplex        run full duplex test using same socket\n\
       --ipg                set the the interpacket gap (milliseconds) for packets within an isochronous frame\n\
       --isochronous <frames-per-second>:<mean>,<stddev> send traffic in bursts (frames - emulate video traffic)\n\
       --incr-dstip         Increment the destination ip with parallel (-P) traffic threads\n\
-      --incr-dstport       Increment the destination port with parallel (-P) traffic threads\n\
-      --local-only         Set don't route on socket\n\
-      --near-congestion=[w] Use a weighted write delay per the sampled TCP RTT (experimental)\n\
       --no-connect-sync    No sychronization after connect when -P or parallel traffic threads\n\
       --no-udp-fin         No final server to client stats at end of UDP test\n\
   -n, --num       #[kmgKMG]    number of bytes to transmit (instead of -t)\n\
@@ -133,7 +126,6 @@ Client specific:\n\
       --txstart-time       unix epoch time to schedule first write and start traffic\n\
   -B, --bind [<ip> | <ip:port>] bind ip (and optional port) from which to source traffic\n\
   -F, --fileinput <name>   input the data to be transmitted from a file\n\
-  -H, --ssm-host <ip>      set the SSM source, use with -B for (S,G) \n\
   -I, --stdin              input the data to be transmitted from stdin\n\
   -L, --listenport #       port to receive fullduplexectional tests back on\n\
   -P, --parallel  #        number of parallel client threads to run\n"
@@ -192,9 +184,6 @@ const char client_port[] =
 
 const char server_pid_port[] =
 "Server listening on %s port %d with pid %d\n";
-
-const char server_pid_portrange[] =
-"Server listening on %s ports %d-%d with pid %d\n";
 
 const char client_pid_port[] =
 "Client connecting to %s, %s port %d with pid %d (%d flows)\n";
@@ -373,19 +362,13 @@ const char report_sumcnt_bw_write_enhanced_header[] =
 "[SUM-cnt] Interval" IPERFTimeSpace "Transfer    Bandwidth       Write/Err  Rtry\n";
 
 const char report_sumcnt_bw_write_enhanced_format[] =
-"[SUM-%d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d%10d\n";
+"[SUM-%d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d\n";
 
 const char report_bw_pps_enhanced_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer     Bandwidth      Write/Err  PPS\n";
 
 const char report_bw_pps_enhanced_format[] =
 "%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %8.0f pps\n";
-
-const char report_sumcnt_bw_pps_enhanced_header[] =
-"[SUM-cnt] Interval" IPERFTimeSpace "Transfer     Bandwidth      Write/Err  PPS\n";
-
-const char report_sumcnt_bw_pps_enhanced_format[] =
-"[SUM-%d] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %8.0f pps\n";
 
 const char report_bw_pps_enhanced_isoch_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer     Bandwidth      Write/Err  PPS  isoch:tx/miss/slip\n";
