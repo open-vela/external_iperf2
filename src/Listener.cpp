@@ -816,10 +816,7 @@ bool Listener::L2_setup (thread_Settings *server, int sockfd) {
 	rc = SockAddr_v4_Connect_BPF(server->mSock, ((struct sockaddr_in *)(l))->sin_addr.s_addr, ((struct sockaddr_in *)(p))->sin_addr.s_addr, ((struct sockaddr_in *)(l))->sin_port, ((struct sockaddr_in *)(p))->sin_port);
 	WARN_errno(rc == SOCKET_ERROR, "l2 connect ip bpf");
     }
-    if (rc < 0)
-	return false;
-    else
-	return true;
+    return rc >= 0;
 #else
     fprintf(stderr, "Client requested --l2checks but not supported on this platform\n");
     return false;

@@ -146,10 +146,8 @@ Server::~Server () {
 }
 
 inline bool Server::InProgress () {
-    if (sInterupted || peerclose ||
-	((isServerModeTime(mSettings) || (isModeTime(mSettings) && isReverse(mSettings))) && mEndTime.before(reportstruct->packetTime)))
-	return false;
-    return true;
+    return !(sInterupted || peerclose ||
+	((isServerModeTime(mSettings) || (isModeTime(mSettings) && isReverse(mSettings))) && mEndTime.before(reportstruct->packetTime)));
 }
 
 /* -------------------------------------------------------------------
