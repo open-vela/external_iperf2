@@ -58,9 +58,9 @@ namespace Isochronous {
         FrameCounter(double, const Timestamp& start);
         FrameCounter(double);
         ~FrameCounter();
-	unsigned int get(void);
+	unsigned int get(void) const;
 	unsigned int get(long *);
-	unsigned int get(const Timestamp&);
+	unsigned int get(const Timestamp&) const;
 	unsigned int period_us(void);
 	unsigned int wait_tick(void);
 	unsigned int wait_sync(long sec, long usec);

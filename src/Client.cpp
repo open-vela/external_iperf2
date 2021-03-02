@@ -241,7 +241,7 @@ bool Client::my_connect (bool close_on_fail) {
     return connected;
 } // end Connect
 
-bool Client::isConnected () {
+bool Client::isConnected () const {
 #ifdef HAVE_THREAD_DEBUG
   // thread_debug("Client is connected %d", connected);
 #endif

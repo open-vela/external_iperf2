@@ -90,7 +90,7 @@ public:
     void TxDelay(void);
     void ConnectPeriodic(void);
     bool my_connect(bool close_on_fail);
-    bool isConnected(void);
+    bool isConnected(void) const;
     int SendFirstPayload(void);
     int BarrierClient(struct BarrierMutex *);
     struct ReportHeader *myJob;
