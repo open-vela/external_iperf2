@@ -90,7 +90,7 @@ static void active_table_show_compare(const char *action, Iperf_ListEntry *entry
 }
 #endif
 
-void Iperf_initialize_active_table (void) {
+void Iperf_initialize_active_table () {
     Mutex_Initialize(&active_table.my_mutex);
     active_table.root = NULL;
     active_table.groupid = 0;
@@ -189,7 +189,7 @@ void Iperf_remove_host (iperf_sockaddr *del) {
 /*
  * Destroy the table
  */
-void Iperf_destroy_active_table (void) {
+void Iperf_destroy_active_table () {
     Iperf_ListEntry *itr1 = active_table.root, *itr2;
     while (itr1 != NULL) {
         itr2 = itr1->next;

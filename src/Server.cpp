@@ -131,7 +131,7 @@ Server::Server (thread_Settings *inSettings) {
 /* -------------------------------------------------------------------
  * Destructor close socket.
  * ------------------------------------------------------------------- */
-Server::~Server (void) {
+Server::~Server () {
 #if HAVE_THREAD_DEBUG
     thread_debug("Server destructor sock=%d fullduplex=%s", mySocket, (isFullDuplex(mSettings) ? "true" : "false"));
 #endif
@@ -145,7 +145,7 @@ Server::~Server (void) {
     DELETE_ARRAY(mBuf);
 }
 
-inline bool Server::InProgress (void) {
+inline bool Server::InProgress () {
     if (sInterupted || peerclose ||
 	((isServerModeTime(mSettings) || (isModeTime(mSettings) && isReverse(mSettings))) && mEndTime.before(reportstruct->packetTime)))
 	return false;
@@ -157,7 +157,7 @@ inline bool Server::InProgress (void) {
  * Sends termination flag several times at the end.
  * Does not close the socket.
  * ------------------------------------------------------------------- */
-void Server::RunTCP (void) {
+void Server::RunTCP () {
     long currLen;
     intmax_t totLen = 0;
     bool peerclose  = false;
@@ -296,7 +296,7 @@ void Server::RunTCP (void) {
     FreeReport(myJob);
 }
 
-void Server::InitKernelTimeStamping (void) {
+void Server::InitKernelTimeStamping () {
 #if HAVE_DECL_SO_TIMESTAMP
     iov[0].iov_base=mBuf;
     iov[0].iov_len=mSettings->mBufLen;
@@ -320,7 +320,7 @@ void Server::InitKernelTimeStamping (void) {
 // Set the report start times and next report times, options
 // are now, the accept time or the first write time
 //
-inline void Server::SetFullDuplexReportStartTime (void) {
+inline void Server::SetFullDuplexReportStartTime () {
     assert(myReport->FullDuplexReport != NULL);
     struct TransferInfo *fullduplexstats = &myReport->FullDuplexReport->info;
     assert(fullduplexstats != NULL);
@@ -334,7 +334,7 @@ inline void Server::SetFullDuplexReportStartTime (void) {
     thread_debug("Server fullduplex report start=%ld.%ld next=%ld.%ld", fullduplexstats->ts.startTime.tv_sec, fullduplexstats->ts.startTime.tv_usec, fullduplexstats->ts.nextTime.tv_sec, fullduplexstats->ts.nextTime.tv_usec);
 #endif
 }
-inline void Server::SetReportStartTime (void) {
+inline void Server::SetReportStartTime () {
     now.setnow();
     if (isTripTime(mSettings) && !isFrameInterval(mSettings)) {
 	// Start times come from the sender's timestamp
@@ -379,7 +379,7 @@ inline void Server::SetReportStartTime (void) {
 #endif
 }
 
-bool Server::InitTrafficLoop (void) {
+bool Server::InitTrafficLoop () {
     myJob = InitIndividualReport(mSettings);
     myReport = (struct ReporterData *)myJob->this_report;
     assert(myJob != NULL);
@@ -490,7 +490,7 @@ bool Server::InitTrafficLoop (void) {
     return true;
 }
 
-inline int Server::ReadWithRxTimestamp (void) {
+inline int Server::ReadWithRxTimestamp () {
     long currLen;
     int tsdone = 0;
 
@@ -535,7 +535,7 @@ inline int Server::ReadWithRxTimestamp (void) {
 }
 
 // Returns true if the client has indicated this is the final packet
-inline bool Server::ReadPacketID (void) {
+inline bool Server::ReadPacketID () {
     bool terminate = false;
     struct UDP_datagram* mBuf_UDP  = (struct UDP_datagram*) (mBuf + mSettings->l4payloadoffset);
 
@@ -568,7 +568,7 @@ inline bool Server::ReadPacketID (void) {
     return terminate;
 }
 
-void Server::L2_processing (void) {
+void Server::L2_processing () {
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
     eth_hdr = (struct ether_header *) mBuf;
     ip_hdr = (struct iphdr *) (mBuf + sizeof(struct ether_header));
@@ -607,7 +607,7 @@ void Server::L2_processing (void) {
 
 // Run the L2 packet through a quintuple check, i.e. proto/ip src/ip dst/src port/src dst
 // and return zero is there is a match, otherwize return nonzero
-int Server::L2_quintuple_filter (void) {
+int Server::L2_quintuple_filter () {
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
 
 #define IPV4SRCOFFSET 12  // the ipv4 source address offset from the l3 pdu
@@ -711,7 +711,7 @@ inline void Server::udp_isoch_processing (int rxlen) {
  * Sends termination flag several times at the end.
  * Does not close the socket.
  * ------------------------------------------------------------------- */
-void Server::RunUDP (void) {
+void Server::RunUDP () {
     int rxlen;
     int readerr = 0;
     bool lastpacket = false;
