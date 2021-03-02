@@ -491,8 +491,8 @@ void Client::InitTrafficLoop () {
         assert(myReport!=NULL);
         PostReport(myJob);
     }
-    one_report = ((!isUDP(mSettings) && !isEnhanced(mSettings) && (mSettings->mIntervalMode != kInterval_Time) \
-		   && !isIsochronous(mSettings) && !isTripTime(mSettings) && !isReverse(mSettings)) ? true : false);
+    one_report = (!isUDP(mSettings) && !isEnhanced(mSettings) && (mSettings->mIntervalMode != kInterval_Time) \
+		   && !isIsochronous(mSettings) && !isTripTime(mSettings) && !isReverse(mSettings));
 }
 
 /* -------------------------------------------------------------------
@@ -1174,16 +1174,11 @@ inline bool Client::InProgress () {
     // the file if it's file input
     if (isFileInput(mSettings)) {
 	Extractor_getNextDataBlock(readAt, mSettings);
-        if (Extractor_canRead(mSettings) != 0)
-	    return true;
-	else
-	    return false;
+        return Extractor_canRead(mSettings) != 0;
     }
-    if (sInterupted ||
+    return !(sInterupted ||
 	(isModeTime(mSettings) && mEndTime.before(reportstruct->packetTime))  ||
-	(isModeAmount(mSettings) && (mSettings->mAmount <= 0)))
-	return false;
-    return true;
+	(isModeAmount(mSettings) && (mSettings->mAmount <= 0)));
 }
 
 /*
