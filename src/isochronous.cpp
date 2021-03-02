@@ -117,7 +117,7 @@ int FrameCounter::mySetWaitableTimer (long delay_time) {
 #endif
 
 #if defined(HAVE_CLOCK_NANOSLEEP)
-unsigned int FrameCounter::wait_tick (void) {
+unsigned int FrameCounter::wait_tick () {
     Timestamp now;
     int rc = true;
     if (!slot_counter) {
@@ -170,7 +170,7 @@ unsigned int FrameCounter::wait_tick (void) {
     return(framecounter);
 }
 #endif
-inline unsigned int FrameCounter::get (void) {
+inline unsigned int FrameCounter::get () {
     Timestamp now;
     return slot_counter + 1;
 }
@@ -190,7 +190,7 @@ inline unsigned int FrameCounter::get (long *ticks_remaining) {
     return(counter + 1); // Frame counter for packets starts at 1
 }
 
-inline Timestamp FrameCounter::next_slot (void) {
+inline Timestamp FrameCounter::next_slot () {
     Timestamp next = startTime;
     slot_counter = get();
     // period unit is in microseconds, convert to seconds
@@ -198,11 +198,11 @@ inline Timestamp FrameCounter::next_slot (void) {
     return next;
 }
 
-unsigned int FrameCounter::period_us (void) {
+unsigned int FrameCounter::period_us () {
     return(period);
 }
 
-void FrameCounter::reset (void) {
+void FrameCounter::reset () {
     period = (1000000 / frequency);
     startTime.setnow();
 }
@@ -219,10 +219,10 @@ unsigned int FrameCounter::wait_sync (long sec, long usec) {
     return(framecounter);
 }
 
-long FrameCounter::getSecs (void) {
+long FrameCounter::getSecs () {
     return startTime.getSecs();
 }
 
-long FrameCounter::getUsecs (void) {
+long FrameCounter::getUsecs () {
     return startTime.getUsecs();
 }

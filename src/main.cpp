@@ -79,7 +79,7 @@
  * prototypes
  * ------------------------------------------------------------------- */
 // Function called at exit to clean up as much as possible
-void cleanup(void);
+void cleanup();
 // signal handlers
 static void Sig_Interupt(int inSigno);
 
@@ -114,7 +114,7 @@ nthread_t sThread;
 static thread_Settings* ext_gSettings;
 // The main thread uses this function to wait
 // for all other threads to complete
-void waitUntilQuit(void);
+void waitUntilQuit();
 
 /* -------------------------------------------------------------------
  * main()
@@ -333,7 +333,7 @@ void Sig_Interupt (int inSigno) {
  * either by exit() or terminating main().
  * ------------------------------------------------------------------- */
 
-void cleanup (void) {
+void cleanup () {
 #ifdef WIN32
     // Shutdown Winsock
     WSACleanup();
