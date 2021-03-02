@@ -611,7 +611,7 @@ inline int reporter_process_report (struct ReportHeader *reporthdr) {
 	FreeReport(reporthdr);
 	break;
     default:
-	fprintf(stderr,"Invalid report type in process report %p\n", (void *) reporthdr->this_report);
+	fprintf(stderr,"Invalid report type in process report %p\n", reporthdr->this_report);
 	assert(0);
 	break;
     }

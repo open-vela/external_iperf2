@@ -346,11 +346,11 @@ void Settings_Copy (struct thread_Settings *from, struct thread_Settings **into,
 	    strcpy((*into)->mSSMMulticastStr, from->mSSMMulticastStr);
 	}
 	if (from->mIfrname != NULL) {
-	    (*into)->mIfrname = (char *) calloc(strlen(from->mIfrname) + 1, sizeof(char));
+	    (*into)->mIfrname = static_cast<char *>(calloc(strlen(from->mIfrname) + 1, sizeof(char)));
 	    strcpy((*into)->mIfrname, from->mIfrname);
 	}
 	if (from->mIfrnametx != NULL) {
-	    (*into)->mIfrnametx = (char *) calloc(strlen(from->mIfrnametx) + 1, sizeof(char));
+	    (*into)->mIfrnametx = static_cast<char *>(calloc(strlen(from->mIfrnametx) + 1, sizeof(char)));
 	    strcpy((*into)->mIfrnametx, from->mIfrnametx);
 	}
 	if (from->mIsochronousStr != NULL) {
@@ -548,7 +548,7 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 			fprintf (stderr, "Too large value of '%s' for -i interval, max is %f\n", optarg, (UINT_MAX / 1e6));
 			exit(1);
 		    }
-		    mExtSettings->mInterval = (unsigned int) (itime * 1e6);
+		    mExtSettings->mInterval = static_cast<unsigned int>(itime * 1e6);
 		    if (!mExtSettings->mInterval) {
 			fprintf (stderr, "Interval per -i cannot be zero\n");
 			exit(1);
@@ -619,7 +619,7 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
             setModeTime(mExtSettings);
             setServerModeTime(mExtSettings);
 	    if (atof(optarg) > 0.0)
-                mExtSettings->mAmount = (size_t) (atof(optarg) * 100.0);
+                mExtSettings->mAmount = static_cast<size_t>(atof(optarg) * 100.0);
 	    else
 	        infinitetime = 1;
             break;
@@ -944,7 +944,7 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    if (permitkeytimeout) {
 		permitkeytimeout = 0;
 		if (atof(optarg) >= 0.0)
-		    mExtSettings->mListenerTimeout = (size_t) (atof(optarg));
+		    mExtSettings->mListenerTimeout = static_cast<size_t>(atof(optarg));
 	    }
 	    if (rxhistogram) {
 		rxhistogram = 0;
@@ -973,7 +973,7 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 #if defined(HAVE_DECL_SO_MAX_PACING_RATE)
 	        fqrate=0;
 		setFQPacing(mExtSettings);
-		mExtSettings->mFQPacingRate = (uintmax_t) (bitorbyte_atoi(optarg) / 8);
+		mExtSettings->mFQPacingRate = static_cast<uintmax_t>(bitorbyte_atoi(optarg) / 8);
 #else
 		fprintf(stderr, "WARNING: The --fq-rate option is not supported\n");
 #endif
@@ -1019,13 +1019,13 @@ static void generate_permit_key (struct thread_Settings *mExtSettings) {
     mExtSettings->mPermitKeyTime.tv_sec = now.getSecs();
     mExtSettings->mPermitKeyTime.tv_usec = now.getUsecs();
     int usecs = mExtSettings->mPermitKeyTime.tv_usec;
-    int timestrlength = snprintf(NULL, 0, "%ld.%06d-", (long) mExtSettings->mPermitKeyTime.tv_sec, usecs);
-    snprintf(mExtSettings->mPermitKey, (timestrlength+1), "%ld.%06d-", (long) mExtSettings->mPermitKeyTime.tv_sec, usecs);
-    srand((unsigned int)(time(NULL)));
+    int timestrlength = snprintf(NULL, 0, "%ld.%06d-", static_cast<long>(mExtSettings->mPermitKeyTime.tv_sec), usecs);
+    snprintf(mExtSettings->mPermitKey, (timestrlength+1), "%ld.%06d-", static_cast<long>(mExtSettings->mPermitKeyTime.tv_sec), usecs);
+    srand(static_cast<unsigned int>(time(NULL)));
     int index;
     char characters[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     for(index = timestrlength; index < (DEFAULT_PERMITKEY_LEN + timestrlength); index++) {
-	sprintf(mExtSettings->mPermitKey + index, "%c", characters[rand() % ((int) sizeof(characters) - 1)]);
+	sprintf(mExtSettings->mPermitKey + index, "%c", characters[rand() % (static_cast<int>(sizeof(characters)) - 1)]);
     }
     mExtSettings->mPermitKey[DEFAULT_PERMITKEY_LEN + timestrlength] = '\0';
     if (strlen(mExtSettings->mPermitKey) > MAX_PERMITKEY_LEN) {
@@ -1229,9 +1229,9 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		bail = true;
 	    }
 #endif
-	    if (isBWSet(mExtSettings) && ((mExtSettings->mAppRate / 8) < (uintmax_t) mExtSettings->mBufLen)) {
+	    if (isBWSet(mExtSettings) && ((mExtSettings->mAppRate / 8) < static_cast<uintmax_t>(mExtSettings->mBufLen))) {
 		fprintf(stderr, "ERROR: option -b and -l of %d are incompatible, consider setting -l to %d or lower\n", \
-			mExtSettings->mBufLen, (int) (mExtSettings->mAppRate / 8));
+			mExtSettings->mBufLen, static_cast<int>(mExtSettings->mAppRate / 8));
 		bail = true;
 	    }
 	    if (isIPG(mExtSettings)) {
@@ -1428,7 +1428,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
     // Parse -B addresses
     if (mExtSettings->mLocalhost) {
 	if (((results = strtok(mExtSettings->mLocalhost, "%")) != NULL) && ((results = strtok(NULL, "%")) != NULL)) {
-	    mExtSettings->mIfrname = (char *) calloc(strlen(results) + 1, sizeof(char));
+	    mExtSettings->mIfrname = static_cast<char *>(calloc(strlen(results) + 1, sizeof(char)));
 	    strcpy(mExtSettings->mIfrname, results);
 	    if (mExtSettings->mThreadMode == kMode_Client) {
 	        fprintf(stderr, "WARNING: Client cannot set bind device %s via -B consider using -c\n", mExtSettings->mIfrname);
@@ -1465,7 +1465,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
     if (mExtSettings->mThreadMode == kMode_Client) {
 	mExtSettings->mIfrnametx = NULL; // default off SO_BINDTODEVICE
 	if (((results = strtok(mExtSettings->mHost, "%")) != NULL) && ((results = strtok(NULL, "%")) != NULL)) {
-	    mExtSettings->mIfrnametx = (char *) calloc(strlen(results) + 1, sizeof(char));
+	    mExtSettings->mIfrnametx = static_cast<char *>(calloc(strlen(results) + 1, sizeof(char)));
 	    strcpy(mExtSettings->mIfrnametx, results);
 	}
 	if (isIPV6(mExtSettings))
@@ -1586,18 +1586,18 @@ void Settings_GenerateListenerSettings (struct thread_Settings *client, struct t
 
 void Settings_ReadClientSettingsIsoch (struct thread_Settings **client, struct client_hdrext_isoch_settings *hdr) {
     (*client)->mFPS = ntohl(hdr->FPSl);
-    (*client)->mFPS += ntohl(hdr->FPSu) / (double)rMillion;
+    (*client)->mFPS += ntohl(hdr->FPSu) / static_cast<double>(rMillion);
     (*client)->mMean = ntohl(hdr->Meanl);
-    (*client)->mMean += ntohl(hdr->Meanu) / (double)rMillion;
+    (*client)->mMean += ntohl(hdr->Meanu) / static_cast<double>(rMillion);
     (*client)->mVariance = ntohl(hdr->Variancel);
-    (*client)->mVariance += ntohl(hdr->Varianceu) / (double)rMillion;
+    (*client)->mVariance += ntohl(hdr->Varianceu) / static_cast<double>(rMillion);
     (*client)->mBurstIPG = ntohl(hdr->BurstIPGl);
-    (*client)->mBurstIPG += ntohl(hdr->BurstIPGu) / (double)rMillion;
+    (*client)->mBurstIPG += ntohl(hdr->BurstIPGu) / static_cast<double>(rMillion);
 }
 
 void Settings_ReadClientSettingsV1 (struct thread_Settings **client, struct client_hdr_v1 *hdr) {
     (*client)->mTID = thread_zeroid();
-    (*client)->mPort = (unsigned short) ntohl(hdr->mPort);
+    (*client)->mPort = static_cast<unsigned short>(ntohl(hdr->mPort));
     (*client)->mThreads = 1;
     if (hdr->mBufLen != 0) {
 	(*client)->mBufLen = ntohl(hdr->mBufLen);
@@ -1655,7 +1655,7 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
     reversed_thread->mThreadMode = kMode_Client;
 
     if (isUDP(server)) { // UDP test information passed in every packet per being stateless
-	struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) mBuf;
+	struct client_udp_testhdr *hdr = static_cast<struct client_udp_testhdr *>(mBuf);
 	Settings_ReadClientSettingsV1(&reversed_thread, &hdr->base);
 	if (isFullDuplex(server) || v1test) {
 	    server->mAmount = reversed_thread->mAmount + (SLOPSECS * 100);
@@ -1671,7 +1671,7 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
 	if (flags & HEADER_EXTEND) {
 	    reversed_thread->mAppRate = ntohl(hdr->extend.lRate);
 #ifdef HAVE_INT64_T
-	    reversed_thread->mAppRate |= ((uint64_t)(ntohl(hdr->extend.uRate) >> 8) << 32);
+	    reversed_thread->mAppRate |= (static_cast<uint64_t>(ntohl(hdr->extend.uRate) >> 8) << 32);
 #endif
 	    upperflags = ntohs(hdr->extend.upperflags);
 	    if (upperflags & HEADER_NOUDPFIN) {
@@ -1690,12 +1690,12 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
 		setFQPacing(reversed_thread);
 		reversed_thread->mFQPacingRate = ntohl(hdr->start_fq.fqratel);
 #ifdef HAVE_INT64_T
-		reversed_thread->mFQPacingRate |= ((uint64_t)(ntohl(hdr->start_fq.fqrateu)) << 32);
+		reversed_thread->mFQPacingRate |= (static_cast<uint64_t>(ntohl(hdr->start_fq.fqrateu)) << 32);
 #endif
 	    }
 	}
     } else { //tcp first payload
-	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) mBuf;
+	struct client_tcp_testhdr *hdr = static_cast<struct client_tcp_testhdr *>(mBuf);
 	Settings_ReadClientSettingsV1(&reversed_thread, &hdr->base);
 	if (isFullDuplex(server) || v1test) {
 	    server->mAmount = reversed_thread->mAmount + (SLOPSECS * 100);
@@ -1711,7 +1711,7 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
 	if (flags & HEADER_EXTEND) {
 	    reversed_thread->mAppRate = ntohl(hdr->extend.lRate);
 #ifdef HAVE_INT64_T
-	    reversed_thread->mAppRate |= ((uint64_t)(ntohl(hdr->extend.uRate) >> 8) << 32);
+	    reversed_thread->mAppRate |= (static_cast<uint64_t>(ntohl(hdr->extend.uRate) >> 8) << 32);
 #endif
 	    upperflags = ntohs(hdr->extend.upperflags);
 	    reversed_thread->mTOS = ntohs(hdr->extend.tos);
@@ -1723,7 +1723,7 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
 		setFQPacing(reversed_thread);
 		reversed_thread->mFQPacingRate = ntohl(hdr->start_fq.fqratel);
 #ifdef HAVE_INT64_T
-		reversed_thread->mFQPacingRate |= ((uint64_t)(ntohl(hdr->start_fq.fqrateu)) << 32);
+		reversed_thread->mFQPacingRate |= (static_cast<uint64_t>(ntohl(hdr->start_fq.fqrateu)) << 32);
 #endif
 	    }
 	}
@@ -1734,13 +1734,13 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
     // for legacy -d and -r need so set the reversed threads mHost
     if (v1test) {
 	reversed_thread->mHost = new char[REPORT_ADDRLEN];
-	if (((sockaddr*)&server->peer)->sa_family == AF_INET) {
-	    inet_ntop(AF_INET, &((sockaddr_in*)&server->peer)->sin_addr,
+	if ((reinterpret_cast<sockaddr*>(&server->peer))->sa_family == AF_INET) {
+	    inet_ntop(AF_INET, &(reinterpret_cast<sockaddr_in*>(&server->peer))->sin_addr,
 		      reversed_thread->mHost, REPORT_ADDRLEN);
 	}
 #ifdef HAVE_IPV6
 	else {
-	    inet_ntop(AF_INET6, &((sockaddr_in6*)&server->peer)->sin6_addr,
+	    inet_ntop(AF_INET6, &(reinterpret_cast<sockaddr_in6*>(&server->peer))->sin6_addr,
 		      reversed_thread->mHost, REPORT_ADDRLEN);
 	}
 #endif
@@ -1814,7 +1814,7 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 
     // Now setup UDP and TCP specific passed settings from client to server
     if (isUDP(client)) { // UDP test information passed in every packet per being stateless
-	struct client_udp_testhdr *hdr = (struct client_udp_testhdr *) testhdr;
+	struct client_udp_testhdr *hdr = static_cast<struct client_udp_testhdr *>(testhdr);
 	memset(hdr, 0, sizeof(struct client_udp_testhdr));
 	flags |= HEADER_SEQNO64B; // use 64 bit by default
 	flags |= HEADER_EXTEND;
@@ -1904,7 +1904,7 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	}
 	hdr->base.flags = htonl(flags);
     } else { // TCP first write with test information
-	struct client_tcp_testhdr *hdr = (struct client_tcp_testhdr *) testhdr;
+	struct client_tcp_testhdr *hdr = static_cast<struct client_tcp_testhdr *>(testhdr);
 	memset(hdr, 0, sizeof(struct client_tcp_testhdr));
 	flags |= HEADER_EXTEND;
 	hdr->extend.version_u = htonl(IPERF_VERSION_MAJORHEX);
@@ -1966,9 +1966,9 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	    flags |= HEADER_LEN_BIT;
 	    int keylen = 0;
 	    if (!isServerReverse(client) && isPermitKey(client) && (client->mPermitKey[0] != '\0')) {
-		keylen = (int) strnlen(client->mPermitKey, MAX_PERMITKEY_LEN);
+		keylen = static_cast<int>(strnlen(client->mPermitKey, MAX_PERMITKEY_LEN));
 		flags |= HEADER_KEYCHECK;
-		struct permitKey *thiskey = (struct permitKey *) ((char *)testhdr + len);
+		struct permitKey *thiskey = reinterpret_cast<struct permitKey *>(static_cast<char *>(testhdr) + len);
 		thiskey->length = htons((uint16_t)keylen);
 		memcpy(thiskey->value, client->mPermitKey, keylen);
 		len += sizeof(thiskey->length);
@@ -1985,7 +1985,7 @@ int Settings_ClientHdrPeekLen (uint32_t flags) {
     //* determine peek length and permit key
     int peeklen = 0;
     if (flags & HEADER_LEN_BIT) {
-	peeklen = (int) ((flags & HEADER_LEN_MASK) >> 1);
+	peeklen = static_cast<int>((flags & HEADER_LEN_MASK) >> 1);
 	if (peeklen > MAX_HEADER_LEN) {
 	    fprintf(stderr, "WARN: header of %d length too large\n", peeklen);
 	    peeklen = -1;

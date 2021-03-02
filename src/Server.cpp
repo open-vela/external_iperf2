@@ -97,7 +97,7 @@ Server::Server (thread_Settings *inSettings) {
     mBufLen = (mSettings->mBufLen > MINMBUFALLOCSIZE) ? mSettings->mBufLen : MINMBUFALLOCSIZE;
     mBuf = new char[mBufLen];
     FAIL_errno(mBuf == NULL, "No memory for buffer\n", mSettings);
-    if (mSettings->mBufLen < (int) sizeof(UDP_datagram)) {
+    if (mSettings->mBufLen < static_cast<int>(sizeof(UDP_datagram))) {
 	fprintf(stderr, warn_buffer_too_small, mSettings->mBufLen);
     }
 
@@ -122,7 +122,7 @@ Server::Server (thread_Settings *inSettings) {
 	timeout.tv_sec = sorcvtimer / 1000000;
 	timeout.tv_usec = sorcvtimer % 1000000;
 #endif
-	if (setsockopt(mSettings->mSock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+	if (setsockopt(mSettings->mSock, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char *>(&timeout), sizeof(timeout)) < 0) {
 	    WARN_errno(mSettings->mSock == SO_RCVTIMEO, "socket");
 	}
     }
@@ -193,7 +193,7 @@ void Server::RunTCP () {
 		readLen = (mSettings->mBufLen < burst_nleft) ? mSettings->mBufLen : burst_nleft;
 	    reportstruct->emptyreport=1;
 	    if ((isIsochronous(mSettings) || isTripTime(mSettings)) && (burst_nleft == 0)) {
-		if ((n = recvn(mSettings->mSock, (char *)&burst_info, sizeof(struct TCP_burst_payload), 0)) == sizeof(struct TCP_burst_payload)) {
+		if ((n = recvn(mSettings->mSock, reinterpret_cast<char *>(&burst_info), sizeof(struct TCP_burst_payload), 0)) == sizeof(struct TCP_burst_payload)) {
 		    // burst_info.typelen.type = ntohl(burst_info.typelen.type);
 		    // burst_info.typelen.length = ntohl(burst_info.typelen.length);
 		    burst_info.flags = ntohl(burst_info.flags);
@@ -268,7 +268,7 @@ void Server::RunTCP () {
 	    // Check for reverse and amount where
 	    // the server stops after receiving
 	    // the expected byte count
-	    if (isReverse(mSettings) && !isModeTime(mSettings) && (totLen >= (intmax_t) mSettings->mAmount)) {
+	    if (isReverse(mSettings) && !isModeTime(mSettings) && (totLen >= static_cast<intmax_t>(mSettings->mAmount))) {
 	        break;
 	    }
 	} else {
@@ -308,7 +308,7 @@ void Server::InitKernelTimeStamping () {
     message.msg_controllen = sizeof(ctrl);
 
     int timestampOn = 1;
-    if (setsockopt(mSettings->mSock, SOL_SOCKET, SO_TIMESTAMP, (int *) &timestampOn, sizeof(timestampOn)) < 0) {
+    if (setsockopt(mSettings->mSock, SOL_SOCKET, SO_TIMESTAMP, &timestampOn, sizeof(timestampOn)) < 0) {
 	WARN_errno(mSettings->mSock == SO_TIMESTAMP, "socket");
     }
 #endif
@@ -379,7 +379,7 @@ inline void Server::SetReportStartTime () {
 
 bool Server::InitTrafficLoop () {
     myJob = InitIndividualReport(mSettings);
-    myReport = (struct ReporterData *)myJob->this_report;
+    myReport = static_cast<struct ReporterData *>(myJob->this_report);
     assert(myJob != NULL);
     //  copy the thread drop socket to this object such
     //  that the destructor can close it if needed
@@ -410,7 +410,7 @@ bool Server::InitTrafficLoop () {
 		//peer closed the socket, with no writes e.g. a connect-only test
 		return false;
 	    }
-	    struct client_udp_testhdr *udp_pkt = (struct client_udp_testhdr *) mBuf;
+	    struct client_udp_testhdr *udp_pkt = reinterpret_cast<struct client_udp_testhdr *>(mBuf);
 	    flags = ntohl(udp_pkt->base.flags);
 	    mSettings->triptime_start.tv_sec = ntohl(udp_pkt->start_fq.start_tv_sec);
 	    mSettings->triptime_start.tv_usec = ntohl(udp_pkt->start_fq.start_tv_usec);
@@ -423,14 +423,14 @@ bool Server::InitTrafficLoop () {
 		return false;
 	    }
 	    FAIL_errno((n < (int) sizeof(uint32_t)), "read tcp flags", mSettings);
-	    struct client_tcp_testhdr *tcp_pkt = (struct client_tcp_testhdr *) mBuf;
+	    struct client_tcp_testhdr *tcp_pkt = reinterpret_cast<struct client_tcp_testhdr *>(mBuf);
 	    flags = ntohl(tcp_pkt->base.flags);
 	    // figure out the length of the test header
 	    if ((peeklen = Settings_ClientHdrPeekLen(flags)) > 0) {
 		// read the test settings passed to the mSettings by the client
 		n = recvn(mSettings->mSock, mBuf, peeklen, 0);
 		FAIL_errno((n < peeklen), "read tcp test info", mSettings);
-		struct client_tcp_testhdr *tcp_pkt = (struct client_tcp_testhdr *) mBuf;
+		struct client_tcp_testhdr *tcp_pkt = reinterpret_cast<struct client_tcp_testhdr *>(mBuf);
 		mSettings->triptime_start.tv_sec = ntohl(tcp_pkt->start_fq.start_tv_sec);
 		mSettings->triptime_start.tv_usec = ntohl(tcp_pkt->start_fq.start_tv_usec);
 		reportstruct->packetLen = n;
@@ -460,8 +460,8 @@ bool Server::InitTrafficLoop () {
         int err;
         struct itimerval it;
 	memset (&it, 0, sizeof (it));
-	it.it_value.tv_sec = (int) (mSettings->mAmount / 100.0);
-	it.it_value.tv_usec = (int) (10000 * (mSettings->mAmount -
+	it.it_value.tv_sec = static_cast<int>(mSettings->mAmount / 100.0);
+	it.it_value.tv_usec = static_cast<int>(10000 * (mSettings->mAmount -
 					      it.it_value.tv_sec * 100.0));
 	err = setitimer(ITIMER_REAL, &it, NULL);
 	FAIL_errno(err != 0, "setitimer", mSettings);
@@ -493,7 +493,7 @@ inline int Server::ReadWithRxTimestamp () {
     int tsdone = 0;
 
 #if HAVE_DECL_SO_TIMESTAMP
-    cmsg = (struct cmsghdr *) &ctrl;
+    cmsg = reinterpret_cast<struct cmsghdr *>(&ctrl);
     currLen = recvmsg(mSettings->mSock, &message, mSettings->recvflags);
     if (currLen > 0) {
 	if (cmsg->cmsg_level == SOL_SOCKET &&
@@ -535,14 +535,14 @@ inline int Server::ReadWithRxTimestamp () {
 // Returns true if the client has indicated this is the final packet
 inline bool Server::ReadPacketID () {
     bool terminate = false;
-    struct UDP_datagram* mBuf_UDP  = (struct UDP_datagram*) (mBuf + mSettings->l4payloadoffset);
+    struct UDP_datagram* mBuf_UDP  = reinterpret_cast<struct UDP_datagram*>(mBuf + mSettings->l4payloadoffset);
 
     // terminate when datagram begins with negative index
     // the datagram ID should be correct, just negated
 
     if (isSeqNo64b(mSettings)) {
       // New client - Signed PacketID packed into unsigned id2,id
-      reportstruct->packetID = ((uint32_t)ntohl(mBuf_UDP->id)) | ((uintmax_t)(ntohl(mBuf_UDP->id2)) << 32);
+      reportstruct->packetID = (static_cast<uint32_t>(ntohl(mBuf_UDP->id))) | (static_cast<uintmax_t>(ntohl(mBuf_UDP->id2)) << 32);
 
 #ifdef HAVE_PACKET_DEBUG
       printf("id 0x%x, 0x%x -> %" PRIdMAX " (0x%" PRIxMAX ")\n",
@@ -550,7 +550,7 @@ inline bool Server::ReadPacketID () {
 #endif
     } else {
       // Old client - Signed PacketID in Signed id
-      reportstruct->packetID = (int32_t)ntohl(mBuf_UDP->id);
+      reportstruct->packetID = static_cast<int32_t>(ntohl(mBuf_UDP->id));
 #ifdef HAVE_PACKET_DEBUG
       printf("id 0x%x -> %" PRIdMAX " (0x%" PRIxMAX ")\n",
 	     ntohl(mBuf_UDP->id), reportstruct->packetID, reportstruct->packetID);
@@ -568,10 +568,10 @@ inline bool Server::ReadPacketID () {
 
 void Server::L2_processing () {
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
-    eth_hdr = (struct ether_header *) mBuf;
-    ip_hdr = (struct iphdr *) (mBuf + sizeof(struct ether_header));
+    eth_hdr = reinterpret_cast<struct ether_header *>(mBuf);
+    ip_hdr = reinterpret_cast<struct iphdr *>(mBuf + sizeof(struct ether_header));
     // L4 offest is set by the listener and depends upon IPv4 or IPv6
-    udp_hdr = (struct udphdr *) (mBuf + mSettings->l4offset);
+    udp_hdr = reinterpret_cast<struct udphdr *>(mBuf + mSettings->l4offset);
     // Read the packet to get the UDP length
     int udplen = ntohs(udp_hdr->len);
     //
@@ -615,15 +615,15 @@ int Server::L2_quintuple_filter () {
     // Note: it's expected the initiating socket has aready "connected"
     // and the sockaddr structs have been populated
     // 2nd Note:  sockaddr structs are in network byte order
-    struct sockaddr *p = (sockaddr *)&mSettings->peer;
-    struct sockaddr *l = (sockaddr *)&mSettings->local;
+    struct sockaddr *p = reinterpret_cast<sockaddr *>(&mSettings->peer);
+    struct sockaddr *l = reinterpret_cast<sockaddr *>(&mSettings->local);
     // make sure sa_family is coherent for both src and dst
     if (!(((l->sa_family == AF_INET) && (p->sa_family == AF_INET)) || ((l->sa_family == AF_INET6) && (p->sa_family == AF_INET6)))) {
 	return -1;
     }
 
     // check the L2 ethertype
-    struct ether_header *l2hdr = (struct ether_header *)mBuf;
+    struct ether_header *l2hdr = reinterpret_cast<struct ether_header *>(mBuf);
 
     if (!isIPV6(mSettings)) {
 	if (ntohs(l2hdr->ether_type) != ETHERTYPE_IP)
@@ -634,18 +634,18 @@ int Server::L2_quintuple_filter () {
     }
     // check the ip src/dst
     const uint32_t *data;
-    udp_hdr = (struct udphdr *) (mBuf + mSettings->l4offset);
+    udp_hdr = reinterpret_cast<struct udphdr *>(mBuf + mSettings->l4offset);
 
     // Check plain old v4 using v4 addr structs
     if (l->sa_family == AF_INET) {
-	data = (const uint32_t *) (mBuf + sizeof(struct ether_header) + IPV4SRCOFFSET);
-	if (((struct sockaddr_in *)(p))->sin_addr.s_addr != *data++)
+	data = reinterpret_cast<const uint32_t *>(mBuf + sizeof(struct ether_header) + IPV4SRCOFFSET);
+	if ((reinterpret_cast<struct sockaddr_in *>(p))->sin_addr.s_addr != *data++)
 	    return -1;
-	if (((struct sockaddr_in *)(l))->sin_addr.s_addr != *data)
+	if ((reinterpret_cast<struct sockaddr_in *>(l))->sin_addr.s_addr != *data)
 	    return -1;
-	if (udp_hdr->source != ((struct sockaddr_in *)(p))->sin_port)
+	if (udp_hdr->source != (reinterpret_cast<struct sockaddr_in *>(p))->sin_port)
 	    return -1;
-	if (udp_hdr->dest != ((struct sockaddr_in *)(l))->sin_port)
+	if (udp_hdr->dest != (reinterpret_cast<struct sockaddr_in *>(l))->sin_port)
 	    return -1;
     } else {
 	// Using the v6 addr structures
@@ -654,7 +654,7 @@ int Server::L2_quintuple_filter () {
 	struct in6_addr *v6local = SockAddr_get_in6_addr(&mSettings->local);
 	if (isIPV6(mSettings)) {
 	    int i;
-	    data = (const uint32_t *) (mBuf + sizeof(struct ether_header) + IPV6SRCOFFSET);
+	    data = reinterpret_cast<const uint32_t *>(mBuf + sizeof(struct ether_header) + IPV6SRCOFFSET);
 	    // check for v6 src/dst address match
 	    for (i = 0; i < 4; i++) {
 		if (v6peer->s6_addr32[i] != *data++)
@@ -665,16 +665,16 @@ int Server::L2_quintuple_filter () {
 		    return -1;
 	    }
 	} else { // v4 addr in v6 family struct
-	    data = (const uint32_t *) (mBuf + sizeof(struct ether_header) + IPV4SRCOFFSET);
+	    data = reinterpret_cast<const uint32_t *>(mBuf + sizeof(struct ether_header) + IPV4SRCOFFSET);
 	    if (v6peer->s6_addr32[3] != *data++)
 		return -1;
 	    if (v6peer->s6_addr32[3] != *data)
 		return -1;
 	}
 	// check udp ports
-	if (udp_hdr->source != ((struct sockaddr_in6 *)(p))->sin6_port)
+	if (udp_hdr->source != (reinterpret_cast<struct sockaddr_in6 *>(p))->sin6_port)
 	    return -1;
-	if (udp_hdr->dest != ((struct sockaddr_in6 *)(l))->sin6_port)
+	if (udp_hdr->dest != (reinterpret_cast<struct sockaddr_in6 *>(l))->sin6_port)
 	    return -1;
 #  endif // HAVE_IPV6
     }
@@ -685,12 +685,12 @@ int Server::L2_quintuple_filter () {
 
 inline void Server::udp_isoch_processing (int rxlen) {
     // Ignore runt sized isoch packets
-    if (rxlen < (int) (sizeof(struct UDP_datagram) +  sizeof(struct client_hdr_v1) + sizeof(struct client_hdrext) + sizeof(struct isoch_payload))) {
+    if (rxlen < static_cast<int>(sizeof(struct UDP_datagram) +  sizeof(struct client_hdr_v1) + sizeof(struct client_hdrext) + sizeof(struct isoch_payload))) {
 	reportstruct->burstsize = 0;
 	reportstruct->remaining = 0;
 	reportstruct->frameID = 0;
     } else {
-	struct client_udp_testhdr *udp_pkt = (struct client_udp_testhdr *)mBuf;
+	struct client_udp_testhdr *udp_pkt = reinterpret_cast<struct client_udp_testhdr *>(mBuf);
 	reportstruct->isochStartTime.tv_sec = ntohl(udp_pkt->isoch.start_tv_sec);
 	reportstruct->isochStartTime.tv_usec = ntohl(udp_pkt->isoch.start_tv_usec);
 	reportstruct->frameID = ntohl(udp_pkt->isoch.frameid);
