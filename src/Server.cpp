@@ -714,7 +714,7 @@ inline void Server::udp_isoch_processing (int rxlen) {
 void Server::RunUDP (void) {
     int rxlen;
     int readerr = 0;
-    bool lastpacket = 0;
+    bool lastpacket = false;
 
     if (!InitTrafficLoop())
 	return;

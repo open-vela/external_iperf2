@@ -220,7 +220,7 @@ void Listener::Run (void) {
 		    continue;
 	    }
 	}
-	if (!setsock_blocking(mSettings->mSock, 1)) {
+	if (!setsock_blocking(mSettings->mSock, true)) {
 	    WARN(1, "Failed setting socket to blocking mode");
 	}
 	// Instantiate another settings object to be used by the server thread
