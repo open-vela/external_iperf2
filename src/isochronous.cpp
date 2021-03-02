@@ -52,7 +52,7 @@
 
 using namespace Isochronous;
 
-FrameCounter::FrameCounter (double value, Timestamp start) : frequency(value) {
+FrameCounter::FrameCounter (double value, const Timestamp& start) : frequency(value) {
     period = (unsigned int) (1000000 / frequency);
     startTime = start;
     nextslotTime=start;
@@ -175,7 +175,7 @@ inline unsigned int FrameCounter::get (void) {
     return slot_counter + 1;
 }
 
-inline unsigned int FrameCounter::get (Timestamp slot) {
+inline unsigned int FrameCounter::get (const Timestamp& slot) {
     return(slot_counter + 1); // Frame counter for packets starts at 1
 }
 
