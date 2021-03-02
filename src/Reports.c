@@ -459,7 +459,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
     if (reporthdr == NULL) {
 	FAIL(1, "Out of Memory!!\n", inSettings);
     }
-    reporthdr->this_report = (void *) calloc(1, sizeof(struct ReporterData));
+    reporthdr->this_report = calloc(1, sizeof(struct ReporterData));
     if (reporthdr->this_report == NULL) {
 	FAIL(1, "Out of Memory!!\n", inSettings);
     }
@@ -643,7 +643,7 @@ struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, d
     if (reporthdr == NULL) {
 	FAIL(1, "Out of Memory!!\n", inSettings);
     }
-    reporthdr->this_report = (void *) calloc(1, sizeof(struct ConnectionInfo));
+    reporthdr->this_report = calloc(1, sizeof(struct ConnectionInfo));
     if (reporthdr->this_report == NULL) {
 	FAIL(1, "Out of Memory!!\n", inSettings);
     }
@@ -696,7 +696,7 @@ struct ReportHeader *InitSettingsReport (struct thread_Settings *inSettings) {
     if (reporthdr == NULL) {
 	FAIL(1, "Out of Memory!!\n", inSettings);
     }
-    reporthdr->this_report = (void *) calloc(1, sizeof(struct ReportSettings));
+    reporthdr->this_report = calloc(1, sizeof(struct ReportSettings));
     if (reporthdr->this_report == NULL) {
 	FAIL(1, "Out of Memory!!\n", inSettings);
     }
@@ -733,7 +733,7 @@ struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings
     if (reporthdr == NULL) {
 	FAIL(1, "Out of Memory!!\n", inSettings);
     }
-    reporthdr->this_report = (void *) calloc(1, sizeof(struct ServerRelay));
+    reporthdr->this_report = calloc(1, sizeof(struct ServerRelay));
     if (!reporthdr->this_report) {
 	FAIL(1, "Out of Memory!!\n", inSettings);
     }
@@ -744,7 +744,7 @@ struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings
     reporthdr->ReportMode = inSettings->mReportMode;
     struct ServerRelay *sr_report = (struct ServerRelay *)reporthdr->this_report;
     common_copy(&sr_report->info.common, inSettings);
-    struct TransferInfo *stats = (struct TransferInfo *)&sr_report->info;
+    struct TransferInfo *stats = &sr_report->info;
     stats->common->transferID = inSettings->mTransferID;
 
     stats->jitter = ntohl(server->base.jitter1);

@@ -113,7 +113,7 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
 	    char *buf;
 	    int len = snprintf(NULL, 0, "%s %s", "bind to device", inSettings->mIfrnametx);
 	    len++;  // Trailing null byte + extra
-	    buf = (char *) malloc(len);
+	    buf = static_cast<char *>(malloc(len));
 	    len = snprintf(buf, len, "%s %s", "bind to device", inSettings->mIfrnametx);
 	    WARN_errno(1, buf);
 	    free(buf);
@@ -139,14 +139,14 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
 	    int val = inSettings->mTTL;
 	    if (!isIPV6(inSettings)) {
 		int rc = setsockopt(inSettings->mSock, IPPROTO_IP, IP_MULTICAST_TTL,
-				     (char*) &val, (Socklen_t) sizeof(val));
+				     reinterpret_cast<char*>(&val), static_cast<Socklen_t>(sizeof(val)));
 
 		WARN_errno(rc == SOCKET_ERROR, "multicast v4 ttl");
 	    } else
 #  ifdef HAVE_IPV6_MULTICAST
 	    {
 		int rc = setsockopt(inSettings->mSock, IPPROTO_IPV6, IPV6_MULTICAST_HOPS,
-				     (char*) &val, (Socklen_t) sizeof(val));
+				     reinterpret_cast<char*>(&val), static_cast<Socklen_t>(sizeof(val)));
 		WARN_errno(rc == SOCKET_ERROR, "multicast v6 ttl");
 	    }
 #  else
@@ -157,7 +157,7 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
     } else if (inSettings->mTTL > 0) {
 	int val = inSettings->mTTL;
 	int rc = setsockopt(inSettings->mSock, IPPROTO_IP, IP_TTL,
-			     (char*) &val, (Socklen_t) sizeof(val));
+			     reinterpret_cast<char*>(&val), static_cast<Socklen_t>(sizeof(val)));
 	WARN_errno(rc == SOCKET_ERROR, "v4 ttl");
     }
 
@@ -175,7 +175,7 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
         int  tos = inSettings->mTOS;
         Socklen_t len = sizeof(tos);
         int rc = setsockopt(inSettings->mSock, IPPROTO_IP, IP_TOS,
-                             (char*) &tos, len);
+                             reinterpret_cast<char*>(&tos), len);
         WARN_errno(rc == SOCKET_ERROR, "setsockopt IP_TOS");
     }
 #endif
@@ -191,7 +191,7 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
             int nodelay = 1;
             Socklen_t len = sizeof(nodelay);
             int rc = setsockopt(inSettings->mSock, IPPROTO_TCP, TCP_NODELAY,
-                                 (char*) &nodelay, len);
+                                 reinterpret_cast<char*>(&nodelay), len);
             WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_NODELAY");
         }
 #endif
@@ -209,7 +209,7 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
     if (isDontRoute(inSettings)) {
 	int option = 1;
 	Socklen_t len = sizeof(option);
-	int rc = setsockopt(inSettings->mSock, SOL_SOCKET, SO_DONTROUTE, (char*) &option, len);
+	int rc = setsockopt(inSettings->mSock, SOL_SOCKET, SO_DONTROUTE, reinterpret_cast<char*>(&option), len);
         WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
     }
 #endif /* HAVE_DECL_SO_DONTROUTE */
@@ -225,7 +225,7 @@ void SetSocketOptionsSendTimeout (struct thread_Settings *mSettings, int timer) 
     timeout.tv_sec = timer / 1000000;
     timeout.tv_usec = timer % 1000000;
 #endif
-    if (setsockopt(mSettings->mSock, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+    if (setsockopt(mSettings->mSock, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<char *>(&timeout), sizeof(timeout)) < 0) {
 	WARN_errno(mSettings->mSock == SO_SNDTIMEO, "socket");
     }
 }
@@ -240,7 +240,7 @@ void SetSocketOptionsReceiveTimeout (struct thread_Settings *mSettings, int time
     timeout.tv_sec = timer / 1000000;
     timeout.tv_usec = timer % 1000000;
 #endif
-    if (setsockopt(mSettings->mSock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+    if (setsockopt(mSettings->mSock, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char *>(&timeout), sizeof(timeout)) < 0) {
 	WARN_errno(mSettings->mSock == SO_RCVTIMEO, "socket");
     }
 }

@@ -53,7 +53,7 @@
 using namespace Isochronous;
 
 FrameCounter::FrameCounter (double value, const Timestamp& start) : frequency(value) {
-    period = (unsigned int) (1000000 / frequency);
+    period = static_cast<unsigned int>(1000000 / frequency);
     startTime = start;
     nextslotTime=start;
     lastcounter = 0;
@@ -67,7 +67,7 @@ FrameCounter::FrameCounter (double value) : frequency(value) {
     if (!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL))
 	WARN_errno(1, "SetThreadPriority");
 #endif
-    period = (unsigned int) (1000000 / frequency); // unit us
+    period = static_cast<unsigned int>(1000000 / frequency); // unit us
     lastcounter = 0;
     slot_counter = 0;
     slip = 0;
@@ -183,7 +183,7 @@ inline unsigned int FrameCounter::get (long *ticks_remaining) {
     assert(ticks_remaining != NULL);
     Timestamp sampleTime;  // Constructor will initialize timestamp to now
     long usecs = -startTime.subUsec(sampleTime);
-    unsigned int counter = (unsigned int) (usecs / period);
+    unsigned int counter = static_cast<unsigned int>(usecs / period);
     // figure out how many usecs before the next frame counter tick
     // the caller can use this to delay until the next tick
     *ticks_remaining = (counter * period) - usecs;

@@ -311,7 +311,7 @@ void delay_kalman (unsigned long usec) {
     }
     // Compute the delay error in units of nanoseconds
     // and cast to type double
-    err = (double) (timespec_diff(t2, t1) - (usec * 1000));
+    err = (timespec_diff(t2, t1) - (usec * 1000));
     // printf("req: %ld adj: %f err: %.5f (ns)\n", usec, nsec_adjusted, kalmanerr.x);
     kalman_update(&kalmanerr, err);
 }
