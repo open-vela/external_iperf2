@@ -50,8 +50,8 @@
  * A client thread initiates a connect to the server and handles
  * sending and receiving data, then closes the socket.
  * ------------------------------------------------------------------- */
-#include <time.h>
-#include <math.h>
+#include <ctime>
+#include <cmath>
 #include "headers.h"
 #include "Client.hpp"
 #include "Thread.h"
@@ -711,7 +711,7 @@ void Client::RunNearCongestionTCP (void) {
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 	// apply placing after write burst completes
 	if (reportstruct->transit_ready && myReportPacket(true)) {
-	    int pacing_timer = (int) ceil((double)my_tcpi_stats.tcpi_rtt * mSettings->rtt_nearcongest_divider);
+	    int pacing_timer = (int) std::ceil((double)my_tcpi_stats.tcpi_rtt * mSettings->rtt_nearcongest_divider);
 //		printf("**** delaytime = %d\n", delaytime);
 	    delay_loop(pacing_timer);
 	} else
