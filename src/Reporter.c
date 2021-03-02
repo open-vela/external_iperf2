@@ -628,10 +628,8 @@ inline int reporter_process_report (struct ReportHeader *reporthdr) {
 
 // Reporter private routines
 void reporter_handle_packet_null (struct ReporterData *data, struct ReportStruct *packet) {
-    return;
 }
 void reporter_transfer_protocol_null (struct ReporterData *data, int final){
-    return;
 }
 
 inline void reporter_handle_packet_pps (struct ReporterData *data, struct ReportStruct *packet) {

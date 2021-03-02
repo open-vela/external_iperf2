@@ -347,7 +347,6 @@ void redirect(const char *inOutputFileName) {
 
 #endif
 
-    return;
 }
 
 
