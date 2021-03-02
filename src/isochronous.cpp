@@ -170,12 +170,12 @@ unsigned int FrameCounter::wait_tick (void) {
     return(framecounter);
 }
 #endif
-inline unsigned int FrameCounter::get () {
+inline unsigned int FrameCounter::get () const {
     Timestamp now;
     return slot_counter + 1;
 }
 
-inline unsigned int FrameCounter::get (const Timestamp& slot) {
+inline unsigned int FrameCounter::get (const Timestamp& slot) const {
     return(slot_counter + 1); // Frame counter for packets starts at 1
 }
 
