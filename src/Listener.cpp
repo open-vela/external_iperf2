@@ -136,7 +136,7 @@ Listener::~Listener () {
  * o) start the threads needed
  *
  * ------------------------------------------------------------------- */
-void Listener::Run (void) {
+void Listener::Run () {
     // mCount is set True if -P was passed to the server
     int mCount = ((mSettings->mThreads != 0) ?  mSettings->mThreads : -1);
 
@@ -401,7 +401,7 @@ void Listener::Run (void) {
  * wildcard server address, specifying what incoming interface to
  * accept connections on.
  * ------------------------------------------------------------------- */
-void Listener::my_listen (void) {
+void Listener::my_listen () {
     int rc;
 
     SockAddr_localAddr(mSettings);
@@ -518,7 +518,7 @@ void Listener::my_listen (void) {
  * net.ipv4.conf.eth0.force_igmp_version = 0
  *
  * ------------------------------------------------------------------- */
-void Listener::my_multicast_join (void) {
+void Listener::my_multicast_join () {
     // This is the older mulitcast join code.  Both SSM and binding the
     // an interface requires the newer socket options.  Using the older
     // code here will maintain compatiblity with previous iperf versions
