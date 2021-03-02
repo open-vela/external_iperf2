@@ -472,14 +472,14 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		char *tmp= new char [strlen(optarg) + 1];
 		strcpy(tmp, optarg);
 		// scan for PPS units, just look for 'p' as that's good enough
-		if ((((results = strtok(tmp, "p")) != NULL) && strcmp(results,optarg)) \
-		    || (((results = strtok(tmp, "P")) != NULL)  && strcmp(results,optarg))) {
+		if ((((results = strtok(tmp, "p")) != NULL) && strcmp(results,optarg) != 0) \
+		    || (((results = strtok(tmp, "P")) != NULL)  && strcmp(results,optarg) != 0)) {
 		    mExtSettings->mAppRateUnits = kRate_PPS;
 		    mExtSettings->mAppRate = byte_atoi(results);
 		} else {
 		    mExtSettings->mAppRateUnits = kRate_BW;
 		    mExtSettings->mAppRate = byte_atoi(optarg);
-		    if (((results = strtok(tmp, ",")) != NULL) && strcmp(results,optarg)) {
+		    if (((results = strtok(tmp, ",")) != NULL) && strcmp(results,optarg) != 0) {
 			setVaryLoad(mExtSettings);
 			mExtSettings->mVariance = byte_atoi(optarg);
 		    }
@@ -1351,11 +1351,11 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    // scan for unit specifier
 	    char *tmp = new char [strlen(results) + 1];
 	    strcpy(tmp, results);
-	    if ((strtok(tmp, "u") != NULL) && strcmp(results,tmp)) {
+	    if ((strtok(tmp, "u") != NULL) && strcmp(results,tmp) != 0) {
 		mExtSettings->mRXunits = 6;  // units is microseconds
 	    } else {
 		strcpy(tmp, results);
-		if ((strtok(tmp, "m") != NULL) && strcmp(results,tmp)) {
+		if ((strtok(tmp, "m") != NULL) && strcmp(results,tmp) != 0) {
 		    mExtSettings->mRXunits = 3;  // units is milliseconds
 		}
 	    }
