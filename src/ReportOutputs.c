@@ -926,7 +926,8 @@ void tcp_output_basic_csv (struct TransferInfo *stats) {
  */
 static void output_window_size (struct ReportSettings *report) {
     int winsize = getsock_tcp_windowsize(report->common->socket, (report->common->ThreadMode != kMode_Client ? 0 : 1));
-    byte_snprintf(outbuffer, sizeof(outbuffer), winsize, toupper(report->common->Format));
+    byte_snprintf(outbuffer, sizeof(outbuffer), winsize, \
+		  ((toupper(report->common->Format) == 'B') ? 'B' : 'A'));
     outbuffer[(sizeof(outbuffer)-1)] = '\0';
     printf("%s: %s", (isUDP(report->common) ? udp_buffer_size : tcp_window_size), outbuffer);
     if (report->common->winsize_requested == 0) {
