@@ -306,13 +306,13 @@ void byte_snprintf(char* outString, int inLen, double inNum, char inFormat) {
 
     /* print such that we always fit in 4 places */
     tmpNum = (inNum < 0.0 ? (-1 * inNum) : inNum);
-    if (tmpNum < 0.9995) {          /* 9.995 would be rounded to 10.0 */
+    if (tmpNum < 0.9995) {          /* 0.995 would be rounded to 1.000 */
         format = "%4.3f %s";        /* #.## */
-    } else if (tmpNum < 9.995) {          /* 9.995 would be rounded to 10.0 */
+    } else if (tmpNum < 9.995) {    /* 9.995 would be rounded to 10.00 */
         format = "%4.2f %s";        /* #.## */
-    } else if (tmpNum < 99.95) {   /* 99.95 would be rounded to 100 */
+    } else if (tmpNum < 99.95) {    /* 99.95 would be rounded to 100.0 */
         format = "%4.1f %s";        /* ##.# */
-    } else if (tmpNum < 999.5) {   /* 999.5 would be rounded to 1000 */
+    } else if (tmpNum < 999.5) {    /* 999.5 would be rounded to 1000 */
 	format = "%4.0f %s";        /*  ### */
     } else {                        /* 1000-1024 fits in 4 places
 				     * If not using Adaptive sizes then
