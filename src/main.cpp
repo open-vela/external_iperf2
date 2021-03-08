@@ -261,6 +261,10 @@ int main(int argc, char **argv) {
 	    }
 	}
 #endif
+	// Start up any parallel listener threads
+	if (ext_gSettings->mPortLast) {
+	    listeners_init(ext_gSettings);
+	}
 	break;
     default :
 	fprintf(stderr, "unknown mode");

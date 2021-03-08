@@ -224,6 +224,7 @@ struct thread_Settings {
     // shorts
     unsigned short mListenPort;     // -L
     unsigned short mPort;           // -p
+    unsigned short mPortLast;       // -p last port, e.g. when -p 6001-6010
     unsigned short mBindPort;      // -B
     // chars
     char   mFormat;                 // -f
@@ -346,6 +347,7 @@ struct thread_Settings {
 #define FLAG_NEARCONGEST    0x08000000
 #define FLAG_PERMITKEY      0x10000000
 #define FLAG_SETTCPMSS      0x20000000
+#define FLAG_INCRDSTPORT    0x40000000
 
 #define isBuflenSet(settings)      ((settings->flags & FLAG_BUFLENSET) != 0)
 #define isCompat(settings)         ((settings->flags & FLAG_COMPAT) != 0)
@@ -386,6 +388,7 @@ struct thread_Settings {
 #define isRxHistogram(settings)    ((settings->flags_extend & FLAG_RXHISTOGRAM) != 0)
 #define isL2LengthCheck(settings)  ((settings->flags_extend & FLAG_L2LENGTHCHECK) != 0)
 #define isIncrDstIP(settings)      ((settings->flags_extend & FLAG_INCRDSTIP) != 0)
+#define isIncrDstPort(settings)    ((settings->flags_extend & FLAG_INCRDSTPORT) != 0)
 #define isTxStartTime(settings)    ((settings->flags_extend & FLAG_TXSTARTTIME) != 0)
 #define isTxHoldback(settings)     ((settings->flags_extend & FLAG_TXHOLDBACK) != 0)
 #define isVaryLoad(settings)       ((settings->flags_extend & FLAG_VARYLOAD) != 0)
@@ -443,6 +446,7 @@ struct thread_Settings {
 #define setRxHistogram(settings)   settings->flags_extend |= FLAG_RXHISTOGRAM
 #define setL2LengthCheck(settings) settings->flags_extend |= FLAG_L2LENGTHCHECK
 #define setIncrDstIP(settings)     settings->flags_extend |= FLAG_INCRDSTIP
+#define setIncrDstPort(settings)     settings->flags_extend |= FLAG_INCRDSTPORT
 #define setTxStartTime(settings)   settings->flags_extend |= FLAG_TXSTARTTIME
 #define setTxHoldback(settings)    settings->flags_extend |= FLAG_TXHOLDBACK
 #define setVaryLoad(settings)      settings->flags_extend |= FLAG_VARYLOAD
@@ -498,6 +502,7 @@ struct thread_Settings {
 #define unsetRxHistogram(settings)    settings->flags_extend &= ~FLAG_RXHISTOGRAM
 #define unsetL2LengthCheck(settings)  settings->flags_extend &= ~FLAG_L2LENGTHCHECK
 #define unsetIncrDstIP(settings)    settings->flags_extend &= ~FLAG_INCRDSTIP
+#define unsetIncrDstPort(settings)    settings->flags_extend &= ~FLAG_INCRDSTPORT
 #define unsetTxStartTime(settings)  settings->flags_extend &= ~FLAG_TXSTARTTIME
 #define unsetTxHoldback(settings)   settings->flags_extend &= ~FLAG_TXHOLDBACK
 #define unsetVaryLoad(settings)     settings->flags_extend &= ~FLAG_VARYLOAD
