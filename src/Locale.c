@@ -76,7 +76,7 @@ Client/Server:\n\
   -l, --len       #[kmKM]    length of buffer in bytes to read or write (Defaults: TCP=128K, v4 UDP=1470, v6 UDP=1450)\n\
   -m, --print_mss          print TCP maximum segment size (MTU - TCP/IP header)\n\
   -o, --output    <filename> output the report or error message to this specified file\n\
-  -p, --port      #        server port to listen on/connect to\n\
+  -p, --port      #        client/server port to listen/send on and to connect\n\
       --permit-key         permit key to be used to verify client and server (TCP only)\n\
       --sum-only           output sum only reports\n\
   -u, --udp                use UDP rather than TCP\n\
@@ -92,6 +92,7 @@ Client/Server:\n\
   -Z, --tcp-congestion <algo>  set TCP congestion control algorithm (Linux only)\n\
 \n\
 Server specific:\n\
+  -p, --port      #[-#]    server port(s) to listen on/connect to\n\
   -s, --server             run in server mode\n\
   -1, --singleclient       run one server at a time\n\
       --histograms         enable latency histograms\n\
@@ -99,7 +100,6 @@ Server specific:\n\
   -t, --time      #        time in seconds to listen for new connections as well as to receive traffic (default not set)\n\
       --udp-histogram #,#  enable UDP latency histogram(s) with bin width and count, e.g. 1,1000=1(ms),1000(bins)\n\
   -B, --bind <ip>[%<dev>]  bind to multicast address and optional device\n\
-  -H, --ssm-host <ip>      set the SSM source, use with -B for (S,G) \n\
   -U, --single_udp         run in single threaded UDP mode\n\
   -D, --daemon             run the server as a daemon\n"
 #ifdef WIN32
@@ -120,6 +120,7 @@ Client specific:\n\
       --ipg                set the the interpacket gap (milliseconds) for packets within an isochronous frame\n\
       --isochronous <frames-per-second>:<mean>,<stddev> send traffic in bursts (frames - emulate video traffic)\n\
       --incr-dstip         Increment the destination ip with parallel (-P) traffic threads\n\
+      --incr-dstport       Increment the destination port with parallel (-P) traffic threads\n\
       --local-only         Set don't route on socket\n\
       --near-congestion=[w] Use a weighted write delay per the sampled TCP RTT (experimental)\n\
       --no-connect-sync    No sychronization after connect when -P or parallel traffic threads\n\
@@ -132,6 +133,7 @@ Client specific:\n\
       --txstart-time       unix epoch time to schedule first write and start traffic\n\
   -B, --bind [<ip> | <ip:port>] bind ip (and optional port) from which to source traffic\n\
   -F, --fileinput <name>   input the data to be transmitted from a file\n\
+  -H, --ssm-host <ip>      set the SSM source, use with -B for (S,G) \n\
   -I, --stdin              input the data to be transmitted from stdin\n\
   -L, --listenport #       port to receive fullduplexectional tests back on\n\
   -P, --parallel  #        number of parallel client threads to run\n"
@@ -190,6 +192,9 @@ const char client_port[] =
 
 const char server_pid_port[] =
 "Server listening on %s port %d with pid %d\n";
+
+const char server_pid_portrange[] =
+"Server listening on %s ports %d-%d with pid %d\n";
 
 const char client_pid_port[] =
 "Client connecting to %s, %s port %d with pid %d (%d flows)\n";

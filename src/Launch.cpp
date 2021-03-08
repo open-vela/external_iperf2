@@ -365,20 +365,30 @@ void client_init(struct thread_Settings *clients) {
     // For each of the needed threads create a copy of the
     // provided settings, unsetting the report flag and add
     // to the list of threads to start
-    for (int i = 1; i < clients->mThreads; i++) {
-        Settings_Copy(clients, &next, 1);
-	if (next) {
-	    if (isIncrDstIP(clients)) {
-		next->incrdstip = i;
-		// force a setHostname
-		SockAddr_zeroAddress(&next->peer);
-	    } else if (clients->mBindPort) {
-		// case -B with src port and -P > 1
-		next->incrsrcport = i;
+    for (int j = 0; j < (1 + clients->mPortLast - clients->mPort); j++) {
+	for (int i = 0; i < clients->mThreads; i++) {
+	    // skip first one as already set
+	    if (!(!j && !i)) {
+		Settings_Copy(clients, &next, 1);
+		// printf("*****port/thread = %d/%d\n", next->mPort + j, i);
+		if (next) {
+		    if (isIncrDstIP(clients)) {
+			next->incrdstip = i;
+			// force a setHostname
+			SockAddr_zeroAddress(&next->peer);
+		    } else if (clients->mBindPort) {
+			// case -B with src port and -P > 1
+			next->incrsrcport = i;
+		    }
+		    if (isIncrDstPort(clients)) {
+			next->mPort += j;
+			SockAddr_zeroAddress(&next->peer);
+		    }
+		}
+		itr->runNow = next;
+		itr = next;
 	    }
 	}
-        itr->runNow = next;
-        itr = next;
     }
 #else
     if (next != NULL) {
@@ -387,4 +397,19 @@ void client_init(struct thread_Settings *clients) {
         itr->runNext = next;
     }
 #endif
+}
+
+void listeners_init(struct thread_Settings *listener) {
+    struct thread_Settings *itr = listener;
+    struct thread_Settings *next = NULL;
+    for (int ix = 1; ix < (listener->mPortLast - listener->mPort + 1); ix++)  {
+	Settings_Copy(listener, &next, 1);
+	if (next != NULL) {
+	    setNoSettReport(next);
+	    next->mPort = listener->mPort + ix;
+	    next->mThreadMode = kMode_Listener;
+	    itr->runNow = next;
+	    itr = next;
+	}
+    }
 }

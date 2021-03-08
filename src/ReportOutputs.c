@@ -928,7 +928,8 @@ void tcp_output_basic_csv (struct TransferInfo *stats) {
  */
 static void output_window_size (struct ReportSettings *report) {
     int winsize = getsock_tcp_windowsize(report->common->socket, (report->common->ThreadMode != kMode_Client ? 0 : 1));
-    byte_snprintf(outbuffer, sizeof(outbuffer), winsize, toupper(report->common->Format));
+    byte_snprintf(outbuffer, sizeof(outbuffer), winsize, \
+		  ((toupper(report->common->Format) == 'B') ? 'B' : 'A'));
     outbuffer[(sizeof(outbuffer)-1)] = '\0';
     printf("%s: %s", (isUDP(report->common) ? udp_buffer_size : tcp_window_size), outbuffer);
     if (report->common->winsize_requested == 0) {
@@ -942,8 +943,13 @@ static void output_window_size (struct ReportSettings *report) {
     fflush(stdout);
 }
 static void reporter_output_listener_settings (struct ReportSettings *report) {
-    printf(isEnhanced(report->common) ? server_pid_port : server_port,
-	   (isUDP(report->common) ? "UDP" : "TCP"), report->common->Port, report->pid);
+    if (report->common->PortLast > report->common->Port) {
+	printf(server_pid_portrange, (isUDP(report->common) ? "UDP" : "TCP"), \
+	       report->common->Port, report->common->PortLast, report->pid);
+    } else {
+	printf(isEnhanced(report->common) ? server_pid_port : server_port,
+	       (isUDP(report->common) ? "UDP" : "TCP"), report->common->Port, report->pid);
+    }
     if (report->common->Localhost != NULL) {
 	if (isEnhanced(report->common) && !SockAddr_isMulticast(&report->local)) {
 	    if (report->common->Ifrname)
