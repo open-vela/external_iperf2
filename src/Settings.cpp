@@ -589,9 +589,19 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
             break;
 
         case 'p': // server port
-            mExtSettings->mPort = atoi(optarg);
+	{
+	    char *tmp= new char [strlen(optarg) + 1];
+	    strcpy(tmp, optarg);
+	    if ((results = strtok(tmp, "-")) != NULL) {
+		mExtSettings->mPort = atoi(results);
+		if (strcmp(results,optarg)) {
+		    mExtSettings->mPortLast = atoi(strtok(NULL, "-"));
+		    setIncrDstPort(mExtSettings);
+		}
+	    }
+	    delete [] tmp;
             break;
-
+	}
         case 'r': // test mode tradeoff
             if (mExtSettings->mThreadMode != kMode_Client) {
                 fprintf(stderr, warn_invalid_server_option, option);
@@ -1082,6 +1092,9 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    mExtSettings->mBufLen = kDefault_TCPBufLen;
 	}
     }
+    if (!mExtSettings->mPortLast)
+	mExtSettings->mPortLast = mExtSettings->mPort;
+
     // Handle default UDP offered load (TCP will be max, i.e. no read() or write() rate limiting)
     if (!isBWSet(mExtSettings) && isUDP(mExtSettings)) {
 	mExtSettings->mAppRate = kDefault_UDPRate;
@@ -1264,6 +1277,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    bail = true;
 	}
     } else {
+	if (mExtSettings->mPortLast && (!(mExtSettings->mPortLast >= mExtSettings->mPort))) {
+            fprintf(stderr, "ERROR: invalid port range of %d-%d\n",mExtSettings->mPort, mExtSettings->mPortLast);
+	    bail = true;
+	}
 	if (isPermitKey(mExtSettings)) {
 	    if (mExtSettings->mPermitKey[0]=='\0')  {
 		generate_permit_key(mExtSettings);
@@ -1335,6 +1352,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
     }
     if (bail)
 	exit(1);
+
     // UDP histogram optional settings
     if (isRxHistogram(mExtSettings) && (mExtSettings->mThreadMode != kMode_Client) && mExtSettings->mRxHistogramStr) {
 	// check for optional arguments to change histogram settings

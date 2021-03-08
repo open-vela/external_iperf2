@@ -203,6 +203,7 @@ struct ReportCommon {
     int flags_extend;
     int threads;
     unsigned short Port;
+    unsigned short PortLast;
     unsigned short BindPort;
     unsigned short ListenPort;
     intmax_t AppRate;            // -b or -u

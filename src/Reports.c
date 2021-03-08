@@ -104,6 +104,7 @@ static void common_copy (struct ReportCommon **common, struct thread_Settings *i
     (*common)->TCPWin = inSettings->mTCPWin;
     (*common)->FQPacingRate = inSettings->mFQPacingRate;
     (*common)->Port = inSettings->mPort;
+    (*common)->PortLast = inSettings->mPortLast;
     (*common)->BindPort = inSettings->mBindPort;
     (*common)->ListenPort = inSettings->mListenPort;
     (*common)->AppRate = inSettings->mAppRate;
