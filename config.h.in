@@ -93,6 +93,10 @@
    if you don't. */
 #undef HAVE_DECL_SO_MAX_PACING_RATE
 
+/* Define to 1 if you have the declaration of `SO_REUSEPORT', and to 0 if you
+   don't. */
+#undef HAVE_DECL_SO_REUSEPORT
+
 /* Define to 1 if you have the declaration of `SO_SNDTIMEO', and to 0 if you
    don't. */
 #undef HAVE_DECL_SO_SNDTIMEO
