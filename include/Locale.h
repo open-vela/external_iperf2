@@ -191,6 +191,10 @@ extern const char report_sumcnt_bw_read_enhanced_header[];
 
 extern const char report_sumcnt_bw_read_enhanced_format[];
 
+extern const char report_sumcnt_bw_pps_enhanced_header[];
+
+extern const char report_sumcnt_bw_pps_enhanced_format[];
+
 extern const char report_triptime_enhanced_format[];
 
 extern const char report_bw_write_enhanced_header[];

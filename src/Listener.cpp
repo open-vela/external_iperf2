@@ -1173,9 +1173,9 @@ int Listener::client_test_ack(thread_Settings *server) {
     if (!isUDP(server)) {
 	// sotimer units microseconds convert
 	if (server->mInterval) {
-	    sotimer = static_cast<int>((server->mInterval * 1e6) / 4);
+	    sotimer = static_cast<int>((server->mInterval) / 4);
 	} else if (isModeTime(server)) {
-	    sotimer = static_cast<int>((server->mAmount * 1000) / 4);
+	    sotimer = static_cast<int>((server->mAmount * 10000) / 4);
 	}
 	if (sotimer > HDRXACKMAX) {
 	    sotimer = HDRXACKMAX;

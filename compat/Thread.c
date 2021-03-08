@@ -81,7 +81,9 @@ extern "C" {
 #if HAVE_THREAD_DEBUG
 #include <time.h>
 #include <unistd.h>
+#if HAVE_GETTID_SYSCALL
 #include <sys/syscall.h>
+#endif
 #include <sys/types.h>
 #include <stdarg.h>
 #include "Reporter.h"
@@ -115,7 +117,11 @@ static void __gettimestamp(char *timestr) {
     struct tm *t;
     t=localtime(&t1.tv_sec);
     if (t) {
+#if WIN32
+	strftime(timestr, 200, "%Y-%m-%d %H:%M:%S", t);
+#else
         strftime(timestr, 200, "%T", t);
+#endif
         // strftime(buf, len, "%F %T", &t);
 	snprintf(&timestr[strlen(timestr)], strlen(timestr), ".%09ld", t1.tv_nsec);
         timestr[199]='\0';

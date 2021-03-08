@@ -372,6 +372,9 @@ void client_init(struct thread_Settings *clients) {
 		next->incrdstip = i;
 		// force a setHostname
 		SockAddr_zeroAddress(&next->peer);
+	    } else if (clients->mBindPort) {
+		// case -B with src port and -P > 1
+		next->incrsrcport = i;
 	    }
 	}
         itr->runNow = next;
