@@ -275,7 +275,7 @@ struct ShiftCounters {
 };
 
 struct IsochStats {
-    int mFPS; //frames per second
+    double mFPS; //frames per second
     double mMean; //variable bit rate mean
     double mVariance; //vbr variance
     int mJitterBufSize; //Server jitter buffer size, units is frames
