@@ -568,6 +568,9 @@ void Client::RunTCP () {
 		    if (burst_remaining < static_cast<int>(sizeof(struct TCP_burst_payload)))
 			burst_remaining = static_cast<int>(sizeof(struct TCP_burst_payload));
 		    burst_id = framecounter->wait_tick();
+		    //time interval crossings may have occurred during the wait
+		    //post a null event to flush them via the reporter
+		    PostNullEvent();
 		} else {
 		    burst_remaining = mSettings->mBufLen;
 		}
@@ -609,7 +612,7 @@ void Client::RunTCP () {
 	    reportstruct->packetLen = 0;
 	    reportstruct->emptyreport = 1;
 	} else {
-	    reportstruct->emptyreport = reportstruct->packetLen ? 0 : 1;
+	    reportstruct->emptyreport = (reportstruct->packetLen == 0) ? 1 : 0;
 	    totLen += reportstruct->packetLen;
 	    reportstruct->errwrite=WriteNoErr;
 	    if (isTripTime(mSettings) || isIsochronous(mSettings)) {
@@ -1331,12 +1334,11 @@ void Client::PostNullEvent () {
     // push a nonevent into the packet ring
     // this will cause the reporter to process
     // up to this event
-    struct ReportStruct emptypacket;
-    memset(&emptypacket, 0, sizeof(struct ReportStruct));
+    memset(reportstruct, 0, sizeof(struct ReportStruct));
     now.setnow();
-    emptypacket.packetTime.tv_sec = now.getSecs();
-    emptypacket.packetTime.tv_usec = now.getUsecs();
-    emptypacket.emptyreport=1;
+    reportstruct->packetTime.tv_sec = now.getSecs();
+    reportstruct->packetTime.tv_usec = now.getUsecs();
+    reportstruct->emptyreport=1;
     myReportPacket();
 }
 

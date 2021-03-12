@@ -248,7 +248,7 @@ const char wait_server_threads[] =
 "Waiting for server threads to complete. Interrupt again to force quit.\n";
 
 const char client_isochronous[] =
-"Isochronous: %d frames/sec mean=%s/s, stddev=%s/s, Period/IPG=%0.2f/%.3f ms\n";
+"Isochronous: %0.2f frames/sec mean=%s/s, stddev=%s/s, Period/IPG=%0.2f/%.3f ms\n";
 
 const char client_fq_pacing [] =
 "fair-queue socket pacing set to %s/s\n";
