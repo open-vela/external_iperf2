@@ -1997,8 +1997,12 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 		upperflags |= HEADER_FQRATESET;
 	    }
 	}
-	if (isIsochronous(client)) {
-	    upperflags |= HEADER_ISOCH;
+	if (isIsochronous(client) || isPeriodicBurst(client)) {
+	    if (isPeriodicBurst(client)) {
+		upperflags |= HEADER_PERIODICBURST;
+	    } else {
+		upperflags |= HEADER_ISOCH;
+	    }
 	    if (isFullDuplex(client) || isReverse(client)) {
 		upperflags |= HEADER_ISOCH_SETTINGS;
 		hdr->isoch_settings.FPSl = htonl((long)client->mFPS);
@@ -2011,9 +2015,6 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 		hdr->isoch_settings.BurstIPGu = htonl(((long)(client->mBurstIPG) - (long)client->mBurstIPG * rMillion));
 		len += sizeof(struct client_hdrext_isoch_settings);
 	    }
-	}
-	if (isPeriodicBurst(client)) {
-	    upperflags |= HEADER_PERIODICBURST;
 	}
 	if (isReverse(client) || isFullDuplex(client)) {
 	    flags |= HEADER_VERSION2;
