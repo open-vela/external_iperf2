@@ -93,7 +93,6 @@ static void common_copy (struct ReportCommon **common, struct thread_Settings *i
     // copy some relevant settings
     (*common)->flags = inSettings->flags;
     (*common)->flags_extend = inSettings->flags_extend;
-    (*common)->flags_extend2 = inSettings->flags_extend2;
     (*common)->ThreadMode = inSettings->mThreadMode;
     (*common)->ReportMode = inSettings->mReportMode;
     (*common)->KeyCheck = inSettings->mKeyCheck;
@@ -529,8 +528,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	    }
 	} else {  // TCP case
 	    ireport->packet_handler = reporter_handle_packet_server_tcp;
-	    if ((inSettings->mIntervalMode == kInterval_Frames) && \
-		(isTripTime(inSettings) || isIsochronous(inSettings) || isPeriodicBurst(inSettings))) {
+	    if ((inSettings->mIntervalMode == kInterval_Frames) && (isTripTime(inSettings) || isIsochronous(inSettings))) {
 		ireport->transfer_interval_handler = reporter_condprint_frame_interval_report_server_tcp;
 		ireport->transfer_protocol_handler = reporter_transfer_protocol_server_tcp;
 		ireport->info.output_handler = tcp_output_frame_read_triptime;
