@@ -18,6 +18,7 @@ o transfer id now an incrementing integer and no longer the socket id
 o support for TCP connect only tests with --connect-only
 o isochronous support compiled in by default, must use config to disable
 o support --isochronous for both UDP or TCP traffic to simulate video streams
+o support for low duty cycle traffic patterns via --burst-period and --burst-size
 o use of clock_nanosleep when supported to schedule isochronous burst starts, otherwise use nanosleep delay
 o support for --trip-times indicating the client and server clocks are synchronized to an accuracy sufficient, note: consider the use of precision time protocol as well as ask your data center to provide access to a GPS disciplined reference time source
 o support for --trip-times with -d and -r bidirectional tests
