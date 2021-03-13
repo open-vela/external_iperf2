@@ -201,7 +201,6 @@ struct ReportCommon {
     bool KeyCheck;
     int flags;
     int flags_extend;
-    int flags_extend2;
     int threads;
     unsigned short Port;
     unsigned short PortLast;
