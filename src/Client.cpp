@@ -545,7 +545,7 @@ void Client::RunTCP () {
     int burst_id = 1;
 
     // RJM, consider moving this into the constructor
-    if (isIsochronous(mSettings)) {
+    if (isIsochronous(mSettings) || isPeriodicBurst(mSettings)) {
 	framecounter = new Isochronous::FrameCounter(mSettings->mFPS);
     }
     now.setnow();
@@ -557,16 +557,18 @@ void Client::RunTCP () {
 	} else {
 	    reportstruct->packetLen = mSettings->mBufLen;
 	}
-	if (isTripTime(mSettings) || isIsochronous(mSettings)) {
+	if (isTripTime(mSettings) || isIsochronous(mSettings) || isPeriodicBurst(mSettings))  {
 	    if (!burst_remaining) {
 		if (framecounter) {
 		    if (mSettings->mMean > 0) {
 			burst_remaining = static_cast<int>(lognormal(mSettings->mMean,mSettings->mVariance)) / (mSettings->mFPS * 8);
 		    } else {
-			burst_remaining = mSettings->mBufLen;
+			burst_remaining = (isPeriodicBurst(mSettings) ? mSettings->mBurstSize : mSettings->mBufLen);
 		    }
 		    if (burst_remaining < static_cast<int>(sizeof(struct TCP_burst_payload)))
 			burst_remaining = static_cast<int>(sizeof(struct TCP_burst_payload));
+		    if (isPeriodicBurst(mSettings))
+			PostNullEvent(); // Post a null event for low duty cycle traffic
 		    burst_id = framecounter->wait_tick();
 		    //time interval crossings may have occurred during the wait
 		    //post a null event to flush them via the reporter
