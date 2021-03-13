@@ -323,7 +323,7 @@ int Client::StartSynch () {
 	    TxDelay();
 	}
     // Server side client
-    } else if (isTripTime(mSettings)) {
+    } else if (isTripTime(mSettings) || isPeriodicBurst(mSettings)) {
 	reportstruct->packetLen = SendFirstPayload();
     } else {
 	reportstruct->packetLen = 0;

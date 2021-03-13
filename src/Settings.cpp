@@ -183,7 +183,7 @@ const struct option long_options[] =
 {"permit-key", optional_argument, &permitkey, 1},
 {"permit-key-timeout", required_argument, &permitkeytimeout, 1},
 {"burst-size", optional_argument, &burstsize, 1},
-{"burst-period", optional_argument, &burstperiodic,1},
+{"burst-periodic", optional_argument, &burstperiodic,1},
 {"NUM_REPORT_STRUCTS", required_argument, &numreportstructs, 1},
 #ifdef WIN32
 {"reverse", no_argument, &reversetest, 1},
