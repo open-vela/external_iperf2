@@ -1128,6 +1128,12 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 			    setEnhanced(server);
 			}
 		    }
+		    if (upperflags & HEADER_PERIODICBURST) {
+			setEnhanced(server);
+			setFrameInterval(server);
+			setPeriodicBurst(server);
+			server->mIntervalMode = kInterval_Frames;
+		    }
 		    if (flags & HEADER_VERSION2) {
 			if (upperflags & HEADER_FULLDUPLEX) {
 			    setFullDuplex(server);

@@ -250,6 +250,7 @@ struct thread_Settings {
 #endif
     double mFPS; //frames per second
     double mMean; //variable bit rate mean
+    double mBurstSize; //number of bytes in a burst
     int mJitterBufSize; //Server jitter buffer size, units is frames
     double mBurstIPG; //Interpacket gap
     int l4offset; // used in l2 mode to offset the raw packet
@@ -348,6 +349,10 @@ struct thread_Settings {
 #define FLAG_PERMITKEY      0x10000000
 #define FLAG_SETTCPMSS      0x20000000
 #define FLAG_INCRDSTPORT    0x40000000
+/*
+ * More extended flags
+ */
+#define FLAG_PERIODICBURST  0x00000001
 
 #define isBuflenSet(settings)      ((settings->flags & FLAG_BUFLENSET) != 0)
 #define isCompat(settings)         ((settings->flags & FLAG_COMPAT) != 0)
@@ -407,7 +412,7 @@ struct thread_Settings {
 #define isNearCongest(settings)    ((settings->flags_extend & FLAG_NEARCONGEST) != 0)
 #define isPermitKey(settings)  ((settings->flags_extend & FLAG_PERMITKEY) != 0)
 #define isTCPMSS(settings)         ((settings->flags_extend & FLAG_SETTCPMSS) != 0)
-
+#define isPeriodicBurst(settings)         ((settings->flags_extend2 & FLAG_PERIODICBURST) != 0)
 
 #define setBuflenSet(settings)     settings->flags |= FLAG_BUFLENSET
 #define setCompat(settings)        settings->flags |= FLAG_COMPAT
@@ -464,6 +469,7 @@ struct thread_Settings {
 #define setNearCongest(settings)   settings->flags_extend |= FLAG_NEARCONGEST
 #define setPermitKey(settings) settings->flags_extend |= FLAG_PERMITKEY
 #define setTCPMSS(settings) settings->flags_extend |= FLAG_SETTCPMSS
+#define setPeriodicBurst(settings) settings->flags_extend2 |= FLAG_PERIODICBURST
 
 #define unsetBuflenSet(settings)   settings->flags &= ~FLAG_BUFLENSET
 #define unsetCompat(settings)      settings->flags &= ~FLAG_COMPAT
@@ -519,6 +525,7 @@ struct thread_Settings {
 #define unsetDontRoute(settings)     settings->flags_extend &= ~FLAG_DONTROUTE
 #define unsetPermitKey(settings) settings->flags_extend &= ~FLAG_PERMITKEY
 #define unsetTCPMSS(settings) settings->flags_extend &= ~FLAG_SETTCPMSS
+#define unsetPeriodicBurst(settings) settings->flags_extend &= ~FLAG_PERIODICBURST
 
 // set to defaults
 void Settings_Initialize(struct thread_Settings* main);
