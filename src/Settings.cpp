@@ -88,6 +88,8 @@ static int infinitetime = 0;
 static int connectonly = 0;
 static int connectretry = 0;
 static int burstipg = 0;
+static int burstsize = 0;
+static int burstperiodic = 0;
 static int isochronous = 0;
 static int noudpfin = 0;
 static int numreportstructs = 0;
@@ -180,6 +182,8 @@ const struct option long_options[] =
 {"near-congestion", optional_argument, &nearcongest, 1},
 {"permit-key", optional_argument, &permitkey, 1},
 {"permit-key-timeout", required_argument, &permitkeytimeout, 1},
+{"burst-size", optional_argument, &burstsize, 1},
+{"burst-period", optional_argument, &burstperiodic,1},
 {"NUM_REPORT_STRUCTS", required_argument, &numreportstructs, 1},
 #ifdef WIN32
 {"reverse", no_argument, &reversetest, 1},
@@ -1004,6 +1008,20 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		    exit(1);
 		}
 	    }
+	    if (burstperiodic) {
+		burstperiodic = 0;
+		setPeriodicBurst(mExtSettings);
+		if (optarg) {
+		    mExtSettings->mFPS = 1.0/atof(optarg);
+		}
+	    }
+	    if (burstsize) {
+		burstsize = 0;
+		setPeriodicBurst(mExtSettings);
+		if (optarg) {
+		    mExtSettings->mBurstSize = byte_atoi(optarg);
+		}
+	    }
 	    if (numreportstructs) {
 		numreportstructs = 0;
 		mExtSettings->numreportstructs = byte_atoi(optarg);
@@ -1141,6 +1159,11 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	}
     }
     if (mExtSettings->mThreadMode == kMode_Client) {
+	if (isPeriodicBurst(mExtSettings)) {
+	    mExtSettings->mIntervalMode = kInterval_Frames;
+	    setEnhanced(mExtSettings);
+	    setFrameInterval(mExtSettings);
+	}
 	if (isPermitKey(mExtSettings) && (mExtSettings->mPermitKey[0] == '\0')) {
 	    fprintf(stderr, "ERROR: option of --permit-key requires a value on the client\n");
 	    bail = true;
@@ -1172,6 +1195,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		printf(error_delaytime_exceeds, mExtSettings->txholdback_timer.tv_sec, MAXDIFFTXDELAY);
 		bail = true;
 	    }
+	}
+	if (isPeriodicBurst(mExtSettings) && isIsochronous(mExtSettings)) {
+	    fprintf(stderr, "ERROR: options of --burst-size or burst-period and --isochronous cannot be applied together\n");
+	    bail = true;
 	}
 	if (isUDP(mExtSettings)) {
 	    if (isPeerVerDetect(mExtSettings)) {
@@ -1349,6 +1376,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    fprintf(stderr, "ERROR: option of --near-congestion not supported on the server\n");
 	    bail = true;
 	}
+	if (isPeriodicBurst(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of --burst-size or burst-periodic not supported on the server\n");
+	    bail = true;
+	}
     }
     if (bail)
 	exit(1);
@@ -1401,6 +1432,14 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    setNoUDPfin(mExtSettings);
 	}
     }
+    if (isPeriodicBurst(mExtSettings)) {
+	if (mExtSettings->mBurstSize <= 0) {
+	    mExtSettings->mBurstSize = 1000000; //default to 1 Mbyte
+	}
+	if (mExtSettings->mFPS <= 0) {
+	    mExtSettings->mFPS = 1;
+	}
+    }
     if (isIsochronous(mExtSettings) && mExtSettings->mIsochronousStr) {
 	// parse client isochronous field,
 	// format is --isochronous <int>:<float>,<float> and supports
@@ -1411,8 +1450,19 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		mExtSettings->mFPS = atof(results);
 		if ((results = strtok(NULL, ",")) != NULL) {
 		    mExtSettings->mMean = bitorbyte_atof(results);
-		    if (mExtSettings->mMean < 0) {
-		        mExtSettings->mMean *= -8 * mExtSettings->mBufLen * mExtSettings->mFPS;
+		    if (mExtSettings->mMean == 0.0) {
+		        fprintf(stderr, "ERROR: Invalid --isochronous mean value, must be greater than zero\n");
+		        exit(1);
+		    }
+		    if (!isUDP(mExtSettings)) {
+		        if (mExtSettings->mMean < 0) {
+			    fprintf(stderr, "ERROR: Invalid --isochronous units of 'p' with TCP must be bytes\n");
+			    exit(1);
+			}
+		    } else { // UDP
+		        if (mExtSettings->mMean < 0) {
+			    mExtSettings->mMean *= -8 * mExtSettings->mBufLen * mExtSettings->mFPS;
+			}
 		    }
 		    if ((results = strtok(NULL, ",")) != NULL) {
 		        mExtSettings->mVariance = bitorbyte_atof(results);
@@ -1961,6 +2011,9 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 		hdr->isoch_settings.BurstIPGu = htonl(((long)(client->mBurstIPG) - (long)client->mBurstIPG * rMillion));
 		len += sizeof(struct client_hdrext_isoch_settings);
 	    }
+	}
+	if (isPeriodicBurst(client)) {
+	    upperflags |= HEADER_PERIODICBURST;
 	}
 	if (isReverse(client) || isFullDuplex(client)) {
 	    flags |= HEADER_VERSION2;

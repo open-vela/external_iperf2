@@ -96,6 +96,7 @@ extern "C" {
 #define HEADER_REVERSE        0x0400
 #define HEADER_FULLDUPLEX     0x0800
 #define HEADER_EPOCH_START    0x1000
+#define HEADER_PERIODICBURST  0x2000
 
 // later features
 #define HDRXACKMAX 2500000 // default 2.5 seconds, units microseconds
