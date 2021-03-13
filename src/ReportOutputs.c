@@ -1124,6 +1124,10 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 	    snprintf(b, SNBUFFERSIZE-strlen(b), " (isoch)");
 	    b += strlen(b);
 	}
+	if (isPeriodicBurst(report->common)) {
+	    snprintf(b, SNBUFFERSIZE-strlen(b), " (burst-periodic)");
+	    b += strlen(b);
+	}
 	if (isFullDuplex(report->common)) {
 	    snprintf(b, SNBUFFERSIZE-strlen(b), " (full-duplex)");
 	    b += strlen(b);
