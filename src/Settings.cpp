@@ -1411,8 +1411,19 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		mExtSettings->mFPS = atof(results);
 		if ((results = strtok(NULL, ",")) != NULL) {
 		    mExtSettings->mMean = bitorbyte_atof(results);
-		    if (mExtSettings->mMean < 0) {
-		        mExtSettings->mMean *= -8 * mExtSettings->mBufLen * mExtSettings->mFPS;
+		    if (mExtSettings->mMean == 0.0) {
+		        fprintf(stderr, "ERROR: Invalid --isochronous mean value, must be greater than zero\n");
+		        exit(1);
+		    }
+		    if (!isUDP(mExtSettings)) {
+		        if (mExtSettings->mMean < 0) {
+			    fprintf(stderr, "ERROR: Invalid --isochronous units of 'p' with TCP must be bytes\n");
+			    exit(1);
+			}
+		    } else { // UDP
+		        if (mExtSettings->mMean < 0) {
+			    mExtSettings->mMean *= -8 * mExtSettings->mBufLen * mExtSettings->mFPS;
+			}
 		    }
 		    if ((results = strtok(NULL, ",")) != NULL) {
 		        mExtSettings->mVariance = bitorbyte_atof(results);
