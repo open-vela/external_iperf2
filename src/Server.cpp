@@ -162,6 +162,7 @@ void Server::RunTCP () {
     struct TCP_burst_payload burst_info;
     Timestamp time1, time2;
     double tokens=0.000004;
+    bool isburst = (isIsochronous(mSettings) || isPeriodicBurst(mSettings) || isTripTime(mSettings));
 
     if (!InitTrafficLoop())
 	return;
@@ -192,7 +193,7 @@ void Server::RunTCP () {
 	    if (burst_nleft > 0)
 		readLen = (mSettings->mBufLen < burst_nleft) ? mSettings->mBufLen : burst_nleft;
 	    reportstruct->emptyreport=1;
-	    if ((isIsochronous(mSettings) || isTripTime(mSettings)) && (burst_nleft == 0)) {
+	    if (isburst && (burst_nleft == 0)) {
 		if ((n = recvn(mSettings->mSock, reinterpret_cast<char *>(&burst_info), sizeof(struct TCP_burst_payload), 0)) == sizeof(struct TCP_burst_payload)) {
 		    // burst_info.typelen.type = ntohl(burst_info.typelen.type);
 		    // burst_info.typelen.length = ntohl(burst_info.typelen.length);
