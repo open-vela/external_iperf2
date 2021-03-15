@@ -1034,10 +1034,10 @@ bool Listener::apply_client_settings_udp (thread_Settings *server) {
 		}
 	    }
 	    if (upperflags & HEADER_TRIPTIME) {
-		server->triptime_start.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
-		server->triptime_start.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
+		server->accept_time.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
+		server->accept_time.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
 		Timestamp now;
-		if (!isTxStartTime(server) && ((abs(now.getSecs() - server->triptime_start.tv_sec)) > (MAXDIFFTIMESTAMPSECS + 1))) {
+		if (!isTxStartTime(server) && ((abs(now.getSecs() - server->accept_time.tv_sec)) > (MAXDIFFTIMESTAMPSECS + 1))) {
 		    fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
 		} else {
 		    setTripTime(server);
@@ -1118,10 +1118,8 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 			}
 		    }
 		    if (upperflags & HEADER_TRIPTIME) {
-			server->triptime_start.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
-			server->triptime_start.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
 			Timestamp now;
-			if (!isTxStartTime(server) && ((abs(now.getSecs() - server->triptime_start.tv_sec)) > (MAXDIFFTIMESTAMPSECS + 1))) {
+			if (!isTxStartTime(server) && ((abs(now.getSecs() - server->accept_time.tv_sec)) > (MAXDIFFTIMESTAMPSECS + 1))) {
 			    fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
 			} else {
 			    setTripTime(server);
