@@ -213,13 +213,20 @@ int writen (int inSock, const void *inBuf, int inLen) {
 
     while (nleft > 0) {
         nwritten = write(inSock, ptr, nleft);
-        if (nwritten <= 0) {
-            if ((nwritten == 0) || (errno == EINTR))
-                nwritten = 0; /* interupted, call write again */
-            else
-                return -1;    /* error */
-        }
-
+        if (nwritten < 0) {
+	    if (errno == EINTR) {
+		continue; /* interupted, call write again */
+	    } else {
+		return nwritten; // error
+	    }
+	} else if (nwritten == 0) { // send timeout
+	    if (nleft == inLen) {
+		// first write attempt failed per send timeout
+		return 0;
+	    } else {
+		continue; // send timeout w/partial - retry write
+	    }
+	}
         nleft -= nwritten;
         ptr   += nwritten;
     }
