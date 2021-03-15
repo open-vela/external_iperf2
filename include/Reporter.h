@@ -208,7 +208,7 @@ struct ReportCommon {
     unsigned short BindPort;
     unsigned short ListenPort;
     intmax_t AppRate;            // -b or -u
-    intmax_t BurstSize;
+    uint32_t BurstSize;
     int AppRateUnits;
     char Format;
     int TTL;

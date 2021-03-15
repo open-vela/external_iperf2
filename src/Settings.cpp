@@ -1439,7 +1439,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    }
 	}
     } else {
-	if (mExtSettings->mBurstSize && (mExtSettings->mBurstSize < mExtSettings->mBufLen)) {
+	if (mExtSettings->mBurstSize && (static_cast<int>(mExtSettings->mBurstSize) < mExtSettings->mBufLen)) {
 	    fprintf(stderr, "WARN: Setting --burst-size to %d because value given is smaller than -l value\n", \
 		    mExtSettings->mBufLen);
 	    mExtSettings->mBurstSize = mExtSettings->mBufLen;

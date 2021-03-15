@@ -250,7 +250,7 @@ struct thread_Settings {
 #endif
     double mFPS; //frames per second
     double mMean; //variable bit rate mean
-    intmax_t mBurstSize; //number of bytes in a burst
+    uint32_t mBurstSize; //number of bytes in a burst
     int mJitterBufSize; //Server jitter buffer size, units is frames
     double mBurstIPG; //Interpacket gap
     int l4offset; // used in l2 mode to offset the raw packet
