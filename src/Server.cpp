@@ -126,6 +126,7 @@ Server::Server (thread_Settings *inSettings) {
 	    WARN_errno(mSettings->mSock == SO_RCVTIMEO, "socket");
 	}
     }
+    isburst = (isIsochronous(mSettings) || isPeriodicBurst(mSettings) || (isTripTime(mSettings) && !isUDP(mSettings)));
 }
 
 /* -------------------------------------------------------------------
@@ -162,7 +163,6 @@ void Server::RunTCP () {
     struct TCP_burst_payload burst_info;
     Timestamp time1, time2;
     double tokens=0.000004;
-    bool isburst = (isIsochronous(mSettings) || isPeriodicBurst(mSettings) || isTripTime(mSettings));
 
     if (!InitTrafficLoop())
 	return;

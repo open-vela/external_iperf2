@@ -134,6 +134,8 @@ extern const char wait_server_threads[];
 
 extern const char client_isochronous[];
 
+extern const char client_burstperiodic[];
+
 extern const char client_fq_pacing[];
 /* -------------------------------------------------------------------
  * Legacy reports

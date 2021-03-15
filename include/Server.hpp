@@ -102,6 +102,7 @@ private:
     int SkipFirstPayload(void);
     Timestamp connect_done;
     bool peerclose;
+    bool isburst;
 #if WIN32
     SOCKET mySocket;
     SOCKET myDropSocket;

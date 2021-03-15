@@ -151,10 +151,10 @@ set target bandwidth to \fIn\fR bits/sec (default 1 Mbit/sec) or
 run in client mode, connecting to \fIhost\fR  where the optional %dev will SO_BINDTODEVICE that output interface (requires root and see NOTES)
 .TP
 .BR "    --burst-periodic[=" \fIn\fR "]"
-Set the burst period in seconds. Defaults to one second. (Note: Also ses --burst-size, assumed use case is low duty cycle traffic bursts)
+Set the burst period in seconds (periodic-burst). Defaults to one second. (Note: assumed use case is low duty cycle traffic bursts)
 .TP
 .BR "    --burst-size[=" \fIn\fR "]"
-Set the burst size in bytes. Defaults to one megabyte (Note: Also uses --burst-period, assumed use case is low duty cycle traffic bursts)
+Set the burst size in bytes. Defaults to one megabyte if no value is given.
 .TP
 .BR "    --connect-only[=" \fIn\fR "]"
 only perform a TCP connect (or 3WHS) without any data transfer, useful to measure TCP connect() times. Optional value of n is the total number of connects to do (zero is run forever.) Note that -i will rate limit the connects where -P will create bursts and -t will end the client and hence end its connect attempts.
@@ -202,6 +202,9 @@ sent from client to server and if it's lost then the server will continue to run
 .TP
 .BR -n ", " --num " \fIn\fR[kmKM]"
 number of bytes to transmit (instead of -t)
+.TP
+.BR "    --periodic-burst[=" \fIn\fR "]"
+Set the burst period in seconds (same as burst-periodic). Defaults to one second. (Note: assumed use case is low duty cycle traffic bursts)
 .TP
 .BR "    --permit-key [=" \fI<value>\fR "]"
 Set a key value that must match the server's value (also set with --permit-key) in order for the server to accept traffic from the client. TCP only, no UDP support.

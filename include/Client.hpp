@@ -145,6 +145,7 @@ private:
     char* readAt;
     Timestamp connect_done, connect_start;
     Isochronous::FrameCounter *framecounter;
+    bool isburst;
 }; // end class Client
 
 #endif // CLIENT_H

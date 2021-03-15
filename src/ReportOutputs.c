@@ -1051,6 +1051,12 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
 	meanbuf[39]='\0'; variancebuf[39]='\0';
 	printf(client_isochronous, report->isochstats.mFPS, meanbuf, variancebuf, (report->isochstats.mBurstInterval/1000.0), (report->isochstats.mBurstIPG/1000.0));
     }
+    if (isPeriodicBurst(report->common)) {
+	char tmpbuf[40];
+	byte_snprintf(tmpbuf, sizeof(tmpbuf), report->common->BurstSize, 'A');
+	tmpbuf[39]='\0';
+	printf(client_burstperiodic, report->isochstats.mFPS, tmpbuf);
+    }
     if (isFQPacing(report->common)) {
 	byte_snprintf(outbuffer, sizeof(outbuffer), report->common->FQPacingRate, 'a');
 	outbuffer[(sizeof(outbuffer)-1)] = '\0';
