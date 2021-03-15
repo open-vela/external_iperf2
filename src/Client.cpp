@@ -542,6 +542,7 @@ void Client::Run () {
 void Client::RunTCP () {
     int burst_remaining = 0;
     int burst_id = 1;
+    int writelen;
     now.setnow();
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
@@ -550,9 +551,9 @@ void Client::RunTCP () {
     }
     while (InProgress()) {
         if (isModeAmount(mSettings)) {
-	    reportstruct->packetLen = ((mSettings->mAmount < static_cast<unsigned>(mSettings->mBufLen)) ? mSettings->mAmount : mSettings->mBufLen);
+	    writelen = ((mSettings->mAmount < static_cast<unsigned>(mSettings->mBufLen)) ? mSettings->mAmount : mSettings->mBufLen);
 	} else {
-	    reportstruct->packetLen = mSettings->mBufLen;
+	    writelen = mSettings->mBufLen;
 	}
 	if (isburst && !(burst_remaining > 0)) {
 	    if (isIsochronous(mSettings)) {
@@ -581,28 +582,29 @@ void Client::RunTCP () {
 	    reportstruct->sentTime = reportstruct->packetTime;
 	    myReport->info.ts.prevsendTime = reportstruct->packetTime;
 	    // perform write
-	    int writelen = (mSettings->mBufLen > burst_remaining) ? burst_remaining : mSettings->mBufLen;
+	    writelen = (mSettings->mBufLen > burst_remaining) ? burst_remaining : mSettings->mBufLen;
 	    reportstruct->packetLen = writen(mySocket, mBuf, writelen);
 	    assert(reportstruct->packetLen >= (intmax_t) sizeof(struct TCP_burst_payload));
 	    if (!(reportstruct->packetLen > 0)) {
-		// This is the case of a send timeout
-		// post a null event to the reporter
-		// and try the first burst again
+		// the writen failed so try again
 		if (reportstruct->packetLen == 0) {
+		    // This is the case of a send timeout
+		    // post a null event to the reporter
+		    // and try the first burst again
 		    PostNullEvent();
+		    continue;
 		}
-		continue;
+		FAIL_errno(1, "writen hdr", mSettings);
 	    }
-	    goto ReportNow;
+	} else {
+	    // printf("pl=%ld\n",reportstruct->packetLen);
+	    // perform write
+	    reportstruct->packetLen = write(mySocket, mBuf, writelen);
+	    now.setnow();
+	    reportstruct->packetTime.tv_sec = now.getSecs();
+	    reportstruct->packetTime.tv_usec = now.getUsecs();
+	    reportstruct->sentTime = reportstruct->packetTime;
 	}
-	// printf("pl=%ld\n",reportstruct->packetLen);
-	// perform write
-	reportstruct->packetLen = write(mySocket, mBuf, reportstruct->packetLen);
-	now.setnow();
-	reportstruct->packetTime.tv_sec = now.getSecs();
-	reportstruct->packetTime.tv_usec = now.getUsecs();
-	reportstruct->sentTime = reportstruct->packetTime;
-      ReportNow:
 	if (reportstruct->packetLen < 0) {
 	    if (NONFATALTCPWRITERR(errno)) {
 		reportstruct->errwrite=WriteErrAccount;
