@@ -174,7 +174,7 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
     while (nleft > 0) {
         nread = recv(inSock, ptr, nleft, flags);
         if (nread < 0) {
-            if (errno == EAGAIN) {
+            if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
                 nread = 0;  /* Socket read timeout */
 		break;
             } else {
@@ -214,23 +214,16 @@ int writen (int inSock, const void *inBuf, int inLen) {
     while (nleft > 0) {
         nwritten = write(inSock, ptr, nleft);
         if (nwritten < 0) {
-	    if (errno == EINTR) {
+            if ((errno == EINTR) || (errno == EAGAIN) || (errno == EWOULDBLOCK)) {
 		continue; /* interupted, call write again */
 	    } else {
-		return nwritten; // error
-	    }
-	} else if (nwritten == 0) { // send timeout
-	    if (nleft == inLen) {
-		// first write attempt failed per send timeout
-		return 0;
-	    } else {
-		continue; // send timeout w/partial - retry write
+		WARN_errno(1, "writen");
+                return -1;  /* error */
 	    }
 	}
         nleft -= nwritten;
         ptr   += nwritten;
     }
-
     return inLen;
 } /* end writen */
 
