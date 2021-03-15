@@ -293,26 +293,28 @@ int Client::StartSynch () {
     // o First is an absolute start time per unix epoch format
     // o Second is a holdback, a relative amount of seconds between the connect and data xfers
     // check for an epoch based start time
-
-    if (!isServerReverse(mSettings) && !isCompat(mSettings)) {
-	reportstruct->packetLen = SendFirstPayload();
-	// Reverse UDP tests need to retry "first sends" a few times
-	// before going to server or read mode
-	if (isReverse(mSettings) && isUDP(mSettings)) {
-	    reportstruct->packetLen = 0;
-	    fd_set set;
-	    struct timeval timeout;
-	    int resend_udp = 100;
-	    while (--resend_udp > 0) {
-		FD_ZERO(&set);
-		FD_SET(mySocket, &set);
-		timeout.tv_sec = 0;
-		timeout.tv_usec = rand() % 20000; // randomize IPG a bit
-		if (select(mySocket + 1, &set, NULL, NULL, &timeout) == 0) {
-		    SendFirstPayload();
-		    // printf("**** resend sock=%d count=%d\n", mySocket, resend_udp);
-		} else {
-		    break;
+    reportstruct->packetLen = 0;
+    if (!isServerReverse(mSettings)) {
+	if (!isCompat(mSettings)) {
+	    reportstruct->packetLen = SendFirstPayload();
+	    // Reverse UDP tests need to retry "first sends" a few times
+	    // before going to server or read mode
+	    if (isReverse(mSettings) && isUDP(mSettings)) {
+		reportstruct->packetLen = 0;
+		fd_set set;
+		struct timeval timeout;
+		int resend_udp = 100;
+		while (--resend_udp > 0) {
+		    FD_ZERO(&set);
+		    FD_SET(mySocket, &set);
+		    timeout.tv_sec = 0;
+		    timeout.tv_usec = rand() % 20000; // randomize IPG a bit
+		    if (select(mySocket + 1, &set, NULL, NULL, &timeout) == 0) {
+			SendFirstPayload();
+			// printf("**** resend sock=%d count=%d\n", mySocket, resend_udp);
+		    } else {
+			break;
+		    }
 		}
 	    }
 	}
@@ -321,13 +323,10 @@ int Client::StartSynch () {
 	} else if (isTxHoldback(mSettings)) {
 	    TxDelay();
 	}
-    // Server side client
+	// Server side client
     } else if (isTripTime(mSettings) || isPeriodicBurst(mSettings)) {
 	reportstruct->packetLen = SendFirstPayload();
-    } else {
-	reportstruct->packetLen = 0;
     }
-
     if (isIsochronous(mSettings) || isPeriodicBurst(mSettings)) {
         Timestamp tmp;
         tmp.set(mSettings->txstart_epoch.tv_sec, mSettings->txstart_epoch.tv_usec);
@@ -341,9 +340,7 @@ int Client::StartSynch () {
     }
     SetReportStartTime();
     if (reportstruct->packetLen > 0) {
-	now.setnow();
-	reportstruct->packetTime.tv_sec = now.getSecs();
-	reportstruct->packetTime.tv_usec = now.getUsecs();
+	reportstruct->packetTime = myReport->info.ts.startTime;
 	reportstruct->sentTime = reportstruct->packetTime;
 	reportstruct->prevSentTime = reportstruct->packetTime;
 	reportstruct->prevPacketTime = myReport->info.ts.prevpacketTime;
