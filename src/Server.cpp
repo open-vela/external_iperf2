@@ -218,7 +218,7 @@ void Server::RunTCP () {
 		    }
 		    myReport->info.ts.prevsendTime = reportstruct->sentTime;
 		    burst_nleft = burst_info.burst_size - n;
-//                 printf("**** 1st rxbytes=%d burst size = %d id = %d\n", n, burst_info.burst_size, burst_info.burst_id);
+//                printf("**** 1st rxbytes=%d burst size = %d id = %d\n", n, burst_info.burst_size, burst_info.burst_id);
 		    if (burst_nleft == 0) {
 			reportstruct->prevSentTime = myReport->info.ts.prevsendTime;
 			reportstruct->transit_ready = 1;
@@ -408,8 +408,10 @@ bool Server::InitTrafficLoop () {
 	if ((setfullduplexflag = fullduplex_start_barrier(&mSettings->mFullDuplexReport->fullduplex_barrier)) < 0)
 	    exit(-1);
     }
+
+    // Handle the case when the client spawns a server (no listener) and need the initial header
     // Case of --trip-times and --reverse or --fullduplex, listener handles normal case
-    if (isTripTime(mSettings) && TimeZero(mSettings->triptime_start)) {
+    if ((isTripTime(mSettings) || isPeridicBurst(mSettings)) && TimeZero(mSettings->triptime_start)) {
 	int n = 0;
 	uint32_t flags = 0;
 	int peeklen = 0;
@@ -443,12 +445,14 @@ bool Server::InitTrafficLoop () {
 		mSettings->triptime_start.tv_sec = ntohl(tcp_pkt->start_fq.start_tv_sec);
 		mSettings->triptime_start.tv_usec = ntohl(tcp_pkt->start_fq.start_tv_usec);
 		reportstruct->packetLen = n;
+		mSettings->skip	= n;
 		if (n == 0)
 		    return false;
 		reportstruct->packetID = (n > 0) ? 1 : 0;
 	    }
 	}
-    } else if (isTripTime(mSettings)) {
+    }
+    if (isTripTime(mSettings)) {
 	Timestamp now;
 	if ((abs(now.getSecs() - mSettings->triptime_start.tv_sec)) > MAXDIFFTIMESTAMPSECS) {
 	    unsetTripTime(mSettings);
@@ -456,6 +460,7 @@ bool Server::InitTrafficLoop () {
 	}
     }
     // skip the test exchange header to get to the first burst
+    // The test exchange header was read in listener context
     if (mSettings->skip && (isTripTime(mSettings) || isPeriodicBurst(mSettings))) {
 	reportstruct->packetLen = recvn(mSettings->mSock, mBuf, mSettings->skip, 0);
     }
