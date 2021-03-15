@@ -582,17 +582,15 @@ void Client::RunTCP () {
 	    myReport->info.ts.prevsendTime = reportstruct->packetTime;
 	    // perform write
 	    int writelen = (mSettings->mBufLen > burst_remaining) ? burst_remaining : mSettings->mBufLen;
-	    reportstruct->packetLen = write(mySocket, mBuf, writelen);
+	    reportstruct->packetLen = writen(mySocket, mBuf, writelen);
 	    assert(reportstruct->packetLen >= (intmax_t) sizeof(struct TCP_burst_payload));
 	    if (!(reportstruct->packetLen > 0)) {
-		burst_remaining = 0;
-	    }
-	    // This is the case of a send timeout
-	    // pust a null event to the reporter
-	    // and try the first burst again
-	    if (reportstruct->packetLen == 0) {
-		burst_remaining = 0;
-		PostNullEvent();
+		// This is the case of a send timeout
+		// post a null event to the reporter
+		// and try the first burst again
+		if (reportstruct->packetLen == 0) {
+		    PostNullEvent();
+		}
 		continue;
 	    }
 	    goto ReportNow;
@@ -1174,6 +1172,7 @@ inline void Client::WriteTcpTxHdr (struct ReportStruct *reportstruct, int burst_
     mBuf_burst->burst_period_us  = htonl(0x0);
     reportstruct->frameID=burst_id;
     reportstruct->burstsize=burst_size;
+    printf("**** Write tcp burst header size= %d id = %d\n", burst_size, burst_id);
 }
 
 inline bool Client::InProgress () {

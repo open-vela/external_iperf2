@@ -169,6 +169,7 @@ void Server::RunTCP () {
     myReport->info.ts.prevsendTime = myReport->info.ts.startTime;
 
     int burst_nleft = 0;
+    uint32_t burstid_expect = 1;
     burst_info.burst_id = 0;
 
     burst_info.send_tt.write_tv_sec = 0;
@@ -178,6 +179,7 @@ void Server::RunTCP () {
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
     while (InProgress() && !peerclose) {
+//	printf("***** bid expect = %u\n", burstid_expect);
 	reportstruct->emptyreport=1;
 	currLen = 0;
 	// perform read
@@ -202,6 +204,9 @@ void Server::RunTCP () {
 		    assert(burst_info.burst_size > 0);
 		    reportstruct->burstsize = burst_info.burst_size;
 		    burst_info.burst_id = ntohl(burst_info.burst_id);
+		    if (burstid_expect != burst_info.burst_id)
+			fprintf(stderr, "ERROR: invalid burst id %d expect %u\n", burst_info.burst_id, burstid_expect);
+
 		    reportstruct->frameID = burst_info.burst_id;
 		    if (isTripTime(mSettings)) {
 			reportstruct->sentTime.tv_sec = ntohl(burst_info.send_tt.write_tv_sec);
@@ -213,7 +218,7 @@ void Server::RunTCP () {
 		    }
 		    myReport->info.ts.prevsendTime = reportstruct->sentTime;
 		    burst_nleft = burst_info.burst_size - n;
-//                 printf("**** rxbytes=%d burst size = %d id = %d\n", n, burst_info.burst_size, burst_info.burst_id);
+//                 printf("**** 1st rxbytes=%d burst size = %d id = %d\n", n, burst_info.burst_size, burst_info.burst_id);
 		    if (burst_nleft == 0) {
 			reportstruct->prevSentTime = myReport->info.ts.prevsendTime;
 			reportstruct->transit_ready = 1;
@@ -238,8 +243,11 @@ void Server::RunTCP () {
 			if (burst_nleft == 0) {
 			    reportstruct->prevSentTime = myReport->info.ts.prevsendTime;
 			    reportstruct->transit_ready = 1;
+			    burstid_expect++;
+//			printf("**** 3rd rxbytes=%d, burst_nleft=%d id=%d\n", n, burst_nleft, burst_info.burst_id);
+
 			} else {
-//			printf("****currlen = %ld, n=%d, burst_nleft=%d id=%d\n", currLen, n, burst_nleft, burst_info.burst_id);
+//			printf("**** 2nd rxbytes=%d, burst_nleft=%d id=%d\n", n, burst_nleft, burst_info.burst_id);
 			}
 		    }
 		} else if (n == 0) {
@@ -447,6 +455,7 @@ bool Server::InitTrafficLoop () {
 	    fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
 	}
     }
+    // skip the test exchange header to get to the first burst
     if (mSettings->skip && (isTripTime(mSettings) || isPeriodicBurst(mSettings))) {
 	reportstruct->packetLen = recvn(mSettings->mSock, mBuf, mSettings->skip, 0);
     }
