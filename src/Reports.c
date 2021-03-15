@@ -296,11 +296,7 @@ struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, in
 	    if (sumreport->fullduplex_barrier.timeout < MINBARRIERTIMEOUT)
 		sumreport->fullduplex_barrier.timeout = MINBARRIERTIMEOUT;
 	} else {
-	    if (isTripTime(inSettings)) {
-		sumreport->info.ts.startTime = inSettings->triptime_start;
-	    } else {
-		sumreport->info.ts.startTime = inSettings->accept_time;
-	    }
+	    sumreport->info.ts.startTime = inSettings->accept_time;
 	    sumreport->info.ts.nextTime = sumreport->info.ts.startTime;
 	    TimeAdd(sumreport->info.ts.nextTime, sumreport->info.ts.intervalTime);
 	}

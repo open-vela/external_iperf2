@@ -342,26 +342,16 @@ inline void Server::SetFullDuplexReportStartTime () {
 #endif
 }
 inline void Server::SetReportStartTime () {
-    now.setnow();
-    if (isTripTime(mSettings) && !isFrameInterval(mSettings)) {
-	// Start times come from the sender's timestamp
-	assert(mSettings->triptime_start.tv_sec != 0);
-	assert(mSettings->triptime_start.tv_usec != 0);
-	myReport->info.ts.startTime.tv_sec = mSettings->triptime_start.tv_sec;
-	myReport->info.ts.startTime.tv_usec = mSettings->triptime_start.tv_usec;
-	if (isUDP(mSettings)) {
-	    myReport->info.ts.prevpacketTime = myReport->info.ts.startTime;
+    if (TimeZero(myReport->info.ts.startTime)) {
+	if (!TimeZero(mSettings->accept_time) && !isTxStartTime(mSettings)) {
+	    // Servers that aren't full duplex use the accept timestamp for start
+	    myReport->info.ts.startTime.tv_sec = mSettings->accept_time.tv_sec;
+	    myReport->info.ts.startTime.tv_usec = mSettings->accept_time.tv_usec;
 	} else {
-	    myReport->info.ts.prevpacketTime.tv_sec = now.getSecs();
-	    myReport->info.ts.prevpacketTime.tv_usec = now.getUsecs();
+	    now.setnow();
+	    myReport->info.ts.startTime.tv_sec = now.getSecs();
+	    myReport->info.ts.startTime.tv_usec = now.getUsecs();
 	}
-    } else if (TimeZero(myReport->info.ts.startTime) && !TimeZero(mSettings->accept_time) && !isTxStartTime(mSettings)) {
-	// Servers that aren't full duplex use the accept timestamp for start
-	myReport->info.ts.startTime.tv_sec = mSettings->accept_time.tv_sec;
-	myReport->info.ts.startTime.tv_usec = mSettings->accept_time.tv_usec;
-    } else {
-	myReport->info.ts.startTime.tv_sec = now.getSecs();
-	myReport->info.ts.startTime.tv_usec = now.getUsecs();
     }
     myReport->info.ts.IPGstart = myReport->info.ts.startTime;
 
@@ -411,7 +401,7 @@ bool Server::InitTrafficLoop () {
 
     // Handle the case when the client spawns a server (no listener) and need the initial header
     // Case of --trip-times and --reverse or --fullduplex, listener handles normal case
-    if ((isTripTime(mSettings) || isPeriodicBurst(mSettings)) && TimeZero(mSettings->triptime_start)) {
+    if (isReverse(mSettings) && (isTripTime(mSettings) || isPeriodicBurst(mSettings))) {
 	int n = 0;
 	uint32_t flags = 0;
 	int peeklen = 0;
@@ -423,8 +413,8 @@ bool Server::InitTrafficLoop () {
 	    }
 	    struct client_udp_testhdr *udp_pkt = reinterpret_cast<struct client_udp_testhdr *>(mBuf);
 	    flags = ntohl(udp_pkt->base.flags);
-	    mSettings->triptime_start.tv_sec = ntohl(udp_pkt->start_fq.start_tv_sec);
-	    mSettings->triptime_start.tv_usec = ntohl(udp_pkt->start_fq.start_tv_usec);
+	    mSettings->accept_time.tv_sec = ntohl(udp_pkt->start_fq.start_tv_sec);
+	    mSettings->accept_time.tv_usec = ntohl(udp_pkt->start_fq.start_tv_usec);
 	    reportstruct->packetLen = n;
 	} else {
 	    n = recvn(mSettings->mSock, mBuf, sizeof(uint32_t), MSG_PEEK);
@@ -442,8 +432,8 @@ bool Server::InitTrafficLoop () {
 		n = recvn(mSettings->mSock, mBuf, peeklen, 0);
 		FAIL_errno((n < peeklen), "read tcp test info", mSettings);
 		struct client_tcp_testhdr *tcp_pkt = reinterpret_cast<struct client_tcp_testhdr *>(mBuf);
-		mSettings->triptime_start.tv_sec = ntohl(tcp_pkt->start_fq.start_tv_sec);
-		mSettings->triptime_start.tv_usec = ntohl(tcp_pkt->start_fq.start_tv_usec);
+		mSettings->accept_time.tv_sec = ntohl(tcp_pkt->start_fq.start_tv_sec);
+		mSettings->accept_time.tv_usec = ntohl(tcp_pkt->start_fq.start_tv_usec);
 		reportstruct->packetLen = n;
 		mSettings->skip	= n;
 		if (n == 0)
@@ -454,7 +444,7 @@ bool Server::InitTrafficLoop () {
     }
     if (isTripTime(mSettings)) {
 	Timestamp now;
-	if ((abs(now.getSecs() - mSettings->triptime_start.tv_sec)) > MAXDIFFTIMESTAMPSECS) {
+	if ((abs(now.getSecs() - mSettings->accept_time.tv_sec)) > MAXDIFFTIMESTAMPSECS) {
 	    unsetTripTime(mSettings);
 	    fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
 	}
