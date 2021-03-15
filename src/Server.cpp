@@ -411,7 +411,7 @@ bool Server::InitTrafficLoop () {
 
     // Handle the case when the client spawns a server (no listener) and need the initial header
     // Case of --trip-times and --reverse or --fullduplex, listener handles normal case
-    if ((isTripTime(mSettings) || isPeridicBurst(mSettings)) && TimeZero(mSettings->triptime_start)) {
+    if ((isTripTime(mSettings) || isPeriodicBurst(mSettings)) && TimeZero(mSettings->triptime_start)) {
 	int n = 0;
 	uint32_t flags = 0;
 	int peeklen = 0;
