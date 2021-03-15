@@ -578,21 +578,10 @@ void Client::RunTCP () {
 	    WriteTcpTxHdr(reportstruct, burst_remaining, burst_id++);
 	    reportstruct->sentTime = reportstruct->packetTime;
 	    myReport->info.ts.prevsendTime = reportstruct->packetTime;
-	    // perform write
 	    writelen = (mSettings->mBufLen > burst_remaining) ? burst_remaining : mSettings->mBufLen;
+	    // perform write, full header must succeed
 	    reportstruct->packetLen = writen(mySocket, mBuf, writelen);
-	    assert(reportstruct->packetLen >= (intmax_t) sizeof(struct TCP_burst_payload));
-	    if (!(reportstruct->packetLen > 0)) {
-		// the writen send timeout so try again
-		if (reportstruct->packetLen == 0) {
-		    // This is the case of a send timeout
-		    // post a null event to the reporter
-		    // and try the first burst again
-		    PostNullEvent();
-		    continue;
-		}
-		FAIL_errno(1, "writen hdr", mSettings);
-	    }
+	    FAIL_errno(reportstruct->packetLen < (intmax_t) sizeof(struct TCP_burst_payload), "burst writen", mSettings);
 	} else {
 	    // printf("pl=%ld\n",reportstruct->packetLen);
 	    // perform write
