@@ -446,9 +446,9 @@ bool Server::InitTrafficLoop () {
 	    unsetTripTime(mSettings);
 	    fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
 	}
-	if (mSettings->skip) {
-	    reportstruct->packetLen = recvn(mSettings->mSock, mBuf, mSettings->skip, 0);
-	}
+    }
+    if (mSettings->skip && (isTripTime(mSettings) || isPeriodicBurst(mSettings))) {
+	reportstruct->packetLen = recvn(mSettings->mSock, mBuf, mSettings->skip, 0);
     }
     SetReportStartTime();
     if (setfullduplexflag)
