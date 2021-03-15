@@ -109,11 +109,10 @@ Client::Client (thread_Settings *inSettings) {
             unsetFileInput(mSettings);
         }
     }
-    framecounter = NULL;
     if (isIsochronous(mSettings)) {
 	FAIL_errno(!(mSettings->mFPS > 0.0), "Invalid value for frames per second in the isochronous settings\n", mSettings);
     }
-
+    isburst = (isIsochronous(mSettings) || isPeriodicBurst(mSettings) || (isTripTime(mSettings) && !isUDP(mSettings)));
 } // end Client
 
 /* -------------------------------------------------------------------
@@ -329,7 +328,7 @@ int Client::StartSynch () {
 	reportstruct->packetLen = 0;
     }
 
-    if (isIsochronous(mSettings)) {
+    if (isIsochronous(mSettings) || isPeriodicBurst(mSettings)) {
         Timestamp tmp;
         tmp.set(mSettings->txstart_epoch.tv_sec, mSettings->txstart_epoch.tv_usec);
         framecounter = new Isochronous::FrameCounter(mSettings->mFPS, tmp);
@@ -543,55 +542,60 @@ void Client::Run () {
 void Client::RunTCP () {
     int burst_remaining = 0;
     int burst_id = 1;
-
-    // RJM, consider moving this into the constructor
-    if (isIsochronous(mSettings) || isPeriodicBurst(mSettings)) {
-	framecounter = new Isochronous::FrameCounter(mSettings->mFPS);
-    }
     now.setnow();
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
+    if (isburst && !framecounter) {
+	framecounter = new Isochronous::FrameCounter(mSettings->mFPS);
+    }
     while (InProgress()) {
         if (isModeAmount(mSettings)) {
 	    reportstruct->packetLen = ((mSettings->mAmount < static_cast<unsigned>(mSettings->mBufLen)) ? mSettings->mAmount : mSettings->mBufLen);
 	} else {
 	    reportstruct->packetLen = mSettings->mBufLen;
 	}
-	if (isTripTime(mSettings) || isIsochronous(mSettings) || isPeriodicBurst(mSettings))  {
-	    if (!burst_remaining) {
-		if (framecounter) {
-		    if (mSettings->mMean > 0) {
-			burst_remaining = static_cast<int>(lognormal(mSettings->mMean,mSettings->mVariance)) / (mSettings->mFPS * 8);
-		    } else {
-			burst_remaining = (isPeriodicBurst(mSettings) ? mSettings->mBurstSize : mSettings->mBufLen);
-		    }
-		    if (burst_remaining < static_cast<int>(sizeof(struct TCP_burst_payload)))
-			burst_remaining = static_cast<int>(sizeof(struct TCP_burst_payload));
-		    if (isPeriodicBurst(mSettings))
-			PostNullEvent(); // Post a null event for low duty cycle traffic
-		    burst_id = framecounter->wait_tick();
-		    //time interval crossings may have occurred during the wait
-		    //post a null event to flush them via the reporter
-		    PostNullEvent();
-		} else {
-		    burst_remaining = mSettings->mBufLen;
-		}
-		// mAmount check
-		now.setnow();
-		reportstruct->packetTime.tv_sec = now.getSecs();
-		reportstruct->packetTime.tv_usec = now.getUsecs();
-		WriteTcpTxHdr(reportstruct, burst_remaining, burst_id++);
-		reportstruct->sentTime = reportstruct->packetTime;
-		myReport->info.ts.prevsendTime = reportstruct->packetTime;
-		// perform write
-		int writelen = (mSettings->mBufLen > burst_remaining) ? burst_remaining : mSettings->mBufLen;
-		reportstruct->packetLen = write(mySocket, mBuf, writelen);
-		assert(reportstruct->packetLen >= (intmax_t) sizeof(struct TCP_burst_payload));
-		goto ReportNow;
+	if (isburst && !(burst_remaining > 0)) {
+	    if (isIsochronous(mSettings)) {
+		assert(mSettings->mMean);
+		burst_remaining = static_cast<int>(lognormal(mSettings->mMean,mSettings->mVariance)) / (mSettings->mFPS * 8);
+	    } else {
+		assert(mSettings->mBurstSize);
+		burst_remaining = mSettings->mBurstSize;
 	    }
-	    if (reportstruct->packetLen > burst_remaining) {
-		reportstruct->packetLen = burst_remaining;
+	    // check for TCP minimum payload
+	    if (burst_remaining < static_cast<int>(sizeof(struct TCP_burst_payload)))
+		burst_remaining = static_cast<int>(sizeof(struct TCP_burst_payload));
+	    // apply scheduling if needed
+	    if (framecounter) {
+		if (isPeriodicBurst(mSettings))
+		    PostNullEvent(); // Post a null event for low duty cycle traffic
+		burst_id = framecounter->wait_tick();
+		//time interval crossings may have occurred during the wait
+		//post a null event to cause the report to flush the packet ring
+		PostNullEvent();
 	    }
+	    now.setnow();
+	    reportstruct->packetTime.tv_sec = now.getSecs();
+	    reportstruct->packetTime.tv_usec = now.getUsecs();
+	    WriteTcpTxHdr(reportstruct, burst_remaining, burst_id++);
+	    reportstruct->sentTime = reportstruct->packetTime;
+	    myReport->info.ts.prevsendTime = reportstruct->packetTime;
+	    // perform write
+	    int writelen = (mSettings->mBufLen > burst_remaining) ? burst_remaining : mSettings->mBufLen;
+	    reportstruct->packetLen = write(mySocket, mBuf, writelen);
+	    assert(reportstruct->packetLen >= (intmax_t) sizeof(struct TCP_burst_payload));
+	    if (!(reportstruct->packetLen > 0)) {
+		burst_remaining = 0;
+	    }
+	    // This is the case of a send timeout
+	    // pust a null event to the reporter
+	    // and try the first burst again
+	    if (reportstruct->packetLen == 0) {
+		burst_remaining = 0;
+		PostNullEvent();
+		continue;
+	    }
+	    goto ReportNow;
 	}
 	// printf("pl=%ld\n",reportstruct->packetLen);
 	// perform write
@@ -617,7 +621,7 @@ void Client::RunTCP () {
 	    reportstruct->emptyreport = (reportstruct->packetLen == 0) ? 1 : 0;
 	    totLen += reportstruct->packetLen;
 	    reportstruct->errwrite=WriteNoErr;
-	    if (isTripTime(mSettings) || isIsochronous(mSettings)) {
+	    if (isburst) {
 		burst_remaining -= reportstruct->packetLen;
 		if (burst_remaining > 0) {
 		    reportstruct->transit_ready = 0;
@@ -640,7 +644,6 @@ void Client::RunTCP () {
     }
     FinishTrafficActions();
 }
-
 
 /*
  * TCP send loop

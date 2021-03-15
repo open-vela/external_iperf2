@@ -183,7 +183,8 @@ const struct option long_options[] =
 {"permit-key", optional_argument, &permitkey, 1},
 {"permit-key-timeout", required_argument, &permitkeytimeout, 1},
 {"burst-size", optional_argument, &burstsize, 1},
-{"burst-periodic", optional_argument, &burstperiodic,1},
+{"burst-periodic", optional_argument, &burstperiodic, 1},
+{"periodic-burst", optional_argument, &burstperiodic, 1},
 {"NUM_REPORT_STRUCTS", required_argument, &numreportstructs, 1},
 #ifdef WIN32
 {"reverse", no_argument, &reversetest, 1},
@@ -1017,7 +1018,6 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    }
 	    if (burstsize) {
 		burstsize = 0;
-		setPeriodicBurst(mExtSettings);
 		if (optarg) {
 		    mExtSettings->mBurstSize = byte_atoi(optarg);
 		}
@@ -1197,7 +1197,11 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    }
 	}
 	if (isPeriodicBurst(mExtSettings) && isIsochronous(mExtSettings)) {
-	    fprintf(stderr, "ERROR: options of --burst-size or burst-period and --isochronous cannot be applied together\n");
+	    fprintf(stderr, "ERROR: options of --burst-periodic and --isochronous cannot be applied together\n");
+	    bail = true;
+	}
+	if ((mExtSettings->mBurstSize > 0) && isIsochronous(mExtSettings)) {
+	    fprintf(stderr, "ERROR: options of --burst-size and --isochronous cannot be applied together\n");
 	    bail = true;
 	}
 	if (isUDP(mExtSettings)) {
@@ -1377,7 +1381,11 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    bail = true;
 	}
 	if (isPeriodicBurst(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of --burst-size or burst-periodic not supported on the server\n");
+	    fprintf(stderr, "ERROR: option of --burst-periodic not supported on the server\n");
+	    bail = true;
+	}
+	if (mExtSettings->mBurstSize != 0) {
+	    fprintf(stderr, "ERROR: option of --burst-size not supported on the server\n");
 	    bail = true;
 	}
     }
@@ -1413,11 +1421,13 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	}
     }
     if (isUDP(mExtSettings)) {
-	// L2 settings
-	if (l2checks && isUDP(mExtSettings)) {
-	    l2checks = 0;
-	    // Client controls hash or not
-	    if (mExtSettings->mThreadMode == kMode_Client) {
+	if (isFullDuplex(mExtSettings)) {
+	    setNoUDPfin(mExtSettings);
+	}
+	if (mExtSettings->mThreadMode == kMode_Client) {
+	    // L2 settings
+	    if (l2checks && isUDP(mExtSettings)) {
+		l2checks = 0;
 		setL2LengthCheck(mExtSettings);
 	    } else {
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
@@ -1428,8 +1438,13 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 #endif
 	    }
 	}
-	if (isFullDuplex(mExtSettings)) {
-	    setNoUDPfin(mExtSettings);
+    } else {
+	if (mExtSettings->mBurstSize && (mExtSettings->mBurstSize < mExtSettings->mBufLen)) {
+	    fprintf(stderr, "WARN: Setting --burst-size to %d because value given is smaller than -l value\n", \
+		    mExtSettings->mBufLen);
+	    mExtSettings->mBurstSize = mExtSettings->mBufLen;
+	} else if (isTripTime(mExtSettings) && !(mExtSettings->mBurstSize > 0)) {
+	    mExtSettings->mBurstSize = mExtSettings->mBufLen;
 	}
     }
     if (isPeriodicBurst(mExtSettings)) {

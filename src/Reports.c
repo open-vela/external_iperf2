@@ -109,6 +109,7 @@ static void common_copy (struct ReportCommon **common, struct thread_Settings *i
     (*common)->BindPort = inSettings->mBindPort;
     (*common)->ListenPort = inSettings->mListenPort;
     (*common)->AppRate = inSettings->mAppRate;
+    (*common)->BurstSize = inSettings->mBurstSize;
     (*common)->AppRateUnits = inSettings->mAppRateUnits;
     (*common)->socket = inSettings->mSock;
     (*common)->transferID = inSettings->mTransferID;
