@@ -214,7 +214,7 @@ int writen (int inSock, const void *inBuf, int inLen) {
     while (nleft > 0) {
         nwritten = write(inSock, ptr, nleft);
         if (nwritten <= 0) {
-            if (errno == EINTR)
+            if ((nwritten == 0) || (errno == EINTR))
                 nwritten = 0; /* interupted, call write again */
             else
                 return -1;    /* error */
