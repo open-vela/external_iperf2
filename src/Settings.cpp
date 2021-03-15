@@ -1420,6 +1420,15 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    }
 	}
     }
+    // set burst size defaults
+    if (isPeriodicBurst(mExtSettings)) {
+	if (mExtSettings->mBurstSize == 0) {
+	    mExtSettings->mBurstSize = 1000000; //default to 1 Mbyte
+	}
+	if (mExtSettings->mFPS <= 0) {
+	    mExtSettings->mFPS = 1;
+	}
+    }
     if (isUDP(mExtSettings)) {
 	if (isFullDuplex(mExtSettings)) {
 	    setNoUDPfin(mExtSettings);
@@ -1445,14 +1454,6 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    mExtSettings->mBurstSize = mExtSettings->mBufLen;
 	} else if (isTripTime(mExtSettings) && !(mExtSettings->mBurstSize > 0)) {
 	    mExtSettings->mBurstSize = mExtSettings->mBufLen;
-	}
-    }
-    if (isPeriodicBurst(mExtSettings)) {
-	if (mExtSettings->mBurstSize <= 0) {
-	    mExtSettings->mBurstSize = 1000000; //default to 1 Mbyte
-	}
-	if (mExtSettings->mFPS <= 0) {
-	    mExtSettings->mFPS = 1;
 	}
     }
     if (isIsochronous(mExtSettings) && mExtSettings->mIsochronousStr) {

@@ -586,7 +586,7 @@ void Client::RunTCP () {
 	    reportstruct->packetLen = writen(mySocket, mBuf, writelen);
 	    assert(reportstruct->packetLen >= (intmax_t) sizeof(struct TCP_burst_payload));
 	    if (!(reportstruct->packetLen > 0)) {
-		// the writen failed so try again
+		// the writen send timeout so try again
 		if (reportstruct->packetLen == 0) {
 		    // This is the case of a send timeout
 		    // post a null event to the reporter
