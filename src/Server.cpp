@@ -202,7 +202,6 @@ void Server::RunTCP () {
 		    assert(burst_info.burst_size > 0);
 		    reportstruct->burstsize = burst_info.burst_size;
 		    burst_info.burst_id = ntohl(burst_info.burst_id);
-//                 printf("**** burst size = %d id = %d\n", burst_info.burst_size, burst_info.burst_id);
 		    reportstruct->frameID = burst_info.burst_id;
 		    if (isTripTime(mSettings)) {
 			reportstruct->sentTime.tv_sec = ntohl(burst_info.send_tt.write_tv_sec);
@@ -214,6 +213,7 @@ void Server::RunTCP () {
 		    }
 		    myReport->info.ts.prevsendTime = reportstruct->sentTime;
 		    burst_nleft = burst_info.burst_size - n;
+//                 printf("**** rxbytes=%d burst size = %d id = %d\n", n, burst_info.burst_size, burst_info.burst_id);
 		    if (burst_nleft == 0) {
 			reportstruct->prevSentTime = myReport->info.ts.prevsendTime;
 			reportstruct->transit_ready = 1;
@@ -232,8 +232,8 @@ void Server::RunTCP () {
 	    if (!reportstruct->transit_ready) {
 		n = recv(mSettings->mSock, mBuf, readLen, 0);
 		if (n > 0) {
-		    reportstruct->emptyreport=0;
-		    if (isIsochronous(mSettings) || isTripTime(mSettings)) {
+		    reportstruct->emptyreport = 0;
+		    if (isburst) {
 			burst_nleft -= n;
 			if (burst_nleft == 0) {
 			    reportstruct->prevSentTime = myReport->info.ts.prevsendTime;
