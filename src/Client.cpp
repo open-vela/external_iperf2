@@ -112,6 +112,7 @@ Client::Client (thread_Settings *inSettings) {
     if (isIsochronous(mSettings)) {
 	FAIL_errno(!(mSettings->mFPS > 0.0), "Invalid value for frames per second in the isochronous settings\n", mSettings);
     }
+    peerclose = false;
     isburst = (isIsochronous(mSettings) || isPeriodicBurst(mSettings) || (isTripTime(mSettings) && !isUDP(mSettings)));
 } // end Client
 
@@ -565,8 +566,6 @@ void Client::RunTCP () {
 		burst_remaining = static_cast<int>(sizeof(struct TCP_burst_payload));
 	    // apply scheduling if needed
 	    if (framecounter) {
-		if (isPeriodicBurst(mSettings))
-		    PostNullEvent(); // Post a null event for low duty cycle traffic
 		burst_id = framecounter->wait_tick();
 		//time interval crossings may have occurred during the wait
 		//post a null event to cause the report to flush the packet ring
@@ -591,8 +590,10 @@ void Client::RunTCP () {
 	    reportstruct->packetTime.tv_usec = now.getUsecs();
 	    reportstruct->sentTime = reportstruct->packetTime;
 	}
-	if (reportstruct->packetLen < 0) {
-	    if (NONFATALTCPWRITERR(errno)) {
+	if (reportstruct->packetLen <= 0) {
+	    if (reportstruct->packetLen == 0) {
+		peerclose = true;
+	    } else if (NONFATALTCPWRITERR(errno)) {
 		reportstruct->errwrite=WriteErrAccount;
 	    } else if (FATALTCPWRITERR(errno)) {
 		reportstruct->errwrite=WriteErrFatal;
@@ -604,7 +605,7 @@ void Client::RunTCP () {
 	    reportstruct->packetLen = 0;
 	    reportstruct->emptyreport = 1;
 	} else {
-	    reportstruct->emptyreport = (reportstruct->packetLen == 0) ? 1 : 0;
+	    reportstruct->emptyreport = 0;
 	    totLen += reportstruct->packetLen;
 	    reportstruct->errwrite=WriteNoErr;
 	    if (isburst) {
@@ -1160,7 +1161,7 @@ inline void Client::WriteTcpTxHdr (struct ReportStruct *reportstruct, int burst_
     mBuf_burst->burst_period_us  = htonl(0x0);
     reportstruct->frameID=burst_id;
     reportstruct->burstsize=burst_size;
-    printf("**** Write tcp burst header size= %d id = %d\n", burst_size, burst_id);
+//    printf("**** Write tcp burst header size= %d id = %d\n", burst_size, burst_id);
 }
 
 inline bool Client::InProgress () {
@@ -1170,7 +1171,7 @@ inline bool Client::InProgress () {
 	Extractor_getNextDataBlock(readAt, mSettings);
         return Extractor_canRead(mSettings) != 0;
     }
-    return !(sInterupted ||
+    return !(sInterupted || peerclose || \
 	(isModeTime(mSettings) && mEndTime.before(reportstruct->packetTime))  ||
 	(isModeAmount(mSettings) && (mSettings->mAmount <= 0)));
 }

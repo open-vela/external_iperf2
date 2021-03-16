@@ -146,6 +146,7 @@ private:
     Timestamp connect_done, connect_start;
     Isochronous::FrameCounter *framecounter;
     bool isburst;
+    bool peerclose;
 }; // end class Client
 
 #endif // CLIENT_H
