@@ -717,7 +717,20 @@ static inline double reporter_handle_packet_oneway_transit (struct ReporterData 
 
 static inline void reporter_handle_burst_tcp_transit (struct ReporterData *data, struct ReportStruct *packet) {
     struct TransferInfo *stats = &data->info;
+    static bool check_next = false;
+    // very first burst
+    if (!stats->isochstats.frameID) {
+	stats->isochstats.frameID = packet->frameID;
+    }
     if (packet->frameID && packet->transit_ready) {
+	int framedelta=0;
+	// perform client and server frame based accounting
+	if ((framedelta = (packet->frameID - stats->isochstats.frameID))) {
+	    if (framedelta > 1) {
+		fprintf(stderr,"Invalid burst id seq %ld\n", packet->frameID);
+	    }
+	    stats->isochstats.framecnt.current += framedelta;
+	}
         double transit = reporter_handle_packet_oneway_transit(data, packet);
 	if (!TimeZero(stats->ts.prevpacketTime)) {
 	    double delta = TimeDifference(packet->sentTime, stats->ts.prevpacketTime);
@@ -727,7 +740,11 @@ static inline void reporter_handle_burst_tcp_transit (struct ReporterData *data,
 	if (stats->framelatency_histogram) {
 	    histogram_insert(stats->framelatency_histogram, transit, isTripTime(stats->common) ? &packet->sentTime : NULL);
 	}
+	check_next = true;
 	// printf("***Burst id = %ld, transit = %f\n", packet->frameID, stats->transit.lastTransit);
+    } else if (check_next && packet->frameID && (packet->frameID != stats->isochstats.frameID)) {
+	check_next = false;
+	fprintf(stderr,"%sError: invalid next burst id of %" PRIdMAX " expected %u\n", stats->common->transferIDStr, packet->frameID, stats->isochstats.frameID + 1);
     }
 }
 
@@ -784,7 +801,7 @@ inline void reporter_handle_packet_server_tcp (struct ReporterData *data, struct
 	    stats->sock_callstats.read.bins[bin]++;
 	    stats->sock_callstats.read.totbins[bin]++;
 	}
-	if (!isFrameInterval(stats->common))
+	if (isPeriodicBurst(stats->common))
 	    reporter_handle_burst_tcp_transit(data, packet);
     }
 }
@@ -853,7 +870,6 @@ void reporter_handle_packet_client (struct ReporterData *data, struct ReportStru
 	// These are valid packets that need standard iperf accounting
 	stats->sock_callstats.write.WriteCnt++;
 	stats->sock_callstats.write.totWriteCnt++;
-
 	if (isIsochronous(stats->common)) {
 	    reporter_handle_packet_isochronous(data, packet);
 	}

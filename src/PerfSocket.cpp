@@ -229,6 +229,7 @@ void SetSocketOptionsSendTimeout (struct thread_Settings *mSettings, int timer) 
     if (setsockopt(mSettings->mSock, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<char *>(&timeout), sizeof(timeout)) < 0) {
 	WARN_errno(mSettings->mSock == SO_SNDTIMEO, "socket");
     }
+//    fprintf(stderr,"**** tx timeout %d usecs\n", timer);
 }
 
 void SetSocketOptionsReceiveTimeout (struct thread_Settings *mSettings, int timer) {
@@ -244,5 +245,6 @@ void SetSocketOptionsReceiveTimeout (struct thread_Settings *mSettings, int time
     if (setsockopt(mSettings->mSock, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char *>(&timeout), sizeof(timeout)) < 0) {
 	WARN_errno(mSettings->mSock == SO_RCVTIMEO, "socket");
     }
+//    fprintf(stderr,"**** rx timeout %d usecs\n", timer);
 }
 // end SetSocketOptions
