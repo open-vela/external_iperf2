@@ -153,7 +153,6 @@ inline bool Server::InProgress () {
 void Server::RunTCP () {
     long currLen;
     intmax_t totLen = 0;
-    bool peerclose  = false;
     struct TCP_burst_payload burst_info;
     Timestamp time1, time2;
     double tokens=0.000004;
@@ -171,7 +170,7 @@ void Server::RunTCP () {
     now.setnow();
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
-    while (InProgress() && !peerclose) {
+    while (InProgress()) {
 //	printf("***** bid expect = %u\n", burstid_expect);
 	reportstruct->emptyreport=1;
 	currLen = 0;
