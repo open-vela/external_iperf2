@@ -1134,7 +1134,7 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 	    b += strlen(b);
 	}
 	if (isPeriodicBurst(report->common)) {
-	    snprintf(b, SNBUFFERSIZE-strlen(b), " (burst-periodic)");
+	    snprintf(b, SNBUFFERSIZE-strlen(b), " (burst-periodic=%0.2f)", report->FPS);
 	    b += strlen(b);
 	}
 	if (isFullDuplex(report->common)) {

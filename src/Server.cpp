@@ -190,7 +190,6 @@ void Server::RunTCP () {
 		readLen = (mSettings->mBufLen < burst_nleft) ? mSettings->mBufLen : burst_nleft;
 	    reportstruct->emptyreport=1;
 	    if (isburst && (burst_nleft == 0)) {
-//		printf("**** readn attempt %ld\n", sizeof(struct TCP_burst_payload));
 		if ((n = recvn(mSettings->mSock, reinterpret_cast<char *>(&burst_info), sizeof(struct TCP_burst_payload), 0)) == sizeof(struct TCP_burst_payload)) {
 		    // burst_info.typelen.type = ntohl(burst_info.typelen.type);
 		    // burst_info.typelen.length = ntohl(burst_info.typelen.length);
@@ -213,7 +212,6 @@ void Server::RunTCP () {
 		    }
 		    myReport->info.ts.prevsendTime = reportstruct->sentTime;
 		    burst_nleft = burst_info.burst_size - n;
- //               printf("**** 1st rxbytes=%d burst size = %d id = %d\n", n, burst_info.burst_size, burst_info.burst_id);
 		    if (burst_nleft == 0) {
 			reportstruct->prevSentTime = myReport->info.ts.prevsendTime;
 			reportstruct->transit_ready = 1;
@@ -223,7 +221,6 @@ void Server::RunTCP () {
 		    WARN(burst_nleft <= 0, "invalid burst read req size");
 		    // thread_debug("***read burst header size %d id=%d", burst_info.burst_size, burst_info.burst_id);
 		} else {
-//		    printf("**** readn %d %d\n", n, readLen);
 		    if (n > 0)
 			WARN(1, "partial readn");
 #ifdef HAVE_THREAD_DEBUG
@@ -242,10 +239,6 @@ void Server::RunTCP () {
 			    reportstruct->prevSentTime = myReport->info.ts.prevsendTime;
 			    reportstruct->transit_ready = 1;
 			    burstid_expect++;
-//			printf("**** 3rd rxbytes=%d, burst_nleft=%d id=%d\n", n, burst_nleft, burst_info.burst_id);
-
-			} else {
-//			printf("**** 2nd rxbytes=%d, burst_nleft=%d id=%d\n", n, burst_nleft, burst_info.burst_id);
 			}
 		    }
 		} else if (n == 0) {

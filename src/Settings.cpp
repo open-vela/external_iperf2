@@ -1380,6 +1380,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    fprintf(stderr, "ERROR: option of --near-congestion not supported on the server\n");
 	    bail = true;
 	}
+	if (isPeriodicBurst(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of --burst-periodic only can be set on the client\n");
+	    bail = true;
+	}
 	if (mExtSettings->mBurstSize != 0) {
 	    fprintf(stderr, "ERROR: option of --burst-size not supported on the server\n");
 	    bail = true;
@@ -1662,6 +1666,11 @@ void Settings_ReadClientSettingsIsoch (struct thread_Settings **client, struct c
     (*client)->mBurstIPG += ntohl(hdr->BurstIPGu) / static_cast<double>(rMillion);
 }
 
+void Settings_ReadClientSettingsBurst (struct thread_Settings **client, struct client_hdrext_isoch_settings *hdr) {
+    (*client)->mFPS = ntohl(hdr->FPSl);
+    (*client)->mFPS += ntohl(hdr->FPSu) / static_cast<double>(rMillion);
+}
+
 void Settings_ReadClientSettingsV1 (struct thread_Settings **client, struct client_hdr_v1 *hdr) {
     (*client)->mTID = thread_zeroid();
     (*client)->mPort = static_cast<unsigned short>(ntohl(hdr->mPort));
@@ -1785,6 +1794,8 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
 
 	    if (isIsochronous(server)) {
 		Settings_ReadClientSettingsIsoch(&reversed_thread, &hdr->isoch_settings);
+	    } else if (isPeriodicBurst(server)) {
+		Settings_ReadClientSettingsBurst(&reversed_thread, &hdr->isoch_settings);
 	    }
 	    if (upperflags & HEADER_FQRATESET) {
 		setFQPacing(reversed_thread);
@@ -2011,20 +2022,23 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	}
 	if (isIsochronous(client) || isPeriodicBurst(client)) {
 	    if (isPeriodicBurst(client)) {
-		upperflags |= HEADER_PERIODICBURST;
+		upperflags |= HEADER_PERIODICBURST;  // overload the isoch settings
 	    } else {
 		upperflags |= HEADER_ISOCH;
 	    }
-	    if (isFullDuplex(client) || isReverse(client)) {
-		upperflags |= HEADER_ISOCH_SETTINGS;
+	    if (isFullDuplex(client) || isReverse(client) || isPeriodicBurst(client)) {
 		hdr->isoch_settings.FPSl = htonl((long)client->mFPS);
-		hdr->isoch_settings.FPSu = htonl(((long)(client->mFPS) - (long)client->mFPS * rMillion));
-		hdr->isoch_settings.Meanl = htonl((long)client->mMean);
-		hdr->isoch_settings.Meanu = htonl(((long)(client->mMean) - (long)client->mMean * rMillion));
-		hdr->isoch_settings.Variancel = htonl((long)client->mVariance);
-		hdr->isoch_settings.Varianceu = htonl(((long)(client->mVariance) - (long)client->mVariance * rMillion));
-		hdr->isoch_settings.BurstIPGl = htonl((long)client->mBurstIPG);
-		hdr->isoch_settings.BurstIPGu = htonl(((long)(client->mBurstIPG) - (long)client->mBurstIPG * rMillion));
+		hdr->isoch_settings.FPSu = htonl((long)((client->mFPS - (long)(client->mFPS)) * rMillion));
+		hdr->isoch_settings.Variancel = htonl((long)(client->mVariance));
+		hdr->isoch_settings.Varianceu = htonl((long)((client->mVariance - (long)(client->mVariance)) * rMillion));
+		if (!isPeriodicBurst(client)) {
+		    hdr->isoch_settings.Meanl = htonl((long)(client->mMean));
+		    hdr->isoch_settings.Meanu = htonl((long)(((client->mMean) - (long)(client->mMean)) * rMillion));
+		    hdr->isoch_settings.BurstIPGl = htonl((long)client->mBurstIPG);
+		    hdr->isoch_settings.BurstIPGu = htonl(((long)(client->mBurstIPG) - (long)client->mBurstIPG * rMillion));
+		} else {
+		    hdr->isoch_settings.Meanl = htonl((long)(client->mBurstSize));
+		}
 		len += sizeof(struct client_hdrext_isoch_settings);
 	    }
 	}
