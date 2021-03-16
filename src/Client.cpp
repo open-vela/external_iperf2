@@ -489,7 +489,7 @@ void Client::InitTrafficLoop () {
         PostReport(myJob);
     }
     one_report = (!isUDP(mSettings) && !isEnhanced(mSettings) && (mSettings->mIntervalMode != kInterval_Time) \
-		   && !isIsochronous(mSettings) && !isTripTime(mSettings) && !isReverse(mSettings));
+		   && !isIsochronous(mSettings) && !isPeriodicBurst(mSettings) && !isTripTime(mSettings) && !isReverse(mSettings));
 }
 
 /* -------------------------------------------------------------------
