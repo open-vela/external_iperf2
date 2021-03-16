@@ -377,7 +377,6 @@ struct ReporterData {
     // group sum and full duplext reports
     struct SumReport *GroupSumReport;
     struct SumReport *FullDuplexReport;
-
     struct TransferInfo info;
 };
 
