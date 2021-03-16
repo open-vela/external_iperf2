@@ -253,6 +253,9 @@ const char client_isochronous[] =
 const char client_burstperiodic[] =
 "Bursting: %s every %0.2f seconds\n";
 
+const char server_burstperiodic[] =
+"Burst wait timeout set to (2 * %0.2f) seconds (use --burst-period=<n secs> to change)\n";
+
 const char client_fq_pacing [] =
 "fair-queue socket pacing set to %s/s\n";
 
