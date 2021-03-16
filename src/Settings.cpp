@@ -1380,10 +1380,6 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    fprintf(stderr, "ERROR: option of --near-congestion not supported on the server\n");
 	    bail = true;
 	}
-	if (isPeriodicBurst(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of --burst-periodic not supported on the server\n");
-	    bail = true;
-	}
 	if (mExtSettings->mBurstSize != 0) {
 	    fprintf(stderr, "ERROR: option of --burst-size not supported on the server\n");
 	    bail = true;
