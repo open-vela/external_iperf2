@@ -1133,7 +1133,7 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 	    snprintf(b, SNBUFFERSIZE-strlen(b), " (isoch)");
 	    b += strlen(b);
 	}
-	if (isPeriodicBurst(report->common)) {
+	if (isPeriodicBurst(report->common) && (report->common->ThreadMode != kMode_Client) && !isServerReverse(report->common)) {
 	    snprintf(b, SNBUFFERSIZE-strlen(b), " (burst-periodic=%0.2f)", (1.0 / report->FPS));
 	    b += strlen(b);
 	}
