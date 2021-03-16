@@ -744,7 +744,8 @@ static inline void reporter_handle_burst_tcp_transit (struct ReporterData *data,
 	// printf("***Burst id = %ld, transit = %f\n", packet->frameID, stats->transit.lastTransit);
     } else if (check_next && packet->frameID && (packet->frameID != stats->isochstats.frameID)) {
 	check_next = false;
-	fprintf(stderr,"%sError: invalid next burst id of %" PRIdMAX " expected %u\n", stats->common->transferIDStr, packet->frameID, stats->isochstats.frameID + 1);
+	fprintf(stderr,"%sError: expected burst id %u but got %" PRIdMAX "\n", \
+		stats->common->transferIDStr, stats->isochstats.frameID + 1, packet->frameID);
     }
 }
 
