@@ -65,6 +65,7 @@
 #include "PerfSocket.hpp"
 #include "SocketAddr.h"
 #include "payloads.h"
+#include <cmath>
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
 #include "checksums.h"
 #endif
@@ -109,24 +110,17 @@ Server::Server (thread_Settings *inSettings) {
     // mAmount integer, units 10 milliseconds
     // divide by two so timeout is 1/2 the interval
     if (mSettings->mInterval && (mSettings->mIntervalMode == kInterval_Time)) {
-	sorcvtimer = (mSettings->mInterval / 2);
+	sorcvtimer = static_cast<int>(round(1000000.0 * mSettings->mInterval / 2.0));
     } else if (isServerModeTime(mSettings)) {
-	sorcvtimer = (mSettings->mAmount * 1000) / 2;
-    }
-    if (sorcvtimer > 0) {
-#ifdef WIN32
-	// Windows SO_RCVTIMEO uses ms
-	DWORD timeout = (double) sorcvtimer / 1e3;
-#else
-	struct timeval timeout;
-	timeout.tv_sec = sorcvtimer / 1000000;
-	timeout.tv_usec = sorcvtimer % 1000000;
-#endif
-	if (setsockopt(mSettings->mSock, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char *>(&timeout), sizeof(timeout)) < 0) {
-	    WARN_errno(mSettings->mSock == SO_RCVTIMEO, "socket");
-	}
+	sorcvtimer = static_cast<int>(round(mSettings->mAmount * 10000) / 2);
     }
     isburst = (isIsochronous(mSettings) || isPeriodicBurst(mSettings) || (isTripTime(mSettings) && !isUDP(mSettings)));
+    if (isburst && (mSettings->mFPS != 0)) {
+	sorcvtimer = static_cast<int>(round(2000000.0 / mSettings->mFPS));
+    }
+    if (sorcvtimer > 0) {
+	SetSocketOptionsReceiveTimeout(mSettings, sorcvtimer);
+    }
 }
 
 /* -------------------------------------------------------------------
@@ -196,6 +190,7 @@ void Server::RunTCP () {
 		readLen = (mSettings->mBufLen < burst_nleft) ? mSettings->mBufLen : burst_nleft;
 	    reportstruct->emptyreport=1;
 	    if (isburst && (burst_nleft == 0)) {
+//		printf("**** readn attempt %ld\n", sizeof(struct TCP_burst_payload));
 		if ((n = recvn(mSettings->mSock, reinterpret_cast<char *>(&burst_info), sizeof(struct TCP_burst_payload), 0)) == sizeof(struct TCP_burst_payload)) {
 		    // burst_info.typelen.type = ntohl(burst_info.typelen.type);
 		    // burst_info.typelen.length = ntohl(burst_info.typelen.length);
@@ -218,7 +213,7 @@ void Server::RunTCP () {
 		    }
 		    myReport->info.ts.prevsendTime = reportstruct->sentTime;
 		    burst_nleft = burst_info.burst_size - n;
-//                printf("**** 1st rxbytes=%d burst size = %d id = %d\n", n, burst_info.burst_size, burst_info.burst_id);
+ //               printf("**** 1st rxbytes=%d burst size = %d id = %d\n", n, burst_info.burst_size, burst_info.burst_id);
 		    if (burst_nleft == 0) {
 			reportstruct->prevSentTime = myReport->info.ts.prevsendTime;
 			reportstruct->transit_ready = 1;
@@ -228,6 +223,8 @@ void Server::RunTCP () {
 		    WARN(burst_nleft <= 0, "invalid burst read req size");
 		    // thread_debug("***read burst header size %d id=%d", burst_info.burst_size, burst_info.burst_id);
 		} else {
+//		    printf("**** readn %d %d\n", n, readLen);
+		    WARN(1, "partial readn");
 #ifdef HAVE_THREAD_DEBUG
 		    thread_debug("TCP burst partial read of %d wanted %d", n, sizeof(struct TCP_burst_payload));
 #endif

@@ -923,25 +923,9 @@ bool Listener::apply_client_settings (thread_Settings *server) {
     assert(mBuf != NULL);
     bool rc;
 
-    // Set the receive timeout for the very first read based upon the -t
-    // and not -i.
-#ifdef WIN32
-    int sorcvtimer = 4000;
-    DWORD timeout;
-    if (isServerModeTime(server)) {
-	// Windows SO_RCVTIMEO uses ms
-	timeout = (double) sorcvtimer / 1e3;
-    }
-#else
-    struct timeval timeout = {4, 0};
-    if (isServerModeTime(server)) {
-	timeout.tv_sec = server->mAmount / 100;
-	timeout.tv_usec = (server->mAmount % 100) * 10000;
-    }
-#endif // WIN32
-    if (setsockopt(server->mSock, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char *>(&timeout), sizeof(timeout)) < 0) {
-	WARN_errno(server->mSock == SO_RCVTIMEO, "socket");
-    }
+    // Set the receive timeout for the very first read
+    int sorcvtimer = 4000000; // 4 sec in usecs
+    SetSocketOptionsReceiveTimeout(server, sorcvtimer);
     server->peer_version_u = 0;
     server->peer_version_l = 0;
     server->mMode = kTest_Normal;
@@ -1131,6 +1115,9 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 			setFrameInterval(server);
 			setPeriodicBurst(server);
 			server->mIntervalMode = kInterval_Frames;
+			if (!server->mFPS) {
+			    server->mFPS = 1;
+			}
 		    }
 		    if (flags & HEADER_VERSION2) {
 			if (upperflags & HEADER_FULLDUPLEX) {
