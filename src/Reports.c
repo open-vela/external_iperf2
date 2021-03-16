@@ -678,6 +678,9 @@ struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, d
     }
     creport->common->winsize_requested = inSettings->mTCPWin;
     creport->txholdbacktime = inSettings->txholdback_timer;
+    if (isPeriodicBurst(inSettings)) {
+	creport->FPS = inSettings->mFPS;
+    }
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Init connection report %p", reporthdr);
 #endif

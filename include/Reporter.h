@@ -256,6 +256,7 @@ struct ConnectionInfo {
     char peerversion[PEERVERBUFSIZE];
     struct MeanMinMaxStats connect_times;
     int MSS;
+    double FPS;
 };
 
 struct ShiftIntCounter {
