@@ -59,8 +59,9 @@
 #include "Mutex.h"
 #include "Settings.hpp"
 
-void SetSocketOptions( struct thread_Settings *inSettings );
-void SetSocketOptionsSendTimeout( struct thread_Settings *mSettings, int timer);
-void SetSocketOptionsReceiveTimeout( struct thread_Settings *mSettings, int timer);
+// int timer units is micorseconds
+void SetSocketOptions(struct thread_Settings *inSettings);
+void SetSocketOptionsSendTimeout(struct thread_Settings *mSettings, int timer);
+void SetSocketOptionsReceiveTimeout(struct thread_Settings *mSettings, int timer);
 
 #endif // PERFSOCKET_H

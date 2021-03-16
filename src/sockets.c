@@ -176,14 +176,14 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
         if (nread < 0) {
             if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
                 nread = 0;  /* Socket read timeout */
-		break;
+		WARN_errno(1, "recvn timeout");
             } else {
 		WARN_errno(1, "recvn");
-                return -1;  /* error */
 	    }
+            return -1;  /* error */
 	} else if (nread == 0) {
-	  // WARN_errno(1, "recvn abort");
-            break;        /* EOF */
+	    WARN(1, "recvn peer close");
+            break;
 	}
         nleft -= nread;
         ptr   += nread;
@@ -220,6 +220,9 @@ int writen (int inSock, const void *inBuf, int inLen) {
 		WARN_errno(1, "writen");
                 return -1;  /* error */
 	    }
+	} else if (nwritten == 0) {
+	    WARN(1, "writen peer close");
+	    break;
 	}
         nleft -= nwritten;
         ptr   += nwritten;
