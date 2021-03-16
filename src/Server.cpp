@@ -163,7 +163,6 @@ void Server::RunTCP () {
     myReport->info.ts.prevsendTime = myReport->info.ts.startTime;
 
     int burst_nleft = 0;
-    uint32_t burstid_expect = 1;
     burst_info.burst_id = 0;
 
     burst_info.send_tt.write_tv_sec = 0;
@@ -198,9 +197,6 @@ void Server::RunTCP () {
 		    assert(burst_info.burst_size > 0);
 		    reportstruct->burstsize = burst_info.burst_size;
 		    burst_info.burst_id = ntohl(burst_info.burst_id);
-		    if (burstid_expect != burst_info.burst_id)
-			fprintf(stderr, "ERROR: invalid burst id %d expect %u\n", burst_info.burst_id, burstid_expect);
-
 		    reportstruct->frameID = burst_info.burst_id;
 		    if (isTripTime(mSettings)) {
 			reportstruct->sentTime.tv_sec = ntohl(burst_info.send_tt.write_tv_sec);
@@ -238,7 +234,6 @@ void Server::RunTCP () {
 			if (burst_nleft == 0) {
 			    reportstruct->prevSentTime = myReport->info.ts.prevsendTime;
 			    reportstruct->transit_ready = 1;
-			    burstid_expect++;
 			}
 		    }
 		} else if (n == 0) {
