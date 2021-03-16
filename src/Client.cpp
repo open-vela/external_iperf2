@@ -197,14 +197,9 @@ bool Client::my_connect (bool close_on_fail) {
 	    connected = true;
     }
     if (connected) {
-	// mInterval units are microseconds, mAmount units is 10 ms
-	// SetSocketOptionsSendTimeout takes microrseconds
-	// Set the timeout value to 1/2 the interval (per -i) or 1/2 the -t value
-	if (mSettings->mInterval > 0) {
-	    SetSocketOptionsSendTimeout(mSettings, mSettings->mInterval / 2);
-	} else {
-	    SetSocketOptionsSendTimeout(mSettings, (mSettings->mAmount * 10000) / 2);
-	}
+	// Set the send timeout for the very first write which has the test exchange
+	int sosndtimer = TESTEXCHANGETIMEOUT; // 4 sec in usecs
+	SetSocketOptionsSendTimeout(mSettings, sosndtimer);
 	getsockname(mySocket, reinterpret_cast<sockaddr*>(&mSettings->local), &mSettings->size_local);
 	getpeername(mySocket, reinterpret_cast<sockaddr*>(&mSettings->peer), &mSettings->size_peer);
 	SockAddr_Ifrname(mSettings);
@@ -454,10 +449,15 @@ void Client::InitTrafficLoop () {
     //  default socket timeouts are preferred.
     int sosndtimer = 0;
     // sosndtimer units microseconds
-    if ((mSettings->mIntervalMode == kInterval_Time) && mSettings->mInterval) {
-	sosndtimer = mSettings->mInterval / 2;
-    } else if (isModeTime(mSettings)) {
-	sosndtimer = (mSettings->mAmount * 10000) / 2;
+    // mInterval units are microseconds, mAmount units is 10 ms
+    // SetSocketOptionsSendTimeout takes microseconds
+    // Set the timeout value to 1/2 the interval (per -i) or 1/2 the -t value
+    if (isPeriodicBurst(mSettings) && (mSettings->mFPS > 0.0)) {
+	sosndtimer = static_cast<int>(round(250000.0 / mSettings->mFPS));
+    } else if (mSettings->mInterval > 0) {
+	sosndtimer = static_cast<int>(mSettings->mInterval / 2);
+    } else {
+	sosndtimer = static_cast<int>((mSettings->mAmount * 10000) / 2);
     }
     SetSocketOptionsSendTimeout(mSettings, sosndtimer);
     // set the lower bounds delay based of the socket timeout timer
