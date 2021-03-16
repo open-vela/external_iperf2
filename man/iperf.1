@@ -108,6 +108,10 @@ set the server to process only one client at a time
 .TP
 .BR -b ", " --bandwidth " \fIn\fR[kmgKMG]"
 set target read rate to \fIn\fR bits/sec. TCP only for the server.
+.TP
+.BR "    --burst-periodic[=" \fIn\fR "]"
+Set the burst wait timeout in seconds. Defaults to 2 * one second. (Note: assumed use case is low duty cycle traffic bursts)
+.TP
 .BR -s ", " --server " "
 run in server mode
 .TP

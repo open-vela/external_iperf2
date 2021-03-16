@@ -136,6 +136,8 @@ extern const char client_isochronous[];
 
 extern const char client_burstperiodic[];
 
+extern const char server_burstperiodic[];
+
 extern const char client_fq_pacing[];
 /* -------------------------------------------------------------------
  * Legacy reports

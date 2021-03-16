@@ -984,6 +984,9 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
 		printf(join_multicast_sg_dev, report->common->SSMMulticastStr, report->common->Localhost, report->common->Ifrname);
         }
     }
+    if (isPeriodicBurst(report->common)) {
+	printf(server_burstperiodic, report->isochstats.mFPS);
+    }
     if (isEnhanced(report->common)) {
 	byte_snprintf(outbuffer, sizeof(outbuffer), report->common->BufLen, toupper((int)report->common->Format));
 	byte_snprintf(outbufferext, sizeof(outbufferext), report->common->BufLen / 8, 'A');
