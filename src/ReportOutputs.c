@@ -300,22 +300,37 @@ void tcp_output_frame_read (struct TransferInfo *stats) {
 }
 void tcp_output_frame_read_triptime (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_frame_read_tcp_enhanced_triptime);
-    set_netpowerbuf(stats->tripTime, stats);
     _print_stats_common(stats);
-    printf(report_frame_read_triptime_format,
-	   stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
-	   outbuffer, outbufferext,
-	   stats->tripTime,
-	   stats->sock_callstats.read.cntRead,
-	   stats->sock_callstats.read.bins[0],
-	   stats->sock_callstats.read.bins[1],
-	   stats->sock_callstats.read.bins[2],
-	   stats->sock_callstats.read.bins[3],
-	   stats->sock_callstats.read.bins[4],
-	   stats->sock_callstats.read.bins[5],
-	   stats->sock_callstats.read.bins[6],
-	   stats->sock_callstats.read.bins[7],
-	   netpower_buf);
+    if (!stats->final) {
+	set_netpowerbuf(stats->tripTime, stats);
+	printf(report_frame_read_triptime_format,
+	       stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
+	       outbuffer, outbufferext,
+	       stats->tripTime,
+	       stats->sock_callstats.read.cntRead,
+	       stats->sock_callstats.read.bins[0],
+	       stats->sock_callstats.read.bins[1],
+	       stats->sock_callstats.read.bins[2],
+	       stats->sock_callstats.read.bins[3],
+	       stats->sock_callstats.read.bins[4],
+	       stats->sock_callstats.read.bins[5],
+	       stats->sock_callstats.read.bins[6],
+	       stats->sock_callstats.read.bins[7],
+	       netpower_buf);
+    } else {
+	printf(report_frame_read_triptime_final_format,
+	       stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
+	       outbuffer, outbufferext,
+	       stats->sock_callstats.read.cntRead,
+	       stats->sock_callstats.read.bins[0],
+	       stats->sock_callstats.read.bins[1],
+	       stats->sock_callstats.read.bins[2],
+	       stats->sock_callstats.read.bins[3],
+	       stats->sock_callstats.read.bins[4],
+	       stats->sock_callstats.read.bins[5],
+	       stats->sock_callstats.read.bins[6],
+	       stats->sock_callstats.read.bins[7]);
+    }
     fflush(stdout);
 }
 

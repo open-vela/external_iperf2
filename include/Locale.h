@@ -267,6 +267,8 @@ extern const char report_frame_read_tcp_enhanced_triptime_header[];
 
 extern const char report_frame_read_triptime_format[];
 
+extern const char report_frame_read_triptime_final_format[];
+
 extern const char report_udp_fullduplex_header[];
 
 extern const char report_udp_fullduplex_format[];

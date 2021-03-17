@@ -1,3 +1,4 @@
+
 /*---------------------------------------------------------------
  * Copyright (c) 1999,2000,2001,2002,2003
  * The Board of Trustees of the University of Illinois
@@ -354,6 +355,7 @@ struct TransferInfo {
     uint32_t matchframeID;
     uint32_t frameID;
     char csv_peer[CSVPEERLIMIT];
+    bool final;
 };
 
 struct SumReport {
