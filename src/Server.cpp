@@ -205,6 +205,7 @@ void Server::RunTCP () {
 			reportstruct->sentTime.tv_sec = now.getSecs();
 			reportstruct->sentTime.tv_usec = now.getUsecs();
 		    }
+		    // This is the first stamp of the burst
 		    myReport->info.ts.prevsendTime = reportstruct->sentTime;
 		    burst_nleft = burst_info.burst_size - n;
 		    if (burst_nleft == 0) {
