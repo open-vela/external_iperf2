@@ -1,4 +1,4 @@
-.TH IPERF 1 "February 2021" NLANR/DAST "User Manuals"
+.TH IPERF 1 "March 2021" NLANR/DAST "User Manuals"
 .SH NAME
 iperf \- perform network traffic tests using network sockets. Metrics include throughput and latency.
 .SH SYNOPSIS
@@ -65,9 +65,11 @@ Set a key value that must match for the server to accept traffic on a connection
 .BR -p ", " --port " \fIm\fR[-\fIn\fR]"
 set client or server port(s) to send or listen on per \fIm\fR (default 5001) w/optional port range per m-n (e.g. -p 6002-6008) (see NOTES)
 .TP
-.TP
 .BR "    --sum-only "
 set the output to sum reports only. Useful for -P at large values
+.TP
+.BR -t ", " --time " \fIn\fR"
+time in seconds to listen for new traffic connections, receive traffic or send traffic
 .TP
 .BR -u ", " --udp " "
 use UDP rather than TCP
@@ -120,6 +122,9 @@ Set a key value that must match for the server to accept traffic from a client (
 .TP
 .BR "    --permit-key-timeout " \fI<value>\fR
 Set the lifetime of the permit key in seconds. Defaults to 20 seconds if not set. A value of zero will disable the timer.
+.TP
+.BR -t ", " --time " \fIn\fR"
+time in seconds to listen for new traffic connections and/or receive traffic (defaults to infinite)
 .TP
 .BR -B ", " --bind " \fIip\fR | \fIip\fR%\fIdevice\fR"
 bind src ip addr and optional src device for receiving
@@ -190,7 +195,6 @@ Set 1 to limit traffic to the local network only (through the use of SO_DONTROUT
 .BR "    --near-congestion[=\fIn\fR]"
 Enable TCP write rate limiting per the sampled RTT. The delay is applied after the -l number of bytes have completed. The optional value is the multiplier to the RTT and defines the time delay. This value defaults to 0.5 if it is not set. Values less than 1 are supported but the value cannot be negative. This is an experimental feature. It is not likely stable on live networks. Suggested use is over controlled test networks.
 .TP
-.TP
 .BR "    --no-connect-sync "
 By default, parallel traffic threads (per -P greater than 1) will synchronize after their TCP connects and prior to each sending traffic, i.e. all the threads first complete (or error) the TCP 3WHS before any traffic thread will start sending. This option disables that synchronization such that each traffic thread will start sending immediately after completing its successful connect.
 .TP
@@ -211,8 +215,8 @@ Set a key value that must match the server's value (also set with --permit-key) 
 Do a bidirectional test individually - client-to-server, followed by
 a reversed test, server-to-client
 .TP
-.BR -t ", " --time " \fIn\fR"
-time in seconds to listen for new traffic connections, receive traffic or transmit traffic (Defaults: transmit is 10 secs while listen and receive are indefinite)
+.BR -t ", " --time " \fIn\fR" | "\fI0\fR"
+time in seconds to transmit traffic, use zero for infinite (default is 10 secs)
 .TP
 .BR "    --trip-times "
 enable the measurement of end to end write to read latencies (client and server clocks must be synchronized)
