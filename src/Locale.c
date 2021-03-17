@@ -458,11 +458,13 @@ const char report_frame_tcp_enhanced_header[] =
 "[ ID] Interval(f-transit)" IPERFFTimeSpace "Transfer     Bandwidth    FrameID\n";
 
 const char report_frame_read_tcp_enhanced_triptime_header[] =
-"[ ID] Burst (start-end)" IPERFFTimeSpace "Transfer     Bandwidth       XferTime (ms) Reads=Dist          NetPwr\n";
+"[ ID] Burst (start-end)" IPERFFTimeSpace "Transfer     Bandwidth       XferTime      Reads=Dist          NetPwr\n";
 
 const char report_frame_read_triptime_format[] =
-"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f       %d=%d:%d:%d:%d:%d:%d:%d:%d  %s\n";
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms     %d=%d:%d:%d:%d:%d:%d:%d:%d  %s\n";
 
+const char report_frame_read_triptime_final_format[] =
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec               %d=%d:%d:%d:%d:%d:%d:%d:%d\n";
 
 /* -------------------------------------------------------------------
  * Fullduplex reports

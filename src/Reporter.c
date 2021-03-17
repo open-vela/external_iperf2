@@ -1122,6 +1122,7 @@ void reporter_transfer_protocol_server_udp (struct ReporterData *data, int final
 	    }
 	}
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
+	stats->final = true;
 	stats->IPGsum = TimeDifference(stats->ts.packetTime, stats->ts.startTime);
 	stats->cntOutofOrder = stats->total.OutofOrder.current;
 	// assume most of the  time out-of-order packets are not
@@ -1320,6 +1321,7 @@ void reporter_transfer_protocol_server_tcp (struct ReporterData *data, int final
 		reporter_reset_transfer_stats_server_tcp(stats);
 	    }
         }
+	stats->final = true;
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
         stats->cntBytes = stats->total.Bytes.current;
 	stats->IPGsum = stats->ts.iEnd;
