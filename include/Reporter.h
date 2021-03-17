@@ -370,6 +370,7 @@ struct ReporterData {
     void (*packet_handler) (struct ReporterData *data, struct ReportStruct *packet);
     void (*transfer_protocol_handler) (struct ReporterData *data, int final);
     int (*transfer_interval_handler) (struct ReporterData *data, struct ReportStruct *packet);
+    bool burst_boundary;
 
     struct PacketRing *packetring;
     int reporter_thread_suspends; // used to detect CPU bound systems

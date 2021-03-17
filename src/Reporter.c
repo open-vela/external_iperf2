@@ -512,11 +512,17 @@ int reporter_process_transfer_report (struct ReporterData *this_ireport) {
 	if (!(packet->packetID < 0)) {
 	    // Check to output any interval reports, do this prior
 	    // to packet handling to preserve interval accounting
-	    if (this_ireport->transfer_interval_handler) {
-		advance_jobq = (*this_ireport->transfer_interval_handler)(this_ireport, packet);
+	    if (this_ireport->burst_boundary) {
+		(*this_ireport->packet_handler)(this_ireport, packet);
+		if (this_ireport->transfer_interval_handler) {
+		    advance_jobq = (*this_ireport->transfer_interval_handler)(this_ireport, packet);
+		}
+	    } else {
+		(*this_ireport->packet_handler)(this_ireport, packet);
+		if (this_ireport->transfer_interval_handler) {
+		    advance_jobq = (*this_ireport->transfer_interval_handler)(this_ireport, packet);
+		}
 	    }
-	    // Do the packet accounting per the handler type
-	    (*this_ireport->packet_handler)(this_ireport, packet);
 	    // Sum reports update the report header's last
 	    // packet time after the handler. This means
 	    // the report header's packet time will be
@@ -729,7 +735,7 @@ static inline void reporter_handle_burst_tcp_transit (struct ReporterData *data,
 	    if (framedelta > 1) {
 		fprintf(stderr,"Invalid burst id seq %ld\n", packet->frameID);
 	    }
-	    stats->isochstats.framecnt.current += framedelta;
+	    stats->isochstats.frameID = packet->frameID;
 	}
         double transit = reporter_handle_packet_oneway_transit(data, packet);
 	if (!TimeZero(stats->ts.prevpacketTime)) {
@@ -742,7 +748,7 @@ static inline void reporter_handle_burst_tcp_transit (struct ReporterData *data,
 	}
 	check_next = true;
 	// printf("***Burst id = %ld, transit = %f\n", packet->frameID, stats->transit.lastTransit);
-    } else if (check_next && packet->frameID && (packet->frameID != stats->isochstats.frameID)) {
+    } else if (check_next && packet->frameID && (packet->frameID != (stats->isochstats.frameID + 1))) {
 	check_next = false;
 	fprintf(stderr,"%sError: expected burst id %u but got %" PRIdMAX "\n", \
 		stats->common->transferIDStr, stats->isochstats.frameID + 1, packet->frameID);

@@ -1114,7 +1114,6 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 			setEnhanced(server);
 			setFrameInterval(server);
 			setPeriodicBurst(server);
-			server->mIntervalMode = kInterval_Frames;
 			{
 			    struct client_tcp_testhdr *hdr = reinterpret_cast<struct client_tcp_testhdr *>(mBuf);
 			    server->mFPS = ntohl(hdr->isoch_settings.FPSl);
