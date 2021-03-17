@@ -1160,7 +1160,6 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
     }
     if (mExtSettings->mThreadMode == kMode_Client) {
 	if (isPeriodicBurst(mExtSettings)) {
-	    mExtSettings->mIntervalMode = kInterval_Frames;
 	    setEnhanced(mExtSettings);
 	    setFrameInterval(mExtSettings);
 	}
@@ -1423,7 +1422,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
     // set burst size defaults
     if (isPeriodicBurst(mExtSettings)) {
 	if (mExtSettings->mBurstSize == 0) {
-	    mExtSettings->mBurstSize = 1000000; //default to 1 Mbyte
+	    mExtSettings->mBurstSize = byte_atoi("1M"); //default to 1 Mbyte
 	}
 	if (mExtSettings->mFPS <= 0) {
 	    mExtSettings->mFPS = 1;

@@ -176,13 +176,13 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
         if (nread < 0) {
             if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
                 nread = 0;  /* Socket read timeout */
-		WARN_errno(1, "recvn timeout");
+		// WARN_errno(1, "recvn timeout");
             } else {
-		WARN_errno(1, "recvn");
+		// WARN_errno(1, "recvn");
 	    }
             return -1;  /* error */
 	} else if (nread == 0) {
-	    WARN(1, "recvn peer close");
+	    // WARN(1, "recvn peer close");
             break;
 	}
         nleft -= nread;
