@@ -987,7 +987,7 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
         }
     }
     if (isPeriodicBurst(report->common)) {
-	printf(server_burstperiodic, report->isochstats.mFPS);
+	printf(server_burstperiod, report->isochstats.mFPS);
     }
     if (isEnhanced(report->common)) {
 	byte_snprintf(outbuffer, sizeof(outbuffer), report->common->BufLen, toupper((int)report->common->Format));
@@ -1060,7 +1060,7 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
 	char tmpbuf[40];
 	byte_snprintf(tmpbuf, sizeof(tmpbuf), report->common->BurstSize, 'A');
 	tmpbuf[39]='\0';
-	printf(client_burstperiodic, report->isochstats.mFPS, tmpbuf);
+	printf(client_burstperiod, report->isochstats.mFPS, tmpbuf);
     }
     if (isFQPacing(report->common)) {
 	byte_snprintf(outbuffer, sizeof(outbuffer), report->common->FQPacingRate, 'a');
@@ -1136,7 +1136,7 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 	    b += strlen(b);
 	}
 	if (isPeriodicBurst(report->common) && (report->common->ThreadMode != kMode_Client) && !isServerReverse(report->common)) {
-	    snprintf(b, SNBUFFERSIZE-strlen(b), " (burst-periodic=%0.2f)", (1.0 / report->FPS));
+	    snprintf(b, SNBUFFERSIZE-strlen(b), " (burst-period=%0.2f)", (1.0 / report->FPS));
 	    b += strlen(b);
 	}
 	if (isFullDuplex(report->common)) {

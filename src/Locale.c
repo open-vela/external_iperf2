@@ -226,9 +226,6 @@ const char join_multicast_sg_dev[] =
 const char client_datagram_size[] =
 "Sending %d byte datagrams, IPG target: %.2f us\n";
 
-const char client_datagram_size_tx_sync[] =
-"Sending %d byte datagrams, tx-sync periodic: %.2f ms\n";
-
 const char client_datagram_size_kalman[] =
 "Sending %d byte datagrams, IPG target: %.2f us (kalman adjust)\n";
 
@@ -250,10 +247,10 @@ const char wait_server_threads[] =
 const char client_isochronous[] =
 "Isochronous: %0.2f frames/sec mean=%s/s, stddev=%s/s, Period/IPG=%0.2f/%.3f ms\n";
 
-const char client_burstperiodic[] =
+const char client_burstperiod[] =
 "Bursting: %s every %0.2f seconds\n";
 
-const char server_burstperiodic[] =
+const char server_burstperiod[] =
 "Burst wait timeout set to (2 * %0.2f) seconds (use --burst-period=<n secs> to change)\n";
 
 const char client_fq_pacing [] =
