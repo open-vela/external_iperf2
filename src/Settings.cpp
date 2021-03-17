@@ -183,8 +183,7 @@ const struct option long_options[] =
 {"permit-key", optional_argument, &permitkey, 1},
 {"permit-key-timeout", required_argument, &permitkeytimeout, 1},
 {"burst-size", optional_argument, &burstsize, 1},
-{"burst-periodic", optional_argument, &burstperiodic, 1},
-{"periodic-burst", optional_argument, &burstperiodic, 1},
+{"burst-period", optional_argument, &burstperiodic, 1},
 {"NUM_REPORT_STRUCTS", required_argument, &numreportstructs, 1},
 #ifdef WIN32
 {"reverse", no_argument, &reversetest, 1},
@@ -1196,7 +1195,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    }
 	}
 	if (isPeriodicBurst(mExtSettings) && isIsochronous(mExtSettings)) {
-	    fprintf(stderr, "ERROR: options of --burst-periodic and --isochronous cannot be applied together\n");
+	    fprintf(stderr, "ERROR: options of --burst-period and --isochronous cannot be applied together\n");
 	    bail = true;
 	}
 	if ((mExtSettings->mBurstSize > 0) && isIsochronous(mExtSettings)) {
@@ -1380,7 +1379,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    bail = true;
 	}
 	if (isPeriodicBurst(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of --burst-periodic only can be set on the client\n");
+	    fprintf(stderr, "ERROR: option of --burst-period can only be set on the client\n");
 	    bail = true;
 	}
 	if (mExtSettings->mBurstSize != 0) {
