@@ -597,6 +597,8 @@ void Client::RunTCP () {
 	} else {
 	    // printf("pl=%ld\n",reportstruct->packetLen);
 	    // perform write
+	    if (isburst)
+		writelen = (mSettings->mBufLen > burst_remaining) ? burst_remaining : mSettings->mBufLen;
 	    reportstruct->packetLen = write(mySocket, mBuf, writelen);
 	    now.setnow();
 	    reportstruct->packetTime.tv_sec = now.getSecs();

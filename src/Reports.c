@@ -475,6 +475,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
     }
     // Copy common settings into the transfer report section
     common_copy(&ireport->info.common, inSettings);
+    ireport->burst_boundary = false;
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Job report %p uses multireport %p and fullduplex report is %p (socket=%d)", (void *)reporthdr->this_report, (void *)inSettings->mSumReport, (void *)inSettings->mFullDuplexReport, inSettings->mSock);
 #endif
@@ -526,11 +527,12 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	    }
 	} else {  // TCP case
 	    ireport->packet_handler = reporter_handle_packet_server_tcp;
-	    if ((inSettings->mIntervalMode == kInterval_Frames) && \
-		(isTripTime(inSettings) || isIsochronous(inSettings) || isPeriodicBurst(inSettings))) {
+	    if (((inSettings->mIntervalMode == kInterval_Frames) && isIsochronous(inSettings)) \
+		|| isPeriodicBurst(inSettings)) {
 		ireport->transfer_interval_handler = reporter_condprint_frame_interval_report_server_tcp;
 		ireport->transfer_protocol_handler = reporter_transfer_protocol_server_tcp;
 		ireport->info.output_handler = tcp_output_frame_read_triptime;
+		ireport->burst_boundary = true;
 	    } else {
 		ireport->transfer_protocol_handler = reporter_transfer_protocol_server_tcp;
 		if (inSettings->mReportMode == kReport_CSV) {
