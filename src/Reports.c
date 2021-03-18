@@ -128,6 +128,7 @@ static void common_copy (struct ReportCommon **common, struct thread_Settings *i
     (*common)->pktIPG =inSettings->mBurstIPG;
     (*common)->rtt_weight =inSettings->rtt_nearcongest_divider;
     (*common)->ListenerTimeout =inSettings->mListenerTimeout;
+    (*common)->FPS = inSettings->mFPS;
 }
 
 static void free_common_copy (struct ReportCommon *common) {
@@ -683,7 +684,7 @@ struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, d
     creport->common->winsize_requested = inSettings->mTCPWin;
     creport->txholdbacktime = inSettings->txholdback_timer;
     if (isPeriodicBurst(inSettings)) {
-	creport->FPS = inSettings->mFPS;
+	creport->common->FPS = inSettings->mFPS;
     }
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Init connection report %p", reporthdr);

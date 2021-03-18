@@ -316,6 +316,7 @@ void tcp_output_frame_read_triptime (struct TransferInfo *stats) {
 	       stats->sock_callstats.read.bins[5],
 	       stats->sock_callstats.read.bins[6],
 	       stats->sock_callstats.read.bins[7],
+	       (stats->tripTime * stats->common->FPS) / 10.0, // (1e3 / 100%)
 	       netpower_buf);
     } else {
 	printf(report_frame_read_triptime_final_format,
@@ -1151,7 +1152,7 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 	    b += strlen(b);
 	}
 	if (isPeriodicBurst(report->common) && (report->common->ThreadMode != kMode_Client) && !isServerReverse(report->common)) {
-	    snprintf(b, SNBUFFERSIZE-strlen(b), " (burst-period=%0.2f)", (1.0 / report->FPS));
+	    snprintf(b, SNBUFFERSIZE-strlen(b), " (burst-period=%0.2f)", (1.0 / report->common->FPS));
 	    b += strlen(b);
 	}
 	if (isFullDuplex(report->common)) {
