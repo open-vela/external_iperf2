@@ -510,18 +510,19 @@ int reporter_process_transfer_report (struct ReporterData *this_ireport) {
 	consumption_detector.accounted_packets--;
 	// Check against a final packet event on this packet ring
 	if (!(packet->packetID < 0)) {
-	    // Check to output any interval reports, do this prior
-	    // to packet handling to preserve interval accounting
+	    // Check to output any interval reports,
+            // bursts need to report the packet first
 	    if (this_ireport->burst_boundary) {
 		(*this_ireport->packet_handler)(this_ireport, packet);
 		if (this_ireport->transfer_interval_handler) {
 		    advance_jobq = (*this_ireport->transfer_interval_handler)(this_ireport, packet);
 		}
 	    } else {
-		(*this_ireport->packet_handler)(this_ireport, packet);
+		// timing based events handle the reporting first
 		if (this_ireport->transfer_interval_handler) {
 		    advance_jobq = (*this_ireport->transfer_interval_handler)(this_ireport, packet);
 		}
+		(*this_ireport->packet_handler)(this_ireport, packet);
 	    }
 	    // Sum reports update the report header's last
 	    // packet time after the handler. This means
@@ -721,7 +722,7 @@ static inline double reporter_handle_packet_oneway_transit (struct ReporterData 
     return (transit);
 }
 
-static inline void reporter_handle_burst_tcp_transit (struct ReporterData *data, struct ReportStruct *packet) {
+static inline void reporter_handle_burst_tcp_server_transit (struct ReporterData *data, struct ReportStruct *packet) {
     struct TransferInfo *stats = &data->info;
     // very first burst
     if (!stats->isochstats.frameID) {
@@ -737,12 +738,32 @@ static inline void reporter_handle_burst_tcp_transit (struct ReporterData *data,
 	if (stats->framelatency_histogram) {
 	    histogram_insert(stats->framelatency_histogram, transit, isTripTime(stats->common) ? &packet->sentTime : NULL);
 	}
-	stats->check_next = true;
+	stats->isochstats.frameID++;  // RJM fix this overload
+	stats->burstid_transition = true;
 	// printf("***Burst id = %ld, transit = %f\n", packet->frameID, stats->transit.lastTransit);
-    } else if (stats->check_next && packet->frameID && (packet->frameID != (stats->isochstats.frameID + 1))) {
-	stats->check_next = false;
+    } else if (stats->burstid_transition && packet->frameID && (packet->frameID != stats->isochstats.frameID)) {
+	stats->burstid_transition = false;
 	fprintf(stderr,"%sError: expected burst id %u but got %" PRIdMAX "\n", \
 		stats->common->transferIDStr, stats->isochstats.frameID + 1, packet->frameID);
+	stats->isochstats.frameID = packet->frameID;
+    }
+}
+
+static inline void reporter_handle_burst_tcp_client_transit (struct ReporterData *data, struct ReportStruct *packet) {
+    struct TransferInfo *stats = &data->info;
+    // very first burst
+    if (!stats->isochstats.frameID) {
+	stats->isochstats.frameID = packet->frameID;
+    }
+    if (stats->burstid_transition && packet->frameID && packet->transit_ready) {
+	stats->burstid_transition = false;
+	// printf("***Burst id = %ld, transit = %f\n", packet->frameID, stats->transit.lastTransit);
+    } else if (!stats->burstid_transition) {
+	stats->burstid_transition = true;
+	if (packet->frameID && (packet->frameID != (stats->isochstats.frameID + 1))) {
+	    fprintf(stderr,"%sError: expected burst id %u but got %" PRIdMAX "\n", \
+		    stats->common->transferIDStr, stats->isochstats.frameID + 1, packet->frameID);
+	}
 	stats->isochstats.frameID = packet->frameID;
     }
 }
@@ -801,7 +822,7 @@ inline void reporter_handle_packet_server_tcp (struct ReporterData *data, struct
 	    stats->sock_callstats.read.totbins[bin]++;
 	}
 	if (isPeriodicBurst(stats->common))
-	    reporter_handle_burst_tcp_transit(data, packet);
+	    reporter_handle_burst_tcp_server_transit(data, packet);
     }
 }
 
@@ -871,6 +892,8 @@ void reporter_handle_packet_client (struct ReporterData *data, struct ReportStru
 	stats->sock_callstats.write.totWriteCnt++;
 	if (isIsochronous(stats->common)) {
 	    reporter_handle_packet_isochronous(data, packet);
+	} else if (isPeriodicBurst(stats->common)) {
+	    reporter_handle_burst_tcp_client_transit(data, packet);
 	}
     }
     if (isUDP(stats->common)) {
@@ -1608,6 +1631,11 @@ int reporter_condprint_frame_interval_report_server_udp (struct ReporterData *da
 }
 
 int reporter_condprint_frame_interval_report_server_tcp (struct ReporterData *data, struct ReportStruct *packet) {
+    fprintf(stderr, "FIX ME\n");
+    return 1;
+}
+
+int reporter_condprint_burst_interval_report_server_tcp (struct ReporterData *data, struct ReportStruct *packet) {
     assert(packet->burstsize != 0);
     struct TransferInfo *stats = &data->info;
 

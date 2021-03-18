@@ -457,13 +457,13 @@ const char report_frame_jitter_loss_suppress_enhanced_format[] =
 const char report_frame_tcp_enhanced_header[] =
 "[ ID] Interval(f-transit)" IPERFFTimeSpace "Transfer     Bandwidth    FrameID\n";
 
-const char report_frame_read_tcp_enhanced_triptime_header[] =
+const char report_burst_read_tcp_header[] =
 "[ ID] Burst (start-end)" IPERFFTimeSpace "Transfer     Bandwidth       XferTime  (DC%)     Reads=Dist          NetPwr\n";
 
-const char report_frame_read_triptime_format[] =
+const char report_burst_read_tcp_format[] =
 "%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms (%.2g%%)    %d=%d:%d:%d:%d:%d:%d:%d:%d  %s\n";
 
-const char report_frame_read_triptime_final_format[] =
+const char report_burst_read_tcp_final_format[] =
 "%s" IPERFTimeFrmt " sec  %ss  %ss/sec               %d=%d:%d:%d:%d:%d:%d:%d:%d\n";
 
 /* -------------------------------------------------------------------
