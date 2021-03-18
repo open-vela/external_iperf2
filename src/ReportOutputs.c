@@ -85,6 +85,7 @@ static int HEADING_FLAG(report_sumcnt_bw_pps_enhanced) = 0;
 static int HEADING_FLAG(report_bw_jitter_loss_enhanced_triptime) = 0;
 static int HEADING_FLAG(report_bw_jitter_loss_enhanced_isoch_triptime) = 0;
 static int HEADING_FLAG(report_sumcnt_bw_jitter_loss) = 0;
+static int HEADING_FLAG(report_burst_read_tcp) = 0;
 
 void reporter_default_heading_flags (int flag) {
     HEADING_FLAG(report_bw) = flag;
@@ -109,6 +110,7 @@ void reporter_default_heading_flags (int flag) {
     HEADING_FLAG(report_udp_fullduplex) = flag;
     HEADING_FLAG(report_sumcnt_bw_jitter_loss) = flag;
     HEADING_FLAG(report_sumcnt_bw_pps_enhanced) = flag;
+    HEADING_FLAG(report_burst_read_tcp) = flag;
 }
 static inline void _print_stats_common (struct TransferInfo *stats) {
     assert(stats!=NULL);
@@ -299,11 +301,14 @@ void tcp_output_frame_read (struct TransferInfo *stats) {
     fflush(stdout);
 }
 void tcp_output_frame_read_triptime (struct TransferInfo *stats) {
-    HEADING_PRINT_COND(report_frame_read_tcp_enhanced_triptime);
+    fprintf(stderr, "FIXME\n");
+}
+void tcp_output_burst_read (struct TransferInfo *stats) {
+    HEADING_PRINT_COND(report_burst_read_tcp);
     _print_stats_common(stats);
     if (!stats->final) {
 	set_netpowerbuf(stats->tripTime, stats);
-	printf(report_frame_read_triptime_format,
+	printf(report_burst_read_tcp_format,
 	       stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
 	       outbuffer, outbufferext,
 	       stats->tripTime,
@@ -319,7 +324,7 @@ void tcp_output_frame_read_triptime (struct TransferInfo *stats) {
 	       (stats->tripTime * stats->common->FPS) / 10.0, // (1e3 / 100%)
 	       netpower_buf);
     } else {
-	printf(report_frame_read_triptime_final_format,
+	printf(report_burst_read_tcp_final_format,
 	       stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
 	       outbuffer, outbufferext,
 	       stats->sock_callstats.read.cntRead,
@@ -1002,9 +1007,6 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
 		printf(join_multicast_sg_dev, report->common->SSMMulticastStr, report->common->Localhost, report->common->Ifrname);
         }
     }
-    if (isPeriodicBurst(report->common)) {
-	printf(server_burstperiod, report->isochstats.mFPS);
-    }
     if (isEnhanced(report->common)) {
 	byte_snprintf(outbuffer, sizeof(outbuffer), report->common->BufLen, toupper((int)report->common->Format));
 	byte_snprintf(outbufferext, sizeof(outbufferext), report->common->BufLen / 8, 'A');
@@ -1076,7 +1078,7 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
 	char tmpbuf[40];
 	byte_snprintf(tmpbuf, sizeof(tmpbuf), report->common->BurstSize, 'A');
 	tmpbuf[39]='\0';
-	printf(client_burstperiod, report->isochstats.mFPS, tmpbuf);
+	printf(client_burstperiod, (1.0 / report->common->FPS), tmpbuf);
     }
     if (isFQPacing(report->common)) {
 	byte_snprintf(outbuffer, sizeof(outbuffer), report->common->FQPacingRate, 'a');
