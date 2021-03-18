@@ -129,6 +129,42 @@ shown in include/payloads.h
 
 The -C or --compatibility option indicates older header or no header.
 
+More on test exchange:
+
+Let's clear a few things up. Only UDP can set packet sizes and -l sets that size
+by setting the UDP payload size. The final packet size as seen by packet capture tools
+will be then determined by the L2 layer. For ethernet and ipv4, a 1470 byte UDP payload
+translates to a 1514 byte packet on the wire.
+
+TCP is a byte protocol and the application has no control over packet sizes. The write
+size is controlled by -l. So the first window and hence first packet can always be
+variable irrelevant of the -l write size. It's driven by the network stack which
+handles the byte stream and not by iperf. Things like TCP MSS, no delay, can
+affect this as well.
+
+The first send can be found in Client::SendFirstPayload. The test exchange payload is
+found in Settings_GenerateClientHdr. The amount of information passed on the first TCP write
+is driven by the test settings. It's not random but is variable. Iperf 2.1.n has a lot
+more test options, per things like --reverse --isochronous, so the write size will
+have more possibilities in later versions. But, recalling that TCP is a serial byte protocol,
+there is no guarantee to the packet size. Again, that's not directly controlled by an
+application write size.
+
+This can be seen by the reading of the first payload by TCP by the Listener thread which
+spawns traffic thread. The entire test exchange must be read before starting up traffic
+threads so the the right things can and will happen. The way that the full payload read
+occurs is through the use of recvn (which is a special recv found in src/sockets.c
+that makes sure all n bytes are read before proceeding.
+
+bool Listener::apply_client_settings_tcp (thread_Settings *server) {
+    bool rc;
+    int n = recvn(server->mSock, mBuf, sizeof(uint32_t), MSG_PEEK);
+
+Finally, the test settings are a combination of three things. First and second, the settings
+read from each command line options, per the server and per the client, and thirdly from
+the passed "shared information" The shared information isn't necessarily the same as the
+settings, rather it's shared information which will influence a traffic thread's settings.
+
 Reporter Jobq
 -------------
 The reporter thread receives work to do via its jobq. Threads enqueue work
