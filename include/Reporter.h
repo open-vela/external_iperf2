@@ -356,6 +356,7 @@ struct TransferInfo {
     uint32_t frameID;
     char csv_peer[CSVPEERLIMIT];
     bool final;
+    bool check_next;
 };
 
 struct SumReport {
