@@ -728,14 +728,6 @@ static inline void reporter_handle_burst_tcp_transit (struct ReporterData *data,
 	stats->isochstats.frameID = packet->frameID;
     }
     if (packet->frameID && packet->transit_ready) {
-	int framedelta=0;
-	// perform client and server frame based accounting
-	if ((framedelta = (packet->frameID - stats->isochstats.frameID))) {
-	    if (framedelta > 1) {
-		fprintf(stderr,"Invalid burst id seq %ld\n", packet->frameID);
-	    }
-	    stats->isochstats.frameID = packet->frameID;
-	}
         double transit = reporter_handle_packet_oneway_transit(data, packet);
 	if (!TimeZero(stats->ts.prevpacketTime)) {
 	    double delta = TimeDifference(packet->sentTime, stats->ts.prevpacketTime);
@@ -751,6 +743,7 @@ static inline void reporter_handle_burst_tcp_transit (struct ReporterData *data,
 	stats->check_next = false;
 	fprintf(stderr,"%sError: expected burst id %u but got %" PRIdMAX "\n", \
 		stats->common->transferIDStr, stats->isochstats.frameID + 1, packet->frameID);
+	stats->isochstats.frameID = packet->frameID;
     }
 }
 
