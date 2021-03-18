@@ -356,7 +356,7 @@ struct TransferInfo {
     uint32_t frameID;
     char csv_peer[CSVPEERLIMIT];
     bool final;
-    bool check_next;
+    bool burstid_transition;
 };
 
 struct SumReport {
@@ -451,6 +451,10 @@ int reporter_condprint_frame_interval_report_client_udp(struct ReporterData *rep
 int reporter_condprint_frame_interval_report_server_udp(struct ReporterData *data, struct ReportStruct *packet);
 int reporter_condprint_frame_interval_report_server_tcp(struct ReporterData *data, struct ReportStruct *packet);
 int reporter_condprint_frame_interval_report_client_tcp(struct ReporterData *reporthdr, struct ReportStruct *packet);
+int reporter_condprint_burst_interval_report_client_udp(struct ReporterData *reporthdr, struct ReportStruct *packet);
+int reporter_condprint_burst_interval_report_server_udp(struct ReporterData *data, struct ReportStruct *packet);
+int reporter_condprint_burst_interval_report_server_tcp(struct ReporterData *data, struct ReportStruct *packet);
+int reporter_condprint_burst_interval_report_client_tcp(struct ReporterData *reporthdr, struct ReportStruct *packet);
 //void reporter_set_timestamps_time(struct ReporterData *stats, enum TimestampType);
 
 // Reporter's interval output specialize routines
@@ -482,6 +486,8 @@ void tcp_output_sumcnt_read(struct TransferInfo *stats);
 void tcp_output_sumcnt_read_enhanced (struct TransferInfo *stats);
 void tcp_output_frame_read(struct TransferInfo *stats);
 void tcp_output_frame_read_triptime(struct TransferInfo *stats);
+void tcp_output_burst_read(struct TransferInfo *stats);
+
 // TCP client
 void tcp_output_write(struct TransferInfo *stats);
 void tcp_output_sum_write(struct TransferInfo *stats);
