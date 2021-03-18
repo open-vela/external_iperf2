@@ -723,7 +723,6 @@ static inline double reporter_handle_packet_oneway_transit (struct ReporterData 
 
 static inline void reporter_handle_burst_tcp_transit (struct ReporterData *data, struct ReportStruct *packet) {
     struct TransferInfo *stats = &data->info;
-    static bool check_next = false;
     // very first burst
     if (!stats->isochstats.frameID) {
 	stats->isochstats.frameID = packet->frameID;
@@ -746,10 +745,10 @@ static inline void reporter_handle_burst_tcp_transit (struct ReporterData *data,
 	if (stats->framelatency_histogram) {
 	    histogram_insert(stats->framelatency_histogram, transit, isTripTime(stats->common) ? &packet->sentTime : NULL);
 	}
-	check_next = true;
+	stats->check_next = true;
 	// printf("***Burst id = %ld, transit = %f\n", packet->frameID, stats->transit.lastTransit);
-    } else if (check_next && packet->frameID && (packet->frameID != (stats->isochstats.frameID + 1))) {
-	check_next = false;
+    } else if (stats->check_next && packet->frameID && (packet->frameID != (stats->isochstats.frameID + 1))) {
+	stats->check_next = false;
 	fprintf(stderr,"%sError: expected burst id %u but got %" PRIdMAX "\n", \
 		stats->common->transferIDStr, stats->isochstats.frameID + 1, packet->frameID);
     }
@@ -1620,10 +1619,6 @@ int reporter_condprint_frame_interval_report_server_tcp (struct ReporterData *da
     struct TransferInfo *stats = &data->info;
 
     int advance_jobq = 0;
-    if (!packet->frameID) {
-	stats->matchframeID = 1;
-	return 1;
-    }
     // first packet of a burst and not a duplicate
     if (packet->transit_ready) {
         stats->tripTime = reporter_handle_packet_oneway_transit(data, packet);
@@ -1631,7 +1626,6 @@ int reporter_condprint_frame_interval_report_server_tcp (struct ReporterData *da
 	    histogram_insert(stats->framelatency_histogram, stats->tripTime, &packet->sentTime);
 	}
 	stats->tripTime *= 1e3; // convert from secs millisecs
-	stats->matchframeID++;
 //	printf("****sndpkt=%ld.%ld rxpkt=%ld.%ld\n", packet->sentTime.tv_sec, packet->sentTime.tv_usec, packet->packetTime.tv_sec,packet->packetTime.tv_usec);
 	stats->ts.prevpacketTime = packet->prevSentTime;
 	stats->ts.packetTime = packet->packetTime;

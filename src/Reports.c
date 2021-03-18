@@ -477,6 +477,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
     common_copy(&ireport->info.common, inSettings);
     ireport->burst_boundary = false;
     ireport->info.final = false;
+    ireport->info.check_next = false;
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Job report %p uses multireport %p and fullduplex report is %p (socket=%d)", (void *)reporthdr->this_report, (void *)inSettings->mSumReport, (void *)inSettings->mFullDuplexReport, inSettings->mSock);
 #endif
