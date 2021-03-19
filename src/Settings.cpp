@@ -1194,13 +1194,19 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		bail = true;
 	    }
 	}
-	if (isPeriodicBurst(mExtSettings) && isIsochronous(mExtSettings)) {
-	    fprintf(stderr, "ERROR: options of --burst-period and --isochronous cannot be applied together\n");
-	    bail = true;
-	}
-	if ((mExtSettings->mBurstSize > 0) && isIsochronous(mExtSettings)) {
-	    fprintf(stderr, "ERROR: options of --burst-size and --isochronous cannot be applied together\n");
-	    bail = true;
+	if (isPeriodicBurst(mExtSettings)) {
+	    if (isIsochronous(mExtSettings)) {
+		fprintf(stderr, "ERROR: options of --burst-period and --isochronous cannot be applied together\n");
+		bail = true;
+	    }
+	    if (isNearCongest(mExtSettings)) {
+		fprintf(stderr, "ERROR: options of --burst-period and --near-congestion cannot be applied together\n");
+		bail = true;
+	    }
+	    if ((mExtSettings->mBurstSize < mExtSettings->mBufLen)) {
+		fprintf(stderr, "ERROR: option of --burst-size must be equal or larger to write length (-l)\n");
+		bail = true;
+	    }
 	}
 	if (isUDP(mExtSettings)) {
 	    if (isPeerVerDetect(mExtSettings)) {
