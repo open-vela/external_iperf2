@@ -1162,6 +1162,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    setEnhanced(mExtSettings);
 	    setFrameInterval(mExtSettings);
 	}
+        if (mExtSettings->mTTL > MAXTTL) {
+	    fprintf(stderr, "ERROR: option of -ttl (-T) must be less than %d\n", MAXTTL);
+	    bail = true;
+	}
 	if (isPermitKey(mExtSettings) && (mExtSettings->mPermitKey[0] == '\0')) {
 	    fprintf(stderr, "ERROR: option of --permit-key requires a value on the client\n");
 	    bail = true;

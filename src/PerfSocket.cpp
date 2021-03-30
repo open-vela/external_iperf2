@@ -134,16 +134,17 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
 	if (inSettings->mTTL == -1) {
 	    inSettings->mTTL = 1;
 	}
-	u_char cval  = inSettings->mTTL;
 	if (inSettings->mTTL > 0) {
 	    // set TTL
 	    if (!isIPV6(inSettings)) {
+		u_char cval  = inSettings->mTTL;
 		int rc = setsockopt(inSettings->mSock, IPPROTO_IP, IP_MULTICAST_TTL, &cval, sizeof(cval));
 		WARN_errno(rc == SOCKET_ERROR, "multicast v4 ttl");
 	    } else
 #  ifdef HAVE_IPV6_MULTICAST
 	    {
-		int rc = setsockopt(inSettings->mSock, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, (&cval), (sizeof(cval)));
+		int val  = inSettings->mTTL;
+		int rc = setsockopt(inSettings->mSock, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, (&val), (sizeof(val)));
 		WARN_errno(rc == SOCKET_ERROR, "multicast v6 ttl");
 	    }
 #  else

@@ -41,6 +41,10 @@
    if you don't. */
 #undef HAVE_DECL_IPV6_ADD_MEMBERSHIP
 
+/* Define to 1 if you have the declaration of `IPV6_JOIN_GROUP', and to 0 if
+   you don't. */
+#undef HAVE_DECL_IPV6_JOIN_GROUP
+
 /* Define to 1 if you have the declaration of `IPV6_MULTICAST_HOPS', and to 0
    if you don't. */
 #undef HAVE_DECL_IPV6_MULTICAST_HOPS
