@@ -537,16 +537,20 @@ void Listener::my_multicast_join () {
 	    WARN_errno(rc == SOCKET_ERROR, "ip_multicast_all");
 #endif
 	} else {
-#ifdef HAVE_IPV6_MULTICAST
+#if (HAVE_IPV6_MULTICAST && (HAVE_DECL_IPV6_JOIN_GROUP || HAVE_DECL_IPV6_ADD_MEMBERSHIP))
 	    struct ipv6_mreq mreq;
-	    memcpy(&mreq.ipv6mr_multiaddr, SockAddr_get_in6_addr(&mSettings->local), \
-		    sizeof(mreq.ipv6mr_multiaddr));
+	    memcpy(&mreq.ipv6mr_multiaddr, SockAddr_get_in6_addr(&mSettings->local), sizeof(mreq.ipv6mr_multiaddr));
 	    mreq.ipv6mr_interface = 0;
-	    int rc = setsockopt(ListenSocket, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, \
-				 reinterpret_cast<char*>(&mreq), sizeof(mreq));
-	    WARN_errno(rc == SOCKET_ERROR, "multicast v6 join");
+#if HAVE_DECL_IPV6_JOIN_GROUP
+	    int rc = setsockopt(ListenSocket, IPPROTO_IPV6, IPV6_JOIN_GROUP, \
+				reinterpret_cast<char*>(&mreq), sizeof(mreq));
 #else
-	    fprintf(stderr, "Unfortunately, IPv6 multicast is not supported on this platform\n");
+	    int rc = setsockopt(ListenSocket, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, \
+				reinterpret_cast<char*>(&mreq), sizeof(mreq));
+#endif
+	    FAIL_errno(rc == SOCKET_ERROR, "multicast v6 join", mSettings);
+#else
+	    fprintf(stderr, "IPv6 multicast is not supported on this platform\n");
 #endif
 	}
     } else {
