@@ -137,14 +137,16 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
 	if (inSettings->mTTL > 0) {
 	    // set TTL
 	    if (!isIPV6(inSettings)) {
-		u_char cval  = inSettings->mTTL;
-		int rc = setsockopt(inSettings->mSock, IPPROTO_IP, IP_MULTICAST_TTL, &cval, sizeof(cval));
+		unsigned char cval  = inSettings->mTTL;
+		int rc = setsockopt(inSettings->mSock, IPPROTO_IP, IP_MULTICAST_TTL, \
+				    reinterpret_cast<const char *>(&cval), sizeof(cval));
 		WARN_errno(rc == SOCKET_ERROR, "multicast v4 ttl");
 	    } else
 #  ifdef HAVE_IPV6_MULTICAST
 	    {
 		int val  = inSettings->mTTL;
-		int rc = setsockopt(inSettings->mSock, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, (&val), (sizeof(val)));
+		int rc = setsockopt(inSettings->mSock, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, \
+				    reinterpret_cast<char *>(&val), static_cast<Socklen_t>(sizeof(val)));
 		WARN_errno(rc == SOCKET_ERROR, "multicast v6 ttl");
 	    }
 #  else
@@ -154,7 +156,8 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
 #endif
     } else if (inSettings->mTTL > 0) {
 	int val = inSettings->mTTL;
-	int rc = setsockopt(inSettings->mSock, IPPROTO_IP, IP_TTL, &val, sizeof(val));
+	int rc = setsockopt(inSettings->mSock, IPPROTO_IP, IP_TTL, \
+			    reinterpret_cast<char *>(&val), static_cast<Socklen_t>(sizeof(val)));
 	WARN_errno(rc == SOCKET_ERROR, "v4 ttl");
     }
 
