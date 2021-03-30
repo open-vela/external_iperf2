@@ -1203,7 +1203,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		fprintf(stderr, "ERROR: options of --burst-period and --near-congestion cannot be applied together\n");
 		bail = true;
 	    }
-	    if ((mExtSettings->mBurstSize < mExtSettings->mBufLen)) {
+	    if (static_cast<int> (mExtSettings->mBurstSize) < mExtSettings->mBufLen) {
 		fprintf(stderr, "ERROR: option of --burst-size must be equal or larger to write length (-l)\n");
 		bail = true;
 	    }
