@@ -1445,8 +1445,6 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    // L2 settings
 	    if (l2checks && isUDP(mExtSettings)) {
 		l2checks = 0;
-		setL2LengthCheck(mExtSettings);
-	    } else {
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
 		// Request server to do length checks
 		setL2LengthCheck(mExtSettings);
