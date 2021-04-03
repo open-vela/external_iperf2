@@ -794,7 +794,6 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    setReverse(mExtSettings);
             break;
 #endif
-
         case 'S': // IP type-of-service
             // TODO use a function that understands base-2
             // the zero base here allows the user to specify
@@ -1158,6 +1157,12 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	}
     }
     if (mExtSettings->mThreadMode == kMode_Client) {
+	if (isRemoveService(mExtSettings)) {
+	    // -R on the client is overloaded and is the
+	    // short option for --reverse, fix it now
+	    setReverse(mExtSettings);
+	    unsetRemoveService(mExtSettings);
+	}
 	if (isPeriodicBurst(mExtSettings)) {
 	    setEnhanced(mExtSettings);
 	    setFrameInterval(mExtSettings);
