@@ -1571,9 +1571,8 @@ int reporter_condprint_time_interval_report (struct ReporterData *data, struct R
 #endif
 	reporter_set_timestamps_time(&stats->ts, INTERVAL);
 	(*data->transfer_protocol_handler)(data, 0);
-	if (fullduplexstats && ((++data->FullDuplexReport->threads) == 2)) {
+	if (fullduplexstats && ((++data->FullDuplexReport->threads) == 2) && isEnhanced(stats->common)) {
 	    data->FullDuplexReport->threads = 0;
-	    reporter_set_timestamps_time(&fullduplexstats->ts, INTERVAL);
 	    assert(data->FullDuplexReport->transfer_protocol_sum_handler != NULL);
 	    (*data->FullDuplexReport->transfer_protocol_sum_handler)(fullduplexstats, 0);
 	}
