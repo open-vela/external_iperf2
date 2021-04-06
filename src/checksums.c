@@ -190,13 +190,13 @@ uint32_t udpchecksum(const void *l3pdu, const void *l4pdu, int udplen, int v6) {
      */
     if (v6) {
 	// skip to the ip header v6 src field, offset 8 (see ipv6 header)
-	data = (const uint16_t *)(l3pdu + IPV6SRCOFFSET);
+	data = (const uint16_t *)((char *)l3pdu + IPV6SRCOFFSET);
 	for (i = 0; i < (2 * IPV6SIZE); i++) {
 	    sum += *data++;
 	}
     } else {
 	// skip to the ip header v4 src field, offset 12 (see ipv4 header)
-	data = (const uint16_t *)(l3pdu + IPV4SRCOFFSET);
+	data = (const uint16_t *)((char *)l3pdu + IPV4SRCOFFSET);
 	for (i = 0; i < (2 * IPV4SIZE); i++) {
 	    sum += *data++;
 	}
