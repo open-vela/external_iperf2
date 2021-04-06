@@ -59,41 +59,59 @@
 #include "util.h"
 #include "Timestamp.hpp"
 
+#ifdef WIN32
+#define NONFATALTCPREADERR(errno) (WSAGetLastError() != WSAEWOULDBLOCK)
+#else
+#define NONFATALTCPREADERR(errno) (errno != EAGAIN && errno != EWOULDBLOCK)
+#endif
 
 
 /* ------------------------------------------------------------------- */
 class Server {
 public:
     // stores server socket, port and TCP/UDP mode
-    Server( thread_Settings *inSettings );
+    Server(thread_Settings *inSettings);
 
     // destroy the server object
     ~Server();
 
     // accepts connection and receives data
-    void RunUDP ( void );
-    void RunTCP ( void );
-
-    void write_UDP_AckFIN( );
-
-    static void Sig_Int( int inSigno );
+    void RunUDP(void);
+    void RunTCP(void);
+    static void Sig_Int(int inSigno);
 
 private:
     thread_Settings *mSettings;
     char* mBuf;
+    int mBufLen;
     Timestamp mEndTime;
     Timestamp now;
+    ReportStruct scratchpad;
     ReportStruct *reportstruct;
 
-    void InitTimeStamping (void);
-    void InitTrafficLoop (void);
-    int ReadWithRxTimestamp (int *readerr);
-    bool ReadPacketID (void);
-    void L2_processing (void);
-    int L2_quintuple_filter (void);
-    void Isoch_processing (void);
+    void InitKernelTimeStamping(void);
+    bool InitTrafficLoop(void);
+    inline void SetFullDuplexReportStartTime(void);
+    inline void SetReportStartTime();
+    int ReadWithRxTimestamp(void);
+    bool ReadPacketID(void);
+    void L2_processing(void);
+    int L2_quintuple_filter(void);
+    void udp_isoch_processing(int);
     bool InProgress(void);
+    int SkipFirstPayload(void);
     Timestamp connect_done;
+    bool peerclose;
+    bool isburst;
+#if WIN32
+    SOCKET mySocket;
+    SOCKET myDropSocket;
+#else
+    int mySocket;
+    int myDropSocket;
+#endif
+    struct ReportHeader *myJob;
+    struct ReporterData *myReport;
 
 #if HAVE_DECL_SO_TIMESTAMP
     // Structures needed for recvmsg
