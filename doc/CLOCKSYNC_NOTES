@@ -4,6 +4,122 @@ Also, 'dnf install ptpd' will install on fedora systems
 
 First thing is find a PTP grandmaster. The configure it as master. Example /etc/ptpd.conf:
 
+
+UNICAST:
+========
+
+PTP Unicast Mode
+
+This document describes how to configure PTP in unicast mode and a bit on how to check the corrections
+
+
+Grandmaster setup (unicast mode)
+* add DUT ip address to ptpengine:unicast_destinations=
+* announce a ptp grandmaster restart to work peers using the same grandmaster
+* restart ptpd2 via systemctl restart ptpd2.service
+DUT setup
+* Install PTP - dnf install ptp
+* Configure ptp via/etc/ptpd.conf (see below)
+* Update systemd file of /usr/lib/systemd/system/ptpd2.service (see below)
+* Disable chronyd via systemctl disable chronyd
+* Disable ntpd via systemctl disable ntpd
+* Enable ptpd via systemctl enable ptpd2.service
+* Reboot DUT
+* Check ntpd, chrony dead and ptpd2 working
+   * systemctl status ntpd
+   * systemctl status chronyd
+   * systemctl status ptpd2
+* Check the clock corrections in /var/log/ptpd2.stats
+Modifications needed in /etc/ptpd.conf per each DUT
+* ptpengine:interface=<dev>, e.g. enp2s0
+* for unicast mode, ptpengine:unicast_destinations=<ip grandmaster> e.g. 10.59.13.17
+* clock:step_startup_force=y
+* global:statistics_file=/var/log/ptpd2.stats
+* global:statistics_file_max_size=5000
+; on multi-core systems it is recommended to bind ptpd to a single core
+* global:cpuaffinity_cpucore=0
+systemd service file looks like (can be directly copied from another DUT)
+
+
+[root@localhost fdt]# more /usr/lib/systemd/system/ptpd2.service
+[Unit]
+Description=ptpd time precision daemon
+Wants=network-online.target
+After=network.target network-online.target
+
+
+[Service]
+Type=forking
+EnvironmentFile=-/etc/sysconfig/ptpd2
+ExecStart=/usr/bin/ptpd2 -c $PTPD_CONFIG_FILE $PTPD_EXTRA_OPTIONS
+ExecStartPost=/usr/bin/sleep 10
+ExecStartPost=/usr/bin/pkill ptpd --signal SIGUSR1
+
+
+[Install]
+WantedBy=multi-user.target
+
+
+Check the error corrections
+
+The error corrections can be found in the /var/log/ptpd.stats file.  Tail this file to read them. The units are nanoseconds.  Here is an example. I removed some columns, using ellipses, in the first two lines for readability. The highlighted columns show that the clock is being corrected by -1201 nanoseconds or -1.2 microseconds.  It’s suggested that these corrections should be sub 25 microseconds for WiFi latency testing.
+
+[root@localhost fdt]# tail -n 20 /var/log/ptpd2.stats
+2020-12-10 07:52:05.078368, slv, 141877fffe2b5446(unknown)/1,  0.000094584, -0.000001201,  …,  0.000090683,  0.000094390
+2020-12-10 07:52:05.328450, slv, 141877fffe2b5446(unknown)/1,  0.000094584, -0.000001201,  …, 0.000092167,  0.000094390
+
+2020-12-10 07:52:05.578442, slv, 141877fffe2b5446(unknown)/1,  0.000094584, -0.000001201,  0.000095768,  0.000092929, 294.638250000, S, 0.000094557, 16, 0.000000178, 1145, 296, 1,  0.000090683,  0.000094390
+2020-12-10 07:52:05.590040, slv, 141877fffe2b5446(unknown)/1,  0.000094584, -0.000001201,  0.000095768,  0.000092929, 294.638250000, D, 0.000094557, 16, 0.000000178, 1145, 296, 1,  0.000090683,  0.000095715
+2020-12-10 07:52:05.876909, slv, 141877fffe2b5446(unknown)/1,  0.000094584, -0.000001201,  0.000095768,  0.000092929, 294.638250000, S, 0.000094557, 16, 0.000000178, 1145, 296, 1,  0.000090683,  0.000095715
+2020-12-10 07:52:06.078439, slv, 141877fffe2b5446(unknown)/1,  0.000094584, -0.000001201,  0.000095768,  0.000092929, 294.638250000, S, 0.000094557, 16, 0.000000178, 1145, 296, 1,  0.000090533,  0.000095715
+2020-12-10 07:52:06.328409, slv, 141877fffe2b5446(unknown)/1,  0.000094584, -0.000001201,  0.000095768,  0.000092929, 294.638250000, S, 0.000094557, 16, 0.000000178, 1145, 296, 1,  0.000090095,  0.000095715
+2020-12-10 07:52:06.425850, slv, 141877fffe2b5446(unknown)/1,  0.000094584, -0.000001201,  0.000095768,  0.000092929, 294.638250000, D, 0.000094557, 16, 0.000000178, 1145, 296, 1,  0.000090095,  0.000095265
+2020-12-10 07:52:06.578374, slv, 141877fffe2b5446(unknown)/1,  0.000094584, -0.000001201,  0.000095768,  0.000092929, 294.638250000, S, 0.000094557, 16, 0.000000178, 1145, 296, 1,  0.000086198,  0.000095265
+2020-12-10 07:52:06.828399, slv, 141877fffe2b5446(unknown)/1,  0.000094584, -0.000001201,  0.000095768,  0.000092929, 294.638250000, S, 0.000094557, 16, 0.000000178, 1145, 296, 1,  0.000086198,  0.000095265
+2020-12-10 07:52:07.078434, slv, 141877fffe2b5446(unknown)/1,  0.000094584, -0.000001201,  0.000095768,  0.000092929, 294.638250000, S, 0.000094557, 16, 0.000000178, 1145, 296, 1,  0.000089226,  0.000095265
+2020-12-10 07:52:07.158394, slv, 141877fffe2b5446(unknown)/1,  0.000094584, -0.000001201,  0.000095768,  0.000092929, 294.638250000, D, 0.000094557, 16, 0.000000178, 1145, 296, 1,  0.000089226,  0.000093841
+2020-12-10 07:52:07.328398, slv, 141877fffe2b5446(unknown)/1,  0.000094584, -0.000001201,  0.000095768,  0.000092929, 294.638250000, S, 0.000094557, 16, 0.000000178, 1145, 296, 1,  0.000086198,  0.000093841
+2020-12-10 07:52:07.578358, slv, 141877fffe2b5446(unknown)/1,  0.000094584, -0.000001201,  0.000095768,  0.000092929, 294.638250000, S, 0.000094557, 16, 0.000000178, 1145, 296, 1,  0.000082906,  0.000093841
+2020-12-10 07:52:07.719444, slv, 141877fffe2b5446(unknown)/1,  0.000094584, -0.000001201,  0.000095768,  0.000092929, 294.638250000, D, 0.000094557, 16, 0.000000178, 1145, 296, 1,  0.000082906,  0.000094916
+2020-12-10 07:52:07.797430, slv, 141877fffe2b5446(unknown)/1,  0.000094581, -0.000001201,  0.000095889,  0.000092929, 294.638250000, D, 0.000094557, 16, 0.000000178, 1145, 296, 1,  0.000082906,  0.000095889
+2020-12-10 07:52:07.828386, slv, 141877fffe2b5446(unknown)/1,  0.000094581, -0.000001201,  0.000095889,  0.000092929, 294.638250000, S, 0.000094557, 16, 0.000000178, 1145, 296, 1,  0.000082906,  0.000095889
+2020-12-10 07:52:08.078403, slv, 141877fffe2b5446(unknown)/1,  0.000094581, -0.000001201,  0.000095889,  0.000092929, 294.638250000, S, 0.000094563, 18, -0.000001072, 300, 296, 1,  0.000082817,  0.000095889
+2020-12-10 07:52:08.328402, slv, 141877fffe2b5446(unknown)/1,  0.000094581, -0.000001201,  0.000095889,  0.000092929, 294.638250000, S, 0.000094563, 18, -0.000001072, 300, 296, 1,  0.000081650,  0.000095889
+
+
+Plot the errors using gnuplot (credit Tim A.)
+
+
+You might find useful a simple way to plot the ptp error corrections from the stats file.  It reports the last 8 hours (or whatever history you have configured). Start gnuplot (dnf gnuplot if not installed) then:
+
+gnuplot> set xlabel "hours"
+gnuplot> set ylabel "ms fast"
+gnuplot> set datafile separator ","
+gnuplot> plot "< cat /var/log/ptpd2.stats{.5,.4,.3,.2,.1,}" using ($0/5/60/60):(1000*$5) with l title "ptp"
+
+
+
+Force a time sync (requires version 2.3.2)
+
+A PTP slave can be forçed to time sync to the grandmaster immediately by sending the ptpd process a SIGUSR1.
+
+
+   * ps -ef | grep ptpd2.conf
+   * kill -SIGUSR1 $ptp_pid
+
+
+[root@mc20tst3 ~]# ps -ef | grep ptpd
+root      9271     1  0 Nov20 ?        01:45:37 /usr/local/sbin/ptpd2 -c /etc/ptpd2.conf
+root     31452 26633  0 08:03 pts/0    00:00:00 grep --color=auto ptpd
+
+
+
+
+
+
+MULTICAST:
+==========
+
 ; ==============================================================================
 ; This is a recommended configuration for a PTPv2 slave
 ; For a full list of options run ptpd2 -H or see the documentation and man pages
@@ -146,7 +262,7 @@ listening on any, link-type LINUX_SLL (Linux cooked v1), capture size 262144 byt
 
 Then look at the stats file for the corrections (units are nanonseconds) per the 5th columm, e.g.  -0.000001249
 
-[root@localhost ptpd-code]# tail -n 20 /var/log/ptpd2.stats 
+[root@localhost ptpd-code]# tail -n 20 /var/log/ptpd2.stats
 2020-11-07 20:33:23.966052, slv, 001132fffebebab2(unknown)/1,  0.000116807, -0.000001249,  0.000118058,  0.000116023, 124.005500000, S, 12346, 0.000116808, 19, -0.000000871, 1715, 128, 1,  0.000116023,  0.000118058
 2020-11-07 20:33:24.216067, slv, 001132fffebebab2(unknown)/1,  0.000116807, -0.000001249,  0.000118058,  0.000116023, 123.693250000, S, 12347, 0.000116808, 19, -0.000000871, 1715, 128, 1,  0.000123686,  0.000118058
 2020-11-07 20:33:24.466048, slv, 001132fffebebab2(unknown)/1,  0.000116807, -0.000000842,  0.000118058,  0.000115906, 123.693250000, S, 12348, 0.000116808, 19, -0.000000871, 1715, 128, 1,  0.000115906,  0.000118058
