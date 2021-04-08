@@ -544,7 +544,7 @@ int reporter_process_transfer_report (struct ReporterData *this_ireport) {
 	    (*this_ireport->transfer_protocol_handler)(this_ireport, 1);
 	    // This is a final report so set the sum report header's packet time
 	    // Note, the thread with the max value will set this
-	    if (fullduplexstats) {
+	    if (fullduplexstats && isEnhanced(this_ireport->info.common)) {
 		// The largest packet timestamp sets the sum report final time
 		if (TimeDifference(fullduplexstats->ts.packetTime, packet->packetTime) > 0) {
 		    fullduplexstats->ts.packetTime = packet->packetTime;
