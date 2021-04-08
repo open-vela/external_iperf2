@@ -308,7 +308,7 @@ void Settings_Initialize (struct thread_Settings *main) {
 #if (HAVE_DECL_SO_DONTROUTE) && (HAVE_DEFAULT_DONTROUTE_ON)
     setDontRoute(main);
 #endif
-
+    main->mFPS = 1;
 } // end Settings
 
 void Settings_Copy (struct thread_Settings *from, struct thread_Settings **into, int copyall) {
@@ -1207,15 +1207,19 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    if (isIsochronous(mExtSettings)) {
 		fprintf(stderr, "ERROR: options of --burst-period and --isochronous cannot be applied together\n");
 		bail = true;
-	    }
-	    if (isNearCongest(mExtSettings)) {
+	    } else if (isNearCongest(mExtSettings)) {
 		fprintf(stderr, "ERROR: options of --burst-period and --near-congestion cannot be applied together\n");
 		bail = true;
+	    } else if (static_cast<int> (mExtSettings->mBurstSize) == 0) {
+	        mExtSettings->mBurstSize = byte_atoi("1M"); //default to 1 Mbyte
 	    }
 	    if (static_cast<int> (mExtSettings->mBurstSize) < mExtSettings->mBufLen) {
 		fprintf(stderr, "ERROR: option of --burst-size must be equal or larger to write length (-l)\n");
 		bail = true;
 	    }
+	} else if (static_cast<int> (mExtSettings->mBurstSize) >= 0) {
+		fprintf(stderr, "ERROR: option of --burst-size requires use of --burst-period option\n");
+		bail = true;
 	}
 	if (isUDP(mExtSettings)) {
 	    if (isPeerVerDetect(mExtSettings)) {
@@ -1431,15 +1435,6 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		    }
 		}
 	    }
-	}
-    }
-    // set burst size defaults
-    if (isPeriodicBurst(mExtSettings)) {
-	if (mExtSettings->mBurstSize == 0) {
-	    mExtSettings->mBurstSize = byte_atoi("1M"); //default to 1 Mbyte
-	}
-	if (mExtSettings->mFPS <= 0) {
-	    mExtSettings->mFPS = 1;
 	}
     }
     if (isUDP(mExtSettings)) {
