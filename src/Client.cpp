@@ -540,26 +540,23 @@ void Client::Run () {
 void Client::RunTCP () {
     int burst_remaining = 0;
     int burst_id = 1;
-    int writelen;
+    int writelen = mSettings->mBufLen;
     now.setnow();
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
-    if (isburst && !framecounter) {
-	framecounter = new Isochronous::FrameCounter(mSettings->mFPS);
-    }
     while (InProgress()) {
         if (isModeAmount(mSettings)) {
 	    writelen = ((mSettings->mAmount < static_cast<unsigned>(mSettings->mBufLen)) ? mSettings->mAmount : mSettings->mBufLen);
-	} else {
-	    writelen = mSettings->mBufLen;
 	}
 	if (isburst && !(burst_remaining > 0)) {
 	    if (isIsochronous(mSettings)) {
 		assert(mSettings->mMean);
 		burst_remaining = static_cast<int>(lognormal(mSettings->mMean,mSettings->mVariance)) / (mSettings->mFPS * 8);
-	    } else {
+	    } else if (isPeriodicBurst(mSettings)){
 		assert(mSettings->mBurstSize);
 		burst_remaining = mSettings->mBurstSize;
+	    } else {
+		burst_remaining = mSettings->mBufLen;
 	    }
 	    // check for TCP minimum payload
 	    if (burst_remaining < static_cast<int>(sizeof(struct TCP_burst_payload)))

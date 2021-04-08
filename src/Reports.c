@@ -530,31 +530,27 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	    }
 	} else {  // TCP case
 	    ireport->packet_handler = reporter_handle_packet_server_tcp;
+	    ireport->transfer_protocol_handler = reporter_transfer_protocol_server_tcp;
 	    if (isPeriodicBurst(inSettings)) {
 		ireport->transfer_interval_handler = reporter_condprint_burst_interval_report_server_tcp;
-		ireport->transfer_protocol_handler = reporter_transfer_protocol_server_tcp;
 		ireport->info.output_handler = tcp_output_burst_read;
 		ireport->burst_boundary = true;
 	    } else if ((inSettings->mIntervalMode == kInterval_Frames) && isIsochronous(inSettings)) {
 		ireport->transfer_interval_handler = reporter_condprint_frame_interval_report_server_tcp;
-		ireport->transfer_protocol_handler = reporter_transfer_protocol_server_tcp;
 		ireport->info.output_handler = tcp_output_frame_read_triptime;
 		ireport->burst_boundary = true;
+	    } else if (inSettings->mReportMode == kReport_CSV) {
+		ireport->info.output_handler = tcp_output_basic_csv;
+	    } else if (isSumOnly(inSettings)) {
+		ireport->info.output_handler = NULL;
+	    } else if (isTripTime(inSettings)) {
+		ireport->info.output_handler = tcp_output_read_enhanced_triptime;
+	    } else if (isEnhanced(inSettings)) {
+		ireport->info.output_handler = tcp_output_read_enhanced;
+	    } else if (!isFullDuplex(inSettings)) {
+		ireport->info.output_handler = tcp_output_read;
 	    } else {
-		ireport->transfer_protocol_handler = reporter_transfer_protocol_server_tcp;
-		if (inSettings->mReportMode == kReport_CSV) {
-		    ireport->info.output_handler = tcp_output_basic_csv;
-		} else if (isSumOnly(inSettings)) {
-		    ireport->info.output_handler = NULL;
-		} else if (isTripTime(inSettings)) {
-		    ireport->info.output_handler = tcp_output_read_enhanced_triptime;
-		} else if (isEnhanced(inSettings)) {
-		    ireport->info.output_handler = tcp_output_read_enhanced;
-		} else if (!isFullDuplex(inSettings)) {
-		    ireport->info.output_handler = tcp_output_read;
-		} else {
-		    ireport->info.output_handler = tcp_output_read;
-		}
+		ireport->info.output_handler = tcp_output_read;
 	    }
 	}
 	break;
