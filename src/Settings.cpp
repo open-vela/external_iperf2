@@ -1217,9 +1217,9 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		fprintf(stderr, "ERROR: option of --burst-size must be equal or larger to write length (-l)\n");
 		bail = true;
 	    }
-	} else if (static_cast<int> (mExtSettings->mBurstSize) >= 0) {
-		fprintf(stderr, "ERROR: option of --burst-size requires use of --burst-period option\n");
-		bail = true;
+	} else if (static_cast<int> (mExtSettings->mBurstSize) > 0) {
+	    fprintf(stderr, "ERROR: option of --burst-size requires use of --burst-period option\n");
+	    bail = true;
 	}
 	if (isUDP(mExtSettings)) {
 	    if (isPeerVerDetect(mExtSettings)) {
