@@ -821,7 +821,7 @@ inline void reporter_handle_packet_server_tcp (struct ReporterData *data, struct
 	    stats->sock_callstats.read.bins[bin]++;
 	    stats->sock_callstats.read.totbins[bin]++;
 	}
-	if (isPeriodicBurst(stats->common))
+	if (isPeriodicBurst(stats->common) || isTripTime(stats->common))
 	    reporter_handle_burst_tcp_server_transit(data, packet);
     }
 }
