@@ -564,22 +564,9 @@ void Client::RunTCP () {
 	    // apply scheduling if needed
 	    if (framecounter) {
 		burst_id = framecounter->wait_tick();
-		if (isPeriodicBurst(mSettings)) {
-		    // low duty cycle traffic needs special event handling
-		    now.setnow();
-		    reportstruct->packetTime.tv_sec = now.getSecs();
-		    reportstruct->packetTime.tv_usec = now.getUsecs();
-		    if (!InProgress()) {
-			reportstruct->packetLen = 0;
-			reportstruct->emptyreport = 1;
-			// wait may have crossed the termination boundry
-			break;
-		    } else {
-			//time interval crossings may have occurred during the wait
-			//post a null event to cause the report to flush the packet ring
-			PostNullEvent();
-		    }
-		}
+		//time interval crossings may have occurred during the wait
+		//post a null event to cause the report to flush the packet ring
+		PostNullEvent();
 	    }
 	    now.setnow();
 	    reportstruct->packetTime.tv_sec = now.getSecs();
