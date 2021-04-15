@@ -397,6 +397,7 @@ bool Server::InitTrafficLoop () {
 		//peer closed the socket, with no writes e.g. a connect-only test
 		return false;
 	    }
+	    FAIL_errno(n < 0, "recvn", mSettings);
 	    struct client_udp_testhdr *udp_pkt = reinterpret_cast<struct client_udp_testhdr *>(mBuf);
 	    flags = ntohl(udp_pkt->base.flags);
 	    mSettings->accept_time.tv_sec = ntohl(udp_pkt->start_fq.start_tv_sec);
