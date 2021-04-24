@@ -331,7 +331,9 @@ void Settings_Initialize (struct thread_Settings *main) {
     main->mAmount       = 1000;          // -t,  10 seconds, units is 10 ms
     main->mIntervalMode = kInterval_None;// -i   none, time, packets, or bursts
     // skip version                      // -v,
-    //main->mTCPWin       = 0;           // -w,  ie. don't set window
+#if defined (CONFIG_TOOLS_IPERF2_RECV_BUFSIZE)
+    main->mTCPWin       = CONFIG_TOOLS_IPERF2_RECV_BUFSIZE;// -w,  ie. don't set window
+#endif
 
     // more esoteric options
     //main->mLocalhost    = NULL;        // -B,  none
