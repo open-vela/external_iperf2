@@ -1,3 +1,4 @@
+
 /*---------------------------------------------------------------
  * Copyright (c) 1999,2000,2001,2002,2003
  * The Board of Trustees of the University of Illinois
@@ -44,71 +45,90 @@
  * http://www.ncsa.uiuc.edu
  * ________________________________________________________________
  *
- * Server.hpp
- * by Mark Gates <mgates@nlanr.net>
+ * List.cpp
+ * by Kevin Gibbs <kgibbs@ncsa.uiuc.edu>
  * -------------------------------------------------------------------
- * A server thread is initiated for each connection accept() returns.
- * Handles sending and receiving data, and then closes socket.
- * ------------------------------------------------------------------- */
+ */
 
-#ifndef SERVER_H
-#define SERVER_H
+#include "List.h"
+#include "Mutex.h"
+#include "SocketAddr.h"
 
+/*
+ * Global List and Mutex variables
+ */
+Iperf_ListEntry *clients = NULL;
+Mutex clients_mutex;
 
-#include "Settings.hpp"
-#include "util.h"
-#include "Timestamp.hpp"
+/*
+ * Add Entry add to the List
+ */
+void Iperf_pushback ( Iperf_ListEntry *add, Iperf_ListEntry **root ) {
+    add->next = *root;
+    *root = add;
+}
 
+/*
+ * Delete Entry del from the List
+ */
+void Iperf_delete ( iperf_sockaddr *del, Iperf_ListEntry **root ) {
+    Iperf_ListEntry *temp = Iperf_present( del, *root );
+    if ( temp != NULL ) {
+        if ( temp == *root ) {
+            *root = (*root)->next;
+        } else {
+            Iperf_ListEntry *itr = *root;
+            while ( itr->next != NULL ) {
+                if ( itr->next == temp ) {
+                    itr->next = itr->next->next;
+                    break;
+                }
+                itr = itr->next;
+            }
+        }
+        delete temp;
+    }
+}
 
+/*
+ * Destroy the List (cleanup function)
+ */
+void Iperf_destroy ( Iperf_ListEntry **root ) {
+    Iperf_ListEntry *itr1 = *root, *itr2;
+    while ( itr1 != NULL ) {
+        itr2 = itr1->next;
+        delete itr1;
+        itr1 = itr2;
+    }
+    *root = NULL;
+}
 
-/* ------------------------------------------------------------------- */
-class Server {
-public:
-    // stores server socket, port and TCP/UDP mode
-    Server( thread_Settings *inSettings );
+/*
+ * Check if the exact Entry find is present
+ */
+Iperf_ListEntry* Iperf_present ( iperf_sockaddr *find, Iperf_ListEntry *root ) {
+    Iperf_ListEntry *itr = root;
+    while ( itr != NULL ) {
+        if ( SockAddr_are_Equal( (sockaddr*)itr, (sockaddr*)find ) ) {
+            return itr;
+        }
+        itr = itr->next;
+    }
+    return NULL;
+}
 
-    // destroy the server object
-    ~Server();
-
-    // accepts connection and receives data
-    void RunUDP ( void );
-    void RunTCP ( void );
-
-    void write_UDP_AckFIN( );
-
-    static void Sig_Int( int inSigno );
-
-private:
-    thread_Settings *mSettings;
-    char* mBuf;
-    Timestamp mEndTime;
-    Timestamp now;
-    ReportStruct *reportstruct;
-
-    void InitTimeStamping (void);
-    void InitTrafficLoop (void);
-    int ReadWithRxTimestamp (int *readerr);
-    bool ReadPacketID (void);
-    void L2_processing (void);
-    int L2_quintuple_filter (void);
-    void Isoch_processing (void);
-    bool InProgress(void);
-    Timestamp connect_done;
-
-#if HAVE_DECL_SO_TIMESTAMP
-    // Structures needed for recvmsg
-    // Use to get kernel timestamps of packets
-    struct sockaddr_storage srcaddr;
-    struct iovec iov[1];
-    struct msghdr message;
-    char ctrl[CMSG_SPACE(sizeof(struct timeval))];
-    struct cmsghdr *cmsg;
-#endif
-#if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
-    struct ether_header *eth_hdr;
-    struct iphdr *ip_hdr;
-    struct udphdr *udp_hdr;
-#endif
-}; // end class Server
-
-#endif // SERVER_H
+/*
+ * Check if a Entry find is in the List or if any
+ * Entry exists that has the same host as the
+ * Entry find
+ */
+Iperf_ListEntry* Iperf_hostpresent ( iperf_sockaddr *find, Iperf_ListEntry *root ) {
+    Iperf_ListEntry *itr = root;
+    while ( itr != NULL ) {
+        if ( SockAddr_Hostare_Equal( (sockaddr*)itr, (sockaddr*)find ) ) {
+            return itr;
+        }
+        itr = itr->next;
+    }
+    return NULL;
+}
