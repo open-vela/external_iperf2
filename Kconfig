@@ -43,6 +43,10 @@ config TOOLS_IPERF2_DATA_REPORT_NUM
 	int "iperf2 default TCP buffer size"
 	default 100
 
+config TOOLS_IPERF2_RECV_BUFSIZE
+	int "Net Receive buffer size"
+	default 327680
+
 endif
 
 endmenu
