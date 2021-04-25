@@ -184,8 +184,6 @@ double Client::Connect( ) {
 
     SockAddr_remoteAddr( mSettings );
 
-    assert( mSettings->inHostname != NULL );
-
     // create an internet socket
     int type = ( isUDP( mSettings )  ?  SOCK_DGRAM : SOCK_STREAM);
 
