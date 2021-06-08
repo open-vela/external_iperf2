@@ -12,6 +12,15 @@ AM_CPPFLAGS = @STRIP_BEGIN@ \
 AM_CXXFLAGS = -Wall
 AM_CFLAGS = -Wall
 
+if DEBUG_SYMBOLS
+AM_CFLAGS += -g3 -O0
+AM_CXXFLAGS += -g3 -O0
+else
+AM_CFLAGS += -O2
+AM_CXXFLAGS += -O2
+endif
+
+
 iperf_LDFLAGS = @CFLAGS@ @PTHREAD_CFLAGS@ @WEB100_CFLAGS@ @DEFS@
 
 iperf_SOURCES = \
@@ -19,13 +28,13 @@ iperf_SOURCES = \
 		Extractor.c \
 	        isochronous.cpp \
 		Launch.cpp \
-		List.cpp \
+		active_hosts.cpp \
 		Listener.cpp \
 		Locale.c \
 		PerfSocket.cpp \
-		ReportCSV.c \
-		ReportDefault.c \
 		Reporter.c \
+		Reports.c \
+		ReportOutputs.c \
 		Server.cpp \
 		Settings.cpp \
 		SocketAddr.c \
@@ -36,6 +45,7 @@ iperf_SOURCES = \
 		service.c \
 		sockets.c \
 		stdio.c \
+		packet_ring.c \
 		tcp_window_size.c \
 		pdfs.c
 iperf_LDADD = $(LIBCOMPAT_LDADDS)
@@ -51,6 +61,7 @@ checkisoch_SOURCES = checkisoch.cpp isochronous.cpp pdfs.c stdio.c
 igmp_querier_SOURCES = igmp_querier.c
 checkisoch_LDADD = $(LIBCOMPAT_LDADDS)
 endif
+
 
 if AF_PACKET
 iperf_SOURCES += checksums.c
