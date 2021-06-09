@@ -60,17 +60,20 @@
 #include "payloads.h"
 static int transferid_counter = 0;
 
-static inline void my_str_copy(char **dst, char *src) {
+static inline int my_str_copy(char **dst, char *src) {
+    int cnt = 0;
     if (src) {
         *dst = (char *) calloc(strlen(src) + 1, sizeof(char));
 	if (*dst == NULL) {
 	    fprintf(stderr, "Out of Memory!!\n");
 	    exit(1);
 	}
+	cnt = strlen(src) + 1;
         strcpy((*dst), src);
     } else {
 	*dst = NULL;
     }
+    return cnt;
 }
 
 // These are the thread settings that are shared among report types
@@ -78,18 +81,16 @@ static inline void my_str_copy(char **dst, char *src) {
 // better encpasulate report handling.
 static void common_copy (struct ReportCommon **common, struct thread_Settings *inSettings) {
     // Do deep copies from settings
-    *common = (struct ReportCommon *) calloc(1,sizeof(struct ReportCommon));
-#ifdef HAVE_THREAD_DEBUG
-    thread_debug("Alloc common=%p", (void *)(*common));
-#endif
-    my_str_copy(&(*common)->Host, inSettings->mHost);
-    my_str_copy(&(*common)->Localhost, inSettings->mLocalhost);
-    my_str_copy(&(*common)->Ifrname, inSettings->mIfrname);
-    my_str_copy(&(*common)->Ifrnametx, inSettings->mIfrnametx);
-    my_str_copy(&(*common)->SSMMulticastStr, inSettings->mSSMMulticastStr);
-    my_str_copy(&(*common)->Congestion, inSettings->mCongestion);
-    my_str_copy(&(*common)->transferIDStr, inSettings->mTransferIDStr);
-    my_str_copy(&(*common)->PermitKey, inSettings->mPermitKey);
+    *common = (struct ReportCommon *) calloc(1, sizeof(struct ReportCommon));
+    int bytecnt = 0;
+    bytecnt = my_str_copy(&(*common)->Host, inSettings->mHost);
+    bytecnt += my_str_copy(&(*common)->Localhost, inSettings->mLocalhost);
+    bytecnt += my_str_copy(&(*common)->Ifrname, inSettings->mIfrname);
+    bytecnt += my_str_copy(&(*common)->Ifrnametx, inSettings->mIfrnametx);
+    bytecnt += my_str_copy(&(*common)->SSMMulticastStr, inSettings->mSSMMulticastStr);
+    bytecnt += my_str_copy(&(*common)->Congestion, inSettings->mCongestion);
+    bytecnt += my_str_copy(&(*common)->transferIDStr, inSettings->mTransferIDStr);
+    bytecnt += my_str_copy(&(*common)->PermitKey, inSettings->mPermitKey);
     // copy some relevant settings
     (*common)->flags = inSettings->flags;
     (*common)->flags_extend = inSettings->flags_extend;
@@ -129,6 +130,9 @@ static void common_copy (struct ReportCommon **common, struct thread_Settings *i
     (*common)->rtt_weight =inSettings->rtt_nearcongest_divider;
     (*common)->ListenerTimeout =inSettings->mListenerTimeout;
     (*common)->FPS = inSettings->mFPS;
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Alloc common rpt/com/size/strsz %p/%p/%d/%d", (void *) common, (void *)(*common), sizeof(struct ReportCommon), bytecnt);
+#endif
 }
 
 static void free_common_copy (struct ReportCommon *common) {
@@ -384,7 +388,7 @@ void FreeReport (struct ReportHeader *reporthdr) {
 #ifdef HAVE_THREAD_DEBUG
     char rs[REPORTTXTMAX];
     reporttype_text(reporthdr, &rs[0]);
-    thread_debug("Jobq *FREE* report %p (%s)", reporthdr, &rs[0]);
+    thread_debug("Jobq *FREE* report hdr/rpt %p/%p (%s)", (void *) reporthdr, (void *) reporthdr->this_report, &rs[0]);
 #endif
     switch (reporthdr->type) {
     case DATA_REPORT:
@@ -479,14 +483,19 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
     ireport->burst_boundary = false;
     ireport->info.final = false;
     ireport->info.burstid_transition = false;
-#ifdef HAVE_THREAD_DEBUG
-    thread_debug("Job report %p uses multireport %p and fullduplex report is %p (socket=%d)", (void *)reporthdr->this_report, (void *)inSettings->mSumReport, (void *)inSettings->mFullDuplexReport, inSettings->mSock);
-#endif
     // Create a new packet ring which is used to communicate
     // packet stats from the traffic thread to the reporter
     // thread.  The reporter thread does all packet accounting
     ireport->packetring = packetring_init((inSettings->numreportstructs ? inSettings->numreportstructs : (isSingleUDP(inSettings) ? 40 : NUM_REPORT_STRUCTS)), \
 					  &ReportCond, (isSingleUDP(inSettings) ? NULL : &inSettings->awake_me));
+#ifdef HAVE_THREAD_DEBUG
+    char rs[REPORTTXTMAX];
+    reporttype_text(reporthdr, &rs[0]);
+    thread_debug("Init %s report hdr/rpt/com=%p/%p/%p multireport/fullduplex=%p/%p pring(bytes)/cond=%p(%d)/%p (socket=%d)", &rs[0], \
+		 (void *) reporthdr, (void *) ireport, (void *) ireport->info.common, \
+		 (void *) inSettings->mSumReport, (void *) inSettings->mFullDuplexReport, \
+		 (void *) ireport->packetring, ireport->packetring->bytes, (void *) ireport->packetring->awake_producer, inSettings->mSock);
+#endif
     if (inSettings->numreportstructs)
 	fprintf (stdout, "[%3d] NUM_REPORT_STRUCTS override from %d to %d\n", inSettings->mSock, NUM_REPORT_STRUCTS, inSettings->numreportstructs);
     ireport->info.csv_peer[0] = '\0';
@@ -596,11 +605,6 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	FAIL(1, "InitIndividualReport\n", inSettings);
     }
 
-#ifdef HAVE_THREAD_DEBUG
-    thread_debug("Init data report %p using packetring=%p cond=%p", \
-		 (void *)ireport, (void *)(ireport->packetring), (void *)(ireport->packetring->awake_producer));
-#endif
-
     if (inSettings->mThreadMode == kMode_Server) {
 	ireport->info.sock_callstats.read.binsize = inSettings->mBufLen / 8;
 	if (isRxHistogram(inSettings) && isUDP(inSettings) && isTripTime(inSettings)) {
@@ -687,7 +691,10 @@ struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, d
 	creport->common->FPS = inSettings->mFPS;
     }
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Init connection report %p", reporthdr);
+    char rs[REPORTTXTMAX];
+    reporttype_text(reporthdr, &rs[0]);
+    thread_debug("Init %s report hdr/rpt/com %p/%p/%p", &rs[0],		\
+		 (void *) reporthdr, (void *) reporthdr->this_report, (void *) creport->common);
 #endif
     return reporthdr;
 }
@@ -721,7 +728,10 @@ struct ReportHeader *InitSettingsReport (struct thread_Settings *inSettings) {
     sreport->isochstats.mBurstIPG = (unsigned int) (inSettings->mBurstIPG*1000.0);
     sreport->isochstats.mBurstInterval = (unsigned int) (1 / inSettings->mFPS * 1000000);
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Init settings report %p", reporthdr);
+    char rs[REPORTTXTMAX];
+    reporttype_text(reporthdr, &rs[0]);
+    thread_debug("Init %s report hdr/rpt/com %p/%p/%p", &rs[0], \
+		 (void *) reporthdr, (void *) reporthdr->this_report, (void *) sreport->common);
 #endif
     return reporthdr;
 }
