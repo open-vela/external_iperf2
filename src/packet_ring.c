@@ -59,7 +59,9 @@ struct PacketRing * packetring_init (int count, struct Condition *awake_consumer
     assert(awake_consumer != NULL);
     struct PacketRing *pr = NULL;
     if ((pr = (struct PacketRing *) calloc(1, sizeof(struct PacketRing)))) {
+        pr->bytes = sizeof(struct PacketRing);
 	pr->data = (struct ReportStruct *) calloc(count, sizeof(struct ReportStruct));
+        pr->bytes += count * sizeof(struct ReportStruct);
     }
     if (!pr || !pr->data) {
         fprintf(stderr, "ERROR: no memory for packet ring of size %d count, try to reduce with option --NUM_REPORT_STRUCTS\n", count);
