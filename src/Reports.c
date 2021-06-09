@@ -642,7 +642,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
  */
 struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, double ct) {
     assert(inSettings != NULL);
-    struct ReportHeader *reporthdr = calloc(sizeof(struct ReportHeader), sizeof(char*));
+    struct ReportHeader *reporthdr = (struct ReportHeader *) calloc(1, sizeof(struct ReportHeader));
     if (reporthdr == NULL) {
 	FAIL(1, "Out of Memory!!\n", inSettings);
     }
@@ -698,7 +698,7 @@ struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, d
  */
 struct ReportHeader *InitSettingsReport (struct thread_Settings *inSettings) {
     assert(inSettings != NULL);
-    struct ReportHeader *reporthdr = calloc(sizeof(struct ReportHeader), sizeof(char*));
+    struct ReportHeader *reporthdr = (struct ReportHeader *) calloc(1, sizeof(struct ReportHeader));
     if (reporthdr == NULL) {
 	FAIL(1, "Out of Memory!!\n", inSettings);
     }
