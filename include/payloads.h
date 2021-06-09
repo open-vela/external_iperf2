@@ -71,6 +71,7 @@ extern "C" {
 #define HEADER_UDPTESTS      0x20000000
 #define HEADER_SEQNO64B      0x08000000
 #define HEADER_VERSION2      0x04000000
+#define HEADER_SMALL_TRIPTIMES 0x02000000
 #define HEADER_AVOID2        0x02000000
 #define HEADER_AVOID1        0x01000000
 #define HEADER_V2PEERDETECT  0x02000000
@@ -301,9 +302,9 @@ struct TCP_burst_payload {
  *                +--------+--------+--------+--------+
  *            4   |          seqno upper              |
  *                +--------+--------+--------+--------+
- *            5   |         flags (v1)                |
+ *            5   |         flags (v1)                |  or | start tv_sec  (0.14) |
  *                +--------+--------+--------+--------+
- *            6   |         numThreads (v1)           |
+ *            6   |         numThreads (v1)           |  or | start tv_usec        |
  *                +--------+--------+--------+--------+
  *            7   |         mPort (v1)                |
  *                +--------+--------+--------+--------+
