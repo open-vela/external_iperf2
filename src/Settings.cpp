@@ -79,6 +79,8 @@ static int fullduplextest = 0;
 static int rxhistogram = 0;
 static int l2checks = 0;
 static int incrdstip = 0;
+static int incrsrcip = 0;
+static int sumdstip = 0;
 static int txstarttime = 0;
 static int noconnectsync = 0;
 static int txholdback = 0;
@@ -166,6 +168,8 @@ const struct option long_options[] =
 {"udp-histograms", optional_argument, &rxhistogram, 1}, // keep support per 2.0.13 usage
 {"l2checks", no_argument, &l2checks, 1},
 {"incr-dstip", no_argument, &incrdstip, 1},
+{"incr-srcip", no_argument, &incrsrcip, 1},
+{"sum-dstip", no_argument, &sumdstip, 1},
 {"txstart-time", required_argument, &txstarttime, 1},
 {"txdelay-time", required_argument, &txholdback, 1},
 {"fq-rate", required_argument, &fqrate, 1},
@@ -844,6 +848,14 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		incrdstip = 0;
 		setIncrDstIP(mExtSettings);
 	    }
+	    if (incrsrcip) {
+		incrsrcip = 0;
+		setIncrSrcIP(mExtSettings);
+	    }
+	    if (sumdstip) {
+		sumdstip = 0;
+		setSumServerDstIP(mExtSettings);
+	    }
 	    if (txstarttime) {
 		long seconds;
 		long usecs;
@@ -1163,6 +1175,14 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    setReverse(mExtSettings);
 	    unsetRemoveService(mExtSettings);
 	}
+	if (isIncrSrcIP(mExtSettings) && (mExtSettings->mLocalhost==NULL)) {
+	    fprintf(stderr, "ERROR: option of --incr-srcip requires -B bind option to be set\n");
+	    bail = true;
+	}
+	if (isSumServerDstIP(mExtSettings)) {
+	    fprintf(stderr, "ERROR: option of --sum-dstip not supported on the client\n");
+	    bail = true;
+	}
 	if (isPeriodicBurst(mExtSettings)) {
 	    setEnhanced(mExtSettings);
 	    setFrameInterval(mExtSettings);
@@ -1176,7 +1196,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    bail = true;
 	}
 	if (isTxHoldback(mExtSettings) && isTxStartTime(mExtSettings)) {
-	    fprintf(stdout,"ERROR: options of --txstart-time and --txdelay-time are mutually exclusive\n");
+	    fprintf(stderr,"ERROR: options of --txstart-time and --txdelay-time are mutually exclusive\n");
 	    bail = true;
 	} else if (isTxStartTime(mExtSettings) || isTxHoldback(mExtSettings)) {
 	    Timestamp now;
@@ -1295,7 +1315,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		bail = true;
 	    }
 	    if (isTxHoldback(mExtSettings) && isConnectOnly(mExtSettings)) {
-		fprintf(stdout,"ERROR: Fail because --txdelay-time and --connect-only cannot be applied together\n");
+		fprintf(stderr,"ERROR: Fail because --txdelay-time and --connect-only cannot be applied together\n");
 		bail = true;			;
 	    }
 	}
@@ -1339,6 +1359,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	}
         if (isTripTime(mExtSettings)) {
             fprintf(stderr, "ERROR: setting of option --trip-times is not supported on the server\n");
+	    bail = true;
+	}
+        if (isIncrSrcIP(mExtSettings)) {
+            fprintf(stderr, "ERROR: setting of option --incr-srcip is not supported on the server\n");
 	    bail = true;
 	}
 	if (isVaryLoad(mExtSettings)) {

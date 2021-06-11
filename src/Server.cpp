@@ -285,7 +285,7 @@ void Server::RunTCP () {
 	int rc = close(mySocket);
 	WARN_errno(rc == SOCKET_ERROR, "server close");
     }
-    Iperf_remove_host(&mSettings->peer);
+    Iperf_remove_host(mSettings);
     FreeReport(myJob);
 }
 
@@ -771,7 +771,7 @@ void Server::RunUDP () {
 	int rc = close(mySocket);
 	WARN_errno(rc == SOCKET_ERROR, "server close");
     }
-    Iperf_remove_host(&mSettings->peer);
+    Iperf_remove_host(mSettings);
     FreeReport(myJob);
 }
 // end Recv

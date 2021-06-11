@@ -101,6 +101,7 @@ Server specific:\n\
       --udp-histogram #,#  enable UDP latency histogram(s) with bin width and count, e.g. 1,1000=1(ms),1000(bins)\n\
   -B, --bind <ip>[%<dev>]  bind to multicast address and optional device\n\
   -U, --single_udp         run in single threaded UDP mode\n\
+      --sum-dstip          sum traffic threads based upon destination ip address (default is src ip)\n\
   -D, --daemon             run the server as a daemon\n"
 #ifdef WIN32
 "  -R, --remove             remove service in win32\n"
@@ -121,6 +122,7 @@ Client specific:\n\
       --isochronous <frames-per-second>:<mean>,<stddev> send traffic in bursts (frames - emulate video traffic)\n\
       --incr-dstip         Increment the destination ip with parallel (-P) traffic threads\n\
       --incr-dstport       Increment the destination port with parallel (-P) traffic threads\n\
+      --incr-srcip         Increment the source ip with parallel (-P) traffic threads\n\
       --local-only         Set don't route on socket\n\
       --near-congestion=[w] Use a weighted write delay per the sampled TCP RTT (experimental)\n\
       --no-connect-sync    No sychronization after connect when -P or parallel traffic threads\n\

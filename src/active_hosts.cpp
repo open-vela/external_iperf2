@@ -128,8 +128,14 @@ static void active_table_update (iperf_sockaddr *host, struct thread_Settings *a
     }
 }
 
+static inline iperf_sockaddr *active_table_get_host_key (struct thread_Settings *agent) {
+    iperf_sockaddr *key = (isSumServerDstIP(agent) ? &agent->local : &agent->peer);
+    return key;
+}
+
 // Thread access to store a host
-int Iperf_push_host (iperf_sockaddr *host, struct thread_Settings *agent) {
+int Iperf_push_host (struct thread_Settings *agent) {
+    iperf_sockaddr *host = active_table_get_host_key(agent);
     Mutex_Lock(&active_table.my_mutex);
     active_table_update(host, agent);
     int groupid = active_table.groupid;
@@ -139,7 +145,8 @@ int Iperf_push_host (iperf_sockaddr *host, struct thread_Settings *agent) {
 
 // Used for UDP push of a new host, returns negative value if the host/port is already present
 // This is critical because UDP is connectionless and designed to be stateless
-int Iperf_push_host_port_conditional (iperf_sockaddr *host, struct thread_Settings *agent) {
+int Iperf_push_host_port_conditional (struct thread_Settings *agent) {
+    iperf_sockaddr *host = active_table_get_host_key(agent);
     int rc = -1;
     Mutex_Lock(&active_table.my_mutex);
     if (!Iperf_host_port_present(host)) {
@@ -153,7 +160,8 @@ int Iperf_push_host_port_conditional (iperf_sockaddr *host, struct thread_Settin
 /*
  * Remove a host from the table
  */
-void Iperf_remove_host (iperf_sockaddr *del) {
+void Iperf_remove_host (struct thread_Settings *agent) {
+    iperf_sockaddr *del = active_table_get_host_key(agent);
     // remove_list_entry(entry) {
     //     indirect = &head;
     //     while ((*indirect) != entry) {

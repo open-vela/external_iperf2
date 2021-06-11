@@ -101,7 +101,10 @@ void SockAddr_localAddr (struct thread_Settings *inSettings) {
 
     if (inSettings->mLocalhost != NULL) {
         SockAddr_setHostname(inSettings->mLocalhost, &inSettings->local,
-                              isIPV6(inSettings));
+			     isIPV6(inSettings));
+	if (inSettings->incrsrcip)
+	    SockAddr_incrAddress(&inSettings->local, inSettings->incrsrcip);
+
     } else {
 #ifdef HAVE_IPV6
         if (isIPV6(inSettings)) {
