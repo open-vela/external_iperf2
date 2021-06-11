@@ -266,7 +266,7 @@ void Listener::Run () {
 	    (!isIPV6(mSettings) && SockAddr_isIPv6(&server->peer))) {
 	    // Not allowed, reset things and restart the loop
 	    // Don't forget to delete the UDP entry (inserted in my_accept)
-	    Iperf_remove_host(&server->peer);
+	    Iperf_remove_host(server);
 	    if (DecrSumReportRefCounter(server->mSumReport) <= 0) {
 		FreeSumReport(server->mSumReport);
 	    }
@@ -297,7 +297,7 @@ void Listener::Run () {
 		assert(reporthdr);
 		PostReport(reporthdr);
 	    }
-	    Iperf_remove_host(&server->peer);
+	    Iperf_remove_host(server);
 	    if (DecrSumReportRefCounter(server->mSumReport) <= 0) {
 		FreeSumReport(server->mSumReport);
 	    }
@@ -311,7 +311,7 @@ void Listener::Run () {
 	if (isUDP(server) && !isCompat(mSettings)  && (isL2LengthCheck(mSettings) || isL2LengthCheck(server))) {
 	    if (!L2_setup(server, server->mSock)) {
 		// Requested L2 testing but L2 setup failed
-		Iperf_remove_host(&server->peer);
+		Iperf_remove_host(server);
 		if (DecrSumReportRefCounter(server->mSumReport) <= 0) {
 		    FreeSumReport(server->mSumReport);
 		}
@@ -344,7 +344,7 @@ void Listener::Run () {
 		    listener_client_settings->mTransferID = 0;
 		setTransferID(listener_client_settings, 1);
 		if (isFullDuplex(listener_client_settings) || isReverse(listener_client_settings))
-		    Iperf_push_host(&listener_client_settings->peer, listener_client_settings);
+		    Iperf_push_host(listener_client_settings);
 		if (isFullDuplex(server)) {
 		    assert(server->mSumReport != NULL);
 		    if (!server->mSumReport->sum_fd_set) {
@@ -853,7 +853,7 @@ int Listener::udp_accept (thread_Settings *server) {
     FAIL_errno(rc == SOCKET_ERROR, "recvfrom", mSettings);
     if (!(rc < 0) && !sInterupted) {
 	// Handle connection for UDP sockets
-	int gid = Iperf_push_host_port_conditional(&server->peer, server);
+	int gid = Iperf_push_host_port_conditional(server);
 #if HAVE_THREAD_DEBUG
 	if (gid < 0)
 	    thread_debug("rcvfrom peer: drop duplicate");
@@ -905,7 +905,7 @@ int Listener::my_accept (thread_Settings *server) {
 	    server->size_local = sizeof(iperf_sockaddr);
 	    getsockname(server->mSock, reinterpret_cast<sockaddr*>(&server->local), &server->size_local);
 	    SockAddr_Ifrname(server);
-	    Iperf_push_host(&server->peer, server);
+	    Iperf_push_host(server);
 	}
     }
     if (server->mSock > 0) {

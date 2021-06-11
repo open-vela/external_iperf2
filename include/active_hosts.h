@@ -89,8 +89,7 @@ struct Iperf_Table {
  */
 void Iperf_initialize_active_table (void);
 void Iperf_destroy_active_table (void);
-int Iperf_push_host (iperf_sockaddr *host, struct thread_Settings *agent);
-int Iperf_push_host_port_conditional (iperf_sockaddr *host, struct thread_Settings *agent);
-void Iperf_remove_host (iperf_sockaddr *del);
-
+int Iperf_push_host (struct thread_Settings *agent);
+int Iperf_push_host_port_conditional (struct thread_Settings *agent);
+void Iperf_remove_host (struct thread_Settings *agent);
 #endif
