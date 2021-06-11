@@ -1253,7 +1253,7 @@ void Client::FinishTrafficActions () {
 	int rc = close(mySocket);
 	WARN_errno(rc == SOCKET_ERROR, "client close");
     }
-    Iperf_remove_host(&mSettings->peer);
+    Iperf_remove_host(mSettings);
     FreeReport(myJob);
     if (framecounter)
 	DELETE_PTR(framecounter);

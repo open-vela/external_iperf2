@@ -170,7 +170,7 @@ static void clientside_client_basic (struct thread_Settings *thread, Client *the
 	theClient->BarrierClient(thread->connects_done);
     if (theClient->isConnected()) {
         if ((thread->mThreads > 1) || isSumOnly(thread))
-	    Iperf_push_host(&thread->peer, thread);
+	    Iperf_push_host(thread);
 	theClient->StartSynch();
 	theClient->Run();
     }
@@ -197,7 +197,7 @@ static void clientside_client_reverse (struct thread_Settings *thread, Client *t
 	setReverse(reverse_client);
 	setNoUDPfin(reverse_client); // disable the fin report - no need
         if ((thread->mThreads > 1) || isSumOnly(thread))
-	    Iperf_push_host(&reverse_client->peer, reverse_client);
+	    Iperf_push_host(reverse_client);
 	thread_start(reverse_client);
 	if (!thread_equalid(reverse_client->mTID, thread_zeroid()) && \
 	    !(pthread_join(reverse_client->mTID, NULL) != 0)) {
@@ -222,8 +222,8 @@ static void clientside_client_fullduplex (struct thread_Settings *thread, Client
     Settings_Copy(thread, &reverse_client, 0);
     if ((thread->mThreads > 1) || isSumOnly(thread) || \
 	(!(thread->mThreads > 1) && !isEnhanced(thread))) {
-	Iperf_push_host(&thread->peer, thread);
-	Iperf_push_host(&reverse_client->peer, reverse_client);
+	Iperf_push_host(thread);
+	Iperf_push_host(reverse_client);
     }
     assert(reverse_client != NULL);
     setTransferID(reverse_client, 1);
@@ -271,7 +271,7 @@ static void serverside_client_bidir (struct thread_Settings *thread, Client *the
     setReport(thread);
     theClient->my_connect(false);
     if (theClient->isConnected()) {
-	Iperf_push_host(&thread->peer, thread);
+	Iperf_push_host(thread);
 	if (theClient->StartSynch() != -1) {
 	    theClient->Run();
 	}
@@ -372,6 +372,9 @@ void client_init(struct thread_Settings *clients) {
 		Settings_Copy(clients, &next, 1);
 		// printf("*****port/thread = %d/%d\n", next->mPort + j, i);
 		if (next) {
+		    if (isIncrSrcIP(clients) && (clients->mLocalhost != NULL)) {
+			next->incrsrcip = i;
+		    }
 		    if (isIncrDstIP(clients)) {
 			next->incrdstip = i;
 			// force a setHostname

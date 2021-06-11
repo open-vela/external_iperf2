@@ -241,6 +241,7 @@ struct thread_Settings {
     Socklen_t size_local;
     nthread_t mTID;
     int incrdstip;
+    int incrsrcip;
     int incrsrcport;
     int connectonly_count;
     char* mCongestion;
@@ -352,10 +353,12 @@ struct thread_Settings {
 #define FLAG_PERMITKEY      0x10000000
 #define FLAG_SETTCPMSS      0x20000000
 #define FLAG_INCRDSTPORT    0x40000000
+#define FLAG_INCRSRCIP      0x80000000
 /*
  * More extended flags
  */
 #define FLAG_PERIODICBURST  0x00000001
+#define FLAG_SUMDSTIP       0x00000002
 
 #define isBuflenSet(settings)      ((settings->flags & FLAG_BUFLENSET) != 0)
 #define isCompat(settings)         ((settings->flags & FLAG_COMPAT) != 0)
@@ -396,6 +399,7 @@ struct thread_Settings {
 #define isRxHistogram(settings)    ((settings->flags_extend & FLAG_RXHISTOGRAM) != 0)
 #define isL2LengthCheck(settings)  ((settings->flags_extend & FLAG_L2LENGTHCHECK) != 0)
 #define isIncrDstIP(settings)      ((settings->flags_extend & FLAG_INCRDSTIP) != 0)
+#define isIncrSrcIP(settings)      ((settings->flags_extend & FLAG_INCRSRCIP) != 0)
 #define isIncrDstPort(settings)    ((settings->flags_extend & FLAG_INCRDSTPORT) != 0)
 #define isTxStartTime(settings)    ((settings->flags_extend & FLAG_TXSTARTTIME) != 0)
 #define isTxHoldback(settings)     ((settings->flags_extend & FLAG_TXHOLDBACK) != 0)
@@ -415,7 +419,8 @@ struct thread_Settings {
 #define isNearCongest(settings)    ((settings->flags_extend & FLAG_NEARCONGEST) != 0)
 #define isPermitKey(settings)  ((settings->flags_extend & FLAG_PERMITKEY) != 0)
 #define isTCPMSS(settings)         ((settings->flags_extend & FLAG_SETTCPMSS) != 0)
-#define isPeriodicBurst(settings)         ((settings->flags_extend2 & FLAG_PERIODICBURST) != 0)
+#define isPeriodicBurst(settings)  ((settings->flags_extend2 & FLAG_PERIODICBURST) != 0)
+#define isSumServerDstIP(settings) ((settings->flags_extend2 & FLAG_SUMDSTIP) != 0)
 
 #define setBuflenSet(settings)     settings->flags |= FLAG_BUFLENSET
 #define setCompat(settings)        settings->flags |= FLAG_COMPAT
@@ -444,17 +449,18 @@ struct thread_Settings {
 #define setRealtime(settings)      settings->flags |= FLAG_REALTIME
 #define setBWSet(settings)         settings->flags |= FLAG_BWSET
 #define setEnhanced(settings)      settings->flags |= FLAG_ENHANCEDREPORT
-#define setServerModeTime(settings)      settings->flags |= FLAG_SERVERMODETIME
+#define setServerModeTime(settings)    settings->flags |= FLAG_SERVERMODETIME
 #define setPeerVerDetect(settings) settings->flags_extend |= FLAG_PEERVER
 #define setSeqNo64b(settings)      settings->flags_extend |= FLAG_SEQNO64
 #define setReverse(settings)       settings->flags_extend |= FLAG_REVERSE
-#define setFullDuplex(settings)         settings->flags_extend |= FLAG_FULLDUPLEX
+#define setFullDuplex(settings)    settings->flags_extend |= FLAG_FULLDUPLEX
 #define setServerReverse(settings) settings->flags_extend |= FLAG_SERVERREVERSE
 #define setIsochronous(settings)   settings->flags_extend |= FLAG_ISOCHRONOUS
 #define setRxHistogram(settings)   settings->flags_extend |= FLAG_RXHISTOGRAM
 #define setL2LengthCheck(settings) settings->flags_extend |= FLAG_L2LENGTHCHECK
 #define setIncrDstIP(settings)     settings->flags_extend |= FLAG_INCRDSTIP
-#define setIncrDstPort(settings)     settings->flags_extend |= FLAG_INCRDSTPORT
+#define setIncrSrcIP(settings)     settings->flags_extend |= FLAG_INCRSRCIP
+#define setIncrDstPort(settings)   settings->flags_extend |= FLAG_INCRDSTPORT
 #define setTxStartTime(settings)   settings->flags_extend |= FLAG_TXSTARTTIME
 #define setTxHoldback(settings)    settings->flags_extend |= FLAG_TXHOLDBACK
 #define setVaryLoad(settings)      settings->flags_extend |= FLAG_VARYLOAD
@@ -470,9 +476,10 @@ struct thread_Settings {
 #define setIPG(settings)           settings->flags_extend |= FLAG_IPG
 #define setDontRoute(settings)     settings->flags_extend |= FLAG_DONTROUTE
 #define setNearCongest(settings)   settings->flags_extend |= FLAG_NEARCONGEST
-#define setPermitKey(settings) settings->flags_extend |= FLAG_PERMITKEY
-#define setTCPMSS(settings) settings->flags_extend |= FLAG_SETTCPMSS
+#define setPermitKey(settings)     settings->flags_extend |= FLAG_PERMITKEY
+#define setTCPMSS(settings)        settings->flags_extend |= FLAG_SETTCPMSS
 #define setPeriodicBurst(settings) settings->flags_extend2 |= FLAG_PERIODICBURST
+#define setSumServerDstIP(settings) settings->flags_extend2 |= FLAG_SUMDSTIP
 
 #define unsetBuflenSet(settings)   settings->flags &= ~FLAG_BUFLENSET
 #define unsetCompat(settings)      settings->flags &= ~FLAG_COMPAT
@@ -501,17 +508,18 @@ struct thread_Settings {
 #define unsetRealtime(settings)    settings->flags &= ~FLAG_REALTIME
 #define unsetBWSet(settings)       settings->flags &= ~FLAG_BWSET
 #define unsetEnhanced(settings)    settings->flags &= ~FLAG_ENHANCEDREPORT
-#define unsetServerModeTime(settings)    settings->flags &= ~FLAG_SERVERMODETIME
-#define unsetPeerVerDetect(settings)    settings->flags_extend &= ~FLAG_PEERVER
+#define unsetServerModeTime(settings) settings->flags &= ~FLAG_SERVERMODETIME
+#define unsetPeerVerDetect(settings)  settings->flags_extend &= ~FLAG_PEERVER
 #define unsetSeqNo64b(settings)    settings->flags_extend &= ~FLAG_SEQNO64
 #define unsetReverse(settings)     settings->flags_extend &= ~FLAG_REVERSE
-#define unsetFullDuplex(settings)       settings->flags_extend &= ~FLAG_FULLDUPLEX
+#define unsetFullDuplex(settings)     settings->flags_extend &= ~FLAG_FULLDUPLEX
 #define unsetServerReverse(settings) settings->flags_extend &= ~FLAG_SERVERREVERSE
 #define unsetIsochronous(settings)  settings->flags_extend &= ~FLAG_ISOCHRONOUS
-#define unsetRxHistogram(settings)    settings->flags_extend &= ~FLAG_RXHISTOGRAM
+#define unsetRxHistogram(settings)  settings->flags_extend &= ~FLAG_RXHISTOGRAM
 #define unsetL2LengthCheck(settings)  settings->flags_extend &= ~FLAG_L2LENGTHCHECK
 #define unsetIncrDstIP(settings)    settings->flags_extend &= ~FLAG_INCRDSTIP
-#define unsetIncrDstPort(settings)    settings->flags_extend &= ~FLAG_INCRDSTPORT
+#define unsetIncrSrcIP(settings)    settings->flags_extend &= ~FLAG_INCRSRCIP
+#define unsetIncrDstPort(settings)  settings->flags_extend &= ~FLAG_INCRDSTPORT
 #define unsetTxStartTime(settings)  settings->flags_extend &= ~FLAG_TXSTARTTIME
 #define unsetTxHoldback(settings)   settings->flags_extend &= ~FLAG_TXHOLDBACK
 #define unsetVaryLoad(settings)     settings->flags_extend &= ~FLAG_VARYLOAD
@@ -526,9 +534,10 @@ struct thread_Settings {
 #define unsetFrameInterval(settings) settings->flags_extend &= ~FLAG_FRAMEINTERVAL
 #define unsetIPG(settings)           settings->flags_extend &= ~FLAG_IPG
 #define unsetDontRoute(settings)     settings->flags_extend &= ~FLAG_DONTROUTE
-#define unsetPermitKey(settings) settings->flags_extend &= ~FLAG_PERMITKEY
-#define unsetTCPMSS(settings) settings->flags_extend &= ~FLAG_SETTCPMSS
+#define unsetPermitKey(settings)     settings->flags_extend &= ~FLAG_PERMITKEY
+#define unsetTCPMSS(settings)        settings->flags_extend &= ~FLAG_SETTCPMSS
 #define unsetPeriodicBurst(settings) settings->flags_extend &= ~FLAG_PERIODICBURST
+#define unsetSumServerDstIP(settings) settings->flags_extend &= ~FLAG_SUMDSTIP
 
 // set to defaults
 void Settings_Initialize(struct thread_Settings* main);
