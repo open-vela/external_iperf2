@@ -981,7 +981,14 @@ bool Listener::apply_client_settings_udp (thread_Settings *server) {
     if (flags & HEADER_SEQNO64B) {
 	setSeqNo64b(server);
     }
-    if ((flags & HEADER_VERSION1) || (flags & HEADER_VERSION2) || (flags & HEADER_EXTEND)) {
+    if (flags & HEADER32_SMALL_TRIPTIMES) {
+	server->accept_time.tv_sec = ntohl(hdr->seqno_ts.tv_sec);
+	server->accept_time.tv_usec = ntohl(hdr->seqno_ts.tv_usec);
+	uint32_t seqno = ntohl(hdr->seqno_ts.id);
+	if (seqno != 1) {
+	    fprintf(stderr, "WARN: first received packet was not first sent packet, id = %d\n", seqno);
+	}
+    } else if ((flags & HEADER_VERSION1) || (flags & HEADER_VERSION2) || (flags & HEADER_EXTEND)) {
 	if ((flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2)) {
 	    if (flags & RUN_NOW)
 		server->mMode = kTest_DualTest;
