@@ -986,7 +986,7 @@ bool Listener::apply_client_settings_udp (thread_Settings *server) {
 	server->accept_time.tv_usec = ntohl(hdr->seqno_ts.tv_usec);
 	uint32_t seqno = ntohl(hdr->seqno_ts.id);
 	if (seqno != 1) {
-	    fprintf(stderr, "WARN: first received packet was not first sent packet, id = %d\n", seqno);
+	    fprintf(stderr, "WARN: first received packet (id=%d) was not first sent packet, report start time will be off\n", seqno);
 	}
 	setTripTime(server);
 	setEnhanced(server);
