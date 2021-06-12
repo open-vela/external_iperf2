@@ -71,15 +71,16 @@ extern "C" {
 #define HEADER_UDPTESTS      0x20000000
 #define HEADER_SEQNO64B      0x08000000
 #define HEADER_VERSION2      0x04000000
-#define HEADER_SMALL_TRIPTIMES 0x02000000
 #define HEADER_AVOID2        0x02000000
 #define HEADER_AVOID1        0x01000000
 #define HEADER_V2PEERDETECT  0x02000000
+#define HEADER32_SMALL_TRIPTIMES 0x04000000
 #define HEADER_LEN_BIT       0x00010000
 #define HEADER_LEN_MASK      0x000001FE
 #define MAX_HEADER_LEN       256
 #define SERVER_HEADER_EXTEND 0x40000000
 #define RUN_NOW              0x00000001
+#define HEADER16_SMALL_TRIPTIMES 0x0400 // use is 16 bits and not 32 bits
 
 // newer flags available per HEADER_EXTEND
 // Below flags are used to pass test settings in *every* UDP packet
@@ -114,6 +115,10 @@ enum MsgType {
     SERVERHDR,
     SERVERHDRACK
 };
+
+#define MINIPERFPAYLOAD 18
+// Minimum IPv4 frame size = 18 (Ethernet) + 20 (IPv4) + 8 (UDP) + 18 (payload) = 64 bytes
+// Minimum IPv6 frame size = 18 (Ethernet) + 40 (IPv6) + 8 (UDP) + 18 (payload) = 84 bytes
 
 /*
  * Structures below will be passed as network i/o
@@ -302,9 +307,9 @@ struct TCP_burst_payload {
  *                +--------+--------+--------+--------+
  *            4   |          seqno upper              |
  *                +--------+--------+--------+--------+
- *            5   |         flags (v1)                |  or | start tv_sec  (0.14) |
+ *            5   |         flags (v1)                |
  *                +--------+--------+--------+--------+
- *            6   |         numThreads (v1)           |  or | start tv_usec        |
+ *            6   |         numThreads (v1)           |
  *                +--------+--------+--------+--------+
  *            7   |         mPort (v1)                |
  *                +--------+--------+--------+--------+
@@ -395,6 +400,11 @@ struct client_udp_testhdr {
     struct isoch_payload isoch;
     struct client_hdrext_starttime_fq start_fq;
     struct client_hdrext_isoch_settings isoch_settings;
+};
+
+struct client_udpsmall_testhdr {
+    struct UDP_datagram seqno_ts;
+    uint16_t flags;
 };
 
 struct client_hdr_ack {

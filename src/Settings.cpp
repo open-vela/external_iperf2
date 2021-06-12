@@ -251,6 +251,7 @@ const char short_options[] = "1b:c:def:hi:l:mn:o:p:rst:uvw:x:y:zAB:CDF:H:IL:M:NP
 
 const long kDefault_UDPRate = 1024 * 1024; // -u  if set, 1 Mbit/sec
 const int  kDefault_UDPBufLen = 1470;      // -u  if set, read/write 1470 bytes
+
 // v4: 1470 bytes UDP payload will fill one and only one ethernet datagram (IPv4 overhead is 20 bytes)
 const int  kDefault_UDPBufLenV6 = 1450;      // -u  if set, read/write 1470 bytes
 // v6: 1450 bytes UDP payload will fill one and only one ethernet datagram (IPv6 overhead is 40 bytes)
@@ -1285,9 +1286,15 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		    bail = true;
 		}
 	    }
-	    if (isTripTime(mExtSettings) && (mExtSettings->mBufLen < MINTRIPTIMEPLAYOAD)) {
-		fprintf(stderr, "ERROR: payload (-l) size of %d too small for --trip-times, must be %d or greater\n", mExtSettings->mBufLen, MINTRIPTIMEPLAYOAD);
-		bail = true;
+	    if (isTripTime(mExtSettings)) {
+		if (mExtSettings->mBufLen < MINTRIPTIMEPLAYOAD) {
+		    if (isReverse(mExtSettings) || isFullDuplex(mExtSettings) || (mExtSettings->mMode != kTest_Normal)) {
+			fprintf(stderr, "ERROR: payload (-l) size of %d too small for --trip-times, must be %d or greater\n", mExtSettings->mBufLen, MINTRIPTIMEPLAYOAD);
+			bail = true;
+		    } else {
+			setSmallTripTime(mExtSettings);
+		    }
+		}
 	    }
 	} else {
 #ifndef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
@@ -1909,6 +1916,12 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
     uint16_t lowerflags = 0;
     uint32_t flags = 0;
 
+    // Check the corner case of small packets and trip times
+    if (isUDP(client) && isSmallTripTime(client)) {
+	struct client_udpsmall_testhdr *hdr = static_cast<struct client_udpsmall_testhdr *>(testhdr);
+	hdr->flags = htons(HEADER16_SMALL_TRIPTIMES);
+	return (MINIPERFPAYLOAD);
+    }
     // flags common to both TCP and UDP
     if (isReverse(client) && !isCompat(client)) {
 	upperflags |= HEADER_REVERSE;

@@ -359,6 +359,7 @@ struct thread_Settings {
  */
 #define FLAG_PERIODICBURST  0x00000001
 #define FLAG_SUMDSTIP       0x00000002
+#define FLAG_SMALLTRIPTIME  0x00000004
 
 #define isBuflenSet(settings)      ((settings->flags & FLAG_BUFLENSET) != 0)
 #define isCompat(settings)         ((settings->flags & FLAG_COMPAT) != 0)
@@ -406,6 +407,7 @@ struct thread_Settings {
 #define isVaryLoad(settings)       ((settings->flags_extend & FLAG_VARYLOAD) != 0)
 #define isFQPacing(settings)       ((settings->flags_extend & FLAG_FQPACING) != 0)
 #define isTripTime(settings)       ((settings->flags_extend & FLAG_TRIPTIME) != 0)
+#define isSmallTripTime(settings)  ((settings->flags_extend2 & FLAG_SMALLTRIPTIME) != 0)
 #define isModeInfinite(settings)   ((settings->flags_extend & FLAG_MODEINFINITE) != 0)
 #define isModeAmount(settings)     (!isModeTime(settings) && !isModeInfinite(settings))
 #define isConnectOnly(settings)    ((settings->flags_extend & FLAG_CONNECTONLY) != 0)
@@ -466,6 +468,7 @@ struct thread_Settings {
 #define setVaryLoad(settings)      settings->flags_extend |= FLAG_VARYLOAD
 #define setFQPacing(settings)      settings->flags_extend |= FLAG_FQPACING
 #define setTripTime(settings)      settings->flags_extend |= FLAG_TRIPTIME
+#define setSmallTripTime(settings) settings->flags_extend2 |= FLAG_SMALLTRIPTIME
 #define setModeInfinite(settings)  settings->flags_extend |= FLAG_MODEINFINITE
 #define setConnectOnly(settings)   settings->flags_extend |= FLAG_CONNECTONLY
 #define setWriteAck(settings)      settings->flags_extend |= FLAG_WRITEACK
@@ -525,6 +528,7 @@ struct thread_Settings {
 #define unsetVaryLoad(settings)     settings->flags_extend &= ~FLAG_VARYLOAD
 #define unsetFQPacing(settings)     settings->flags_extend &= ~FLAG_FQPACING
 #define unsetTripTime(settings)     settings->flags_extend &= ~FLAG_TRIPTIME
+#define unsetSmallTripTime(settings)     settings->flags_extend2 &= ~FLAG_SMALLTRIPTIME
 #define unsetModeInfinite(settings) settings->flags_extend &= ~FLAG_MODEINFINITE
 #define unsetConnectOnly(settings)  settings->flags_extend &= ~FLAG_CONNECTONLY
 #define unsetWriteAck(settings)     settings->flags_extend &= ~FLAG_WRITEACK
