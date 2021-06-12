@@ -989,6 +989,7 @@ bool Listener::apply_client_settings_udp (thread_Settings *server) {
 	    fprintf(stderr, "WARN: first received packet was not first sent packet, id = %d\n", seqno);
 	}
 	setTripTime(server);
+	setEnhanced(server);
     } else if ((flags & HEADER_VERSION1) || (flags & HEADER_VERSION2) || (flags & HEADER_EXTEND)) {
 	if ((flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2)) {
 	    if (flags & RUN_NOW)
