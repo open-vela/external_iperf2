@@ -515,7 +515,7 @@ struct thread_Settings {
 #define unsetPeerVerDetect(settings)  settings->flags_extend &= ~FLAG_PEERVER
 #define unsetSeqNo64b(settings)    settings->flags_extend &= ~FLAG_SEQNO64
 #define unsetReverse(settings)     settings->flags_extend &= ~FLAG_REVERSE
-#define unsetFullDuplex(settings)     settings->flags_extend &= ~FLAG_FULLDUPLEX
+#define unsetFullDuplex(settings)  settings->flags_extend &= ~FLAG_FULLDUPLEX
 #define unsetServerReverse(settings) settings->flags_extend &= ~FLAG_SERVERREVERSE
 #define unsetIsochronous(settings)  settings->flags_extend &= ~FLAG_ISOCHRONOUS
 #define unsetRxHistogram(settings)  settings->flags_extend &= ~FLAG_RXHISTOGRAM
@@ -528,7 +528,7 @@ struct thread_Settings {
 #define unsetVaryLoad(settings)     settings->flags_extend &= ~FLAG_VARYLOAD
 #define unsetFQPacing(settings)     settings->flags_extend &= ~FLAG_FQPACING
 #define unsetTripTime(settings)     settings->flags_extend &= ~FLAG_TRIPTIME
-#define unsetSmallTripTime(settings)     settings->flags_extend2 &= ~FLAG_SMALLTRIPTIME
+#define unsetSmallTripTime(settings) settings->flags_extend2 &= ~FLAG_SMALLTRIPTIME
 #define unsetModeInfinite(settings) settings->flags_extend &= ~FLAG_MODEINFINITE
 #define unsetConnectOnly(settings)  settings->flags_extend &= ~FLAG_CONNECTONLY
 #define unsetWriteAck(settings)     settings->flags_extend &= ~FLAG_WRITEACK
@@ -540,8 +540,8 @@ struct thread_Settings {
 #define unsetDontRoute(settings)     settings->flags_extend &= ~FLAG_DONTROUTE
 #define unsetPermitKey(settings)     settings->flags_extend &= ~FLAG_PERMITKEY
 #define unsetTCPMSS(settings)        settings->flags_extend &= ~FLAG_SETTCPMSS
-#define unsetPeriodicBurst(settings) settings->flags_extend &= ~FLAG_PERIODICBURST
-#define unsetSumServerDstIP(settings) settings->flags_extend &= ~FLAG_SUMDSTIP
+#define unsetPeriodicBurst(settings) settings->flags_extend2 &= ~FLAG_PERIODICBURST
+#define unsetSumServerDstIP(settings) settings->flags_extend2 &= ~FLAG_SUMDSTIP
 
 // set to defaults
 void Settings_Initialize(struct thread_Settings* main);
