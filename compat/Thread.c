@@ -1,3 +1,4 @@
+
 /*---------------------------------------------------------------
  * Copyright (c) 1999,2000,2001,2002,2003
  * The Board of Trustees of the University of Illinois
@@ -216,9 +217,12 @@ void thread_start_all(struct thread_Settings* thread) {
 
 void thread_start(struct thread_Settings* thread) {
     // Make sure this object has not been started already
-    if (thread_equalid(thread->mTID, thread_zeroid())) {
-
-
+    if (!thread_equalid(thread->mTID, thread_zeroid())) {
+	WARN(1, "thread_start called on running thread");
+#if HAVE_THREAD_DEBUG
+	thread_debug("Thread_start info %p id=%d ", (void *)thread, (int)thread->mTID);
+#endif
+    } else {
         // increment thread count
         Condition_Lock(thread_sNum_cond);
         thread_sNum++;
@@ -246,7 +250,7 @@ void thread_start(struct thread_Settings* thread) {
             Condition_Unlock(thread_sNum_cond);
         }
 #if HAVE_THREAD_DEBUG
-	thread_debug("Thread_run_wrapper(%p mode=%x) thread counts tot/trfc=%d/%d", (void *)thread, thread->mThreadMode, thread_sNum, thread_trfc_sNum);
+	thread_debug("Thread_run_wrapper(%p mode=%x) thread counts tot/trfc=%d/%d (id=%d)", (void *)thread, thread->mThreadMode, thread_sNum, thread_trfc_sNum, (int)thread->mTID);
 #endif
 #elif defined(HAVE_WIN32_THREAD)
         // Win32 threads -- spawn new thread
@@ -259,7 +263,7 @@ void thread_start(struct thread_Settings* thread) {
             Condition_Lock(thread_sNum_cond);
             thread_sNum--;
 	    if ((thread->mThreadMode == kMode_Client) || (thread->mThreadMode == kMode_Server)) {
-	      thread_trfc_sNum--;
+		thread_trfc_sNum--;
 	    }
             Condition_Unlock(thread_sNum_cond);
         }
@@ -378,7 +382,7 @@ thread_run_wrapper(void* paramPtr) {
 
 #ifdef HAVE_POSIX_THREAD
     // detach Thread. If someone already joined it will not do anything
-    // If noone has then it will free resources upon return from this
+    // If none has then it will free resources upon return from this
     // function (Run_Wrapper)
     pthread_detach(thread->mTID);
 #endif
