@@ -199,16 +199,6 @@ static void clientside_client_reverse (struct thread_Settings *thread, Client *t
         if ((thread->mThreads > 1) || isSumOnly(thread))
 	    Iperf_push_host(reverse_client);
 	thread_start(reverse_client);
-	if (!thread_equalid(reverse_client->mTID, thread_zeroid()) && \
-	    !(pthread_join(reverse_client->mTID, NULL) != 0)) {
-#ifdef HAVE_THREAD_DEBUG
-	    thread_debug("Client join reverse done (sock=%d)", thread->mSock);
-#endif
-	} else {
-	    fprintf(stderr, "thread join on reverse failed\n");
-	    exit(-1);
-	}
-	// Nothing was posted to reporter thread so free here
 	if (theClient->myJob)
 	    FreeReport(theClient->myJob);
     }
