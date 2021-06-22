@@ -96,7 +96,12 @@ Client::Client (thread_Settings *inSettings) {
 	fprintf(stderr, "%s", warn_compat_and_peer_exchange);
 	unsetPeerVerDetect(mSettings);
     }
-    mBuf = new char[(mSettings->mBufLen > MINMBUFALLOCSIZE) ? mSettings->mBufLen : MINMBUFALLOCSIZE]; // defined in payloads.h
+
+    int payloadsize = (mSettings->mBufLen > MINMBUFALLOCSIZE) ? mSettings->mBufLen : MINMBUFALLOCSIZE; // defined in payloads.h
+    mBuf = new char[payloadsize]; // defined in payloads.h
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Client constructor: MBUF malloc %d bytes (%p)", payloadsize, (void *) mBuf);
+#endif
     FAIL_errno(mBuf == NULL, "No memory for buffer\n", mSettings);
     pattern(mBuf, mSettings->mBufLen);
     if (isFileInput(mSettings)) {
