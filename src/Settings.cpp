@@ -2026,6 +2026,9 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	hdr->base.flags = htonl(flags);
     } else { // TCP first write with test information
 	struct client_tcp_testhdr *hdr = static_cast<struct client_tcp_testhdr *>(testhdr);
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug("Client header init size %d (%p)", sizeof(struct client_tcp_testhdr), (void *) hdr);
+#endif
 	memset(hdr, 0, sizeof(struct client_tcp_testhdr));
 	flags |= HEADER_EXTEND;
 	hdr->extend.version_u = htonl(IPERF_VERSION_MAJORHEX);
