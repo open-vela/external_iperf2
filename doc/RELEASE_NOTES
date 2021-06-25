@@ -1,11 +1,25 @@
 See doc/DESIGN_NOTES for some description around the software design
 See doc/CLOCKSYNC_NOTES for some description around synchronizing the realtime clocks
 
-2.1.1 change set (as of February 28th, 2021)
+2.1.2 change set (as of June 25th, 2021)
+----------------------------------------
+o fix TCP retry regression per interval reporting
+
+2.1.1 change set (as of June 23rd, 2021)
 ----------------------------------------
 o isochronous bug fix
 o -P and -B src port will increment for unique quintuple
 o support for port ranges, e.g. -p 6000-6008
+o double free fix per memory corruption when -l is less than 244
+o don't use pthread_join on the client --reverse, symptom hung client
+o fixes for --trip-times and small 64 byte packets
+o udp fail on reverse should exit
+o support for low duty cycle bursts (--burst-period and --burst-size)
+o final report fixes
+o full duplex ouput fixex
+o support for --incr-scrip
+o multicast setsockopt fixes
+
 
 2.1.0 change set (as of January 5th, 2021)
 ----------------------------------------
