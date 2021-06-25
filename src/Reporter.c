@@ -932,7 +932,6 @@ void gettcpistats (struct ReporterData *data, int final, struct tcp_info *tcp_st
         retry = this_tcp_stats->tcpi_total_retrans - stats->sock_callstats.write.lastTCPretry;
 	stats->sock_callstats.write.TCPretry = retry;
 	stats->sock_callstats.write.totTCPretry += retry;
-	stats->sock_callstats.write.lastTCPretry = this_tcp_stats->tcpi_total_retrans;
 	stats->sock_callstats.write.cwnd = this_tcp_stats->tcpi_snd_cwnd * this_tcp_stats->tcpi_snd_mss / 1024;
 	stats->sock_callstats.write.rtt = this_tcp_stats->tcpi_rtt;
 	// New average = old average * (n-1)/n + new value/n
@@ -1011,6 +1010,7 @@ static inline void reporter_reset_transfer_stats_client_tcp (struct TransferInfo
     stats->isochstats.framelostcnt.prev = stats->isochstats.framelostcnt.current;
     stats->isochstats.slipcnt.prev = stats->isochstats.slipcnt.current;
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+    stats->sock_callstats.write.lastTCPretry = stats->sock_callstats.write.TCPretry;
     stats->sock_callstats.write.TCPretry = 0;
     stats->sock_callstats.write.up_to_date = 0;
 #endif

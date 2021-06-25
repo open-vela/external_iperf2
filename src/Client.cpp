@@ -289,6 +289,8 @@ int Client::StartSynch () {
     myJob = InitIndividualReport(mSettings);
     myReport = static_cast<struct ReporterData *>(myJob->this_report);
     myReport->info.common->socket=mySocket;
+    gettcpistats(myReport, true, NULL);
+
     // Perform delays, usually between connect() and data xfer though before connect
     // Two delays are supported:
     // o First is an absolute start time per unix epoch format
