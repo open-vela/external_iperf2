@@ -951,7 +951,6 @@ void reporter_handle_packet_client (struct ReporterData *data, struct ReportStru
 /*
  * Report printing routines below
  */
-
 static inline void reporter_set_timestamps_time (struct ReportTimeStamps *times, enum TimeStampType tstype) {
     // There is a corner case when the first packet is also the last where the start time (which comes
     // from app level syscall) is greater than the packetTime (which come for kernel level SO_TIMESTAMP)
@@ -1010,6 +1009,7 @@ static inline void reporter_reset_transfer_stats_client_tcp (struct TransferInfo
     stats->isochstats.framelostcnt.prev = stats->isochstats.framelostcnt.current;
     stats->isochstats.slipcnt.prev = stats->isochstats.slipcnt.current;
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+    stats->sock_callstats.write.lastTCPretry = stats->sock_callstats.write.TCPretry;
     stats->sock_callstats.write.TCPretry = 0;
 #endif
 }
