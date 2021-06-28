@@ -917,6 +917,7 @@ static inline bool sample_tcpistats (struct ReporterData *data, struct ReportStr
 static inline void reporter_handle_packet_tcpistats (struct ReporterData *data, struct ReportStruct *packet) {
     assert(data!=NULL);
     struct TransferInfo *stats = &data->info;
+
     stats->sock_callstats.write.TCPretry += (packet->retry_tot - stats->sock_callstats.write.totTCPretry);
     stats->sock_callstats.write.totTCPretry = packet->retry_tot;
     stats->sock_callstats.write.cwnd = packet->cwnd;
@@ -1009,7 +1010,6 @@ static inline void reporter_reset_transfer_stats_client_tcp (struct TransferInfo
     stats->isochstats.framelostcnt.prev = stats->isochstats.framelostcnt.current;
     stats->isochstats.slipcnt.prev = stats->isochstats.slipcnt.current;
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-    stats->sock_callstats.write.lastTCPretry = stats->sock_callstats.write.TCPretry;
     stats->sock_callstats.write.TCPretry = 0;
 #endif
 }
