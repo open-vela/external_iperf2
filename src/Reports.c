@@ -130,6 +130,20 @@ static void common_copy (struct ReportCommon **common, struct thread_Settings *i
     (*common)->rtt_weight =inSettings->rtt_nearcongest_divider;
     (*common)->ListenerTimeout =inSettings->mListenerTimeout;
     (*common)->FPS = inSettings->mFPS;
+
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+    (*common)->enable_sampleTCPstats = false;
+    (*common)->intervalonly_sampleTCPstats = false;
+    if (isEnhanced(inSettings) && (inSettings->mThreadMode == kMode_Client)) {
+	(*common)->enable_sampleTCPstats = true;
+	(*common)->intervalonly_sampleTCPstats = true;
+	// Near congestion and peridiodic need sampling on every report packet
+	if (isNearCongest(inSettings) || isPeriodicBurst(inSettings)) {
+	    (*common)->intervalonly_sampleTCPstats = false;
+	}
+    }
+#endif
+
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Alloc common rpt/com/size/strsz %p/%p/%d/%d", (void *) common, (void *)(*common), sizeof(struct ReportCommon), bytecnt);
 #endif
@@ -480,7 +494,6 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
     }
     // Copy common settings into the transfer report section
     common_copy(&ireport->info.common, inSettings);
-    ireport->burst_boundary = false;
     ireport->info.final = false;
     ireport->info.burstid_transition = false;
     // Create a new packet ring which is used to communicate
@@ -510,10 +523,12 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	ireport->transfer_interval_handler = reporter_condprint_time_interval_report;
 	ireport->info.ts.significant_partial = (double) inSettings->mInterval * PARTIALPERCENT / rMillion ;
     }
+    ireport->packet_handler_pre_report = NULL;
+    ireport->packet_handler_post_report = NULL;
     switch (inSettings->mThreadMode) {
     case kMode_Server :
 	if (isUDP(inSettings)) {
-	    ireport->packet_handler = reporter_handle_packet_server_udp;
+	    ireport->packet_handler_post_report = reporter_handle_packet_server_udp;
 	    ireport->transfer_protocol_handler = reporter_transfer_protocol_server_udp;
 	    if ((inSettings->mIntervalMode == kInterval_Frames) && isIsochronous(inSettings)) {
 		ireport->transfer_interval_handler = reporter_condprint_frame_interval_report_server_udp;
@@ -538,16 +553,18 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 		}
 	    }
 	} else {  // TCP case
-	    ireport->packet_handler = reporter_handle_packet_server_tcp;
+	    ireport->packet_handler_post_report = reporter_handle_packet_server_tcp;
 	    ireport->transfer_protocol_handler = reporter_transfer_protocol_server_tcp;
 	    if (isPeriodicBurst(inSettings)) {
 		ireport->transfer_interval_handler = reporter_condprint_burst_interval_report_server_tcp;
 		ireport->info.output_handler = tcp_output_burst_read;
-		ireport->burst_boundary = true;
+		ireport->packet_handler_pre_report = reporter_handle_packet_server_tcp;
+		ireport->packet_handler_post_report = NULL;
 	    } else if ((inSettings->mIntervalMode == kInterval_Frames) && isIsochronous(inSettings)) {
 		ireport->transfer_interval_handler = reporter_condprint_frame_interval_report_server_tcp;
 		ireport->info.output_handler = tcp_output_frame_read_triptime;
-		ireport->burst_boundary = true;
+		ireport->packet_handler_pre_report = reporter_handle_packet_server_tcp;
+		ireport->packet_handler_post_report = NULL;
 	    } else if (inSettings->mReportMode == kReport_CSV) {
 		ireport->info.output_handler = tcp_output_basic_csv;
 	    } else if (isSumOnly(inSettings)) {
@@ -564,7 +581,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	}
 	break;
     case kMode_Client :
-	ireport->packet_handler = reporter_handle_packet_client;
+	ireport->packet_handler_post_report = reporter_handle_packet_client;
 	if (isUDP(inSettings)) {
 	    ireport->transfer_protocol_handler = reporter_transfer_protocol_client_udp;
             if (inSettings->mReportMode == kReport_CSV) {

@@ -384,6 +384,9 @@ inline void Client::SetReportStartTime () {
     if (!TimeZero(myReport->info.ts.intervalTime)) {
 	myReport->info.ts.nextTime = myReport->info.ts.startTime;
 	TimeAdd(myReport->info.ts.nextTime, myReport->info.ts.intervalTime);
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+	myReport->info.ts.nextTCPStampleTime = myReport->info.ts.nextTime;
+#endif
     }
     if (myReport->GroupSumReport) {
 	struct TransferInfo *sumstats = &myReport->GroupSumReport->info;

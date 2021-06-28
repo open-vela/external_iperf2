@@ -136,11 +136,9 @@ struct WriteStats {
     int totWriteCnt;
     int totWriteErr;
     int totTCPretry;
-    int lastTCPretry;
     int cwnd;
     int rtt;
     double meanrtt;
-    int up_to_date;
 };
 
 /*
@@ -237,6 +235,10 @@ struct ReportCommon {
     double rtt_weight;
     double ListenerTimeout;
     double FPS;
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+    bool enable_sampleTCPstats;
+    bool intervalonly_sampleTCPstats;
+#endif
 #if WIN32
     SOCKET socket;
 #else
@@ -324,6 +326,9 @@ struct ReportTimeStamps {
     struct timeval nextTime;
     struct timeval intervalTime;
     struct timeval IPGstart;
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+    struct timeval nextTCPStampleTime;
+#endif
 };
 
 struct TransferInfo {
@@ -369,10 +374,10 @@ struct SumReport {
 
 struct ReporterData {
     // function pointer for per packet processing
-    void (*packet_handler) (struct ReporterData *data, struct ReportStruct *packet);
+    void (*packet_handler_pre_report) (struct ReporterData *data, struct ReportStruct *packet);
+    void (*packet_handler_post_report) (struct ReporterData *data, struct ReportStruct *packet);
     void (*transfer_protocol_handler) (struct ReporterData *data, int final);
     int (*transfer_interval_handler) (struct ReporterData *data, struct ReportStruct *packet);
-    bool burst_boundary;
 
     struct PacketRing *packetring;
     int reporter_thread_suspends; // used to detect CPU bound systems
@@ -544,10 +549,6 @@ int reporter_process_transfer_report (struct ReporterData *this_ireport);
 int reporter_process_report (struct ReportHeader *reporthdr);
 
 void setTransferID(struct thread_Settings *inSettings, int role_reversal);
-
-#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-void gettcpistats(struct ReporterData *data, int final, struct tcp_info *tcp_stats);
-#endif
 
 #ifdef __cplusplus
 } /* end extern "C" */
