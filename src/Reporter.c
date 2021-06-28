@@ -75,15 +75,17 @@ extern "C" {
 struct ReportHeader *ReportRoot = NULL;
 struct ReportHeader *ReportPendingHead = NULL;
 struct ReportHeader *ReportPendingTail = NULL;
-#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-void gettcpistats(struct ReporterData *data, int final, struct tcp_info *tcp_stats);
-#endif
 
 // Reporter's reset of stats after a print occurs
 static void reporter_reset_transfer_stats_client_tcp(struct TransferInfo *stats);
 static void reporter_reset_transfer_stats_client_udp(struct TransferInfo *stats);
 static void reporter_reset_transfer_stats_server_udp(struct TransferInfo *stats);
 static void reporter_reset_transfer_stats_server_tcp(struct TransferInfo *stats);
+
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+static inline bool sample_tcpistats(struct ReporterData *data, struct ReportStruct *sample, struct tcp_info *tcp_stats);
+static inline void reporter_handle_packet_tcpistats(struct ReporterData *data, struct ReportStruct *packet);
+#endif
 
 static struct ConnectionInfo *myConnectionReport;
 
@@ -136,12 +138,16 @@ bool ReportPacket (struct ReporterData* data, struct ReportStruct *packet, struc
 	thread_debug("Reporting last packet for %p  qdepth=%d sock=%d", (void *) data, packetring_getcount(data->packetring), data->info.common->socket);
     }
   #endif
-    // tcpi stats are only sampled on the report interval or per near-congestion
-    if ((isEnhanced(stats->common) && (stats->common->ThreadMode == kMode_Client) && \
-	(TimeDifference(stats->ts.nextTime, packet->packetTime) < 0)) \
-	|| isNearCongest(stats->common)) {
-	gettcpistats(data, 0, tcp_stats);
-	rc = true;
+    if (stats->common->enable_sampleTCPstats) {
+	packet->tcpistat_valid = false;
+	if (stats->common->intervalonly_sampleTCPstats) {
+	    if (TimeDifference(stats->ts.nextTCPStampleTime, packet->packetTime) < 0) {
+		rc = sample_tcpistats(data, packet, tcp_stats);
+		TimeAdd(stats->ts.nextTCPStampleTime, stats->ts.intervalTime);
+	    }
+	} else {
+	    rc = sample_tcpistats(data, packet, tcp_stats);
+	}
     }
     // Note for threaded operation all that needs
     // to be done is to enqueue the packet data
@@ -219,8 +225,8 @@ int EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
      */
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
     // tcpi stats are sampled on a final packet
-    if (isEnhanced(stats->common) && (stats->common->ThreadMode == kMode_Client)) {
-	gettcpistats(report, 0, NULL);
+    if (stats->common->enable_sampleTCPstats) {
+	sample_tcpistats(report, &packet, NULL);
     }
 #endif
     // clear the reporter done predicate
@@ -509,20 +515,22 @@ int reporter_process_transfer_report (struct ReporterData *this_ireport) {
 	// thrashing,
 	consumption_detector.accounted_packets--;
 	// Check against a final packet event on this packet ring
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+	if (this_ireport->info.common->enable_sampleTCPstats && packet->tcpistat_valid) {
+	    reporter_handle_packet_tcpistats(this_ireport, packet);
+	}
+#endif
 	if (!(packet->packetID < 0)) {
 	    // Check to output any interval reports,
             // bursts need to report the packet first
-	    if (this_ireport->burst_boundary) {
-		(*this_ireport->packet_handler)(this_ireport, packet);
-		if (this_ireport->transfer_interval_handler) {
-		    advance_jobq = (*this_ireport->transfer_interval_handler)(this_ireport, packet);
-		}
-	    } else {
-		// timing based events handle the reporting first
-		if (this_ireport->transfer_interval_handler) {
-		    advance_jobq = (*this_ireport->transfer_interval_handler)(this_ireport, packet);
-		}
-		(*this_ireport->packet_handler)(this_ireport, packet);
+	    if (this_ireport->packet_handler_pre_report) {
+		(*this_ireport->packet_handler_pre_report)(this_ireport, packet);
+	    }
+	    if (this_ireport->transfer_interval_handler) {
+		advance_jobq = (*this_ireport->transfer_interval_handler)(this_ireport, packet);
+	    }
+	    if (this_ireport->packet_handler_post_report) {
+		(*this_ireport->packet_handler_post_report)(this_ireport, packet);
 	    }
 	    // Sum reports update the report header's last
 	    // packet time after the handler. This means
@@ -538,7 +546,12 @@ int reporter_process_transfer_report (struct ReporterData *this_ireport) {
 	    // A last packet event was detected
 	    // printf("last packet event detected\n"); fflush(stdout);
 	    this_ireport->reporter_thread_suspends = consumption_detector.reporter_thread_suspends;
-	    (*this_ireport->packet_handler)(this_ireport, packet);
+	    if (this_ireport->packet_handler_pre_report) {
+		(*this_ireport->packet_handler_pre_report)(this_ireport, packet);
+	    }
+	    if (this_ireport->packet_handler_post_report) {
+		(*this_ireport->packet_handler_post_report)(this_ireport, packet);
+	    }
 	    this_ireport->info.ts.packetTime = packet->packetTime;
 	    assert(this_ireport->transfer_protocol_handler != NULL);
 	    (*this_ireport->transfer_protocol_handler)(this_ireport, 1);
@@ -878,6 +891,39 @@ inline void reporter_handle_packet_server_udp (struct ReporterData *data, struct
     }
 }
 
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+// This is done in traffic thread context
+static inline bool sample_tcpistats (struct ReporterData *data, struct ReportStruct *sample, struct tcp_info *tcp_stats) {
+    assert(sample);
+    struct tcp_info tcp_info_buf;
+    struct tcp_info *this_tcp_stats = (tcp_stats != NULL) ? tcp_stats : &tcp_info_buf;
+    socklen_t tcp_info_length = sizeof(struct tcp_info);
+    if ((data->info.common->socket > 0) &&				\
+	!(getsockopt(data->info.common->socket, IPPROTO_TCP, TCP_INFO, this_tcp_stats, &tcp_info_length) < 0)) {
+        sample->cwnd = this_tcp_stats->tcpi_snd_cwnd * this_tcp_stats->tcpi_snd_mss / 1024;
+	sample->rtt = this_tcp_stats->tcpi_rtt;
+	sample->retry_tot = this_tcp_stats->tcpi_total_retrans;
+	sample->tcpistat_valid  = true;
+    } else {
+        sample->cwnd = -1;
+	sample->rtt = 0;
+	sample->retry_tot = 0;
+	sample->tcpistat_valid  = false;
+    }
+    return sample->tcpistat_valid;
+}
+
+// This is done in reporter thread context
+static inline void reporter_handle_packet_tcpistats (struct ReporterData *data, struct ReportStruct *packet) {
+    assert(data!=NULL);
+    struct TransferInfo *stats = &data->info;
+    stats->sock_callstats.write.TCPretry += (packet->retry_tot - stats->sock_callstats.write.totTCPretry);
+    stats->sock_callstats.write.totTCPretry = packet->retry_tot;
+    stats->sock_callstats.write.cwnd = packet->cwnd;
+    stats->sock_callstats.write.rtt = packet->rtt;
+}
+#endif
+
 void reporter_handle_packet_client (struct ReporterData *data, struct ReportStruct *packet) {
     struct TransferInfo *stats = &data->info;
     stats->ts.packetTime = packet->packetTime;
@@ -902,52 +948,6 @@ void reporter_handle_packet_client (struct ReporterData *data, struct ReportStru
     }
 }
 
-#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-void gettcpistats (struct ReporterData *data, int final, struct tcp_info *tcp_stats) {
-    assert(data!=NULL);
-    struct TransferInfo *stats = &data->info;
-    struct TransferInfo *sumstats = (data->GroupSumReport != NULL) ? &data->GroupSumReport->info : NULL;
-    static int cnt = 0;
-    struct tcp_info tcp_info_buf;
-    struct tcp_info *this_tcp_stats = (tcp_stats != NULL) ? tcp_stats : &tcp_info_buf;
-    int retry = 0;
-    // Read the TCP retry stats for a client.  Do this
-    // on  a report interval period.
-    int rc = (stats->common->socket==INVALID_SOCKET) ? 0 : 1;
-    if (rc) {
-        socklen_t tcp_info_length = sizeof(struct tcp_info);
-        rc = (getsockopt(stats->common->socket, IPPROTO_TCP, TCP_INFO, this_tcp_stats, &tcp_info_length) < 0) ? 0 : 1;
-        if (!rc) {
-	    stats->common->socket = INVALID_SOCKET;
-	} else {
-	    // Mark stale now so next call at report interval will update
-	    stats->sock_callstats.write.up_to_date = 1;
-	}
-    }
-    if (!rc) {
-        stats->sock_callstats.write.TCPretry = 0;
-	stats->sock_callstats.write.cwnd = -1;
-	stats->sock_callstats.write.rtt = 0;
-    } else {
-        retry = this_tcp_stats->tcpi_total_retrans - stats->sock_callstats.write.lastTCPretry;
-	stats->sock_callstats.write.TCPretry = retry;
-	stats->sock_callstats.write.totTCPretry += retry;
-	stats->sock_callstats.write.cwnd = this_tcp_stats->tcpi_snd_cwnd * this_tcp_stats->tcpi_snd_mss / 1024;
-	stats->sock_callstats.write.rtt = this_tcp_stats->tcpi_rtt;
-	// New average = old average * (n-1)/n + new value/n
-	cnt++;
-	stats->sock_callstats.write.meanrtt = (stats->sock_callstats.write.meanrtt * ((double) (cnt - 1) / (double) cnt)) + ((double) (this_tcp_stats->tcpi_rtt) / (double) cnt);
-	stats->sock_callstats.write.rtt = this_tcp_stats->tcpi_rtt;
-	if (sumstats) {
-	    sumstats->sock_callstats.write.TCPretry += retry;
-	    sumstats->sock_callstats.write.totTCPretry += retry;
-	}
-    }
-    if (final) {
-        stats->sock_callstats.write.rtt = stats->sock_callstats.write.meanrtt;
-    }
-}
-#endif
 /*
  * Report printing routines below
  */
@@ -1010,9 +1010,7 @@ static inline void reporter_reset_transfer_stats_client_tcp (struct TransferInfo
     stats->isochstats.framelostcnt.prev = stats->isochstats.framelostcnt.current;
     stats->isochstats.slipcnt.prev = stats->isochstats.slipcnt.current;
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-    stats->sock_callstats.write.lastTCPretry = stats->sock_callstats.write.TCPretry;
     stats->sock_callstats.write.TCPretry = 0;
-    stats->sock_callstats.write.up_to_date = 0;
 #endif
 }
 
@@ -1219,7 +1217,6 @@ void reporter_transfer_protocol_sum_client_udp (struct TransferInfo *stats, int 
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
 	stats->sock_callstats.write.WriteErr = stats->sock_callstats.write.totWriteErr;
 	stats->sock_callstats.write.WriteCnt = stats->sock_callstats.write.totWriteCnt;
-	stats->sock_callstats.write.TCPretry = stats->sock_callstats.write.totTCPretry;
 	stats->cntDatagrams = stats->total.Datagrams.current;
 	stats->cntBytes = stats->total.Bytes.current;
 	stats->IPGsum = TimeDifference(stats->ts.packetTime, stats->ts.startTime);
@@ -1392,11 +1389,13 @@ void reporter_transfer_protocol_client_tcp (struct ReporterData *data, int final
 	sumstats->total.Bytes.current += stats->cntBytes;
 	sumstats->sock_callstats.write.WriteErr += stats->sock_callstats.write.WriteErr;
 	sumstats->sock_callstats.write.WriteCnt += stats->sock_callstats.write.WriteCnt;
-	sumstats->sock_callstats.write.TCPretry += stats->sock_callstats.write.TCPretry;
 	sumstats->sock_callstats.write.totWriteErr += stats->sock_callstats.write.WriteErr;
 	sumstats->sock_callstats.write.totWriteCnt += stats->sock_callstats.write.WriteCnt;
-	sumstats->sock_callstats.write.totTCPretry += stats->sock_callstats.write.TCPretry;
 	sumstats->threadcnt++;
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+	sumstats->sock_callstats.write.TCPretry += stats->sock_callstats.write.TCPretry;
+	sumstats->sock_callstats.write.totTCPretry += stats->sock_callstats.write.TCPretry;
+#endif
     }
     if (fullduplexstats) {
 	fullduplexstats->total.Bytes.current += stats->cntBytes;

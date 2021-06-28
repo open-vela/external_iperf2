@@ -75,6 +75,12 @@ struct ReportStruct {
     intmax_t burstperiod;
     intmax_t remaining;
     int transit_ready;
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+    int cwnd;
+    int rtt;
+    intmax_t retry_tot;
+    bool tcpistat_valid;
+#endif
 };
 
 struct PacketRing {
