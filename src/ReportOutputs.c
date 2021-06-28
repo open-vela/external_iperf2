@@ -358,8 +358,7 @@ void tcp_output_write_enhanced (struct TransferInfo *stats) {
 	   stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext,
 	   stats->sock_callstats.write.WriteCnt,
-	   stats->sock_callstats.write.WriteErr,
-	   stats->sock_callstats.write.TCPretry);
+	   stats->sock_callstats.write.WriteErr);
 #else
     set_netpowerbuf(stats->sock_callstats.write.rtt * 1e-6, stats);
     if (stats->sock_callstats.write.cwnd > 0) {
@@ -833,8 +832,11 @@ void tcp_output_sum_write_enhanced (struct TransferInfo *stats) {
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext,
 	   stats->sock_callstats.write.WriteCnt,
-	   stats->sock_callstats.write.WriteErr,
-	   stats->sock_callstats.write.TCPretry);
+	   stats->sock_callstats.write.WriteErr
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+	   ,stats->sock_callstats.write.TCPretry
+#endif
+    );
     fflush(stdout);
 }
 void tcp_output_sumcnt_write_enhanced (struct TransferInfo *stats) {
@@ -844,8 +846,11 @@ void tcp_output_sumcnt_write_enhanced (struct TransferInfo *stats) {
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext,
 	   stats->sock_callstats.write.WriteCnt,
-	   stats->sock_callstats.write.WriteErr,
-	   stats->sock_callstats.write.TCPretry);
+	   stats->sock_callstats.write.WriteErr
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+	   ,stats->sock_callstats.write.TCPretry
+#endif
+    );
     fflush(stdout);
 }
 
