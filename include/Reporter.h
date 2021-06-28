@@ -132,13 +132,14 @@ struct ReadStats {
 struct WriteStats {
     int WriteCnt;
     int WriteErr;
-    int TCPretry;
     int totWriteCnt;
     int totWriteErr;
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+    int TCPretry;
     int totTCPretry;
     int cwnd;
     int rtt;
-    double meanrtt;
+#endif
 };
 
 /*
