@@ -1422,7 +1422,9 @@ void reporter_transfer_protocol_client_tcp (struct ReporterData *data, int final
 	}
 	stats->sock_callstats.write.WriteErr = stats->sock_callstats.write.totWriteErr;
 	stats->sock_callstats.write.WriteCnt = stats->sock_callstats.write.totWriteCnt;
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 	stats->sock_callstats.write.TCPretry = stats->sock_callstats.write.totTCPretry;
+#endif
 	stats->cntBytes = stats->total.Bytes.current;
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
     } else if (isIsochronous(stats->common)) {
@@ -1460,7 +1462,9 @@ void reporter_transfer_protocol_sum_client_tcp (struct TransferInfo *stats, int 
     if (final) {
 	stats->sock_callstats.write.WriteErr = stats->sock_callstats.write.totWriteErr;
 	stats->sock_callstats.write.WriteCnt = stats->sock_callstats.write.totWriteCnt;
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 	stats->sock_callstats.write.TCPretry = stats->sock_callstats.write.totTCPretry;
+#endif
 	stats->cntBytes = stats->total.Bytes.current;
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
 	if ((stats->output_handler) && !(stats->filter_this_sample_output))
