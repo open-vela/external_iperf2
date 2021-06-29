@@ -217,11 +217,11 @@ int writen (int inSock, const void *inBuf, int inLen) {
             if ((errno == EINTR) || (errno == EAGAIN) || (errno == EWOULDBLOCK)) {
 		continue; /* interupted, call write again */
 	    } else {
-		WARN_errno(1, "writen");
+		WARN_errno(1, "writen()");
                 return -1;  /* error */
 	    }
 	} else if (nwritten == 0) {
-	    WARN(1, "writen peer close");
+	    WARN(1, "writen() peer close");
 	    break;
 	}
         nleft -= nwritten;

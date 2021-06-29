@@ -599,7 +599,7 @@ void Client::RunTCP () {
 	    writelen = (mSettings->mBufLen > burst_remaining) ? burst_remaining : mSettings->mBufLen;
 	    // perform write, full header must succeed
 	    reportstruct->packetLen = writen(mySocket, mBuf, writelen);
-	    FAIL_errno(reportstruct->packetLen < (intmax_t) sizeof(struct TCP_burst_payload), "burst writen", mSettings);
+	    FAIL_errno(reportstruct->packetLen < (intmax_t) sizeof(struct TCP_burst_payload), "burst written", mSettings);
 	} else {
 	    // printf("pl=%ld\n",reportstruct->packetLen);
 	    // perform write
