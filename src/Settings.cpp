@@ -1211,7 +1211,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    strftime(now_timebuf, sizeof(now_timebuf), "%Y-%m-%d %H:%M:%S %Z", &ts);
 	    if (isTxStartTime(mExtSettings)) {
 		if (mExtSettings->txstart_epoch.tv_sec < 0) {
-		    fprintf(stderr, "ERROR: --txstart-time must be a postive value\n");
+		    fprintf(stderr, "ERROR: --txstart-time must be a positive value\n");
 		    unsetTxStartTime(mExtSettings);
 		    bail = true;
 		} else if ((mExtSettings->txstart_epoch.tv_sec - now.getSecs()) > MAXDIFFTXSTART) {
