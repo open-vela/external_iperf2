@@ -1343,7 +1343,7 @@ void reporter_peerversion (struct ConnectionInfo *report, uint32_t upper, uint32
 	    sprintf(report->peerversion + strlen(report->peerversion) - 1,"-dev)");
 	    break;
 	case 1:
-	    sprintf(report->peerversion + strlen(report->peerversion) - 1,"-rc1)");
+	    sprintf(report->peerversion + strlen(report->peerversion) - 1,"-rc)");
 	    break;
 	case 2:
 	    sprintf(report->peerversion + strlen(report->peerversion) - 1,"-rc2)");
