@@ -210,7 +210,7 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
 	int option = 1;
 	Socklen_t len = sizeof(option);
 	int rc = setsockopt(inSettings->mSock, SOL_SOCKET, SO_DONTROUTE, reinterpret_cast<char*>(&option), len);
-        WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_MAX_PACING_RATE");
+        WARN_errno(rc == SOCKET_ERROR, "setsockopt SO_DONTROUTE");
     }
 #endif /* HAVE_DECL_SO_DONTROUTE */
 }
