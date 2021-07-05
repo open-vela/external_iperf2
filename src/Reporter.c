@@ -488,7 +488,6 @@ void reporter_spawn (struct thread_Settings *thread) {
 // The Transfer or Data report is by far the most complicated report
 int reporter_process_transfer_report (struct ReporterData *this_ireport) {
     assert(this_ireport != NULL);
-    assert(this_ireport->packet_handler != NULL);
     struct TransferInfo *sumstats = (this_ireport->GroupSumReport ? &this_ireport->GroupSumReport->info : NULL);
     struct TransferInfo *fullduplexstats = (this_ireport->FullDuplexReport ? &this_ireport->FullDuplexReport->info : NULL);
     int need_free = 0;
