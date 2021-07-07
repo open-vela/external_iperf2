@@ -1059,13 +1059,17 @@ bool Listener::apply_client_settings_udp (thread_Settings *server) {
     return true;
 }
 bool Listener::apply_client_settings_tcp (thread_Settings *server) {
-    bool rc;
+    bool rc = false;
     int n = recvn(server->mSock, mBuf, sizeof(uint32_t), MSG_PEEK);
     if (n == 0) {
 	//peer closed the socket, with no writes e.g. a connect-only test
-	rc = false;
+	WARN(1, "read tcp flags (peer close)");
+	goto DONE;
+    }
+    if (n < (int) sizeof(uint32_t)) {
+	WARN(1, "read tcp flags (runt)");
+	goto DONE;
     } else {
-	FAIL_errno((n < (int) sizeof(uint32_t)), "read tcp flags", server);
 	rc = true;
 	struct client_tcp_testhdr *hdr = reinterpret_cast<struct client_tcp_testhdr *>(mBuf);
 	uint32_t flags = ntohl(hdr->base.flags);
