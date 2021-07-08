@@ -503,16 +503,11 @@ inline int Server::ReadWithRxTimestamp () {
 	reportstruct->emptyreport=1;
 	if (currLen == 0) {
 	    peerclose = true;
-	} else if
-#ifdef WIN32
-		(WSAGetLastError() != WSAEWOULDBLOCK)
-#else
-	    ((errno != EAGAIN) && (errno != EWOULDBLOCK) && (errno != ECONNREFUSED))
-#endif
-    {
-	WARN_errno(currLen, "recvmsg");
-	currLen= 0;
-    }
+	} else if (FATALUDPREADERR(errno)) {
+	    WARN_errno(currLen, "recvmsg");
+	    currLen = 0;
+	    peerclose = true;
+	}
     } else if (TimeZero(myReport->info.ts.prevpacketTime)) {
 	myReport->info.ts.prevpacketTime = reportstruct->packetTime;
     }
@@ -703,7 +698,6 @@ inline void Server::udp_isoch_processing (int rxlen) {
  * ------------------------------------------------------------------- */
 void Server::RunUDP () {
     int rxlen;
-    int readerr = 0;
     bool lastpacket = false;
 
     if (!InitTrafficLoop())
@@ -713,7 +707,7 @@ void Server::RunUDP () {
     // 1) Fatal read error
     // 2) Last packet of traffic flow sent by client
     // 3) -t timer expires
-    while (InProgress() && !readerr && !lastpacket) {
+    while (InProgress() && !lastpacket) {
 	// The emptyreport flag can be set
 	// by any of the packet processing routines
 	// If it's set the iperf reporter won't do
