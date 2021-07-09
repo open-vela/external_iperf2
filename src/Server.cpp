@@ -241,8 +241,9 @@ void Server::RunTCP () {
 #ifdef HAVE_THREAD_DEBUG
 		    thread_debug("Server thread detected EOF on socket %d", mSettings->mSock);
 #endif
-		} else if ((n < 0) && (!NONFATALTCPREADERR(errno))) {
-		    // WARN_errno(1, "recv");
+		} else if ((n < 0) && (FATALTCPREADERR(errno))) {
+		    WARN_errno(1, "recv");
+		    peerclose = true;
 		    n = 0;
 		}
 		currLen += n;
@@ -504,7 +505,7 @@ inline int Server::ReadWithRxTimestamp () {
 	if (currLen == 0) {
 	    peerclose = true;
 	} else if (FATALUDPREADERR(errno)) {
-	    WARN_errno(currLen, "recvmsg");
+	    WARN_errno(1, "recvmsg");
 	    currLen = 0;
 	    peerclose = true;
 	}
