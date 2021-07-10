@@ -1181,8 +1181,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    bail = true;
 	}
 	if (isSumServerDstIP(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of --sum-dstip not supported on the client\n");
-	    bail = true;
+	    fprintf(stderr, "WARN: option of --sum-dstip not supported on the client\n");
 	}
 	if (isPeriodicBurst(mExtSettings)) {
 	    setEnhanced(mExtSettings);
@@ -1239,8 +1238,9 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		bail = true;
 	    }
 	} else if (static_cast<int> (mExtSettings->mBurstSize) > 0) {
-	    fprintf(stderr, "ERROR: option of --burst-size requires use of --burst-period option\n");
-	    bail = true;
+	    setPeriodicBurst(mExtSettings);
+	    mExtSettings->mFPS = 1.0;
+	    fprintf(stderr, "WARN: option of --burst-size without --burst-period defaults --burst-period to 1 second\n");
 	}
 	if (isUDP(mExtSettings)) {
 	    if (isPeerVerDetect(mExtSettings)) {
@@ -1327,8 +1327,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    }
 	}
 	if (isRxHistogram(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of --histograms is not supported on the client\n");
-	    bail = true;
+	    fprintf(stderr, "WARN: option of --histograms is not supported on the client\n");
 	}
 	if (isCongestionControl(mExtSettings) && isReverse(mExtSettings)) {
 	    fprintf(stderr, "ERROR: tcp congestion control -Z and --reverse cannot be applied together\n");
@@ -1365,76 +1364,58 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    }
 	}
         if (isTripTime(mExtSettings)) {
-            fprintf(stderr, "ERROR: setting of option --trip-times is not supported on the server\n");
-	    bail = true;
+            fprintf(stderr, "WARN: setting of option --trip-times is not supported on the server\n");
 	}
         if (isIncrSrcIP(mExtSettings)) {
-            fprintf(stderr, "ERROR: setting of option --incr-srcip is not supported on the server\n");
-	    bail = true;
+            fprintf(stderr, "WARN: setting of option --incr-srcip is not supported on the server\n");
 	}
 	if (isVaryLoad(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of variance per -b is not supported on the server\n");
-	    bail = true;
+	    fprintf(stderr, "WARN: option of variance per -b is not supported on the server\n");
 	}
 	if (isTxStartTime(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of --txstart-time is not supported on the server\n");
-	    bail = true;
+	    fprintf(stderr, "WARN: option of --txstart-time is not supported on the server\n");
 	}
 	if (isTxHoldback(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of --txdelay-time is not supported on the server\n");
-	    bail = true;
+	    fprintf(stderr, "WARN: option of --txdelay-time is not supported on the server\n");
 	}
         if (isConnectOnly(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of --connect-only is not supported on the server\n");
-	    bail = true;
+	    fprintf(stderr, "WARN: option of --connect-only is not supported on the server\n");
 	}
 	if (isIPG(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of --ipg is not supported on the server\n");
-	    bail = true;
+	    fprintf(stderr, "WARN: option of --ipg is not supported on the server\n");
 	}
 	if (isIsochronous(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of --isochronous is not supported on the server\n");
-	    bail = true;
+	    fprintf(stderr, "WARN: option of --isochronous is not supported on the server\n");
 	}
 	if (isFullDuplex(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of --full-duplex is not supported on the server\n");
-	    bail = true;
+	    fprintf(stderr, "WARN: option of --full-duplex is not supported on the server\n");
 	}
 	if (isReverse(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of --reverse is not supported on the server\n");
-	    bail = true;
+	    fprintf(stderr, "WARN: option of --reverse is not supported on the server\n");
 	}
 	if (isIncrDstIP(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of --incr-dstpip is not supported on the server\n");
-	    bail = true;
+	    fprintf(stderr, "WARN: option of --incr-dstpip is not supported on the server\n");
 	}
 	if (isFQPacing(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of --fq-rate is not supported on the server\n");
-	    bail = true;
+	    fprintf(stderr, "WARN: option of --fq-rate is not supported on the server\n");
 	}
 	if (isNoUDPfin(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of --no-udp-fin is not supported on the server\n");
-	    bail = true;
+	    fprintf(stderr, "WARN: option of --no-udp-fin is not supported on the server\n");
 	}
 	if (isPeerVerDetect(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of -X or --peer-detect not supported on the server\n");
-	    bail = true;
+	    fprintf(stderr, "WARN: option of -X or --peer-detect not supported on the server\n");
 	}
 	if (mExtSettings->mConnectRetries > 0) {
-	    fprintf(stderr, "ERROR: option --connect-retries not supported on the server\n");
-	    bail = true;
+	    fprintf(stderr, "WARN: option --connect-retries not supported on the server\n");
 	}
 	if (isNearCongest(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of --near-congestion not supported on the server\n");
-	    bail = true;
+	    fprintf(stderr, "WARN: option of --near-congestion not supported on the server\n");
 	}
 	if (isPeriodicBurst(mExtSettings)) {
-	    fprintf(stderr, "ERROR: option of --burst-period can only be set on the client\n");
-	    bail = true;
+	    fprintf(stderr, "WARN: option of --burst-period can only be set on the client\n");
 	}
 	if (mExtSettings->mBurstSize != 0) {
-	    fprintf(stderr, "ERROR: option of --burst-size not supported on the server\n");
-	    bail = true;
+	    fprintf(stderr, "WARN: option of --burst-size not supported on the server\n");
 	}
     }
     if (bail)
