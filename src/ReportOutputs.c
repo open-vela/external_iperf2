@@ -1159,7 +1159,11 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 	    b += strlen(b);
 	}
 	if (isPeriodicBurst(report->common) && (report->common->ThreadMode != kMode_Client) && !isServerReverse(report->common)) {
-	    snprintf(b, SNBUFFERSIZE-strlen(b), " (burst-period=%0.2f)", (1.0 / report->common->FPS));
+#if HAVE_FASTSAMPLING
+	    snprintf(b, SNBUFFERSIZE-strlen(b), " (burst-period=%0.4fs)", (1.0 / report->common->FPS));
+#else
+	    snprintf(b, SNBUFFERSIZE-strlen(b), " (burst-period=%0.2fs)", (1.0 / report->common->FPS));
+#endif
 	    b += strlen(b);
 	}
 	if (isFullDuplex(report->common)) {
