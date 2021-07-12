@@ -168,7 +168,7 @@ Set the burst size in bytes. Defaults to 1M if no value is given.
 .BR "    --connect-only[=" \fIn\fR "]"
 only perform a TCP connect (or 3WHS) without any data transfer, useful to measure TCP connect() times. Optional value of n is the total number of connects to do (zero is run forever.) Note that -i will rate limit the connects where -P will create bursts and -t will end the client and hence end its connect attempts.
 .TP
-.BR "    --connect-retries " \fIn\fR "]"
+.BR "    --connect-retries[= " \fIn\fR "]"
 number of times to retry a TCP connect at the application level.  See operating system information on the details of TCP connect related settings.
 .TP
 .BR -d ", " --dualtest " "
