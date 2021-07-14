@@ -1357,6 +1357,9 @@ void reporter_peerversion (struct ConnectionInfo *report, uint32_t upper, uint32
 	case 4:
 	    sprintf(report->peerversion + strlen(report->peerversion) - 1,"-private)");
 	    break;
+	case 5:
+	    sprintf(report->peerversion + strlen(report->peerversion) - 1,"-master)");
+	    break;
 	default:
 	    sprintf(report->peerversion + strlen(report->peerversion) - 1, "-unk)");
 	}

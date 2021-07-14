@@ -913,8 +913,8 @@ void write_UDP_AckFIN (struct TransferInfo *stats) {
 	    fd_set readSet;
 	    FD_ZERO(&readSet);
 	    FD_SET(stats->common->socket, &readSet);
-	    timeout.tv_sec  = 1;
-	    timeout.tv_usec = 0;
+	    timeout.tv_sec  = 0;
+	    timeout.tv_usec = 250000;
 	    rc = select(stats->common->socket+1, &readSet, NULL, NULL, &timeout);
 	    if (rc == 0) {
 #ifdef HAVE_THREAD_DEBUG

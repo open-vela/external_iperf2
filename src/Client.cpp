@@ -1286,18 +1286,20 @@ void Client::FinishTrafficActions () {
  * stats to displayed on the client.  Attempt to re-transmit
  * until the fin is received
  * ------------------------------------------------------------------- */
+#define RETRYTIMER 10000 //units of us
+#define RETRYCOUNT (2 * 1000000 / RETRYTIMER) // 2 seconds worth of retries
 void Client::AwaitServerFinPacket () {
     int rc;
     fd_set readSet;
     struct timeval timeout;
     int ack_success = 0;
-    int count = 20 ;
+    int count = RETRYCOUNT;
     while (--count >= 0) {
         // wait until the socket is readable, or our timeout expires
         FD_ZERO(&readSet);
         FD_SET(mySocket, &readSet);
         timeout.tv_sec  = 0;
-        timeout.tv_usec = 100000; // 100 milliseconds
+        timeout.tv_usec = RETRYTIMER;
         rc = select(mySocket+1, &readSet, NULL, NULL, &timeout);
         FAIL_errno(rc == SOCKET_ERROR, "select", mSettings);
         // rc= zero means select's read timed out
