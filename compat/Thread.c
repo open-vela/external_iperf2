@@ -400,10 +400,10 @@ thread_run_wrapper(void* paramPtr) {
     if (thread->runNext != NULL) {
         thread_start(thread->runNext);
     }
-
     // Destroy this thread object
     Settings_Destroy(thread);
-
+    // signal the reporter thread now that thread state has changed
+    Condition_Signal(&ReportCond);
     return 0;
 } // end run_wrapper
 

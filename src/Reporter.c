@@ -348,9 +348,9 @@ static inline struct ReportHeader *reporter_jobq_set_root (struct thread_Setting
 	if (!ReportPendingHead) {
 	    Condition_TimedWait(&ReportCond, 1);
 #ifdef HAVE_THREAD_DEBUG
-	    thread_debug( "Jobq *WAIT* exit  %p/%p cond=%p threads=%d", \
+	    thread_debug( "Jobq *WAIT* exit  %p/%p cond=%p threads u/t=%d/%d", \
 			  (void *) ReportRoot, (void *) ReportPendingHead, \
-			  (void *) &ReportCond, thread_numtrafficthreads());
+			  (void *) &ReportCond, thread_numuserthreads(), thread_numtrafficthreads());
 #endif
 	}
     }
