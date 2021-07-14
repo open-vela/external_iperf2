@@ -1204,7 +1204,7 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 		b += strlen(b);
 	    }
 	}
-	if (isEnhanced(report->common) || isConnectOnly(report->common)) {
+	if (!isServerReverse(report->common) && (isEnhanced(report->common) || isConnectOnly(report->common))) {
 	    if (report->connect_timestamp.tv_sec > 0) {
 		struct tm ts;
 		ts = *localtime(&report->connect_timestamp.tv_sec);
