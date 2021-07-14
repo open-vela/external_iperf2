@@ -1270,7 +1270,7 @@ void Client::FinishTrafficActions () {
     }
     if (do_close) {
 #if HAVE_THREAD_DEBUG
-	thread_debug("UDP client close sock=%d", mySocket);
+	thread_debug("client close sock=%d", mySocket);
 #endif
 	int rc = close(mySocket);
 	WARN_errno(rc == SOCKET_ERROR, "client close");
