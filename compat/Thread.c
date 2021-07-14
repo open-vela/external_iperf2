@@ -345,17 +345,20 @@ DWORD WINAPI
 void*
 #endif
 thread_run_wrapper(void* paramPtr) {
+    bool signal_on_exit = false;
     struct thread_Settings* thread = (struct thread_Settings*) paramPtr;
 
     // which type of object are we
     switch (thread->mThreadMode) {
         case kMode_Server:
             {
+		signal_on_exit = true;
                 /* Spawn a Server thread with these settings */
                 server_spawn(thread);
             } break;
         case kMode_Client:
             {
+		signal_on_exit = true;
                 /* Spawn a Client thread with these settings */
                 client_spawn(thread);
             } break;
@@ -403,7 +406,12 @@ thread_run_wrapper(void* paramPtr) {
     // Destroy this thread object
     Settings_Destroy(thread);
     // signal the reporter thread now that thread state has changed
-    Condition_Signal(&ReportCond);
+    if (signal_on_exit) {
+	Condition_Signal(&ReportCond);
+#if HAVE_THREAD_DEBUG
+	thread_debug("Signal sent to reporter thread");
+#endif
+    }
     return 0;
 } // end run_wrapper
 
