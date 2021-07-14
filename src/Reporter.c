@@ -345,7 +345,8 @@ static inline struct ReportHeader *reporter_jobq_set_root (struct thread_Setting
 	    reset_consumption_detector();
 	    reporter_default_heading_flags((inSettings->mReportMode == kReport_CSV));
         }
-	if (!ReportPendingHead) {
+	// Only hang the timed wait if more than this thread is active
+	if (!ReportPendingHead && (thread_numuserthreads() > 1)) {
 	    Condition_TimedWait(&ReportCond, 1);
 #ifdef HAVE_THREAD_DEBUG
 	    thread_debug( "Jobq *WAIT* exit  %p/%p cond=%p threads u/t=%d/%d", \
