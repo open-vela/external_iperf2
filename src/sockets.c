@@ -174,13 +174,11 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
     while (nleft > 0) {
         nread = recv(inSock, ptr, nleft, flags);
         if (nread < 0) {
-            if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
-                nread = 0;  /* Socket read timeout */
-		// WARN_errno(1, "recvn timeout");
-            } else {
-		// WARN_errno(1, "recvn");
+	    nread = 0;
+	    // Note: use TCP fatal error codes even for UDP
+	    if (FATALTCPREADERR(errno)) {
+		return -1;
 	    }
-            return -1;  /* error */
 	} else if (nread == 0) {
 	    // WARN(1, "recvn peer close");
             break;

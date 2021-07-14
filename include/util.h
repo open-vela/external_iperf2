@@ -233,6 +233,31 @@ void redirect(const char *inOutputFileName);
     }                                           \
   } while(false)
 
+
+// Readn and write error macros
+// Define fatal and nonfatal write errors
+#ifdef WIN32
+#define FATALTCPREADERR(errno) (WSAGetLastError() != WSAEWOULDBLOCK)
+#define FATALUDPREADERR(errno)  (((errno = WSAGetLastError()) != WSAEWOULDBLOCK) \
+				 && (errno != WSAECONNREFUSED))
+#define FATALTCPWRITERR(errno)  ((errno = WSAGetLastError()) != WSAETIMEDOUT)
+#define NONFATALTCPWRITERR(errno) ((errno = WSAGetLastError()) == WSAETIMEDOUT)
+#define FATALUDPWRITERR(errno)  (((errno = WSAGetLastError()) != WSAETIMEDOUT) \
+				 && (errno != WSAECONNREFUSED))
+#else
+#define FATALTCPREADERR(errno) ((errno != EAGAIN) && (errno != EWOULDBLOCK) && (errno != EINTR))
+#define FATALUDPREADERR(errno) ((errno != EAGAIN) && (errno != EWOULDBLOCK) && \
+				(errno != EINTR) && (errno != ECONNREFUSED))
+#define FATALTCPWRITERR(errno)  (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)
+#define NONFATALTCPWRITERR(errno)  (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+#define FATALUDPWRITERR(errno) 	((errno != EAGAIN) && (errno != EWOULDBLOCK) && (errno != EINTR) \
+				 && (errno != ECONNREFUSED) && (errno != ENOBUFS))
+#endif
+
+#ifdef WIN32
+#else
+#endif
+
 #ifdef __cplusplus
 } /* end extern "C" */
 #endif
