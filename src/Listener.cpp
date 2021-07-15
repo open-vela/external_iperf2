@@ -87,7 +87,7 @@
 #include <net/if.h>
 #endif
 
-#ifdef MSG_WAITALL
+#if HAVE_DECL_MSG_WAITALL
 #define PEEK_FLAGS (MSG_PEEK | MSG_WAITALL)
 #else
 #define PEEK_FLAGS (MSG_PEEK)

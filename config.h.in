@@ -77,6 +77,10 @@
    don't. */
 #undef HAVE_DECL_MSG_DONTWAIT
 
+/* Define to 1 if you have the declaration of `MSG_WAITALL', and to 0 if you
+   don't. */
+#undef HAVE_DECL_MSG_WAITALL
+
 /* Define to 1 if you have the declaration of `pthread_cancel', and to 0 if
    you don't. */
 #undef HAVE_DECL_PTHREAD_CANCEL
@@ -108,6 +112,10 @@
 /* Define to 1 if you have the declaration of `SO_TIMESTAMP', and to 0 if you
    don't. */
 #undef HAVE_DECL_SO_TIMESTAMP
+
+/* Define to 1 if you have the declaration of `TCP_WINDOW_CLAMP', and to 0 if
+   you don't. */
+#undef HAVE_DECL_TCP_WINDOW_CLAMP
 
 /* Define if limiting test traffic to the local-only network (via socket
    SO_DONTROUTE) should be the default */
@@ -169,6 +177,9 @@
 
 /* Define to 1 if you have the <linux/ip.h> header file. */
 #undef HAVE_LINUX_IP_H
+
+/* Define to 1 if you have the <linux/tcp.h> header file. */
+#undef HAVE_LINUX_TCP_H
 
 /* Define to 1 if you have the <linux/udp.h> header file. */
 #undef HAVE_LINUX_UDP_H

@@ -5,7 +5,7 @@ dnl ===================================================================
 
 
 AC_PREREQ(2.59)
-AC_INIT(Iperf,2.1.3-private)
+AC_INIT(Iperf,2x-master)
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE()
 
@@ -144,7 +144,7 @@ AC_SEARCH_LIBS([socket], [socket], [],
 
 dnl Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([arpa/inet.h libintl.h net/ethernet.h net/if.h linux/ip.h linux/udp.h linux/if_packet.h linux/filter.h netdb.h netinet/in.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h signal.h ifaddrs.h])
+AC_CHECK_HEADERS([arpa/inet.h libintl.h net/ethernet.h net/if.h linux/ip.h linux/udp.h linux/if_packet.h linux/filter.h netdb.h netinet/in.h netinet/tcp.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h signal.h ifaddrs.h])
 
 dnl ===================================================================
 dnl Checks for typedefs, structures
@@ -208,13 +208,14 @@ in_h='
 #else
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #endif
 '
 
 AC_CHECK_DECLS([AF_INET6, SO_TIMESTAMP, SO_SNDTIMEO, SO_REUSEPORT, SO_BINDTODEVICE, MSG_DONTWAIT,
 			  SO_MAX_PACING_RATE, SO_DONTROUTE, IPV6_TCLASS, IP_MULTICAST_ALL,
 			  MCAST_JOIN_GROUP, MCAST_JOIN_SOURCE_GROUP, IPV6_JOIN_GROUP,
-			  IPV6_ADD_MEMBERSHIP, IPV6_MULTICAST_HOPS,
+			  IPV6_ADD_MEMBERSHIP, IPV6_MULTICAST_HOPS, MSG_WAITALL, TCP_WINDOW_CLAMP,
 			  IP_ADD_MEMBERSHIP, IP_ADD_SOURCE_MEMBERSHIP],[],[],[$in_h])
 
 AC_CHECK_TYPES([struct sockaddr_storage, struct sockaddr_in6,
