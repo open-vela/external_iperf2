@@ -960,7 +960,7 @@ inline bool Listener::test_permit_key(uint32_t flags, thread_Settings *server, i
 	return false;
     }
     if (!isUDP(server)) {
-	int n = recvn(server->mSock, mBuf, keyoffset + keylen, MSG_PEEK);
+	int n = recvn(server->mSock, mBuf, keyoffset + keylen, (MSG_PEEK | MSG_WAITALL));
 	FAIL_errno((n < (keyoffset + keylen)), "read key", server);
 	server->skip = n;
     }
@@ -1060,7 +1060,7 @@ bool Listener::apply_client_settings_udp (thread_Settings *server) {
 }
 bool Listener::apply_client_settings_tcp (thread_Settings *server) {
     bool rc = false;
-    int n = recvn(server->mSock, mBuf, sizeof(uint32_t), MSG_PEEK);
+    int n = recvn(server->mSock, mBuf, sizeof(uint32_t), (MSG_PEEK | MSG_WAITALL));
     if (n == 0) {
 	//peer closed the socket, with no writes e.g. a connect-only test
 	WARN(1, "read tcp flags (peer close)");
@@ -1079,7 +1079,7 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 	    // figure out the length of the test header
 	    if ((peeklen = Settings_ClientHdrPeekLen(flags)) > 0) {
 		// read the test settings passed to the server by the client
-		int n = recvn(server->mSock, mBuf, peeklen, MSG_PEEK);
+		int n = recvn(server->mSock, mBuf, peeklen, (MSG_PEEK | MSG_WAITALL));
 		FAIL_errno((n < peeklen), "read tcp test info", server);
 		server->skip = n;
 		if (isPermitKey(mSettings)) {
