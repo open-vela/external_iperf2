@@ -173,6 +173,7 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
 
     while (nleft > 0) {
         nread = recv(inSock, ptr, nleft, flags);
+	// fprintf(stderr,"***read=%d req=%d\n", nread, nleft);
         if (nread < 0) {
 	    nread = 0;
 	    // Note: use TCP fatal error codes even for UDP
@@ -183,8 +184,12 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
 	    // WARN(1, "recvn peer close");
             break;
 	}
-        nleft -= nread;
-        ptr   += nread;
+	if (!(flags & MSG_PEEK)) {
+	    nleft -= nread;
+	    ptr   += nread;
+	} else if (nleft == nread) {
+	    return nread;
+        }
     }
     return(inLen - nleft);
 } /* end readn */
