@@ -988,7 +988,13 @@ bool Listener::apply_client_settings_udp (thread_Settings *server) {
     if (flags & HEADER_SEQNO64B) {
 	setSeqNo64b(server);
     }
+#if HAVE_THREAD_DEBUG
+    thread_debug("UDP test flags = %X", flags);
+#endif
     if (flags & HEADER32_SMALL_TRIPTIMES) {
+#if HAVE_THREAD_DEBUG
+        thread_debug("UDP small header");
+#endif
 	server->accept_time.tv_sec = ntohl(hdr->seqno_ts.tv_sec);
 	server->accept_time.tv_usec = ntohl(hdr->seqno_ts.tv_usec);
 	uint32_t seqno = ntohl(hdr->seqno_ts.id);

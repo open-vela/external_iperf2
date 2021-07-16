@@ -74,13 +74,13 @@ extern "C" {
 #define HEADER_AVOID2        0x02000000
 #define HEADER_AVOID1        0x01000000
 #define HEADER_V2PEERDETECT  0x02000000
-#define HEADER32_SMALL_TRIPTIMES 0x04000000
+#define HEADER32_SMALL_TRIPTIMES 0x00020000
 #define HEADER_LEN_BIT       0x00010000
 #define HEADER_LEN_MASK      0x000001FE
 #define MAX_HEADER_LEN       256
 #define SERVER_HEADER_EXTEND 0x40000000
 #define RUN_NOW              0x00000001
-#define HEADER16_SMALL_TRIPTIMES 0x0400 // use is 16 bits and not 32 bits
+#define HEADER16_SMALL_TRIPTIMES 0x0002 // use is 16 bits and not 32 bits
 
 // newer flags available per HEADER_EXTEND
 // Below flags are used to pass test settings in *every* UDP packet
