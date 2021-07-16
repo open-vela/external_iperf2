@@ -1901,6 +1901,9 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
     if (isUDP(client) && isSmallTripTime(client)) {
 	struct client_udpsmall_testhdr *hdr = static_cast<struct client_udpsmall_testhdr *>(testhdr);
 	hdr->flags = htons(HEADER16_SMALL_TRIPTIMES);
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug("UDP small trip times flags = %X", ntohs(hdr->flags));
+#endif
 	return (MINIPERFPAYLOAD);
     }
     // flags common to both TCP and UDP
@@ -2005,6 +2008,9 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	    flags |= ((len << 1) & HEADER_KEYLEN_MASK) | HEADER_LEN_BIT;
 	}
 	hdr->base.flags = htonl(flags);
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug("UDPflags = %X", ntohl(hdr->base.flags));
+#endif
     } else { // TCP first write with test information
 	struct client_tcp_testhdr *hdr = static_cast<struct client_tcp_testhdr *>(testhdr);
 #ifdef HAVE_THREAD_DEBUG
