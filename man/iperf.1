@@ -1,4 +1,4 @@
-.TH IPERF 1 "June 2021" NLANR/DAST "User Manuals"
+.TH IPERF 1 "July 2021" NLANR/DAST "User Manuals"
 .SH NAME
 iperf \- perform network traffic tests using network sockets. Metrics include throughput and latency.
 .SH SYNOPSIS
@@ -126,6 +126,9 @@ Set a key value that must match for the server to accept traffic from a client (
 .BR "    --permit-key-timeout " \fI<value>\fR
 Set the lifetime of the permit key in seconds. Defaults to 20 seconds if not set. A value of zero will disable the timer.
 .TP
+.BR "    --tcp-rx-window-clamp "  \fIn\fR[kmKM]
+Set the socket option of TCP_WINDOW_CLAMP, units is bytes.
+.TP
 .BR -t ", " --time " \fIn\fR"
 time in seconds to listen for new traffic connections and/or receive traffic (defaults to infinite)
 .TP
@@ -220,6 +223,9 @@ Set a key value that must match the server's value (also set with --permit-key) 
 .BR -r ", " --tradeoff " "
 Do a bidirectional test individually - client-to-server, followed by
 a reversed test, server-to-client
+.TP
+.BR "    --tcp-write-prefetch " \fIn\fR[kmKM]
+Set TCP_NOTSENT_LOWAT on the socket and use event based writes per select() on the socket.
 .TP
 .BR -t ", " --time " \fIn\fR" | "\fI0\fR"
 time in seconds to transmit traffic, use zero for infinite (default is 10 secs)

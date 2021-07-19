@@ -400,3 +400,57 @@ o checkisoch -- used to verify that isoch frames per seconds works
 o checkpdfs -- used to check that bytes give a log normal distributions per box
 	       mueller
 o igmp_querier - a very simple IGMP querier that only support IGMP v2
+
+
+NOTES:
+
+TCP_NOTSENT_LOWAT
+
+Idea of this patch is to add optional limitation of number of
+unsent bytes in TCP sockets, to reduce usage of kernel memory.
+
+TCP receiver might announce a big window, and TCP sender autotuning
+might allow a large amount of bytes in write queue, but this has little
+performance impact if a large part of this buffering is wasted :
+
+Write queue needs to be large only to deal with large BDP, not
+necessarily to cope with scheduling delays (incoming ACKS make room
+for the application to queue more bytes)
+
+For most workloads, using a value of 128 KB or less is OK to give
+applications enough time to react to POLLOUT events in time
+(or being awaken in a blocking sendmsg())
+
+This patch adds two ways to set the limit :
+1) Per socket option TCP_NOTSENT_LOWAT
+
+2) A sysctl (/proc/sys/net/ipv4/tcp_notsent_lowat) for sockets
+not using TCP_NOTSENT_LOWAT socket option (or setting a zero value)
+Default value being UINT_MAX (0xFFFFFFFF), meaning this has no effect.
+
+This changes poll()/select()/epoll() to report POLLOUT
+only if number of unsent bytes is below tp->nosent_lowat
+
+Note this might increase number of sendmsg() calls when using non
+blocking sockets, and increase number of context switches for
+blocking sockets.
+.....
+
+But really TCP write queue is logically split into 2 different logical
+parts :
+
+[1] Already sent data, waiting for ACK. This one can be arbitrary big,
+depending on network conditions.
+
+[2] Not sent data.
+
+1) Part is hard to size, because it depends on losses, which cannot be
+predicted.
+
+2) Part is easy to size, if we have some reasonable ways to schedule
+the application to provide additional data (write()/send()) when empty.
+
+SO_SNDBUF sizes the overall TCP write queue ([1] + [2])
+
+While NOTSENT_LOWAT is able to restrict (2) only, avoiding filling write
+queue when/if no drops are actually seen.

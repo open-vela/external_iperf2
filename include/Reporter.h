@@ -214,6 +214,12 @@ struct ReportCommon {
     int BufLen;
     int MSS;
     int TCPWin;
+#if HAVE_DECL_TCP_WINDOW_CLAMP
+    int ClampSize;
+#endif
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+    int WritePrefetch;
+#endif
     int winsize_requested;
     unsigned int FQPacingRate;
     int RXbins;

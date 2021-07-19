@@ -97,6 +97,7 @@ Server specific:\n\
   -1, --singleclient       run one server at a time\n\
       --histograms         enable latency histograms\n\
       --permit-key-timeout set the timeout for a permit key in seconds\n\
+      --tcp-rx-window-clamp set the TCP receive window clamp size in bytes\n\
   -t, --time      #        time in seconds to listen for new connections as well as to receive traffic (default not set)\n\
       --udp-histogram #,#  enable UDP latency histogram(s) with bin width and count, e.g. 1,1000=1(ms),1000(bins)\n\
   -B, --bind <ip>[%<dev>]  bind to multicast address and optional device\n\
@@ -129,6 +130,7 @@ Client specific:\n\
       --no-udp-fin         No final server to client stats at end of UDP test\n\
   -n, --num       #[kmgKMG]    number of bytes to transmit (instead of -t)\n\
   -r, --tradeoff           Do a fullduplexectional test individually\n\
+      --tcp-write-prefetch set the socket's TCP_NOTSENT_LOWAT value in bytes and use event based writes\n\
   -t, --time      #        time in seconds to transmit for (default 10 secs)\n\
       --trip-times         enable end to end measurements (requires client and server clock sync)\n\
       --txdelay-time       time in seconds to hold back after connect and before first write\n\

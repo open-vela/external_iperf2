@@ -113,6 +113,10 @@
    don't. */
 #undef HAVE_DECL_SO_TIMESTAMP
 
+/* Define to 1 if you have the declaration of `TCP_NOTSENT_LOWAT', and to 0 if
+   you don't. */
+#undef HAVE_DECL_TCP_NOTSENT_LOWAT
+
 /* Define to 1 if you have the declaration of `TCP_WINDOW_CLAMP', and to 0 if
    you don't. */
 #undef HAVE_DECL_TCP_WINDOW_CLAMP
@@ -178,9 +182,6 @@
 /* Define to 1 if you have the <linux/ip.h> header file. */
 #undef HAVE_LINUX_IP_H
 
-/* Define to 1 if you have the <linux/tcp.h> header file. */
-#undef HAVE_LINUX_TCP_H
-
 /* Define to 1 if you have the <linux/udp.h> header file. */
 #undef HAVE_LINUX_UDP_H
 
@@ -204,6 +205,9 @@
 
 /* Define to 1 if you have the <netinet/in.h> header file. */
 #undef HAVE_NETINET_IN_H
+
+/* Define to 1 if you have the <netinet/tcp.h> header file. */
+#undef HAVE_NETINET_TCP_H
 
 /* Define to 1 if you have the <net/ethernet.h> header file. */
 #undef HAVE_NET_ETHERNET_H

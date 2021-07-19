@@ -8077,6 +8077,17 @@ fi
 cat >>confdefs.h <<_ACEOF
 #define HAVE_DECL_TCP_WINDOW_CLAMP $ac_have_decl
 _ACEOF
+ac_fn_c_check_decl "$LINENO" "TCP_NOTSENT_LOWAT" "ac_cv_have_decl_TCP_NOTSENT_LOWAT" "$in_h
+"
+if test "x$ac_cv_have_decl_TCP_NOTSENT_LOWAT" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_TCP_NOTSENT_LOWAT $ac_have_decl
+_ACEOF
 ac_fn_c_check_decl "$LINENO" "IP_ADD_MEMBERSHIP" "ac_cv_have_decl_IP_ADD_MEMBERSHIP" "$in_h
 "
 if test "x$ac_cv_have_decl_IP_ADD_MEMBERSHIP" = xyes; then :

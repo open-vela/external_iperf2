@@ -1,3 +1,4 @@
+
 /*---------------------------------------------------------------
  * Copyright (c) 2020
  * Broadcom Corporation
@@ -1117,6 +1118,9 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
     } else {
 	output_window_size(report);
 	printf("\n");
+	if (isWritePrefetch(report->common)) {
+	    fprintf(stdout, "Event based writes (pending queue watermark at %d bytes)\n", report->common->WritePrefetch);
+	}
     }
     fflush(stdout);
 }
@@ -1154,6 +1158,18 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 		b += strlen(b);
 	    }
 	}
+#if HAVE_DECL_TCP_WINDOW_CLAMP
+	if (!isUDP(report->common) && isRxClamp(report->common)) {
+	    snprintf(b, SNBUFFERSIZE-strlen(b), " (%s%d)", "clamp=", report->common->ClampSize);
+	    b += strlen(b);
+	}
+#endif
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+	if (!isUDP(report->common) && (report->common->socket > 0) && isWritePrefetch(report->common))  {
+	    snprintf(b, SNBUFFERSIZE-strlen(b), " (%s%d)", "prefetch=", report->common->WritePrefetch);
+	    b += strlen(b);
+	}
+#endif
 	if (isIsochronous(report->common)) {
 	    snprintf(b, SNBUFFERSIZE-strlen(b), " (isoch)");
 	    b += strlen(b);
