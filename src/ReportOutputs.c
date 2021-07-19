@@ -1118,9 +1118,11 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
     } else {
 	output_window_size(report);
 	printf("\n");
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
 	if (isWritePrefetch(report->common)) {
 	    fprintf(stdout, "Event based writes (pending queue watermark at %d bytes)\n", report->common->WritePrefetch);
 	}
+#endif
     }
     fflush(stdout);
 }

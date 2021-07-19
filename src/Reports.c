@@ -706,7 +706,7 @@ struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, d
     if (inSettings->mSock > 0) {
 	creport->winsize = getsock_tcp_windowsize(inSettings->mSock,	\
                   (inSettings->mThreadMode != kMode_Client ? 0 : 1) );
-#ifdef HAVE_DECL_TCP_WINDOW_CLAMP
+#if HAVE_DECL_TCP_WINDOW_CLAMP
 	if (!isRxClamp(inSettings)) {
 	    getsock_tcp_windowclamp(inSettings->mSock);
 	}
