@@ -100,6 +100,8 @@ static int so_dontroute = 0;
 static int nearcongest = 0;
 static int permitkey = 0;
 static int permitkeytimeout = 0;
+static int rxwinclamp = 0;
+static int txnotsentlowwater = 0;
 
 void Settings_Interpret(char option, const char *optarg, struct thread_Settings *mExtSettings);
 // apply compound settings after the command line has been fully parsed
@@ -188,6 +190,8 @@ const struct option long_options[] =
 {"permit-key-timeout", required_argument, &permitkeytimeout, 1},
 {"burst-size", optional_argument, &burstsize, 1},
 {"burst-period", optional_argument, &burstperiodic, 1},
+{"tcp-rx-window-clamp", required_argument, &rxwinclamp, 1},
+{"tcp-write-prefetch", required_argument, &txnotsentlowwater, 1}, // see doc/DESIGN_NOTES
 {"NUM_REPORT_STRUCTS", required_argument, &numreportstructs, 1},
 #ifdef WIN32
 {"reverse", no_argument, &reversetest, 1},
@@ -287,7 +291,7 @@ void Settings_Initialize (struct thread_Settings *main) {
     main->mBindPort     = 0;             // -B,  default port for bind
     // mMode    = kTest_Normal;          // -r,  mMode == kTest_TradeOff
     main->mThreadMode   = kMode_Unknown; // -s,  or -c, none
-    main->mAmount       = 1000;          // -t,  10 seconds
+    main->mAmount       = 1000;          // -t,  10 seconds, units is 10 ms
     main->mIntervalMode = kInterval_None;// -i   none, time, packets, or bursts
     // skip version                      // -v,
     //main->mTCPWin       = 0;           // -w,  ie. don't set window
@@ -1020,6 +1024,24 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		    exit(1);
 		}
 	    }
+	    if (rxwinclamp) {
+		rxwinclamp = 0;
+#if HAVE_DECL_TCP_WINDOW_CLAMP
+		mExtSettings->mClampSize = byte_atoi(optarg);
+		setRxClamp(mExtSettings);
+#else
+		fprintf(stderr, "--tcp-rx-window-clamp not supported on this platform\n");
+#endif
+	    }
+	    if (txnotsentlowwater) {
+		txnotsentlowwater = 0;
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+		mExtSettings->mWritePrefetch = byte_atoi(optarg);
+		setWritePrefetch(mExtSettings);
+#else
+		fprintf(stderr, "--tcp-write-prefetch not supported on this platform\n");
+#endif
+	    }
 	    if (burstperiodic) {
 		burstperiodic = 0;
 		setPeriodicBurst(mExtSettings);
@@ -1183,6 +1205,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	if (isSumServerDstIP(mExtSettings)) {
 	    fprintf(stderr, "WARN: option of --sum-dstip not supported on the client\n");
 	}
+	if (isRxClamp(mExtSettings)) {
+	    fprintf(stderr, "WARN: option of --tcp-rx-window-clamp not supported on the client\n");
+	    unsetRxClamp(mExtSettings);
+	}
 	if (isPeriodicBurst(mExtSettings)) {
 	    setEnhanced(mExtSettings);
 	    setFrameInterval(mExtSettings);
@@ -1266,6 +1292,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    if (mExtSettings->mConnectRetries > 0) {
 		fprintf(stderr, "ERROR: option --connect-retries not supported with -u UDP\n");
 		bail = true;
+	    }
+	    if (isWritePrefetch(mExtSettings)) {
+		fprintf(stderr, "WARN: setting of option --tcp-write-prefetch is not with -u UDP\n");
+		unsetWritePrefetch(mExtSettings);
 	    }
 	    {
 		double delay_target;
@@ -1366,6 +1396,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
         if (isTripTime(mExtSettings)) {
             fprintf(stderr, "WARN: setting of option --trip-times is not supported on the server\n");
 	}
+        if (isWritePrefetch(mExtSettings)) {
+            fprintf(stderr, "WARN: setting of option --tcp-write-prefetch is not supported on the server\n");
+	    unsetWritePrefetch(mExtSettings);
+	}
         if (isIncrSrcIP(mExtSettings)) {
             fprintf(stderr, "WARN: setting of option --incr-srcip is not supported on the server\n");
 	}
@@ -1416,6 +1450,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	}
 	if (mExtSettings->mBurstSize != 0) {
 	    fprintf(stderr, "WARN: option of --burst-size not supported on the server\n");
+	}
+	if (isUDP(mExtSettings) && isRxClamp(mExtSettings)) {
+	    fprintf(stderr, "WARN: option of --tcp-rx-window-clamp not supported using -u UDP \n");
+	    unsetRxClamp(mExtSettings);
 	}
     }
     if (bail)

@@ -130,7 +130,12 @@ static void common_copy (struct ReportCommon **common, struct thread_Settings *i
     (*common)->rtt_weight =inSettings->rtt_nearcongest_divider;
     (*common)->ListenerTimeout =inSettings->mListenerTimeout;
     (*common)->FPS = inSettings->mFPS;
-
+#if HAVE_DECL_TCP_WINDOW_CLAMP
+    (*common)->ClampSize = inSettings->mClampSize;
+#endif
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+    (*common)->WritePrefetch = inSettings->mWritePrefetch;
+#endif
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
     (*common)->enable_sampleTCPstats = false;
     (*common)->intervalonly_sampleTCPstats = false;
@@ -701,6 +706,11 @@ struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, d
     if (inSettings->mSock > 0) {
 	creport->winsize = getsock_tcp_windowsize(inSettings->mSock,	\
                   (inSettings->mThreadMode != kMode_Client ? 0 : 1) );
+#ifdef HAVE_DECL_TCP_WINDOW_CLAMP
+	if (!isRxClamp(inSettings)) {
+	    getsock_tcp_windowclamp(inSettings->mSock);
+	}
+#endif
     }
     creport->common->winsize_requested = inSettings->mTCPWin;
     creport->txholdbacktime = inSettings->txholdback_timer;

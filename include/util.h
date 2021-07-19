@@ -73,7 +73,14 @@ int getsock_tcp_windowsize(int inSock, int inSend);
 void setsock_tcp_mss(int inSock, int inMSS);
 int  getsock_tcp_mss(int inSock);
 bool setsock_blocking(int fd, bool blocking);
-
+#ifdef TCP_WINDOW_CLAMP
+int  getsock_tcp_windowclamp(int inSock);
+int  setsock_tcp_windowclamp(int inSock, int clampsize);
+#endif
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+int  getsock_tcp_notsent_low_watermark(int inSock);
+int  setsock_tcp_notsent_low_watermark(int inSock, int clampsize);
+#endif
 int recvn(int inSock, char *outBuf, int inLen, int flags);
 int writen(int inSock, const void *inBuf, int inLen);
 

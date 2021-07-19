@@ -195,6 +195,26 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
             WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_NODELAY");
         }
 #endif
+#if HAVE_DECL_TCP_WINDOW_CLAMP
+        // set TCP clamp option
+        if (isRxClamp(inSettings)) {
+            int clamp = inSettings->mClampSize;
+            Socklen_t len = sizeof(clamp);
+            int rc = setsockopt(inSettings->mSock, IPPROTO_TCP, TCP_WINDOW_CLAMP,
+                                 reinterpret_cast<char*>(&clamp), len);
+            WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_WINDOW_CLAMP");
+        }
+#endif
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+        // set TCP clamp option
+        if (isWritePrefetch(inSettings)) {
+            int bytecnt = inSettings->mWritePrefetch;
+            Socklen_t len = sizeof(bytecnt);
+            int rc = setsockopt(inSettings->mSock, IPPROTO_TCP, TCP_NOTSENT_LOWAT,
+                                 reinterpret_cast<char*>(&bytecnt), len);
+            WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_NOTSENT_LOWAT");
+        }
+#endif
     }
 
 #if HAVE_DECL_SO_MAX_PACING_RATE
