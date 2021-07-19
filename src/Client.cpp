@@ -312,7 +312,7 @@ int Client::StartSynch () {
 		    timeout.tv_sec = 0;
 		    timeout.tv_usec = rand() % 20000; // randomize IPG a bit
 		    if (select(mySocket + 1, &set, NULL, NULL, &timeout) == 0) {
-			SendFirstPayload();
+			reportstruct->packetLen = SendFirstPayload();
 			// printf("**** resend sock=%d count=%d\n", mySocket, resend_udp);
 		    } else {
 			break;
@@ -533,10 +533,14 @@ void Client::Run () {
 	}
     } else {
 	// Launch the approprate TCP traffic loop
-	if (mSettings->mAppRate > 0)
+	if (mSettings->mAppRate > 0) {
 	    RunRateLimitedTCP();
-	else if (isNearCongest(mSettings)) {
+	} else if (isNearCongest(mSettings)) {
 	    RunNearCongestionTCP();
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+	} else if (isWritePrefetch(mSettings)) {
+	    RunWriteEventsTCP();
+#endif
 	} else {
 	    RunTCP();
 	}
@@ -841,6 +845,82 @@ void Client::RunRateLimitedTCP () {
     FinishTrafficActions();
 }
 
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+void Client::RunWriteEventsTCP () {
+    int burst_id = 0;
+    int writelen = mSettings->mBufLen;
+    Timestamp write_event_timeout(0,0);
+    struct timeval select_timeout;
+    if (isModeTime(mSettings)) {
+	if (mSettings->mInterval && (mSettings->mIntervalMode == kInterval_Time)) {
+	    write_event_timeout.add((double) mSettings->mInterval / 1e6 * 2.0);
+	} else {
+	    write_event_timeout.add((double) mSettings->mAmount / 1e2 * 4.0);
+	}
+	select_timeout.tv_sec = write_event_timeout.getSecs();
+	select_timeout.tv_usec = write_event_timeout.getUsecs();
+    } else {
+	select_timeout.tv_sec = 10;
+	select_timeout.tv_usec = 0;
+    }
+    now.setnow();
+    reportstruct->packetTime.tv_sec = now.getSecs();
+    reportstruct->packetTime.tv_usec = now.getUsecs();
+    fd_set writeset;
+    FD_ZERO(&writeset);
+    while (InProgress()) {
+        if (isModeAmount(mSettings)) {
+	    writelen = ((mSettings->mAmount < static_cast<unsigned>(mSettings->mBufLen)) ? mSettings->mAmount : mSettings->mBufLen);
+	}
+
+	FD_SET(mySocket, &writeset);
+	select_timeout.tv_sec = write_event_timeout.getSecs();
+	select_timeout.tv_usec = write_event_timeout.getUsecs();
+	now.setnow();
+	int rc;
+	if ((rc = select(mySocket + 1, NULL, &writeset, NULL, &select_timeout)) <= 0) {
+	    reportstruct->emptyreport = 0;
+//	    fprintf(stderr,"***errno =%d rc =%d timeout = %ld.%ld\n", errno, rc, select_timeout.tv_sec, select_timeout.tv_usec);
+	    WARN_errno(1, "select");
+	    reportstruct->packetLen = 0;
+#ifdef HAVE_THREAD_DEBUG
+	    thread_debug("Write select timeout");
+#endif
+	} else {
+	    now.setnow();
+//	fprintf(stderr, "**** diff = %f\n", now.subSec(write_event_ts));
+	    reportstruct->packetTime.tv_sec = now.getSecs();
+	    reportstruct->packetTime.tv_usec = now.getUsecs();
+	    WriteTcpTxHdr(reportstruct, writelen, ++burst_id);
+	    reportstruct->sentTime = reportstruct->packetTime;
+	    myReport->info.ts.prevsendTime = reportstruct->packetTime;
+	    reportstruct->packetLen = writen(mySocket, mBuf, writelen);
+	    if (reportstruct->packetLen < 0) {
+		WARN_errno(1, "select writen()");
+		reportstruct->packetLen = 0;
+		reportstruct->emptyreport = 0;
+	    }
+	}
+	if (reportstruct->packetLen == 0) {
+	    peerclose = true;
+	    reportstruct->packetLen = 0;
+	    reportstruct->emptyreport = 1;
+	}
+	if (isModeAmount(mSettings) && !reportstruct->emptyreport) {
+	    /* mAmount may be unsigned, so don't let it underflow! */
+	    if (mSettings->mAmount >= static_cast<unsigned long>(reportstruct->packetLen)) {
+		mSettings->mAmount -= static_cast<unsigned long>(reportstruct->packetLen);
+	    } else {
+		mSettings->mAmount = 0;
+	    }
+	}
+	if (!one_report) {
+	    myReportPacket();
+	}
+    }
+    FinishTrafficActions();
+}
+#endif
 /*
  * UDP send loop
  */

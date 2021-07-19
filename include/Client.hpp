@@ -114,6 +114,9 @@ private:
     // TCP version which supports rate limiting per -b
     void RunRateLimitedTCP(void);
     void RunNearCongestionTCP(void);
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+    void RunWriteEventsTCP(void);
+#endif
     // UDP traffic with isochronous and vbr support
     void RunUDPIsochronous(void);
     // UDP plain

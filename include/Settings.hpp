@@ -222,7 +222,7 @@ struct thread_Settings {
     // Hopefully int64_t's
     uintmax_t mAppRate;            // -b or -u
     char mAppRateUnits;            // -b is either bw or pps
-    uintmax_t mAmount;             // -n or -t
+    uintmax_t mAmount;             // -n or -t time unit is 10 ms
     unsigned int mInterval;               // -i integer time units is usec
     enum IntervalMode mIntervalMode;
     // shorts
@@ -278,6 +278,12 @@ struct thread_Settings {
     struct timeval mPermitKeyTime;
     bool mKeyCheck;
     double mListenerTimeout;
+#if HAVE_DECL_TCP_WINDOW_CLAMP
+    int mClampSize;
+#endif
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+    int mWritePrefetch;
+#endif
 };
 
 /*
@@ -360,6 +366,8 @@ struct thread_Settings {
 #define FLAG_PERIODICBURST  0x00000001
 #define FLAG_SUMDSTIP       0x00000002
 #define FLAG_SMALLTRIPTIME  0x00000004
+#define FLAG_RXCLAMP        0x00000008
+#define FLAG_WRITEPREFETCH  0x00000010
 
 #define isBuflenSet(settings)      ((settings->flags & FLAG_BUFLENSET) != 0)
 #define isCompat(settings)         ((settings->flags & FLAG_COMPAT) != 0)
@@ -423,6 +431,8 @@ struct thread_Settings {
 #define isTCPMSS(settings)         ((settings->flags_extend & FLAG_SETTCPMSS) != 0)
 #define isPeriodicBurst(settings)  ((settings->flags_extend2 & FLAG_PERIODICBURST) != 0)
 #define isSumServerDstIP(settings) ((settings->flags_extend2 & FLAG_SUMDSTIP) != 0)
+#define isRxClamp(settings)        ((settings->flags_extend2 & FLAG_RXCLAMP) != 0)
+#define isWritePrefetch(settings) ((settings->flags_extend2 & FLAG_WRITEPREFETCH) != 0)
 
 #define setBuflenSet(settings)     settings->flags |= FLAG_BUFLENSET
 #define setCompat(settings)        settings->flags |= FLAG_COMPAT
@@ -483,6 +493,8 @@ struct thread_Settings {
 #define setTCPMSS(settings)        settings->flags_extend |= FLAG_SETTCPMSS
 #define setPeriodicBurst(settings) settings->flags_extend2 |= FLAG_PERIODICBURST
 #define setSumServerDstIP(settings) settings->flags_extend2 |= FLAG_SUMDSTIP
+#define setRxClamp(settings)       settings->flags_extend2 |= FLAG_RXCLAMP
+#define setWritePrefetch(settings) settings->flags_extend2 |= FLAG_WRITEPREFETCH
 
 #define unsetBuflenSet(settings)   settings->flags &= ~FLAG_BUFLENSET
 #define unsetCompat(settings)      settings->flags &= ~FLAG_COMPAT
@@ -542,6 +554,8 @@ struct thread_Settings {
 #define unsetTCPMSS(settings)        settings->flags_extend &= ~FLAG_SETTCPMSS
 #define unsetPeriodicBurst(settings) settings->flags_extend2 &= ~FLAG_PERIODICBURST
 #define unsetSumServerDstIP(settings) settings->flags_extend2 &= ~FLAG_SUMDSTIP
+#define unsetRxClamp(settings)       settings->flags_extend2 &= ~FLAG_RXCLAMP
+#define unsetWritePrefetch(settings) settings->flags_extend2 &= ~FLAG_WRITEPREFETCH
 
 // set to defaults
 void Settings_Initialize(struct thread_Settings* main);
