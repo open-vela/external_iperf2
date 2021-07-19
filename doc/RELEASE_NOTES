@@ -1,6 +1,12 @@
 See doc/DESIGN_NOTES for some description around the software design
 See doc/CLOCKSYNC_NOTES for some description around synchronizing the realtime clocks
 
+2.1.4 change set as of (July 19, 2021)
+--------------------------------------
+o fix regression in UDP header exchange for tests like --reverse
+o Add support for TCP_NOTSENT_LOWAT vi --tcp-write-prefetch and select() before write()
+o Add support for TCP_WINDOW_CLAMP
+
 2.1.3 change set as of (July 13, 2021)
 --------------------------------------
 o relax cli errors a bit to WARN instead of ERROR
