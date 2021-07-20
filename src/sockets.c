@@ -177,9 +177,11 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
 	    case SOCKET_ERROR :
 		// Note: use TCP fatal error codes even for UDP
 		if (FATALTCPREADERR(errno)) {
+		    WARN_errno(1, "recvn fatal");
 		    nread = inLen - nleft;
 		    goto DONE;
 		}
+		// WARN_errno(1, "recvn non-fatal");
 		break;
 	    case 0:
 		// read timeout - retry
@@ -188,6 +190,7 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
 		nleft -= nread;
 		ptr   += nread;
 	    }
+	    nread = inLen - nleft;
 	}
     } else {
 	while (nleft != nread) {
@@ -196,6 +199,7 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
 	    case SOCKET_ERROR :
 		// Note: use TCP fatal error codes even for UDP
 		if (FATALTCPREADERR(errno)) {
+		    WARN_errno(1, "recvn peek");
 		    nread = -1;
 		    goto DONE;
 		}
