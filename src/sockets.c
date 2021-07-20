@@ -253,6 +253,7 @@ int writen (int inSock, const void *inBuf, int inLen) {
 	    nleft -= nwritten;
 	    ptr   += nwritten;
 	}
+	nwritten = inLen - nleft;
     }
   DONE:
     return (nwritten);
