@@ -123,7 +123,6 @@ int getsock_tcp_mss  (int inSock) {
  *
  * from Stevens, 1998, section 3.9
  * ------------------------------------------------------------------- */
-
 ssize_t readn (int inSock, void *outBuf, size_t inLen) {
     size_t  nleft;
     ssize_t nread;
@@ -174,20 +173,38 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
     if (!(flags & MSG_PEEK)) {
 	while (nleft >  0) {
 	    nread = recv(inSock, ptr, nleft, flags);
-	    // Note: use TCP fatal error codes even for UDP
-	    if ((nread <= 0) && (!nread || FATALTCPREADERR(errno))) {
-		nread = -1;
-		goto DONE;
+	    switch (nread) {
+	    case SOCKET_ERROR :
+		// Note: use TCP fatal error codes even for UDP
+		if (FATALTCPREADERR(errno)) {
+		    nread = inLen - nleft;
+		    goto DONE;
+		}
+		break;
+	    case 0:
+		// read timeout - retry
+		break;
+	    default :
+		nleft -= nread;
+		ptr   += nread;
 	    }
-	    nleft -= nread;
-	    ptr   += nread;
 	}
     } else {
 	while (nleft != nread) {
 	    nread = recv(inSock, ptr, nleft, flags);
-	    if ((nread <= 0) && (!nread || FATALTCPREADERR(errno))) {
-		nread = -1;
-		goto DONE;
+	    switch (nread) {
+	    case SOCKET_ERROR :
+		// Note: use TCP fatal error codes even for UDP
+		if (FATALTCPREADERR(errno)) {
+		    nread = -1;
+		    goto DONE;
+		}
+		break;
+	    case 0:
+		// read timeout - retry
+		break;
+	    default :
+		break;
 	    }
 	}
     }
@@ -214,24 +231,27 @@ int writen (int inSock, const void *inBuf, int inLen) {
 
     ptr   = (char*) inBuf;
     nleft = inLen;
+    nwritten = 0;
 
     while (nleft > 0) {
         nwritten = write(inSock, ptr, nleft);
-        if (nwritten < 0) {
-            if ((errno == EINTR) || (errno == EAGAIN) || (errno == EWOULDBLOCK)) {
-		continue; /* interupted, call write again */
-	    } else {
-		WARN_errno(1, "writen()");
-                return -1;  /* error */
+	switch (nwritten) {
+	case SOCKET_ERROR :
+	    if (!(errno == EINTR) || (errno == EAGAIN) || (errno == EWOULDBLOCK)) {
+		nwritten = inLen - nleft;;
+		goto DONE;
 	    }
-	} else if (nwritten == 0) {
-	    WARN(1, "writen() peer close");
 	    break;
+	case 0:
+	    // write timeout - retry
+	    break;
+	default :
+	    nleft -= nwritten;
+	    ptr   += nwritten;
 	}
-        nleft -= nwritten;
-        ptr   += nwritten;
     }
-    return inLen;
+  DONE:
+    return (nwritten);
 } /* end writen */
 
 
