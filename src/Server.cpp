@@ -217,11 +217,14 @@ void Server::RunTCP () {
 		    WARN(burst_nleft <= 0, "invalid burst read req size");
 		    // thread_debug("***read burst header size %d id=%d", burst_info.burst_size, burst_info.burst_id);
 		} else {
-		    if (n > 0)
-			WARN(1, "partial readn");
+		    if (n > 0) {
+		        WARN(1, "partial readn");
 #ifdef HAVE_THREAD_DEBUG
-		    thread_debug("TCP burst partial read of %d wanted %d", n, sizeof(struct TCP_burst_payload));
+		        thread_debug("TCP burst partial read of %d wanted %d", n, sizeof(struct TCP_burst_payload));
+		    } else {
+		        thread_debug("Detected peer close");
 #endif
+		    }
 		    goto Done;
 		}
 	    }
