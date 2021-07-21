@@ -217,11 +217,14 @@ void Server::RunTCP () {
 		    WARN(burst_nleft <= 0, "invalid burst read req size");
 		    // thread_debug("***read burst header size %d id=%d", burst_info.burst_size, burst_info.burst_id);
 		} else {
-		    if (n > 0)
-			WARN(1, "partial readn");
+		    if (n > 0) {
+		        WARN(1, "partial readn");
 #ifdef HAVE_THREAD_DEBUG
-		    thread_debug("TCP burst partial read of %d wanted %d", n, sizeof(struct TCP_burst_payload));
+		        thread_debug("TCP burst partial read of %d wanted %d", n, sizeof(struct TCP_burst_payload));
+		    } else {
+		        thread_debug("Detected peer close");
 #endif
+		    }
 		    goto Done;
 		}
 	    }
@@ -388,7 +391,7 @@ bool Server::InitTrafficLoop () {
 
     // Handle the case when the client spawns a server (no listener) and need the initial header
     // Case of --trip-times and --reverse or --fullduplex, listener handles normal case
-    if (isReverse(mSettings) && (isTripTime(mSettings) || isPeriodicBurst(mSettings))) {
+    if (isReverse(mSettings) && (isTripTime(mSettings) || isPeriodicBurst(mSettings) || isIsochronous(mSettings))) {
 	int n = 0;
 	uint32_t flags = 0;
 	int peeklen = 0;
@@ -439,7 +442,7 @@ bool Server::InitTrafficLoop () {
     }
     // skip the test exchange header to get to the first burst
     // The test exchange header was read in listener context
-    if (mSettings->skip && (isTripTime(mSettings) || isPeriodicBurst(mSettings))) {
+    if (mSettings->skip && (isTripTime(mSettings) || isPeriodicBurst(mSettings) || isIsochronous(mSettings))) {
 	reportstruct->packetLen = recvn(mSettings->mSock, mBuf, mSettings->skip, 0);
     }
     SetReportStartTime();
