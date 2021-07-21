@@ -189,6 +189,7 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
 	    default :
 		nleft -= nread;
 		ptr   += nread;
+		break;
 	    }
 	    nread = inLen - nleft;
 	}
@@ -252,6 +253,7 @@ int writen (int inSock, const void *inBuf, int inLen) {
 	default :
 	    nleft -= nwritten;
 	    ptr   += nwritten;
+	    break;
 	}
 	nwritten = inLen - nleft;
     }
