@@ -243,7 +243,8 @@ int writen (int inSock, const void *inBuf, int inLen) {
 	switch (nwritten) {
 	case SOCKET_ERROR :
 	    if (!(errno == EINTR) || (errno == EAGAIN) || (errno == EWOULDBLOCK)) {
-		nwritten = inLen - nleft;;
+		nwritten = inLen - nleft;
+		WARN_errno(1, "writen fatal");
 		goto DONE;
 	    }
 	    break;
