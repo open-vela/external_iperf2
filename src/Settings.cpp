@@ -1221,7 +1221,11 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    fprintf(stderr, "ERROR: option of --permit-key requires a value on the client\n");
 	    bail = true;
 	}
-	if (isTxHoldback(mExtSettings) && isTxStartTime(mExtSettings)) {
+	if (isWritePrefetch(mExtSettings) && isIsochronous(mExtSettings)) {
+	    fprintf(stderr,"ERROR: options of --isochronous and --tcp-write-prefetch are mutually exclusive\n");
+	    bail = true;
+	}
+	if (!isUDP(mExtSettings) && isTxHoldback(mExtSettings) && isTxStartTime(mExtSettings)) {
 	    fprintf(stderr,"ERROR: options of --txstart-time and --txdelay-time are mutually exclusive\n");
 	    bail = true;
 	} else if (isTxStartTime(mExtSettings) || isTxHoldback(mExtSettings)) {
