@@ -645,7 +645,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
     }
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
     if ((inSettings->mThreadMode == kMode_Client) && isWritePrefetch(inSettings) && !isUDP(inSettings)) {
-	char name[] = "S1";
+	char name[] = "S8";
 	ireport->info.latency_histogram =  histogram_init(inSettings->mRXbins,inSettings->mRXbinsize,0,\
 							  pow(10,inSettings->mRXunits), \
 							  inSettings->mRXci_lower, inSettings->mRXci_upper, ireport->info.common->transferID, name);
