@@ -941,6 +941,11 @@ void reporter_handle_packet_client (struct ReporterData *data, struct ReportStru
 	    reporter_handle_packet_isochronous(data, packet);
 	} else if (isPeriodicBurst(stats->common)) {
 	    reporter_handle_burst_tcp_client_transit(data, packet);
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+	} else if (stats->latency_histogram) {
+	    float select_delay = TimeDifference(packet->packetTime, packet->prevPacketTime);
+	    histogram_insert(stats->latency_histogram, select_delay, NULL);
+#endif
 	}
     }
     if (isUDP(stats->common)) {

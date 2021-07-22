@@ -1,3 +1,4 @@
+
 /*---------------------------------------------------------------
  * Copyright (c) 1999,2000,2001,2002,2003
  * The Board of Trustees of the University of Illinois
@@ -872,7 +873,6 @@ void Client::RunWriteEventsTCP () {
         if (isModeAmount(mSettings)) {
 	    writelen = ((mSettings->mAmount < static_cast<unsigned>(mSettings->mBufLen)) ? mSettings->mAmount : mSettings->mBufLen);
 	}
-
 	FD_SET(mySocket, &writeset);
 	select_timeout.tv_sec = write_event_timeout.getSecs();
 	select_timeout.tv_usec = write_event_timeout.getUsecs();
@@ -880,15 +880,15 @@ void Client::RunWriteEventsTCP () {
 	int rc;
 	if ((rc = select(mySocket + 1, NULL, &writeset, NULL, &select_timeout)) <= 0) {
 	    reportstruct->emptyreport = 0;
-//	    fprintf(stderr,"***errno =%d rc =%d timeout = %ld.%ld\n", errno, rc, select_timeout.tv_sec, select_timeout.tv_usec);
 	    WARN_errno(1, "select");
 	    reportstruct->packetLen = 0;
 #ifdef HAVE_THREAD_DEBUG
 	    thread_debug("Write select timeout");
 #endif
 	} else {
+	    reportstruct->prevPacketTime = myReport->info.ts.prevpacketTime;
+	    myReport->info.ts.prevpacketTime = reportstruct->packetTime;
 	    now.setnow();
-//	fprintf(stderr, "**** diff = %f\n", now.subSec(write_event_ts));
 	    reportstruct->packetTime.tv_sec = now.getSecs();
 	    reportstruct->packetTime.tv_usec = now.getUsecs();
 	    WriteTcpTxHdr(reportstruct, writelen, ++burst_id);

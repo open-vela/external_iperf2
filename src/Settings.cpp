@@ -1038,6 +1038,12 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
 		mExtSettings->mWritePrefetch = byte_atoi(optarg);
 		setWritePrefetch(mExtSettings);
+		setEnhanced(mExtSettings);
+		mExtSettings->mRXbins = 1000000;
+		mExtSettings->mRXbinsize = 10;
+		mExtSettings->mRXunits = 6;
+		mExtSettings->mRXci_lower = 5;
+		mExtSettings->mRXci_upper = 95;
 #else
 		fprintf(stderr, "--tcp-write-prefetch not supported on this platform\n");
 #endif
