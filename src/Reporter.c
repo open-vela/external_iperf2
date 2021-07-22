@@ -1379,6 +1379,11 @@ void reporter_transfer_protocol_client_tcp (struct ReporterData *data, int final
     struct TransferInfo *sumstats = (data->GroupSumReport != NULL) ? &data->GroupSumReport->info : NULL;
     struct TransferInfo *fullduplexstats = (data->FullDuplexReport != NULL) ? &data->FullDuplexReport->info : NULL;
     stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+    if (stats->latency_histogram) {
+        stats->latency_histogram->final = 0;
+    }
+#endif
     if (isIsochronous(stats->common)) {
 	if (final) {
 	    stats->isochstats.cntFrames = stats->isochstats.framecnt.current;
@@ -1406,6 +1411,11 @@ void reporter_transfer_protocol_client_tcp (struct ReporterData *data, int final
 	fullduplexstats->total.Bytes.current += stats->cntBytes;
     }
     if (final) {
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+	if (stats->latency_histogram) {
+	    stats->latency_histogram->final = 1;
+	}
+#endif
 	if ((stats->cntBytes > 0) && stats->output_handler && !TimeZero(stats->ts.intervalTime)) {
 	    // print a partial interval report if enable and this a final
 	    if ((stats->output_handler) && !(stats->filter_this_sample_output)) {
@@ -1430,6 +1440,9 @@ void reporter_transfer_protocol_client_tcp (struct ReporterData *data, int final
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 	stats->sock_callstats.write.TCPretry = stats->sock_callstats.write.totTCPretry;
 #endif
+	if (stats->framelatency_histogram) {
+	    stats->framelatency_histogram->final = 1;
+	}
 	stats->cntBytes = stats->total.Bytes.current;
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
     } else if (isIsochronous(stats->common)) {
@@ -1437,7 +1450,6 @@ void reporter_transfer_protocol_client_tcp (struct ReporterData *data, int final
 	stats->isochstats.cntFramesMissed = stats->isochstats.framelostcnt.current - stats->isochstats.framelostcnt.prev;
 	stats->isochstats.cntSlips = stats->isochstats.slipcnt.current - stats->isochstats.slipcnt.prev;
     }
-
     if ((stats->output_handler) && !(stats->filter_this_sample_output)) {
 	(*stats->output_handler)(stats);
     }
