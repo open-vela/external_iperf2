@@ -76,7 +76,7 @@
 
 static int reversetest = 0;
 static int fullduplextest = 0;
-static int rxhistogram = 0;
+static int histogram = 0;
 static int l2checks = 0;
 static int incrdstip = 0;
 static int incrsrcip = 0;
@@ -166,8 +166,8 @@ const struct option long_options[] =
 {"suggest_win_size", no_argument, NULL, 'W'},
 {"peer-detect",      no_argument, NULL, 'X'},
 {"tcp-congestion", required_argument, NULL, 'Z'},
-{"histograms", optional_argument, &rxhistogram, 1},
-{"udp-histograms", optional_argument, &rxhistogram, 1}, // keep support per 2.0.13 usage
+{"histograms", optional_argument, &histogram, 1},
+{"udp-histograms", optional_argument, &histogram, 1}, // keep support per 2.0.13 usage
 {"l2checks", no_argument, &l2checks, 1},
 {"incr-dstip", no_argument, &incrdstip, 1},
 {"incr-srcip", no_argument, &incrsrcip, 1},
@@ -350,9 +350,9 @@ void Settings_Copy (struct thread_Settings *from, struct thread_Settings **into,
 	    (*into)->mFileName = new char[ strlen(from->mFileName) + 1];
 	    strcpy((*into)->mFileName, from->mFileName);
 	}
-	if (from->mRxHistogramStr != NULL) {
-	    (*into)->mRxHistogramStr = new char[ strlen(from->mRxHistogramStr) + 1];
-	    strcpy((*into)->mRxHistogramStr, from->mRxHistogramStr);
+	if (from->mHistogramStr != NULL) {
+	    (*into)->mHistogramStr = new char[ strlen(from->mHistogramStr) + 1];
+	    strcpy((*into)->mHistogramStr, from->mHistogramStr);
 	}
 	if (from->mSSMMulticastStr != NULL) {
 	    (*into)->mSSMMulticastStr = new char[ strlen(from->mSSMMulticastStr) + 1];
@@ -379,7 +379,7 @@ void Settings_Copy (struct thread_Settings *from, struct thread_Settings **into,
 	(*into)->mOutputFileName = NULL;
 	(*into)->mLocalhost = NULL;
 	(*into)->mFileName = NULL;
-	(*into)->mRxHistogramStr = NULL;
+	(*into)->mHistogramStr = NULL;
 	(*into)->mSSMMulticastStr = NULL;
 	(*into)->mIfrname = NULL;
 	(*into)->mIfrnametx = NULL;
@@ -421,7 +421,7 @@ void Settings_Destroy (struct thread_Settings *mSettings) {
     DELETE_ARRAY(mSettings->mLocalhost);
     DELETE_ARRAY(mSettings->mFileName);
     DELETE_ARRAY(mSettings->mOutputFileName);
-    DELETE_ARRAY(mSettings->mRxHistogramStr);
+    DELETE_ARRAY(mSettings->mHistogramStr);
     DELETE_ARRAY(mSettings->mSSMMulticastStr);
     DELETE_ARRAY(mSettings->mCongestion);
     FREE_ARRAY(mSettings->mIfrname);
@@ -967,19 +967,15 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		if (atof(optarg) >= 0.0)
 		    mExtSettings->mListenerTimeout = static_cast<size_t>(atof(optarg));
 	    }
-	    if (rxhistogram) {
-		rxhistogram = 0;
-		setRxHistogram(mExtSettings);
+	    if (histogram) {
+		histogram = 0;
+		setHistogram(mExtSettings);
 		setEnhanced(mExtSettings);
-		// set default histogram settings, milliseconds bins between 0 and 1 secs
-		mExtSettings->mRXbins = 1000;
-		mExtSettings->mRXbinsize = 1;
-		mExtSettings->mRXunits = 3;
-		mExtSettings->mRXci_lower = 5;
-		mExtSettings->mRXci_upper = 95;
 		if (optarg) {
-		    mExtSettings->mRxHistogramStr = new char[ strlen(optarg) + 1 ];
-		    strcpy(mExtSettings->mRxHistogramStr, optarg);
+		    mExtSettings->mHistogramStr = new char[ strlen(optarg) + 1 ];
+		    strcpy(mExtSettings->mHistogramStr, optarg);
+		} else {
+		    mExtSettings->mHistogramStr = NULL;
 		}
 	    }
 	    if (reversetest) {
@@ -1039,11 +1035,11 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		mExtSettings->mWritePrefetch = byte_atoi(optarg);
 		setWritePrefetch(mExtSettings);
 		setEnhanced(mExtSettings);
-		mExtSettings->mRXbins = 100000; // 10 seconds wide
-		mExtSettings->mRXbinsize = 100; // 100 usec bins
-		mExtSettings->mRXunits = 6;  // usecs 10 pow(x)
-		mExtSettings->mRXci_lower = 5;
-		mExtSettings->mRXci_upper = 95;
+		mExtSettings->mHistBins = 100000; // 10 seconds wide
+		mExtSettings->mHistBinsize = 100; // 100 usec bins
+		mExtSettings->mHistUnits = 6;  // usecs 10 pow(x)
+		mExtSettings->mHistci_lower = 5;
+		mExtSettings->mHistci_upper = 95;
 #else
 		fprintf(stderr, "--tcp-write-prefetch not supported on this platform\n");
 #endif
@@ -1176,7 +1172,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
     bool bail = false;
     // compat mode doesn't support these test settings
     int compat_nosupport = (isReverse(mExtSettings) | isFullDuplex(mExtSettings) | isTripTime(mExtSettings) | isVaryLoad(mExtSettings) \
-			    | isRxHistogram(mExtSettings) |  isIsochronous(mExtSettings) \
+			    | isHistogram(mExtSettings) |  isIsochronous(mExtSettings) \
 			    | isEnhanced(mExtSettings) | (mExtSettings->mMode != kTest_Normal));
     if (isCompat(mExtSettings) && compat_nosupport) {
 	fprintf(stderr, "ERROR: compatibility mode not supported with the requested with options\n");
@@ -1366,8 +1362,8 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		bail = true;			;
 	    }
 	}
-	if (isRxHistogram(mExtSettings)) {
-	    fprintf(stderr, "WARN: option of --histograms is not supported on the client\n");
+	if (isHistogram(mExtSettings) && !isWritePrefetch(mExtSettings)) {
+	    fprintf(stderr, "WARN: option of --histograms on the client requires --tcp-write-prefetch\n");
 	}
 	if (isCongestionControl(mExtSettings) && isReverse(mExtSettings)) {
 	    fprintf(stderr, "ERROR: tcp congestion control -Z and --reverse cannot be applied together\n");
@@ -1470,28 +1466,46 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	exit(1);
 
     // UDP histogram optional settings
-    if (isRxHistogram(mExtSettings) && (mExtSettings->mThreadMode != kMode_Client) && mExtSettings->mRxHistogramStr) {
-	// check for optional arguments to change histogram settings
-	if (((results = strtok(mExtSettings->mRxHistogramStr, ",")) != NULL) && !strcmp(results,mExtSettings->mRxHistogramStr)) {
-	    // scan for unit specifier
-	    char *tmp = new char [strlen(results) + 1];
-	    strcpy(tmp, results);
-	    if ((strtok(tmp, "u") != NULL) && strcmp(results,tmp) != 0) {
-		mExtSettings->mRXunits = 6;  // units is microseconds
+    if (isHistogram(mExtSettings)) {
+	if (!mExtSettings->mHistogramStr) {
+	    if (mExtSettings->mThreadMode == kMode_Server) {
+		// set default histogram settings, milliseconds bins between 0 and 1 secs
+		mExtSettings->mHistBins = 1000;
+		mExtSettings->mHistBinsize = 1;
+		mExtSettings->mHistUnits = 3;
+		mExtSettings->mHistci_lower = 5;
+		mExtSettings->mHistci_upper = 95;
 	    } else {
-		strcpy(tmp, results);
-		if ((strtok(tmp, "m") != NULL) && strcmp(results,tmp) != 0) {
-		    mExtSettings->mRXunits = 3;  // units is milliseconds
-		}
+		// set default histogram settings, milliseconds bins between 0 and 1 secs
+		mExtSettings->mHistBins = 10000;
+		mExtSettings->mHistBinsize = 100;
+		mExtSettings->mHistUnits = 6;
+		mExtSettings->mHistci_lower = 5;
+		mExtSettings->mHistci_upper = 95;
 	    }
-	    mExtSettings->mRXbinsize = atoi(tmp);
-	    delete [] tmp;
-	    if ((results = strtok(results+strlen(results)+1, ",")) != NULL) {
-		mExtSettings->mRXbins = byte_atoi(results);
-		if ((results = strtok(NULL, ",")) != NULL) {
-		    mExtSettings->mRXci_lower = atof(results);
+	} else {
+	    // check for optional arguments to change histogram settings
+	    if (((results = strtok(mExtSettings->mHistogramStr, ",")) != NULL) && !strcmp(results,mExtSettings->mHistogramStr)) {
+		// scan for unit specifier
+		char *tmp = new char [strlen(results) + 1];
+		strcpy(tmp, results);
+		if ((strtok(tmp, "u") != NULL) && strcmp(results,tmp) != 0) {
+		    mExtSettings->mHistUnits = 6;  // units is microseconds
+		} else {
+		    strcpy(tmp, results);
+		    if ((strtok(tmp, "m") != NULL) && strcmp(results,tmp) != 0) {
+			mExtSettings->mHistUnits = 3;  // units is milliseconds
+		    }
+		}
+		mExtSettings->mHistBinsize = atoi(tmp);
+		delete [] tmp;
+		if ((results = strtok(results+strlen(results)+1, ",")) != NULL) {
+		    mExtSettings->mHistBins = byte_atoi(results);
 		    if ((results = strtok(NULL, ",")) != NULL) {
-			mExtSettings->mRXci_upper = atof(results);
+			mExtSettings->mHistci_lower = atof(results);
+			if ((results = strtok(NULL, ",")) != NULL) {
+			    mExtSettings->mHistci_upper = atof(results);
+			}
 		    }
 		}
 	    }
