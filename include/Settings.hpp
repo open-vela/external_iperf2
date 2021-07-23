@@ -162,7 +162,7 @@ struct thread_Settings {
     char*  mIfrnametx;              // %<device> name (for tx)
     char*  mSSMMulticastStr;        // --ssm-host
     char*  mIsochronousStr;         // --isochronous
-    char*  mRxHistogramStr;         // --histograms (packets)
+    char*  mHistogramStr;         // --histograms (packets)
     char*  mTransferIDStr;          //
     FILE*  Extractor_file;
     struct ReportHeader* reporthdr;
@@ -245,11 +245,11 @@ struct thread_Settings {
     int incrsrcport;
     int connectonly_count;
     char* mCongestion;
-    int mRXbins;
-    int mRXbinsize;
-    int mRXunits;
-    double mRXci_lower;
-    double mRXci_upper;
+    int mHistBins;
+    int mHistBinsize;
+    int mHistUnits;
+    double mHistci_lower;
+    double mHistci_upper;
 #if defined(HAVE_WIN32_THREAD)
     HANDLE mHandle;
 #endif
@@ -335,7 +335,7 @@ struct thread_Settings {
 #define FLAG_REVERSE        0x00000004
 #define FLAG_ISOCHRONOUS    0x00000008
 #define FLAG_UDPUNUSED      0x00000010
-#define FLAG_RXHISTOGRAM    0x00000020
+#define FLAG_HISTOGRAM      0x00000020
 #define FLAG_L2LENGTHCHECK  0x00000100
 #define FLAG_TXSTARTTIME    0x00000200
 #define FLAG_INCRDSTIP      0x00000400
@@ -405,7 +405,7 @@ struct thread_Settings {
 #define isFullDuplex(settings)          ((settings->flags_extend & FLAG_FULLDUPLEX) != 0)
 #define isServerReverse(settings)  ((settings->flags_extend & FLAG_SERVERREVERSE) != 0)
 #define isIsochronous(settings)    ((settings->flags_extend & FLAG_ISOCHRONOUS) != 0)
-#define isRxHistogram(settings)    ((settings->flags_extend & FLAG_RXHISTOGRAM) != 0)
+#define isHistogram(settings)    ((settings->flags_extend & FLAG_HISTOGRAM) != 0)
 #define isL2LengthCheck(settings)  ((settings->flags_extend & FLAG_L2LENGTHCHECK) != 0)
 #define isIncrDstIP(settings)      ((settings->flags_extend & FLAG_INCRDSTIP) != 0)
 #define isIncrSrcIP(settings)      ((settings->flags_extend & FLAG_INCRSRCIP) != 0)
@@ -468,7 +468,7 @@ struct thread_Settings {
 #define setFullDuplex(settings)    settings->flags_extend |= FLAG_FULLDUPLEX
 #define setServerReverse(settings) settings->flags_extend |= FLAG_SERVERREVERSE
 #define setIsochronous(settings)   settings->flags_extend |= FLAG_ISOCHRONOUS
-#define setRxHistogram(settings)   settings->flags_extend |= FLAG_RXHISTOGRAM
+#define setHistogram(settings)   settings->flags_extend |= FLAG_HISTOGRAM
 #define setL2LengthCheck(settings) settings->flags_extend |= FLAG_L2LENGTHCHECK
 #define setIncrDstIP(settings)     settings->flags_extend |= FLAG_INCRDSTIP
 #define setIncrSrcIP(settings)     settings->flags_extend |= FLAG_INCRSRCIP
@@ -530,7 +530,7 @@ struct thread_Settings {
 #define unsetFullDuplex(settings)  settings->flags_extend &= ~FLAG_FULLDUPLEX
 #define unsetServerReverse(settings) settings->flags_extend &= ~FLAG_SERVERREVERSE
 #define unsetIsochronous(settings)  settings->flags_extend &= ~FLAG_ISOCHRONOUS
-#define unsetRxHistogram(settings)  settings->flags_extend &= ~FLAG_RXHISTOGRAM
+#define unsetHistogram(settings)  settings->flags_extend &= ~FLAG_HISTOGRAM
 #define unsetL2LengthCheck(settings)  settings->flags_extend &= ~FLAG_L2LENGTHCHECK
 #define unsetIncrDstIP(settings)    settings->flags_extend &= ~FLAG_INCRDSTIP
 #define unsetIncrSrcIP(settings)    settings->flags_extend &= ~FLAG_INCRSRCIP

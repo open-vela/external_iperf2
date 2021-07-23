@@ -1,3 +1,4 @@
+
 /*---------------------------------------------------------------
  * Copyright (c) 2020
  * Broadcom Corporation
@@ -1039,9 +1040,9 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
     if (isMulticast(report->common)) {
 	fprintf(stdout, "Server set to single client traffic mode (per multicast receive)\n");
     }
-    if (isRxHistogram(report->common)) {
-	fprintf(stdout, "Enabled rx-histograms bin-width=%0.3f ms, bins=%d (clients must use --trip-times)\n", \
-		((1e3 * report->common->RXbinsize) / pow(10,report->common->RXunits)), report->common->RXbins);
+    if (isHistogram(report->common)) {
+	fprintf(stdout, "Enabled receive histograms bin-width=%0.3f ms, bins=%d (clients should use --trip-times)\n", \
+		((1e3 * report->common->HistBinsize) / pow(10,report->common->HistUnits)), report->common->HistBins);
     }
     if (isFrameInterval(report->common)) {
 #if HAVE_FASTSAMPLING
@@ -1125,6 +1126,10 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
 	if (isWritePrefetch(report->common)) {
 	    fprintf(stdout, "Event based writes (pending queue watermark at %d bytes)\n", report->common->WritePrefetch);
+	}
+	if (isHistogram(report->common)) {
+	    fprintf(stdout, "Enabled select histograms bin-width=%0.3f ms, bins=%d\n", \
+		((1e3 * report->common->HistBinsize) / pow(10,report->common->HistUnits)), report->common->HistBins);
 	}
 #endif
     }
