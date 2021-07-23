@@ -222,9 +222,9 @@ struct ReportCommon {
 #endif
     int winsize_requested;
     unsigned int FQPacingRate;
-    int RXbins;
-    int RXbinsize;
-    int RXunits;
+    int HistBins;
+    int HistBinsize;
+    int HistUnits;
     double pktIPG;
     iperf_sockaddr peer;
     Socklen_t size_peer;

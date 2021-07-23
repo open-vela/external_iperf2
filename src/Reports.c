@@ -123,9 +123,9 @@ static void common_copy (struct ReportCommon **common, struct thread_Settings *i
     (*common)->size_peer = inSettings->size_peer;
     (*common)->local = inSettings->local;
     (*common)->size_local = inSettings->size_local;
-    (*common)->RXbins =inSettings->mRXbins;
-    (*common)->RXbinsize =inSettings->mRXbinsize;
-    (*common)->RXunits =inSettings->mRXunits;
+    (*common)->HistBins =inSettings->mHistBins;
+    (*common)->HistBinsize =inSettings->mHistBinsize;
+    (*common)->HistUnits =inSettings->mHistUnits;
     (*common)->pktIPG =inSettings->mBurstIPG;
     (*common)->rtt_weight =inSettings->rtt_nearcongest_divider;
     (*common)->ListenerTimeout =inSettings->mListenerTimeout;
@@ -629,26 +629,26 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 
     if (inSettings->mThreadMode == kMode_Server) {
 	ireport->info.sock_callstats.read.binsize = inSettings->mBufLen / 8;
-	if (isRxHistogram(inSettings) && isUDP(inSettings) && isTripTime(inSettings)) {
+	if (isHistogram(inSettings) && isUDP(inSettings) && isTripTime(inSettings)) {
 	    char name[] = "T8";
-	    ireport->info.latency_histogram =  histogram_init(inSettings->mRXbins,inSettings->mRXbinsize,0,\
-							      pow(10,inSettings->mRXunits), \
-							      inSettings->mRXci_lower, inSettings->mRXci_upper, ireport->info.common->transferID, name);
+	    ireport->info.latency_histogram =  histogram_init(inSettings->mHistBins,inSettings->mHistBinsize,0,\
+							      pow(10,inSettings->mHistUnits), \
+							      inSettings->mHistci_lower, inSettings->mHistci_upper, ireport->info.common->transferID, name);
 	}
-	if (isRxHistogram(inSettings) && (isIsochronous(inSettings) || (!isUDP(inSettings) && isTripTime(inSettings)))) {
+	if (isHistogram(inSettings) && (isIsochronous(inSettings) || (!isUDP(inSettings) && isTripTime(inSettings)))) {
 	    char name[] = "F8";
 	    // make sure frame bin size min is 100 microsecond
-	    ireport->info.framelatency_histogram =  histogram_init(inSettings->mRXbins,inSettings->mRXbinsize,0, \
-								   pow(10,inSettings->mRXunits), inSettings->mRXci_lower, \
-								   inSettings->mRXci_upper, ireport->info.common->transferID, name);
+	    ireport->info.framelatency_histogram =  histogram_init(inSettings->mHistBins,inSettings->mHistBinsize,0, \
+								   pow(10,inSettings->mHistUnits), inSettings->mHistci_lower, \
+								   inSettings->mHistci_upper, ireport->info.common->transferID, name);
 	}
     }
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
-    if ((inSettings->mThreadMode == kMode_Client) && isWritePrefetch(inSettings) && !isUDP(inSettings)) {
+    if ((inSettings->mThreadMode == kMode_Client) && isWritePrefetch(inSettings) && !isUDP(inSettings) && isHistogram(inSettings)) {
 	char name[] = "S8";
-	ireport->info.latency_histogram =  histogram_init(inSettings->mRXbins,inSettings->mRXbinsize,0,\
-							  pow(10,inSettings->mRXunits), \
-							  inSettings->mRXci_lower, inSettings->mRXci_upper, ireport->info.common->transferID, name);
+	ireport->info.latency_histogram =  histogram_init(inSettings->mHistBins,inSettings->mHistBinsize,0,\
+							  pow(10,inSettings->mHistUnits), \
+							  inSettings->mHistci_lower, inSettings->mHistci_upper, ireport->info.common->transferID, name);
     }
 #endif
     return reporthdr;
