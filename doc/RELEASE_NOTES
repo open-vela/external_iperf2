@@ -1,7 +1,7 @@
 See doc/DESIGN_NOTES for some description around the software design
 See doc/CLOCKSYNC_NOTES for some description around synchronizing the realtime clocks
 
-2.1.4 change set as of (July 20, 2021)
+2.1.4 change set as of (July 24, 2021)
 --------------------------------------
 o fix TCP isoch regression
 o fix regression in UDP header exchange for tests like --reverse
@@ -9,6 +9,7 @@ o Add support for TCP_NOTSENT_LOWAT vi --tcp-write-prefetch and select() before 
 o Add support for TCP_WINDOW_CLAMP
 o Rework recvn() and writen() for when SO_SNDTIMEO and SO_RCVTIMEO are enabled
 o Add support for --histograms on select with --tcp-write-prefetch
+o Add support for bind to device on the listener, i.e. iperf -s -i 1 -e -B 0.0.0.0%eth0, will only accept/receive on the eth0 interface
 
 2.1.3 change set as of (July 13, 2021)
 --------------------------------------
