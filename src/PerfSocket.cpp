@@ -105,22 +105,21 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
     }
 
 #if HAVE_DECL_SO_BINDTODEVICE
-    char **device = (inSettings->mThreadMode == kMode_Client) ? &inSettings->mIfrnametx : &inSettings->mIfrname;
-    if (*device) {
-	struct ifreq ifr;
+    if ((inSettings->mThreadMode == kMode_Client) && inSettings->mIfrnametx) {
+        struct ifreq ifr;
 	memset(&ifr, 0, sizeof(ifr));
-	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", *device);
+	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", inSettings->mIfrnametx);
 	if (setsockopt(inSettings->mSock, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
 	    char *buf;
-	    int len = snprintf(NULL, 0, "%s %s", "bind to device", *device);
+	    int len = snprintf(NULL, 0, "%s %s", "bind to device", inSettings->mIfrnametx);
 	    len++;  // Trailing null byte + extra
 	    buf = static_cast<char *>(malloc(len));
-	    len = snprintf(buf, len, "%s %s", "bind to device", *device);
-	    FAIL_errno(1, buf, inSettings);
+	    len = snprintf(buf, len, "%s %s", "bind to device", inSettings->mIfrnametx);
+	    WARN_errno(1, buf);
 	    free(buf);
-            free(*device);
-	    *device = NULL;
-        }
+	    free(inSettings->mIfrnametx);
+	    inSettings->mIfrnametx = NULL;
+	}
     }
 #endif
 
