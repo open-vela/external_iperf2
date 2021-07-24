@@ -116,10 +116,11 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
 	    len++;  // Trailing null byte + extra
 	    buf = static_cast<char *>(malloc(len));
 	    len = snprintf(buf, len, "%s %s", "bind to device", *device);
-	    FAIL_errno(1, buf, inSettings);
+	    WARN_errno(1, buf);
 	    free(buf);
             free(*device);
 	    *device = NULL;
+	    FAIL(1, "setsockopt() SO_BINDTODEVICE", inSettings);
         }
     }
 #endif
