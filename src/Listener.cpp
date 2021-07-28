@@ -407,20 +407,29 @@ void Listener::Run () {
  * ------------------------------------------------------------------- */
 void Listener::my_listen () {
     int rc;
-
+    int type;
+    int domain;
     SockAddr_localAddr(mSettings);
 
     // create an AF_INET socket for the accepts
     // for the case of L2 testing and UDP, a new AF_PACKET
     // will be created to supercede this one
-    int type = (isUDP(mSettings)  ?  SOCK_DGRAM  :  SOCK_STREAM);
-    int domain = (SockAddr_isIPv6(&mSettings->local) ?
-#ifdef HAVE_IPV6
-		  AF_INET6
-#else
-		  AF_INET
+#if (HAVE_IF_TUNTAP) && (HAVE_AF_PACKET)
+    if (isTapDev(mSettings) || isTunDev(mSettings)) {
+	type = SOCK_RAW;
+	domain = AF_PACKET;
+     } else
 #endif
-		  : AF_INET);
+	{
+	    type = (isUDP(mSettings)  ?  SOCK_DGRAM  :  SOCK_STREAM);
+	    domain = (SockAddr_isIPv6(&mSettings->local) ?
+#ifdef HAVE_IPV6
+	    AF_INET6
+#else
+	    AF_INET
+#endif
+	    : AF_INET);
+	}
 
 #ifdef WIN32
     if (SockAddr_isMulticast(&mSettings->local)) {
