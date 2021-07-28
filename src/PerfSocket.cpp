@@ -74,9 +74,6 @@
 #include "PerfSocket.hpp"
 #include "SocketAddr.h"
 #include "util.h"
-#if HAVE_DECL_SO_BINDTODEVICE
-#include <net/if.h>
-#endif
 
 /* -------------------------------------------------------------------
  * Set socket options before the listen() or connect() calls.
@@ -121,7 +118,18 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
             free(*device);
 	    *device = NULL;
 	    FAIL(1, "setsockopt() SO_BINDTODEVICE", inSettings);
-        }
+        } else {
+	    memset(&ifr, 0, sizeof(ifr));
+	    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", *device);
+	    //read flags of the interface
+	    int res = ioctl(inSettings->mSock, SIOCGIFFLAGS, &ifr);
+	    FAIL_errno((res==-1), "ioctl:SIOCGIFFLAGS", inSettings);
+	    if (ifr.ifr_flags & IFF_TAP) {
+	        if (!isUDP(inSettings)) {
+		    FAIL(1, "IFF_TAP requires UDP", inSettings);
+		}
+	    }
+	}
     }
 #endif
 
