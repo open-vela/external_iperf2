@@ -212,6 +212,9 @@ const char bind_address[] =
 const char bind_address_iface[] =
 "Binding to local address %s and iface %s\n";
 
+const char bind_address_iface_taptun[] =
+"Binding to local address %s and iface %s using af_packet & sock_raw\n";
+
 const char multicast_ttl[] =
 "Setting multicast TTL to %d\n";
 

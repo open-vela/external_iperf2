@@ -414,7 +414,7 @@ void Listener::my_listen () {
     // create an AF_INET socket for the accepts
     // for the case of L2 testing and UDP, a new AF_PACKET
     // will be created to supercede this one
-#if (HAVE_IF_TUNTAP) && (HAVE_AF_PACKET)
+#if defined(HAVE_IF_TUNTAP) && defined(HAVE_AF_PACKET)
     if (isTapDev(mSettings) || isTunDev(mSettings)) {
 	type = SOCK_RAW;
 	domain = AF_PACKET;

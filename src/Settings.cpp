@@ -314,7 +314,7 @@ void Settings_Initialize (struct thread_Settings *main) {
     //main->mSuggestWin = false;         // -W,  Suggest the window size.
     main->mListenerTimeout = -1;         //
     main->mKeyCheck = true;
-#if (HAVE_DECL_SO_DONTROUTE) && (HAVE_DEFAULT_DONTROUTE_ON)
+#if defined(HAVE_DECL_SO_DONTROUTE) && defined(HAVE_DEFAULT_DONTROUTE_ON)
     setDontRoute(main);
 #endif
     main->mFPS = 1;
@@ -1586,7 +1586,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		free(mExtSettings->mIfrname);
 		mExtSettings->mIfrname = NULL;
 	    } else if (isUDP(mExtSettings)) {
-#if (HAVE_IF_TUNTAP) && (HAVE_AF_PACKET)
+#if defined(HAVE_IF_TUNTAP) && defined(HAVE_AF_PACKET)
 		struct ifreq ifr;
 		int tmp;
 		if (mExtSettings->mIfrname && ((tmp = socket(AF_PACKET,  SOCK_RAW, 0)) != -1)) {
@@ -1597,8 +1597,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		    if (res != -1) {
 			if (ifr.ifr_flags & IFF_TAP) {
 			    setTapDev(mExtSettings);
+			    setEnhanced(mExtSettings);
 			} else if (ifr.ifr_flags & IFF_TUN) {
 			    setTunDev(mExtSettings);
+			    setEnhanced(mExtSettings);
 			}
 		    }
 		    close(tmp);
