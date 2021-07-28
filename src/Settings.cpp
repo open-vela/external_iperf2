@@ -1585,6 +1585,25 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	        fprintf(stderr, "WARNING: Client cannot set bind device %s via -B consider using -c\n", mExtSettings->mIfrname);
 		free(mExtSettings->mIfrname);
 		mExtSettings->mIfrname = NULL;
+	    } else if (isUDP(mExtSettings)) {
+#if HAVE_IF_TUNTAP & AF_PACKET
+		struct ifreq ifr;
+		int tmp;
+		if (mExtSettings->mIfrname && ((tmp = socket(AF_PACKET,  SOCK_RAW, 0)) != -1)) {
+		    memset(&ifr, 0, sizeof(ifr));
+		    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", mExtSettings->mIfrname);
+		    //read flags of the interface
+		    int res = ioctl(mExtSettings->mSock, SIOCGIFFLAGS, &ifr);
+		    if (res != -1) {
+			if (ifr.ifr_flags & IFF_TAP) {
+			    setTapDev(mExtSettings);
+			} else if (ifr.ifr_flags & IFF_TUN) {
+			    setTunDev(mExtSettings);
+			}
+		    }
+		    close(tmp);
+		}
+#endif
 	    }
 	}
 	if (isIPV6(mExtSettings)) {
