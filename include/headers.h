@@ -101,6 +101,13 @@ typedef bool _Bool;
 # define __bool_true_false_are_defined 1
 #endif
 
+
+#if ((defined HAVE_SSM_MULTICAST) || (defined HAVE_DECL_SO_BINDTODEVICE))  && (defined HAVE_NET_IF_H)
+#include <net/if.h>
+#endif
+#include <sys/ioctl.h>
+#include <linux/if_tun.h>
+
 // AF_PACKET HEADERS
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
 #include <net/ethernet.h>

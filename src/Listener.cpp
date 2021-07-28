@@ -83,9 +83,6 @@
 #include "SocketAddr.h"
 #include "payloads.h"
 #include "delay.h"
-#if (defined HAVE_SSM_MULTICAST) && (defined HAVE_NET_IF_H)
-#include <net/if.h>
-#endif
 
 #if HAVE_DECL_MSG_WAITALL
 #define PEEK_FLAGS (MSG_PEEK | MSG_WAITALL)
