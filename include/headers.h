@@ -105,8 +105,12 @@ typedef bool _Bool;
 #if ((defined HAVE_SSM_MULTICAST) || (defined HAVE_DECL_SO_BINDTODEVICE))  && (defined HAVE_NET_IF_H)
 #include <net/if.h>
 #endif
-#include <sys/ioctl.h>
+
+#if HAVE_IF_TUNTAP
 #include <linux/if_tun.h>
+#include <sys/ioctl.h>
+#endif
+
 
 // AF_PACKET HEADERS
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)

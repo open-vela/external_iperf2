@@ -360,6 +360,7 @@ struct thread_Settings {
 #define FLAG_SETTCPMSS      0x20000000
 #define FLAG_INCRDSTPORT    0x40000000
 #define FLAG_INCRSRCIP      0x80000000
+
 /*
  * More extended flags
  */
@@ -368,6 +369,8 @@ struct thread_Settings {
 #define FLAG_SMALLTRIPTIME  0x00000004
 #define FLAG_RXCLAMP        0x00000008
 #define FLAG_WRITEPREFETCH  0x00000010
+#define FLAG_TUNDEV         0x00000020
+#define FLAG_TAPDEV         0x00000040
 
 #define isBuflenSet(settings)      ((settings->flags & FLAG_BUFLENSET) != 0)
 #define isCompat(settings)         ((settings->flags & FLAG_COMPAT) != 0)
@@ -433,6 +436,8 @@ struct thread_Settings {
 #define isSumServerDstIP(settings) ((settings->flags_extend2 & FLAG_SUMDSTIP) != 0)
 #define isRxClamp(settings)        ((settings->flags_extend2 & FLAG_RXCLAMP) != 0)
 #define isWritePrefetch(settings) ((settings->flags_extend2 & FLAG_WRITEPREFETCH) != 0)
+#define isTapDev(settings)         ((settings->flags_extend2 & FLAG_TAPDEV) != 0)
+#define isTunDev(settings)         ((settings->flags_extend2 & FLAG_TUNDEV) != 0)
 
 #define setBuflenSet(settings)     settings->flags |= FLAG_BUFLENSET
 #define setCompat(settings)        settings->flags |= FLAG_COMPAT
@@ -495,6 +500,8 @@ struct thread_Settings {
 #define setSumServerDstIP(settings) settings->flags_extend2 |= FLAG_SUMDSTIP
 #define setRxClamp(settings)       settings->flags_extend2 |= FLAG_RXCLAMP
 #define setWritePrefetch(settings) settings->flags_extend2 |= FLAG_WRITEPREFETCH
+#define setTapDev(settings)        settings->flags_extend2 |= FLAG_TAPDEV
+#define setTunDev(settings)        settings->flags_extend2 |= FLAG_TUNDEV
 
 #define unsetBuflenSet(settings)   settings->flags &= ~FLAG_BUFLENSET
 #define unsetCompat(settings)      settings->flags &= ~FLAG_COMPAT
@@ -556,6 +563,8 @@ struct thread_Settings {
 #define unsetSumServerDstIP(settings) settings->flags_extend2 &= ~FLAG_SUMDSTIP
 #define unsetRxClamp(settings)       settings->flags_extend2 &= ~FLAG_RXCLAMP
 #define unsetWritePrefetch(settings) settings->flags_extend2 &= ~FLAG_WRITEPREFETCH
+#define unsetTapDev(settings)        settings->flags_extend2 &= ~FLAG_TAPDEV
+#define unsetTunDev(settings)        settings->flags_extend2 &= ~FLAG_TUNDEV
 
 // set to defaults
 void Settings_Initialize(struct thread_Settings* main);

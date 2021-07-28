@@ -651,6 +651,8 @@ CXXDEPMODE
 ac_ct_CXX
 CXXFLAGS
 CXX
+IF_TUNTAP_FALSE
+IF_TUNTAP_TRUE
 AF_PACKET_FALSE
 AF_PACKET_TRUE
 am__fastdepCC_FALSE
@@ -772,6 +774,7 @@ enable_static_bin
 enable_debug_symbols
 enable_af_packet
 enable_dependency_tracking
+enable_if_tuntap
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1438,6 +1441,7 @@ Optional Features:
                           do not reject slow dependency extractors
   --disable-dependency-tracking
                           speeds up one-time build
+  --enable-if-tuntap      Enable IF_TUNTAP support [default=yes]
 
 Some influential environment variables:
   CC          C compiler command
@@ -4419,6 +4423,37 @@ fi
 
 fi
 
+# Check whether --enable-if-tuntap was given.
+if test "${enable_if_tuntap+set}" = set; then :
+  enableval=$enable_if_tuntap;
+else
+  enable_if_tuntap=yes
+fi
+
+
+if test "x$enable_if_tuntap" = "xyes"; then :
+
+   ac_fn_c_check_decl "$LINENO" "TPACKET_V2" "ac_cv_have_decl_TPACKET_V2" "#include <linux/if_tun.h>
+"
+if test "x$ac_cv_have_decl_TPACKET_V2" = xyes; then :
+
+$as_echo "#define HAVE_IF_TUNTAP 1" >>confdefs.h
+
+else
+  enable_if_tuntap="no"
+fi
+
+    if test "x${enable_if_tuntap}" = "xyes"; then
+  IF_TUNTAP_TRUE=
+  IF_TUNTAP_FALSE='#'
+else
+  IF_TUNTAP_TRUE='#'
+  IF_TUNTAP_FALSE=
+fi
+
+
+fi
+
 
 
 ac_ext=cpp
@@ -7093,7 +7128,7 @@ fi
 done
 
 
-for ac_header in arpa/inet.h libintl.h net/ethernet.h net/if.h linux/ip.h linux/udp.h linux/if_packet.h linux/filter.h netdb.h netinet/in.h netinet/tcp.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h signal.h ifaddrs.h
+for ac_header in arpa/inet.h libintl.h net/ethernet.h net/if.h linux/ip.h linux/udp.h linux/if_packet.h linux/filter.h linux/if_tun.h netdb.h netinet/in.h netinet/tcp.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h signal.h ifaddrs.h
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
 ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
@@ -8993,6 +9028,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${AF_PACKET_TRUE}" && test -z "${AF_PACKET_FALSE}"; then
   as_fn_error $? "conditional \"AF_PACKET\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${IF_TUNTAP_TRUE}" && test -z "${IF_TUNTAP_FALSE}"; then
+  as_fn_error $? "conditional \"IF_TUNTAP\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${am__fastdepCXX_TRUE}" && test -z "${am__fastdepCXX_FALSE}"; then

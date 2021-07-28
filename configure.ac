@@ -98,6 +98,18 @@ AS_IF([test "x$enable_af_packet" = "xyes"], [
    AM_CONDITIONAL([AF_PACKET], [test "x${enable_af_packet}" = "xyes"])
 ])
 
+dnl IF_TUNTAP support
+AC_ARG_ENABLE(if-tuntap,
+    AS_HELP_STRING([--enable-if-tuntap], [Enable IF_TUNTAP support [default=yes]]),,[enable_if_tuntap=yes])
+
+AS_IF([test "x$enable_if_tuntap" = "xyes"], [
+   AC_CHECK_DECL([TPACKET_V2],
+      AC_DEFINE([HAVE_IF_TUNTAP],[1],[IF_TUNTAP support is available]),
+      [enable_if_tuntap="no"],
+      [[#include <linux/if_tun.h>]])
+   AM_CONDITIONAL([IF_TUNTAP], [test "x${enable_if_tuntap}" = "xyes"])
+])
+
 
 dnl ===================================================================
 dnl Checks for programs
@@ -144,7 +156,7 @@ AC_SEARCH_LIBS([socket], [socket], [],
 
 dnl Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([arpa/inet.h libintl.h net/ethernet.h net/if.h linux/ip.h linux/udp.h linux/if_packet.h linux/filter.h netdb.h netinet/in.h netinet/tcp.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h signal.h ifaddrs.h])
+AC_CHECK_HEADERS([arpa/inet.h libintl.h net/ethernet.h net/if.h linux/ip.h linux/udp.h linux/if_packet.h linux/filter.h linux/if_tun.h netdb.h netinet/in.h netinet/tcp.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h signal.h ifaddrs.h])
 
 dnl ===================================================================
 dnl Checks for typedefs, structures
