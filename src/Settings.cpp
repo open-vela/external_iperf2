@@ -1586,7 +1586,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		free(mExtSettings->mIfrname);
 		mExtSettings->mIfrname = NULL;
 	    } else if (isUDP(mExtSettings)) {
-#if HAVE_IF_TUNTAP & AF_PACKET
+#if (HAVE_IF_TUNTAP) && (HAVE_AF_PACKET)
 		struct ifreq ifr;
 		int tmp;
 		if (mExtSettings->mIfrname && ((tmp = socket(AF_PACKET,  SOCK_RAW, 0)) != -1)) {
