@@ -1586,24 +1586,28 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		free(mExtSettings->mIfrname);
 		mExtSettings->mIfrname = NULL;
 	    } else if (isUDP(mExtSettings)) {
-#if defined(HAVE_IF_TUNTAP) && defined(HAVE_AF_PACKET)
+#if defined(HAVE_IF_TUNTAP) && defined(HAVE_AF_PACKET) && defined(HAVE_DECL_SO_BINDTODEVICE)
 		struct ifreq ifr;
-		int tmp;
-		if (mExtSettings->mIfrname && ((tmp = socket(AF_PACKET,  SOCK_RAW, 0)) != -1)) {
+		int tmpsock;
+		if (mExtSettings->mIfrname && ((tmpsock = socket(AF_PACKET, SOCK_RAW, 0)) != -1)) {
 		    memset(&ifr, 0, sizeof(ifr));
 		    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", mExtSettings->mIfrname);
-		    //read flags of the interface
-		    int res = ioctl(mExtSettings->mSock, SIOCGIFFLAGS, &ifr);
-		    if (res != -1) {
-			if (ifr.ifr_flags & IFF_TAP) {
+		    if (setsockopt(tmpsock, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) != -1) {
+		      int res = ioctl(tmpsock, SIOCGIFFLAGS, &ifr);
+		      if (res != -1) {
+			// Both IFF_TAP and IFF_TUN cannot be set
+			if (!((ifr.ifr_flags & (IFF_TAP | IFF_TUN)) == (IFF_TAP | IFF_TUN)))  {
+			  if (ifr.ifr_flags & IFF_TAP) {
 			    setTapDev(mExtSettings);
 			    setEnhanced(mExtSettings);
-			} else if (ifr.ifr_flags & IFF_TUN) {
+			  } else if (ifr.ifr_flags & IFF_TUN) {
 			    setTunDev(mExtSettings);
 			    setEnhanced(mExtSettings);
+			  }
 			}
+		      }
 		    }
-		    close(tmp);
+		    close(tmpsock);
 		}
 #endif
 	    }
