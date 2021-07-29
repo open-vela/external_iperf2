@@ -460,8 +460,10 @@ void Listener::my_listen () {
     } else
 #endif
 	{
+	  if (!isTapDev(mSettings) && !isTunDev(mSettings)) {
 	    rc = bind(ListenSocket, reinterpret_cast<sockaddr*>(&mSettings->local), mSettings->size_local);
-	    FAIL_errno(rc == SOCKET_ERROR, "bind", mSettings);
+	    FAIL_errno(rc == SOCKET_ERROR, "listener bind", mSettings);
+	  }
 	}
 
     // update the reporter thread
