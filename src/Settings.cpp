@@ -1593,19 +1593,22 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		    memset(&ifr, 0, sizeof(ifr));
 		    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", mExtSettings->mIfrname);
 		    if (setsockopt(tmpsock, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) != -1) {
-		      int res = ioctl(tmpsock, SIOCGIFFLAGS, &ifr);
-		      if (res != -1) {
-			// Both IFF_TAP and IFF_TUN cannot be set
-			if (!((ifr.ifr_flags & (IFF_TAP | IFF_TUN)) == (IFF_TAP | IFF_TUN)))  {
-			  if (ifr.ifr_flags & IFF_TAP) {
-			    setTapDev(mExtSettings);
-			    setEnhanced(mExtSettings);
-			  } else if (ifr.ifr_flags & IFF_TUN) {
-			    setTunDev(mExtSettings);
-			    setEnhanced(mExtSettings);
-			  }
+			int res = ioctl(tmpsock, SIOCGIFFLAGS, &ifr);
+			if (res != -1) {
+			    // Both IFF_TAP and IFF_TUN cannot be set
+			    if (!((ifr.ifr_flags & (IFF_TAP | IFF_TUN)) == (IFF_TAP | IFF_TUN)))  {
+				if (ifr.ifr_flags & IFF_TAP) {
+				    setTapDev(mExtSettings);
+				    setEnhanced(mExtSettings);
+				}
+#if 0 //reading of tun interface flags don't seem to be working
+				else if (ifr.ifr_flags & IFF_TUN) {
+				    setTunDev(mExtSettings);
+				    setEnhanced(mExtSettings);
+				}
+#endif
+			    }
 			}
-		      }
 		    }
 		    close(tmpsock);
 		}
