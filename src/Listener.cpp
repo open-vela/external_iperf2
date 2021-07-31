@@ -429,9 +429,8 @@ void Listener::my_listen () {
 	memset(&saddr, 0, sizeof(saddr));
 	saddr.sll_family = AF_PACKET;
 	saddr.sll_protocol = htons(ETH_P_ALL);
-	unsigned int ifindex = if_nametoindex(mSettings->mIfrname);
-	FAIL_errno(!ifindex, "tuntap nametoindex", mSettings);
-	saddr.sll_ifindex = ifindex;
+	saddr.sll_ifindex = if_nametoindex(mSettings->mIfrname);
+	FAIL_errno(!saddr.sll_ifindex, "tuntap nametoindex", mSettings);
 	saddr.sll_pkttype = PACKET_HOST;
 	rc = bind(ListenSocket, reinterpret_cast<sockaddr*>(&saddr), sizeof(saddr));
 	FAIL_errno(rc == SOCKET_ERROR, "listener bind", mSettings);
