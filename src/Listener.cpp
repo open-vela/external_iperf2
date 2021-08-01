@@ -420,7 +420,7 @@ void Listener::my_listen () {
 	struct sockaddr_ll saddr;
         struct ifreq ifr;
 
-	ListenSocket = socket(AF_PACKET, SOCK_RAW, 0);
+	ListenSocket = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	FAIL_errno(ListenSocket == SOCKET_ERROR, "tuntap socket()", mSettings);
 	memset(&ifr, 0, sizeof(ifr));
 	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", mSettings->mIfrname);
