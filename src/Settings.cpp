@@ -1589,7 +1589,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 #if defined(HAVE_IF_TUNTAP) && defined(HAVE_AF_PACKET) && defined(HAVE_DECL_SO_BINDTODEVICE)
 		struct ifreq ifr;
 		int tmpsock;
-		if (mExtSettings->mIfrname && ((tmpsock = socket(AF_PACKET, SOCK_RAW, 0)) != -1)) {
+		if (mExtSettings->mIfrname && ((tmpsock = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) != -1)) {
 		    memset(&ifr, 0, sizeof(ifr));
 		    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", mExtSettings->mIfrname);
 		    if (setsockopt(tmpsock, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) != -1) {
