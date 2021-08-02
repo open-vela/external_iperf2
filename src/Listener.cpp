@@ -416,8 +416,8 @@ void Listener::my_listen () {
 	ListenSocket = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	FAIL_errno(ListenSocket == SOCKET_ERROR, "tuntap socket()", mSettings);
 	mSettings->mSock = ListenSocket;
-	SockAddr_Accept_BPF(ListenSocket, mSettings->mPort);
-	WARN_errno((ListenSocket == SOCKET_ERROR), "tap accept bpf");
+	rc = SockAddr_Accept_BPF(ListenSocket, mSettings->mPort);
+	WARN_errno((rc == SOCKET_ERROR), "tap accept bpf");
 	SetSocketOptions(mSettings);
     } else
 #endif
@@ -954,7 +954,8 @@ int Listener::tuntap_accept(thread_Settings *server) {
 	rc = SockAddr_Accept_V4_TAP_BPF(server->mSock, v6local, v6peer, (reinterpret_cast<struct sockaddr_in6 *>(l))->sin6_port, (reinterpret_cast<struct sockaddr_in6 *>(p))->sin6_port);
     }
 #endif
-    int rc = recv(ListenSocket, mBuf, mBufLen, MSG_PEEK);
+    int rc = recv(server->mSock, mBuf, mBufLen, MSG_PEEK);
+    printf("***read %d bytes\n",rc);
     return 0;
 }
 /* -------------------------------------------------------------------
