@@ -101,24 +101,57 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
 #endif
     }
 
-#if HAVE_DECL_SO_BINDTODEVICE
-    char **device = (inSettings->mThreadMode == kMode_Client) ? &inSettings->mIfrnametx : &inSettings->mIfrname;
-    if (*device) {
+
+#if ((HAVE_TUNTAP_TAP) && (HAVE_TUNTAP_TUN))
+    if (isTunDev(inSettings) || isTapDev(inSettings)) {
+	char **device = (inSettings->mThreadMode == kMode_Client) ? &inSettings->mIfrnametx : &inSettings->mIfrname;
 	struct ifreq ifr;
+	struct sockaddr_ll saddr;
+	int rc;
 	memset(&ifr, 0, sizeof(ifr));
-	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", *device);
-	if (setsockopt(inSettings->mSock, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
-	    char *buf;
-	    int len = snprintf(NULL, 0, "%s %s", "bind to device", *device);
-	    len++;  // Trailing null byte + extra
-	    buf = static_cast<char *>(malloc(len));
-	    len = snprintf(buf, len, "%s %s", "bind to device", *device);
-	    WARN_errno(1, buf);
-	    free(buf);
-            free(*device);
-	    *device = NULL;
-	    FAIL(1, "setsockopt() SO_BINDTODEVICE", inSettings);
-        }
+	if (*device) {
+	    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", *device);
+	}
+	inSettings->tuntapdev = open("/dev/net/tun", O_RDWR);
+	FAIL_errno((rc == -1), "open tun dev", inSettings);
+	ifr.ifr_flags =  isTapDev(inSettings) ? IFF_TAP : IFF_TUN;
+	ifr.ifr_flags |= IFF_NO_PI;
+	rc = ioctl(inSettings->tuntapdev, TUNSETIFF, (void*) &ifr);
+	FAIL_errno((rc == -1), "tunsetiff", inSettings);
+	memset(&saddr, 0, sizeof(saddr));
+	saddr.sll_family = AF_PACKET;
+	saddr.sll_protocol = htons(ETH_P_ALL);
+	char buf[80];
+	snprintf(buf, 90, "tap%d", inSettings->tuntapdev);
+	printf("****dev = %s\n", buf);
+	saddr.sll_ifindex = if_nametoindex(buf);
+	FAIL_errno(!saddr.sll_ifindex, "tuntap nametoindex", inSettings);
+	saddr.sll_pkttype = PACKET_HOST;
+	rc = bind(inSettings->mSock, reinterpret_cast<sockaddr*>(&saddr), sizeof(saddr));
+	FAIL_errno((rc == SOCKET_ERROR), "tap bind", inSettings);
+	printf("*** tapdev configured\n");
+    } else
+#endif
+#if (HAVE_DECL_SO_BINDTODEVICE) && 0
+    {
+	char **device = (inSettings->mThreadMode == kMode_Client) ? &inSettings->mIfrnametx : &inSettings->mIfrname;
+	if (*device) {
+	    struct ifreq ifr;
+	    memset(&ifr, 0, sizeof(ifr));
+	    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", *device);
+	    if (setsockopt(inSettings->mSock, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
+		char *buf;
+		int len = snprintf(NULL, 0, "%s %s", "bind to device", *device);
+		len++;  // Trailing null byte + extra
+		buf = static_cast<char *>(malloc(len));
+		len = snprintf(buf, len, "%s %s", "bind to device", *device);
+		WARN_errno(1, buf);
+		free(buf);
+		free(*device);
+		*device = NULL;
+		FAIL(1, "setsockopt() SO_BINDTODEVICE", inSettings);
+	    }
+	}
     }
 #endif
 

@@ -88,6 +88,7 @@ private:
     void my_listen(void);
     int my_accept(thread_Settings *server);
     int udp_accept(thread_Settings *server);
+    int tuntap_accept(thread_Settings *server);
     bool L2_setup(thread_Settings *server, int sockfd);
     bool tap_setup(thread_Settings *server, int sockfd);
     void UDPSingleServer(thread_Settings *server);

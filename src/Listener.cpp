@@ -313,11 +313,7 @@ void Listener::Run () {
 	// server settings flags should now be set per the client's first message exchange
 	// so the server setting's flags per the client can now be checked
 	if (isUDP(server)){
-	    if (
-#if defined(HAVE_IF_TUNTAP) && defined(HAVE_AF_PACKET) && defined(HAVE_DECL_SO_BINDTODEVICE)
-		(isTapDev(server) && !tap_setup(server, server->mSock)) ||
-#endif
-		(!isCompat(mSettings) && (isL2LengthCheck(mSettings) || isL2LengthCheck(server)) && !L2_setup(server, server->mSock))) {
+	    if (!isCompat(mSettings) && (isL2LengthCheck(mSettings) || isL2LengthCheck(server)) && !L2_setup(server, server->mSock)) {
 		// Requested L2 testing but L2 setup failed
 		Iperf_remove_host(server);
 		if (DecrSumReportRefCounter(server->mSumReport) <= 0) {
@@ -415,25 +411,14 @@ void Listener::my_listen () {
     int domain;
     SockAddr_localAddr(mSettings);
 
-#if defined(HAVE_IF_TUNTAP) && defined(HAVE_AF_PACKET)
-    if (1 || isTapDev(mSettings) || isTunDev(mSettings)) {
-	struct sockaddr_ll saddr;
-        struct ifreq ifr;
-
+#if (((HAVE_TUNTAP_TUN) || (HAVE_TUNTAP_TAP)) && (AF_PACKET))
+    if (isTapDev(mSettings)) {
 	ListenSocket = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	FAIL_errno(ListenSocket == SOCKET_ERROR, "tuntap socket()", mSettings);
-	memset(&ifr, 0, sizeof(ifr));
-	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", mSettings->mIfrname);
-	rc = setsockopt(ListenSocket, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr));
-	FAIL_errno(rc == SOCKET_ERROR, "tuntap so_bindtodevice", mSettings);
-	memset(&saddr, 0, sizeof(saddr));
-	saddr.sll_family = AF_PACKET;
-	saddr.sll_protocol = htons(ETH_P_ALL);
-	saddr.sll_ifindex = if_nametoindex(mSettings->mIfrname);
-	FAIL_errno(!saddr.sll_ifindex, "tuntap nametoindex", mSettings);
-	saddr.sll_pkttype = PACKET_HOST;
-	rc = bind(ListenSocket, reinterpret_cast<sockaddr*>(&saddr), sizeof(saddr));
-	FAIL_errno(rc == SOCKET_ERROR, "listener bind", mSettings);
+	mSettings->mSock = ListenSocket;
+	SockAddr_Accept_BPF(ListenSocket, mSettings->mPort);
+	WARN_errno((ListenSocket == SOCKET_ERROR), "tap accept bpf");
+	SetSocketOptions(mSettings);
     } else
 #endif
     {
@@ -915,6 +900,7 @@ bool Listener::tap_setup (thread_Settings *server, int sockfd) {
  * a listening UDP socket for new or first received datagram
  * ------------------------------------------------------------------- ----*/
 int Listener::udp_accept (thread_Settings *server) {
+    delay_loop(10000000);
     assert(server != NULL);
     int rc;
     assert(ListenSocket > 0);
@@ -961,6 +947,16 @@ int Listener::udp_accept (thread_Settings *server) {
     }
     return server->mSock;
 }
+
+int Listener::tuntap_accept(thread_Settings *server) {
+#if 0
+    int rc;
+    if (isTapDev(server)) {
+	rc = SockAddr_Accept_V4_TAP_BPF(server->mSock, v6local, v6peer, (reinterpret_cast<struct sockaddr_in6 *>(l))->sin6_port, (reinterpret_cast<struct sockaddr_in6 *>(p))->sin6_port);
+    }
+#endif
+    return 0;
+}
 /* -------------------------------------------------------------------
  * This is called by the Listener thread main loop, return a socket or error
  * ------------------------------------------------------------------- */
@@ -978,7 +974,11 @@ int Listener::my_accept (thread_Settings *server) {
     server->accept_time.tv_sec = 0;
     server->accept_time.tv_usec = 0;
     if (isUDP(server)) {
-	server->mSock = udp_accept(server);
+	if (isTapDev(server) || isTunDev(server)) {
+	    server->mSock = tuntap_accept(server);
+	} else {
+	    server->mSock = udp_accept(server);
+	}
 	// note udp_accept will update the active host table
     } else {
 	// accept a TCP  connection
