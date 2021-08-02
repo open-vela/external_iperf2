@@ -118,18 +118,26 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
 	ifr.ifr_flags |= IFF_NO_PI;
 	rc = ioctl(inSettings->tuntapdev, TUNSETIFF, (void*) &ifr);
 	FAIL_errno((rc == -1), "tunsetiff", inSettings);
+	if (!(*device)) {
+	    int len = snprintf(NULL, 0, "tap%d", inSettings->tuntapdev);
+	    len++;  // Trailing null byte + extra
+	    (*device) = static_cast<char *>(calloc(0,len));
+	    len = snprintf(*device, len, "tap%d", inSettings->tuntapdev);
+	}
 	memset(&saddr, 0, sizeof(saddr));
 	saddr.sll_family = AF_PACKET;
 	saddr.sll_protocol = htons(ETH_P_ALL);
-	char buf[80];
-	snprintf(buf, 90, "tap%d", inSettings->tuntapdev);
-	printf("****dev = %s\n", buf);
 	saddr.sll_ifindex = if_nametoindex(*device);
-	FAIL_errno(!saddr.sll_ifindex, "tuntap nametoindex", inSettings);
+	if (!saddr.sll_ifindex) {
+	    fprintf(stderr, "tuntap device of %s used for index lookup\n", (*device));
+	    FAIL_errno(!saddr.sll_ifindex, "tuntap nametoindex", inSettings);
+	}
 	saddr.sll_pkttype = PACKET_HOST;
 	rc = bind(inSettings->mSock, reinterpret_cast<sockaddr*>(&saddr), sizeof(saddr));
 	FAIL_errno((rc == SOCKET_ERROR), "tap bind", inSettings);
-	printf("*** tapdev configured\n");
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug("tuntap device of %s configured", inSettings->mIfrname);
+#endif
     } else
 #endif
 #if (HAVE_DECL_SO_BINDTODEVICE) && 0
