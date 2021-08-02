@@ -446,6 +446,7 @@ void Listener::my_listen () {
 		ListenSocket = socket(domain, type, 0);
 		WARN_errno(ListenSocket == INVALID_SOCKET, "socket");
 	    }
+	mSettings->mSock = ListenSocket;
 	SetSocketOptions(mSettings);
 	// reuse the address, so we can run if a former server was killed off
 	int boolean = 1;
@@ -464,7 +465,6 @@ void Listener::my_listen () {
 		FAIL_errno(rc == SOCKET_ERROR, "listener bind", mSettings);
 	    }
     }
-    mSettings->mSock = ListenSocket;
 
     // update the reporter thread
     if (isReport(mSettings) && isSettingsReport(mSettings)) {
