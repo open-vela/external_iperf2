@@ -73,7 +73,6 @@
 #include "payloads.h"
 #include <math.h>
 
-
 static int reversetest = 0;
 static int fullduplextest = 0;
 static int histogram = 0;
@@ -194,8 +193,8 @@ const struct option long_options[] =
 {"burst-period", optional_argument, &burstperiodic, 1},
 {"tcp-rx-window-clamp", required_argument, &rxwinclamp, 1},
 {"tcp-write-prefetch", required_argument, &txnotsentlowwater, 1}, // see doc/DESIGN_NOTES
-{"tap-dev", no_argument, &tapif, 1},
-{"tun-dev", no_argument, &tunif, 1},
+{"tap-dev", optional_argument, &tapif, 1},
+{"tun-dev", optional_argument, &tunif, 1},
 {"NUM_REPORT_STRUCTS", required_argument, &numreportstructs, 1},
 #ifdef WIN32
 {"reverse", no_argument, &reversetest, 1},
@@ -1070,6 +1069,10 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    if (tapif) {
 		tapif = 0;
 #if HAVE_TUNTAP_TAP
+		if (optarg) {
+		    mExtSettings->mIfrname = static_cast<char *>(calloc(strlen(optarg) + 1, sizeof(char)));
+		    strcpy(mExtSettings->mIfrname, optarg);
+		}
 		setTapDev(mExtSettings);
 		setEnhanced(mExtSettings);
 #endif
