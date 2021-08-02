@@ -5,7 +5,7 @@ dnl ===================================================================
 
 
 AC_PREREQ(2.59)
-AC_INIT(Iperf,2.1.4-rc)
+AC_INIT(Iperf,2.1.4-tapdev)
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE()
 
@@ -94,22 +94,33 @@ AS_IF([test "x$enable_af_packet" = "xyes"], [
       AC_DEFINE([HAVE_AF_PACKET],[1],[AF_PACKET support is available]),
       [enable_af_packet="no"],
       [[#include <sys/socket.h>
-      #include <linux/if_packet.h>]])
+      #include <linux/if_packet.h>]]),
    AM_CONDITIONAL([AF_PACKET], [test "x${enable_af_packet}" = "xyes"])
 ])
 
-dnl IF_TUNTAP support
-AC_ARG_ENABLE(if-tuntap,
-    AS_HELP_STRING([--enable-if-tuntap], [Enable IF_TUNTAP support [default=yes]]),,[enable_if_tuntap=yes])
+dnl TUNTAP_TUN support
+AC_ARG_ENABLE(tuntap-tun,
+    AS_HELP_STRING([--enable-tuntap-tun], [Enable TUNTAP_TUN support [default=yes]]),,[enable_tuntap_tun=yes])
 
-AS_IF([test "x$enable_if_tuntap" = "xyes"], [
-   AC_CHECK_DECL([TPACKET_V2],
-      AC_DEFINE([HAVE_IF_TUNTAP],[1],[IF_TUNTAP support is available]),
-      [enable_if_tuntap="no"],
+AS_IF([test "x$enable_tuntap_tun" = "xyes"], [
+   AC_CHECK_DECLS([IFF_TUN],
+      AC_DEFINE([HAVE_TUNTAP_TUN],[1],[TUNTAP_TUN support is available]),
+      [enable_tuntap_tun="no"],
       [[#include <linux/if_tun.h>]])
-   AM_CONDITIONAL([IF_TUNTAP], [test "x${enable_if_tuntap}" = "xyes"])
+   AM_CONDITIONAL([TUNTAP_TUN], [test "x${enable_tuntap_tun}" = "xyes"])
 ])
 
+dnl TUNTAP_TAP support
+AC_ARG_ENABLE(tuntap-tap,
+    AS_HELP_STRING([--enable-tuntap-tap], [Enable TUNTAP_TAP support [default=yes]]),,[enable_tuntap_tap=yes])
+
+AS_IF([test "x$enable_tuntap_tap" = "xyes"], [
+   AC_CHECK_DECLS([IFF_TAP],
+      AC_DEFINE([HAVE_TUNTAP_TAP],[1],[TUNTAP_TAP support is available]),
+      [enable_tuntap_tap="no"],
+      [[#include <linux/if_tun.h>]])
+   AM_CONDITIONAL([TUNTAP_TAP], [test "x${enable_tuntap_tap}" = "xyes"])
+])
 
 dnl ===================================================================
 dnl Checks for programs

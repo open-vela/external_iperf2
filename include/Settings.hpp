@@ -278,6 +278,9 @@ struct thread_Settings {
     struct timeval mPermitKeyTime;
     bool mKeyCheck;
     double mListenerTimeout;
+#if (HAVE_TUNTAP_TAP) || (HAVE_TUNTAP_TUN)
+    int tuntapdev;
+#endif
 #if HAVE_DECL_TCP_WINDOW_CLAMP
     int mClampSize;
 #endif

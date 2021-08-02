@@ -987,12 +987,9 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
     if (report->common->Localhost != NULL) {
 	if (isEnhanced(report->common) && !SockAddr_isMulticast(&report->local)) {
 	    if (report->common->Ifrname) {
-#if (HAVE_IF_TUNTAP) && (HAVE_AF_PACKET)
 		if (isTunDev(report->common) || isTapDev(report->common)) {
 		    printf(bind_address_iface_taptun, report->common->Localhost, report->common->Ifrname);
-		} else
-#endif
-		{
+		} else {
 		    printf(bind_address_iface, report->common->Localhost, report->common->Ifrname);
 		}
 	    } else {

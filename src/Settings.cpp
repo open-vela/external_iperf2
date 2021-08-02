@@ -102,6 +102,8 @@ static int permitkey = 0;
 static int permitkeytimeout = 0;
 static int rxwinclamp = 0;
 static int txnotsentlowwater = 0;
+static int tapif = 0;
+static int tunif = 0;
 
 void Settings_Interpret(char option, const char *optarg, struct thread_Settings *mExtSettings);
 // apply compound settings after the command line has been fully parsed
@@ -192,6 +194,8 @@ const struct option long_options[] =
 {"burst-period", optional_argument, &burstperiodic, 1},
 {"tcp-rx-window-clamp", required_argument, &rxwinclamp, 1},
 {"tcp-write-prefetch", required_argument, &txnotsentlowwater, 1}, // see doc/DESIGN_NOTES
+{"tap-dev", no_argument, &tapif, 1},
+{"tun-dev", no_argument, &tunif, 1},
 {"NUM_REPORT_STRUCTS", required_argument, &numreportstructs, 1},
 #ifdef WIN32
 {"reverse", no_argument, &reversetest, 1},
@@ -1061,6 +1065,20 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		numreportstructs = 0;
 		mExtSettings->numreportstructs = byte_atoi(optarg);
 	    }
+	    if (tapif) {
+		tapif = 0;
+#if HAVE_TUNTAP_TAP
+		setTapDev(mExtSettings);
+		setEnhanced(mExtSettings);
+#endif
+	    }
+	    if (tunif) {
+		tunif = 0;
+#if HAVE_TUNTAP_TUN
+		setTunDev(mExtSettings);
+		setEnhanced(mExtSettings);
+#endif
+	    }
 	    break;
         default: // ignore unknown
             break;
@@ -1585,34 +1603,6 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	        fprintf(stderr, "WARNING: Client cannot set bind device %s via -B consider using -c\n", mExtSettings->mIfrname);
 		free(mExtSettings->mIfrname);
 		mExtSettings->mIfrname = NULL;
-	    } else if (isUDP(mExtSettings)) {
-#if defined(HAVE_IF_TUNTAP) && defined(HAVE_AF_PACKET) && defined(HAVE_DECL_SO_BINDTODEVICE)
-		struct ifreq ifr;
-		int tmpsock;
-		if (mExtSettings->mIfrname && ((tmpsock = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) != -1)) {
-		    memset(&ifr, 0, sizeof(ifr));
-		    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", mExtSettings->mIfrname);
-		    if (setsockopt(tmpsock, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) != -1) {
-			int res = ioctl(tmpsock, SIOCGIFFLAGS, &ifr);
-			if (res != -1) {
-			    // Both IFF_TAP and IFF_TUN cannot be set
-			    if (!((ifr.ifr_flags & (IFF_TAP | IFF_TUN)) == (IFF_TAP | IFF_TUN)))  {
-				if (ifr.ifr_flags & IFF_TAP) {
-				    setTapDev(mExtSettings);
-				    setEnhanced(mExtSettings);
-				}
-#if 0 //reading of tun interface flags don't seem to be working
-				else if (ifr.ifr_flags & IFF_TUN) {
-				    setTunDev(mExtSettings);
-				    setEnhanced(mExtSettings);
-				}
-#endif
-			    }
-			}
-		    }
-		    close(tmpsock);
-		}
-#endif
 	    }
 	}
 	if (isIPV6(mExtSettings)) {

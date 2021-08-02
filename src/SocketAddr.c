@@ -648,7 +648,51 @@ int SockAddr_Accept_BPF (int sock, uint16_t port) {
     };
     return(setsockopt(sock, SOL_SOCKET, SO_ATTACH_FILTER, &bpf, sizeof(bpf)));
 }
+
+//[root@ryzen3950 iperf2-code]# tcpdump  udp dst port 5001 and dst host 1.1.1.1 -dd
+//Warning: assuming Ethernet
+//{ 0x28, 0, 0, 0x0000000c },
+//{ 0x15, 11, 0, 0x000086dd },
+//{ 0x15, 0, 10, 0x00000800 },
+//{ 0x30, 0, 0, 0x00000017 },
+//{ 0x15, 0, 8, 0x00000011 },
+//{ 0x28, 0, 0, 0x00000014 },
+//{ 0x45, 6, 0, 0x00001fff },
+//{ 0xb1, 0, 0, 0x0000000e },
+//{ 0x48, 0, 0, 0x00000010 },
+//{ 0x15, 0, 3, 0x00001389 },
+//{ 0x20, 0, 0, 0x0000001e },
+//{ 0x15, 0, 1, 0x01010101 },
+//{ 0x6, 0, 0, 0x00040000 },
+//{ 0x6, 0, 0, 0x00000000 },
 //
+// BPF for TAP interaces with explicit v4 IP and UDP dst port
+int SockAddr_Accept_V4_TAP_BPF (int sock, uint32_t dstip, uint16_t port) {
+    struct sock_filter udp_filter[] = {
+	{ 0x28, 0, 0, 0x0000000c },
+	{ 0x15, 11, 0, 0x000086dd },
+	{ 0x15, 0, 10, 0x00000800 },
+	{ 0x30, 0, 0, 0x00000017 },
+	{ 0x15, 0, 8, 0x00000011 },
+	{ 0x28, 0, 0, 0x00000014 },
+	{ 0x45, 6, 0, 0x00001fff },
+	{ 0xb1, 0, 0, 0x0000000e },
+	{ 0x48, 0, 0, 0x00000010 },
+	{ 0x15, 0, 3, 0x00001389 },
+	{ 0x20, 0, 0, 0x0000001e },
+	{ 0x15, 0, 1, 0x00000000 },
+	{ 0x6, 0, 0, 0x00040000 },
+	{ 0x6, 0, 0, 0x00000000 },
+    };
+    udp_filter[12].k = htonl(dstip);
+    udp_filter[9].k = htons(port);
+    struct sock_fprog bpf = {
+	.len = (sizeof(udp_filter) / sizeof(struct sock_filter)),
+	.filter = udp_filter,
+    };
+    return(setsockopt(sock, SOL_SOCKET, SO_ATTACH_FILTER, &bpf, sizeof(bpf)));
+}
+
 // Simulate the UDP connect for the AF_PACKET (or PF_PACKET)
 //
 int SockAddr_v4_Connect_BPF (int sock, uint32_t dstip, uint32_t srcip, uint16_t dstport, uint16_t srcport) {
