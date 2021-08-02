@@ -124,7 +124,7 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
 	char buf[80];
 	snprintf(buf, 90, "tap%d", inSettings->tuntapdev);
 	printf("****dev = %s\n", buf);
-	saddr.sll_ifindex = if_nametoindex(buf);
+	saddr.sll_ifindex = if_nametoindex(*device);
 	FAIL_errno(!saddr.sll_ifindex, "tuntap nametoindex", inSettings);
 	saddr.sll_pkttype = PACKET_HOST;
 	rc = bind(inSettings->mSock, reinterpret_cast<sockaddr*>(&saddr), sizeof(saddr));
