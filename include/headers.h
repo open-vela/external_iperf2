@@ -106,7 +106,7 @@ typedef bool _Bool;
 #include <net/if.h>
 #endif
 
-#if HAVE_IF_TUNTAP
+#if ((HAVE_TUNTAP_TAP) || (HAVE_TUNTAP_TUN))
 #include <linux/if_tun.h>
 #include <sys/ioctl.h>
 #endif
