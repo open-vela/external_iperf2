@@ -900,7 +900,6 @@ bool Listener::tap_setup (thread_Settings *server, int sockfd) {
  * a listening UDP socket for new or first received datagram
  * ------------------------------------------------------------------- ----*/
 int Listener::udp_accept (thread_Settings *server) {
-    delay_loop(10000000);
     assert(server != NULL);
     int rc;
     assert(ListenSocket > 0);
@@ -955,6 +954,7 @@ int Listener::tuntap_accept(thread_Settings *server) {
 	rc = SockAddr_Accept_V4_TAP_BPF(server->mSock, v6local, v6peer, (reinterpret_cast<struct sockaddr_in6 *>(l))->sin6_port, (reinterpret_cast<struct sockaddr_in6 *>(p))->sin6_port);
     }
 #endif
+    int rc = recv(ListenSocket, mBuf, mBufLen, MSG_PEEK);
     return 0;
 }
 /* -------------------------------------------------------------------
