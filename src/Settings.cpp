@@ -420,6 +420,8 @@ void Settings_Destroy (struct thread_Settings *mSettings) {
 #if HAVE_THREAD_DEBUG
     thread_debug("Free thread settings=%p", mSettings);
 #endif
+    if (mSettings->tuntapdev)
+	close(mSettings->tuntapdev);
     Condition_Destroy(&mSettings->awake_me);
     DELETE_ARRAY(mSettings->mHost);
     DELETE_ARRAY(mSettings->mLocalhost);
