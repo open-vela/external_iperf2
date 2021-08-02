@@ -101,7 +101,7 @@ int SockAddr_isZeroAddress(iperf_sockaddr *inSockAddr);
 void SockAddr_incrAddress(iperf_sockaddr *inSockAddr, int value);
 int SockAddr_Ifrname(struct thread_Settings *inSettings);
 #ifdef HAVE_LINUX_FILTER_H
-int SockAddr_Accept_BPF(int socket, uint16_t port);
+int SockAddr_v4_Accept_BPF(int socket, uint16_t port);
 int SockAddr_Accept_v4_TAP_BPF(int socket, uint32_t dstip, uint16_t port);
 int SockAddr_Drop_All_BPF(int socket);
 int SockAddr_v4_Connect_BPF(int socket, uint32_t dstip, uint32_t srcip, uint16_t dstport, uint16_t srcport);
