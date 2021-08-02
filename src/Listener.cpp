@@ -416,7 +416,7 @@ void Listener::my_listen () {
 	ListenSocket = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	FAIL_errno(ListenSocket == SOCKET_ERROR, "tuntap socket()", mSettings);
 	mSettings->mSock = ListenSocket;
-	rc = SockAddr_Accept_BPF(ListenSocket, mSettings->mPort);
+	rc = SockAddr_v4_Accept_BPF(ListenSocket, mSettings->mPort);
 	WARN_errno((rc == SOCKET_ERROR), "tap accept bpf");
 	SetSocketOptions(mSettings);
     } else

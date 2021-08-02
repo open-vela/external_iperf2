@@ -618,14 +618,10 @@ int SockAddr_Drop_All_BPF (int sock) {
     return(setsockopt(sock, SOL_SOCKET, SO_ATTACH_FILTER, &bpf, sizeof(bpf)));
 }
 
-// [root@ryzen3950 iperf2-code]# tcpdump udp dst port 5001 -e -dd -i any
+//
+// [root@ryzen3950 iperf2-code]# tcpdump ip and udp dst port 5001 -e -dd -i any
 // tcpdump: data link type LINUX_SLL2
 // { 0x28, 0, 0, 0x00000000 },
-// { 0x15, 0, 4, 0x000086dd },
-// { 0x30, 0, 0, 0x0000001a },
-// { 0x15, 0, 11, 0x00000011 },
-// { 0x28, 0, 0, 0x0000003e },
-// { 0x15, 8, 9, 0x00001389 },
 // { 0x15, 0, 8, 0x00000800 },
 // { 0x30, 0, 0, 0x0000001d },
 // { 0x15, 0, 6, 0x00000011 },
@@ -637,30 +633,31 @@ int SockAddr_Drop_All_BPF (int sock) {
 // { 0x6, 0, 0, 0x00040000 },
 // { 0x6, 0, 0, 0x00000000 },
 
-int SockAddr_Accept_BPF (int sock, uint16_t port) {
+//	{ 0x28, 0, 0, 0x00000014 },
+//	{ 0x45, 4, 0, 0x00001fff },
+//	{ 0xb1, 0, 0, 0x0000001e },
+//	{ 0x48, 0, 0, 0x00000010 },
+//	{ 0x15, 0, 1, 0x00001389 },
+
+
+int SockAddr_v4_Accept_BPF (int sock, uint16_t port) {
     // tcpdump udp dst port 5001 -dd to get c code filter
     // UDP port is the 5 and 13 bytecodes (5001 = 0x1389)
     // see linux/filter.h
     struct sock_filter udp_filter[] = {
-	{ 0x28, 0, 0, 0x00000000 },
-	{ 0x15, 0, 4, 0x000086dd },
-	{ 0x30, 0, 0, 0x0000001a },
-	{ 0x15, 0, 11, 0x00000011 },
-	{ 0x28, 0, 0, 0x0000003e },
-	{ 0x15, 8, 9, 0x00001389 },
+	{ 0x28, 0, 0, 0x0000000c },
 	{ 0x15, 0, 8, 0x00000800 },
-	{ 0x30, 0, 0, 0x0000001d },
+	{ 0x30, 0, 0, 0x00000017 },
 	{ 0x15, 0, 6, 0x00000011 },
-	{ 0x28, 0, 0, 0x0000001a },
+	{ 0x28, 0, 0, 0x00000014 },
 	{ 0x45, 4, 0, 0x00001fff },
-	{ 0xb1, 0, 0, 0x00000014 },
-	{ 0x48, 0, 0, 0x00000016 },
+	{ 0xb1, 0, 0, 0x0000000e },
+	{ 0x48, 0, 0, 0x00000010 },
 	{ 0x15, 0, 1, 0x00001389 },
 	{ 0x6, 0, 0, 0x00040000 },
 	{ 0x6, 0, 0, 0x00000000 },
     };
-    udp_filter[5].k = port;
-    udp_filter[13].k = port;
+    udp_filter[8].k = port;
     struct sock_fprog bpf = {
 	.len = (sizeof(udp_filter) / sizeof(struct sock_filter)),
 	.filter = udp_filter,
