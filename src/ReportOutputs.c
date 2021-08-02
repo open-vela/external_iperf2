@@ -987,11 +987,7 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
     if (report->common->Localhost != NULL) {
 	if (isEnhanced(report->common) && !SockAddr_isMulticast(&report->local)) {
 	    if (report->common->Ifrname) {
-		if (isTunDev(report->common) || isTapDev(report->common)) {
-		    printf(bind_address_iface_taptun, report->common->Localhost, report->common->Ifrname);
-		} else {
-		    printf(bind_address_iface, report->common->Localhost, report->common->Ifrname);
-		}
+		printf(bind_address_iface, report->common->Localhost, report->common->Ifrname);
 	    } else {
 		char *host_ip = (char *) malloc(REPORT_ADDRLEN);
 		if (host_ip != NULL) {
@@ -1021,6 +1017,9 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
 	    else
 		printf(join_multicast_sg_dev, report->common->SSMMulticastStr, report->common->Localhost, report->common->Ifrname);
         }
+    }
+    if (isTunDev(report->common) || isTapDev(report->common)) {
+	printf(bind_address_iface_taptun, report->common->Ifrname);
     }
     if (isEnhanced(report->common)) {
 	byte_snprintf(outbuffer, sizeof(outbuffer), report->common->BufLen, toupper((int)report->common->Format));
