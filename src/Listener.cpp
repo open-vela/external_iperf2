@@ -948,14 +948,16 @@ int Listener::udp_accept (thread_Settings *server) {
 }
 
 int Listener::tuntap_accept(thread_Settings *server) {
-#if 0
-    int rc;
-    if (isTapDev(server)) {
-	rc = SockAddr_Accept_V4_TAP_BPF(server->mSock, v6local, v6peer, (reinterpret_cast<struct sockaddr_in6 *>(l))->sin6_port, (reinterpret_cast<struct sockaddr_in6 *>(p))->sin6_port);
-    }
-#endif
-    int rc = recv(server->mSock, mBuf, mBufLen, MSG_PEEK);
-    printf("***read %d bytes\n",rc);
+    static int counter = 0;
+    int rc = recv(server->mSock, mBuf, (mBufLen + sizeof(struct iphdr) + sizeof(struct ether_header) + sizeof(struct udphdr)), 0);
+    struct iphdr *l3hdr = (struct iphdr *)((char *)mBuf + sizeof(struct ether_header));
+    uint32_t saddr = ntohl(l3hdr->saddr);
+    uint32_t daddr = ntohl(l3hdr->daddr);
+    struct udphdr *l4hdr = (struct udphdr *)((char *)mBuf + sizeof(struct iphdr) + sizeof(struct ether_header));
+    uint16_t srcport = ntohs(l4hdr->source);
+    uint16_t dstport = ntohs(l4hdr->dest);
+    SockAddr_v4_Connect_BPF(server->mSock, daddr, saddr, dstport, srcport);
+    printf("***read(%d) %d bytes from %x to %x src port %d dst port %d\n", ++counter, rc, saddr, daddr, srcport, dstport);
     return 0;
 }
 /* -------------------------------------------------------------------
