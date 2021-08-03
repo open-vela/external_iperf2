@@ -766,6 +766,57 @@ int SockAddr_v4_Connect_BPF (int sock, uint32_t dstip, uint32_t srcip, uint16_t 
     };
     return(setsockopt(sock, SOL_SOCKET, SO_ATTACH_FILTER, &bpf, sizeof(bpf)));
 }
+int SockAddr_v4_Connect_TAP_BPF (int sock, uint32_t dstip, uint32_t srcip, uint16_t dstport, uint16_t srcport) {
+    // [root@ryzen3950 iperf2-code]# tcpdump ip and src 127.0.0.1 and dst 127.0.0.2 and udp src port 5001 and dst port 5002  -d
+    // Warning: assuming Ethernet
+    // (000) ldh      [12]
+    // (001) jeq      #0x800           jt 2	jf 16
+    // (002) ld       [26]
+    // (003) jeq      #0x7f000001      jt 4	jf 16
+    // (004) ld       [30]
+    // (005) jeq      #0x7f000002      jt 6	jf 16
+    // (006) ldb      [23]
+    // (007) jeq      #0x11            jt 8	jf 16
+    // (008) ldh      [20]
+    // (009) jset     #0x1fff          jt 16	jf 10
+    // (010) ldxb     4*([14]&0xf)
+    // (011) ldh      [x + 14]
+    // (012) jeq      #0x1389          jt 13	jf 16
+    // (013) ldh      [x + 16]
+    // (014) jeq      #0x138a          jt 15	jf 16
+    // (015) ret      #262144
+    // (016) ret      #0
+    // [root@ryzen3950 iperf2-code]# tcpdump ip and src 127.0.0.1 and dst 127.0.0.2 and udp src port 5001 and dst port 5002  -dd
+    // Warning: assuming Ethernet
+    struct sock_filter udp_filter[] = {
+	{ 0x28, 0, 0, 0x0000000c },
+	{ 0x15, 0, 14, 0x00000800 },
+	{ 0x20, 0, 0, 0x0000001a },
+	{ 0x15, 0, 12, 0x7f000001 },
+	{ 0x20, 0, 0, 0x0000001e },
+	{ 0x15, 0, 10, 0x7f000002 },
+	{ 0x30, 0, 0, 0x00000017 },
+	{ 0x15, 0, 8, 0x00000011 },
+	{ 0x28, 0, 0, 0x00000014 },
+	{ 0x45, 6, 0, 0x00001fff },
+	{ 0xb1, 0, 0, 0x0000000e },
+	{ 0x48, 0, 0, 0x0000000e },
+	{ 0x15, 0, 3, 0x00001389 },
+	{ 0x48, 0, 0, 0x00000010 },
+	{ 0x15, 0, 1, 0x0000138a },
+	{ 0x6, 0, 0, 0x00040000 },
+	{ 0x6, 0, 0, 0x00000000 },
+    };
+    udp_filter[3].k = htonl(srcip);
+    udp_filter[5].k = htonl(dstip);
+    udp_filter[12].k = htons(srcport);
+    udp_filter[14].k = htons(dstport);
+    struct sock_fprog bpf = {
+	.len = (sizeof(udp_filter) / sizeof(struct sock_filter)),
+	.filter = udp_filter,
+    };
+    return(setsockopt(sock, SOL_SOCKET, SO_ATTACH_FILTER, &bpf, sizeof(bpf)));
+}
 
 int SockAddr_v4_Connect_BPF_Drop (int sock, uint32_t dstip, uint32_t srcip, uint16_t dstport, uint16_t srcport) {
     // Use full quintuple, proto, src ip, dst ip, src port, dst port

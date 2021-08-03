@@ -952,10 +952,10 @@ int Listener::udp_accept (thread_Settings *server) {
 
 //RJM fix these
 
-#define IPADDRSTR 512
 int Listener::tuntap_accept(thread_Settings *server) {
-    static int counter = 0;
     int rc = recv(server->mSock, mBuf, (mBufLen + TAPBYTESSLOP + sizeof(struct iphdr) + sizeof(struct ether_header) + sizeof(struct udphdr)), MSG_PEEK);
+    if (rc <= 0)
+	return 0;
 //	rc = udpchecksum((void *)ip_hdr, (void *)udp_hdr, udplen, (isIPV6(mSettings) ? 1 : 0));
     struct iphdr *l3hdr = (struct iphdr *)((char *)mBuf + sizeof(struct ether_header));
     struct udphdr *l4hdr = (struct udphdr *)((char *)mBuf + sizeof(struct iphdr) + sizeof(struct ether_header));
@@ -972,19 +972,9 @@ int Listener::tuntap_accept(thread_Settings *server) {
     local->sin_addr.s_addr = l3hdr->daddr;
     peer->sin_port = l4hdr->source;
     local->sin_port = l4hdr->dest;
-    char local_addr[REPORT_ADDRLEN];
-    char peer_addr[REPORT_ADDRLEN];
-    inet_ntop(AF_INET, &peer->sin_addr, peer_addr, IPADDRSTR);
-    inet_ntop(AF_INET, &local->sin_addr, local_addr, IPADDRSTR);
 
-    uint32_t saddr = ntohl(peer->sin_addr.s_addr);
-    uint32_t daddr = ntohl(local->sin_addr.s_addr);
-    uint16_t dstport = ntohs(local->sin_port);
-    uint16_t srcport = ntohs(peer->sin_port);
-    SockAddr_v4_Connect_BPF(server->mSock, daddr, saddr, dstport, srcport);
+    SockAddr_v4_Connect_TAP_BPF(server->mSock, local->sin_addr.s_addr, peer->sin_addr.s_addr, local->sin_port, peer->sin_port);
     server->l4payloadoffset = sizeof(struct iphdr) + sizeof(struct ether_header) + sizeof(struct udphdr);
-    printf("***read(%d) %d bytes from src (%s) %x to dst (%s) %x src port %d dst port %d payload offset %d\n", ++counter, rc, local_addr, saddr, peer_addr, daddr, srcport, dstport, server->l4payloadoffset);
-
     return server->mSock;
 }
 /* -------------------------------------------------------------------

@@ -105,6 +105,7 @@ int SockAddr_v4_Accept_BPF(int socket, uint16_t port);
 int SockAddr_Accept_v4_TAP_BPF(int socket, uint32_t dstip, uint16_t port);
 int SockAddr_Drop_All_BPF(int socket);
 int SockAddr_v4_Connect_BPF(int socket, uint32_t dstip, uint32_t srcip, uint16_t dstport, uint16_t srcport);
+int SockAddr_v4_Connect_TAP_BPF(int socket, uint32_t dstip, uint32_t srcip, uint16_t dstport, uint16_t srcport);
 int SockAddr_v4_Connect_BPF_Drop(int socket, uint32_t dstip, uint32_t srcip, uint16_t dstport, uint16_t srcport);
 #  ifdef HAVE_IPV6
 int SockAddr_v6_Connect_BPF (int sock, struct in6_addr *dst, struct in6_addr *src, uint16_t dstport, uint16_t srcport);
