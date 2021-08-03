@@ -111,10 +111,11 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
 	memset(&ifr, 0, sizeof(ifr));
 	if (*device) {
 	    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", *device);
+//	    ifr.ifr_flags = IFF_MULTI_QUEUE;
 	}
 	inSettings->tuntapdev = open("/dev/net/tun", O_RDWR);
 	FAIL_errno((rc == -1), "open tun dev", inSettings);
-	ifr.ifr_flags =  isTapDev(inSettings) ? IFF_TAP : IFF_TUN;
+	ifr.ifr_flags |= isTapDev(inSettings) ? IFF_TAP : IFF_TUN;
 	ifr.ifr_flags |= IFF_NO_PI;
 	rc = ioctl(inSettings->tuntapdev, TUNSETIFF, (void*) &ifr);
 	FAIL_errno((rc == -1), "tunsetiff", inSettings);
