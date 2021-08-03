@@ -947,18 +947,40 @@ int Listener::udp_accept (thread_Settings *server) {
     return server->mSock;
 }
 
+//RJM fix these
+#define TAPBYTESSLOP 512
+#define IPADDRSTR 512
 int Listener::tuntap_accept(thread_Settings *server) {
     static int counter = 0;
-    int rc = recv(server->mSock, mBuf, (mBufLen + sizeof(struct iphdr) + sizeof(struct ether_header) + sizeof(struct udphdr)), 0);
+    int rc = recv(server->mSock, mBuf, (mBufLen + TAPBYTESSLOP + sizeof(struct iphdr) + sizeof(struct ether_header) + sizeof(struct udphdr)), MSG_PEEK);
     struct iphdr *l3hdr = (struct iphdr *)((char *)mBuf + sizeof(struct ether_header));
-    uint32_t saddr = ntohl(l3hdr->saddr);
-    uint32_t daddr = ntohl(l3hdr->daddr);
     struct udphdr *l4hdr = (struct udphdr *)((char *)mBuf + sizeof(struct iphdr) + sizeof(struct ether_header));
-    uint16_t srcport = ntohs(l4hdr->source);
-    uint16_t dstport = ntohs(l4hdr->dest);
+//    uint16_t ipver = (uint16_t) ntohs(mBuf + sizeof(struct ether_header));
+//    printf ("*** version = %d\n", ipver);
+    // Note: sockaddrs are stored in network bytes order
+    struct sockaddr_in *local = (struct sockaddr_in *) &server->local;
+    struct sockaddr_in *peer = (struct sockaddr_in *) &server->peer;
+    server->size_peer = sizeof(iperf_sockaddr);
+    server->size_local = sizeof(iperf_sockaddr);
+    peer->sin_family = AF_INET;
+    local->sin_family = AF_INET;
+    peer->sin_addr.s_addr = l3hdr->saddr;
+    local->sin_addr.s_addr = l3hdr->daddr;
+    peer->sin_port = l4hdr->source;
+    local->sin_port = l4hdr->dest;
+    char local_addr[REPORT_ADDRLEN];
+    char peer_addr[REPORT_ADDRLEN];
+    inet_ntop(AF_INET, &peer->sin_addr, peer_addr, IPADDRSTR);
+    inet_ntop(AF_INET, &local->sin_addr, local_addr, IPADDRSTR);
+
+    uint32_t saddr = ntohl(peer->sin_addr.s_addr);
+    uint32_t daddr = ntohl(local->sin_addr.s_addr);
+    uint16_t dstport = ntohs(local->sin_port);
+    uint16_t srcport = ntohs(peer->sin_port);
     SockAddr_v4_Connect_BPF(server->mSock, daddr, saddr, dstport, srcport);
-    printf("***read(%d) %d bytes from %x to %x src port %d dst port %d\n", ++counter, rc, saddr, daddr, srcport, dstport);
-    return 0;
+
+    printf("***read(%d) %d bytes from src (%s) %x to dst (%s) %x src port %d dst port %d\n", ++counter, rc, local_addr, saddr, peer_addr, daddr, srcport, dstport);
+    return server->mSock;
 }
 /* -------------------------------------------------------------------
  * This is called by the Listener thread main loop, return a socket or error
