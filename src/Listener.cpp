@@ -90,6 +90,8 @@
 #define PEEK_FLAGS (MSG_PEEK)
 #endif
 
+#define TAPBYTESSLOP (512 + sizeof(struct iphdr) + sizeof(struct ether_header) + sizeof(struct udphdr))
+
 /* -------------------------------------------------------------------
 
  * Stores local hostname and socket info.
@@ -108,6 +110,7 @@ Listener::Listener (thread_Settings *inSettings) {
     mSettings = inSettings;
     // alloc and initialize the buffer (mBuf) used for test messages in the payload
     mBufLen = (mSettings->mBufLen > MINMBUFALLOCSIZE) ? mSettings->mBufLen : MINMBUFALLOCSIZE;
+    mBufLen += TAPBYTESSLOP;
     mBuf = new char[mBufLen]; // defined in payloads.h
     FAIL_errno(mBuf == NULL, "No memory for buffer\n", mSettings);
 } // end Listener
@@ -948,11 +951,12 @@ int Listener::udp_accept (thread_Settings *server) {
 }
 
 //RJM fix these
-#define TAPBYTESSLOP 512
+
 #define IPADDRSTR 512
 int Listener::tuntap_accept(thread_Settings *server) {
     static int counter = 0;
     int rc = recv(server->mSock, mBuf, (mBufLen + TAPBYTESSLOP + sizeof(struct iphdr) + sizeof(struct ether_header) + sizeof(struct udphdr)), MSG_PEEK);
+//	rc = udpchecksum((void *)ip_hdr, (void *)udp_hdr, udplen, (isIPV6(mSettings) ? 1 : 0));
     struct iphdr *l3hdr = (struct iphdr *)((char *)mBuf + sizeof(struct ether_header));
     struct udphdr *l4hdr = (struct udphdr *)((char *)mBuf + sizeof(struct iphdr) + sizeof(struct ether_header));
 //    uint16_t ipver = (uint16_t) ntohs(mBuf + sizeof(struct ether_header));
@@ -978,8 +982,9 @@ int Listener::tuntap_accept(thread_Settings *server) {
     uint16_t dstport = ntohs(local->sin_port);
     uint16_t srcport = ntohs(peer->sin_port);
     SockAddr_v4_Connect_BPF(server->mSock, daddr, saddr, dstport, srcport);
+    server->l4payloadoffset = sizeof(struct iphdr) + sizeof(struct ether_header) + sizeof(struct udphdr);
+    printf("***read(%d) %d bytes from src (%s) %x to dst (%s) %x src port %d dst port %d payload offset %d\n", ++counter, rc, local_addr, saddr, peer_addr, daddr, srcport, dstport, server->l4payloadoffset);
 
-    printf("***read(%d) %d bytes from src (%s) %x to dst (%s) %x src port %d dst port %d\n", ++counter, rc, local_addr, saddr, peer_addr, daddr, srcport, dstport);
     return server->mSock;
 }
 /* -------------------------------------------------------------------
@@ -1082,7 +1087,7 @@ inline bool Listener::test_permit_key(uint32_t flags, thread_Settings *server, i
 }
 
 bool Listener::apply_client_settings_udp (thread_Settings *server) {
-    struct client_udp_testhdr *hdr = reinterpret_cast<struct client_udp_testhdr *>(mBuf);
+    struct client_udp_testhdr *hdr = reinterpret_cast<struct client_udp_testhdr *>(mBuf + server->l4payloadoffset);
     uint32_t flags = ntohl(hdr->base.flags);
     uint16_t upperflags = 0;
     if (flags & HEADER_SEQNO64B) {
