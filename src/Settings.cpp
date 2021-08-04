@@ -1075,11 +1075,16 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		}
 		setTapDev(mExtSettings);
 		setEnhanced(mExtSettings);
+		setL2LengthCheck(mExtSettings);
 #endif
 	    }
 	    if (tunif) {
 		tunif = 0;
 #if HAVE_TUNTAP_TUN
+		if (optarg) {
+		    mExtSettings->mIfrname = static_cast<char *>(calloc(strlen(optarg) + 1, sizeof(char)));
+		    strcpy(mExtSettings->mIfrname, optarg);
+		}
 		setTunDev(mExtSettings);
 		setEnhanced(mExtSettings);
 #endif
