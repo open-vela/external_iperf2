@@ -316,7 +316,7 @@ void Listener::Run () {
 	// server settings flags should now be set per the client's first message exchange
 	// so the server setting's flags per the client can now be checked
 	if (isUDP(server)){
-	    if (!isCompat(mSettings) && (isL2LengthCheck(mSettings) || isL2LengthCheck(server)) && !L2_setup(server, server->mSock)) {
+	    if (!isCompat(mSettings) && !isTapDev(mSettings) && (isL2LengthCheck(mSettings) || isL2LengthCheck(server)) && !L2_setup(server, server->mSock)) {
 		// Requested L2 testing but L2 setup failed
 		Iperf_remove_host(server);
 		if (DecrSumReportRefCounter(server->mSumReport) <= 0) {
@@ -972,7 +972,7 @@ int Listener::tuntap_accept(thread_Settings *server) {
     local->sin_addr.s_addr = l3hdr->daddr;
     peer->sin_port = l4hdr->source;
     local->sin_port = l4hdr->dest;
-
+    server->l4offset = sizeof(struct iphdr) + sizeof(struct ether_header);
     SockAddr_v4_Connect_TAP_BPF(server->mSock, local->sin_addr.s_addr, peer->sin_addr.s_addr, local->sin_port, peer->sin_port);
     server->l4payloadoffset = sizeof(struct iphdr) + sizeof(struct ether_header) + sizeof(struct udphdr);
     return server->mSock;

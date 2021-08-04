@@ -558,7 +558,7 @@ inline bool Server::ReadPacketID () {
 }
 
 void Server::L2_processing () {
-#if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
+#if (HAVE_LINUX_FILTER_H) && (HAVE_AF_PACKET)
     eth_hdr = reinterpret_cast<struct ether_header *>(mBuf);
     ip_hdr = reinterpret_cast<struct iphdr *>(mBuf + sizeof(struct ether_header));
     // L4 offest is set by the listener and depends upon IPv4 or IPv6
