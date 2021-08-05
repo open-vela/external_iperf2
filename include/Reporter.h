@@ -231,6 +231,7 @@ struct ReportCommon {
     iperf_sockaddr local;
     Socklen_t size_local;
     char* Host;                   // -c
+    char* HideHost;
     char* Localhost;              // -B
     char* Ifrname;
     char* Ifrnametx;
