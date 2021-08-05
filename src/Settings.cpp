@@ -103,6 +103,7 @@ static int rxwinclamp = 0;
 static int txnotsentlowwater = 0;
 static int tapif = 0;
 static int tunif = 0;
+static int hideips = 0;
 
 void Settings_Interpret(char option, const char *optarg, struct thread_Settings *mExtSettings);
 // apply compound settings after the command line has been fully parsed
@@ -168,6 +169,7 @@ const struct option long_options[] =
 {"peer-detect",      no_argument, NULL, 'X'},
 {"tcp-congestion", required_argument, NULL, 'Z'},
 {"histograms", optional_argument, &histogram, 1},
+{"hide-ips", no_argument, &hideips, 1},
 {"udp-histograms", optional_argument, &histogram, 1}, // keep support per 2.0.13 usage
 {"l2checks", no_argument, &l2checks, 1},
 {"incr-dstip", no_argument, &incrdstip, 1},
@@ -1088,6 +1090,10 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		setTunDev(mExtSettings);
 		setEnhanced(mExtSettings);
 #endif
+	    }
+	    if (hideips) {
+		hideips = 0;
+		setHideIPs(mExtSettings);
 	    }
 	    break;
         default: // ignore unknown

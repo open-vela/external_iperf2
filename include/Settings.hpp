@@ -372,6 +372,7 @@ struct thread_Settings {
 #define FLAG_WRITEPREFETCH  0x00000010
 #define FLAG_TUNDEV         0x00000020
 #define FLAG_TAPDEV         0x00000040
+#define FLAG_HIDEIPS        0x00000080
 
 #define isBuflenSet(settings)      ((settings->flags & FLAG_BUFLENSET) != 0)
 #define isCompat(settings)         ((settings->flags & FLAG_COMPAT) != 0)
@@ -439,6 +440,7 @@ struct thread_Settings {
 #define isWritePrefetch(settings) ((settings->flags_extend2 & FLAG_WRITEPREFETCH) != 0)
 #define isTapDev(settings)         ((settings->flags_extend2 & FLAG_TAPDEV) != 0)
 #define isTunDev(settings)         ((settings->flags_extend2 & FLAG_TUNDEV) != 0)
+#define isHideIPs(settings)        ((settings->flags_extend2 & FLAG_HIDEIPS) != 0)
 
 #define setBuflenSet(settings)     settings->flags |= FLAG_BUFLENSET
 #define setCompat(settings)        settings->flags |= FLAG_COMPAT
@@ -503,6 +505,7 @@ struct thread_Settings {
 #define setWritePrefetch(settings) settings->flags_extend2 |= FLAG_WRITEPREFETCH
 #define setTapDev(settings)        settings->flags_extend2 |= FLAG_TAPDEV
 #define setTunDev(settings)        settings->flags_extend2 |= FLAG_TUNDEV
+#define setHideIPs(settings)       settings->flags_extend2 |= FLAG_HIDEIPS
 
 #define unsetBuflenSet(settings)   settings->flags &= ~FLAG_BUFLENSET
 #define unsetCompat(settings)      settings->flags &= ~FLAG_COMPAT
@@ -566,6 +569,7 @@ struct thread_Settings {
 #define unsetWritePrefetch(settings) settings->flags_extend2 &= ~FLAG_WRITEPREFETCH
 #define unsetTapDev(settings)        settings->flags_extend2 &= ~FLAG_TAPDEV
 #define unsetTunDev(settings)        settings->flags_extend2 &= ~FLAG_TUNDEV
+#define unsetHideIPs(settings)       settings->flags_extend2 &= ~FLAG_HIDEIPS
 
 // set to defaults
 void Settings_Initialize(struct thread_Settings* main);
