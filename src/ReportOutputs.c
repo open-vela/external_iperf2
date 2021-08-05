@@ -172,7 +172,7 @@ static inline void set_netpowerbuf(double meantransit, struct TransferInfo *stat
   if (meantransit == 0.0) {
       strcpy(netpower_buf, "NAN");
   } else {
-      double netpwr = (NETPOWERCONSTANT * ((double) stats->cntBytes) / (stats->ts.iEnd - stats->ts.iStart) / meantransit);
+      double netpwr = log2(((double) stats->cntBytes) / (stats->ts.iEnd - stats->ts.iStart) / meantransit);
       if (netpwr <  NETPWR_LOWERBOUNDS) {
 	  strcpy(netpower_buf, "OBL");
       } else {
