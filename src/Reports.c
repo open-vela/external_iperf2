@@ -84,6 +84,7 @@ static void common_copy (struct ReportCommon **common, struct thread_Settings *i
     *common = (struct ReportCommon *) calloc(1, sizeof(struct ReportCommon));
     int bytecnt = 0;
     bytecnt = my_str_copy(&(*common)->Host, inSettings->mHost);
+    bytecnt += my_str_copy(&(*common)->HideHost, inSettings->mHideHost);
     bytecnt += my_str_copy(&(*common)->Localhost, inSettings->mLocalhost);
     bytecnt += my_str_copy(&(*common)->Ifrname, inSettings->mIfrname);
     bytecnt += my_str_copy(&(*common)->Ifrnametx, inSettings->mIfrnametx);
@@ -91,6 +92,7 @@ static void common_copy (struct ReportCommon **common, struct thread_Settings *i
     bytecnt += my_str_copy(&(*common)->Congestion, inSettings->mCongestion);
     bytecnt += my_str_copy(&(*common)->transferIDStr, inSettings->mTransferIDStr);
     bytecnt += my_str_copy(&(*common)->PermitKey, inSettings->mPermitKey);
+
     // copy some relevant settings
     (*common)->flags = inSettings->flags;
     (*common)->flags_extend = inSettings->flags_extend;
@@ -162,6 +164,8 @@ static void free_common_copy (struct ReportCommon *common) {
     // Free deep copies
     if (common->Host)
 	free(common->Host);
+    if (common->HideHost)
+	free(common->HideHost);
     if (common->Localhost)
 	free(common->Localhost);
     if (common->Ifrname)
