@@ -1,3 +1,4 @@
+
 /*---------------------------------------------------------------
  * Copyright (c) 2020
  * Broadcom Corporation
@@ -879,13 +880,8 @@ static void format_ips_ports_string (struct TransferInfo *stats) {
     struct sockaddr *peer = (reverse ? (struct sockaddr*)&stats->common->local : (struct sockaddr*)&stats->common->peer);
     __ips_ports_string[0] = '\0';
     if (local->sa_family == AF_INET) {
-      if (isHideIPs(stats->common)) {
-	inet_ntop_hide(AF_INET, &((struct sockaddr_in*)local)->sin_addr,
-		       local_addr, REPORT_ADDRLEN);
-      } else {
-	inet_ntop(AF_INET, &((struct sockaddr_in*)local)->sin_addr,
+        inet_ntop(AF_INET, &((struct sockaddr_in*)local)->sin_addr,
 		  local_addr, REPORT_ADDRLEN);
-      }
     }
 #ifdef HAVE_IPV6
     else {
@@ -894,13 +890,8 @@ static void format_ips_ports_string (struct TransferInfo *stats) {
     }
 #endif
     if (peer->sa_family == AF_INET) {
-      if (isHideIPs(stats->common)) {
-        inet_ntop_hide(AF_INET, &((struct sockaddr_in*)peer)->sin_addr,
-		  remote_addr, REPORT_ADDRLEN);
-      } else {
         inet_ntop(AF_INET, &((struct sockaddr_in*)peer)->sin_addr,
 		  remote_addr, REPORT_ADDRLEN);
-      }
     }
 #ifdef HAVE_IPV6
     else {
@@ -995,19 +986,14 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
     }
     if (report->common->Localhost != NULL) {
 	if (isEnhanced(report->common) && !SockAddr_isMulticast(&report->local)) {
-	    if (report->common->Ifrname) {
+	    if (report->common->Ifrname)
 		printf(bind_address_iface, report->common->Localhost, report->common->Ifrname);
-	    } else {
+	    else {
 		char *host_ip = (char *) malloc(REPORT_ADDRLEN);
 		if (host_ip != NULL) {
 		    if (((struct sockaddr*)(&report->common->local))->sa_family == AF_INET) {
-		      if (isHideIPs(report->common)) {
-			inet_ntop_hide(AF_INET, &((struct sockaddr_in*)(&report->common->local))->sin_addr,
-				       host_ip, REPORT_ADDRLEN);
-		      } else {
 			inet_ntop(AF_INET, &((struct sockaddr_in*)(&report->common->local))->sin_addr,
 				  host_ip, REPORT_ADDRLEN);
-		      }
 		    }
 #ifdef HAVE_IPV6
 		    else {
@@ -1031,9 +1017,6 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
 	    else
 		printf(join_multicast_sg_dev, report->common->SSMMulticastStr, report->common->Localhost, report->common->Ifrname);
         }
-    }
-    if (isTunDev(report->common) || isTapDev(report->common)) {
-	printf(bind_address_iface_taptun, report->common->Ifrname);
     }
     if (isEnhanced(report->common)) {
 	byte_snprintf(outbuffer, sizeof(outbuffer), report->common->BufLen, toupper((int)report->common->Format));
@@ -1080,14 +1063,12 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
     fflush(stdout);
 }
 static void reporter_output_client_settings (struct ReportSettings *report) {
-    char *hoststr = (isHideIPs(report->common) ? report->common->HideHost \
-		      : report->common->Host);
     if (!report->common->Ifrnametx) {
-	printf(isEnhanced(report->common) ? client_pid_port : client_port, hoststr,
+	printf(isEnhanced(report->common) ? client_pid_port : client_port, report->common->Host,
 	       (isUDP(report->common) ? "UDP" : "TCP"), report->common->Port, report->pid, \
 	       (!report->common->threads ? 1 : report->common->threads));
     } else {
-	printf(client_pid_port_dev, hoststr,
+	printf(client_pid_port_dev, report->common->Host,
 	       (isUDP(report->common) ? "UDP" : "TCP"), report->common->Port, report->pid, \
 	       report->common->Ifrnametx, (!report->common->threads ? 1 : report->common->threads));
     }
@@ -1265,11 +1246,7 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 	    }
 	}
 	if (local->sa_family == AF_INET) {
-	    if (isHideIPs(report->common)) {
-	      inet_ntop_hide(AF_INET, &((struct sockaddr_in*)local)->sin_addr, local_addr, REPORT_ADDRLEN);
-	    } else {
-	      inet_ntop(AF_INET, &((struct sockaddr_in*)local)->sin_addr, local_addr, REPORT_ADDRLEN);
-	    }
+	    inet_ntop(AF_INET, &((struct sockaddr_in*)local)->sin_addr, local_addr, REPORT_ADDRLEN);
 	}
 #ifdef HAVE_IPV6
 	else {
@@ -1277,11 +1254,7 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 	}
 #endif
 	if (peer->sa_family == AF_INET) {
-	    if (isHideIPs(report->common)) {
-	      inet_ntop_hide(AF_INET, &((struct sockaddr_in*)peer)->sin_addr, remote_addr, REPORT_ADDRLEN);
-	    } else {
-	      inet_ntop(AF_INET, &((struct sockaddr_in*)peer)->sin_addr, remote_addr, REPORT_ADDRLEN);
-	    }
+	    inet_ntop(AF_INET, &((struct sockaddr_in*)peer)->sin_addr, remote_addr, REPORT_ADDRLEN);
 	}
 #ifdef HAVE_IPV6
 	else {

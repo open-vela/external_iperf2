@@ -83,14 +83,15 @@
 #include "SocketAddr.h"
 #include "payloads.h"
 #include "delay.h"
+#if (defined HAVE_SSM_MULTICAST) && (defined HAVE_NET_IF_H)
+#include <net/if.h>
+#endif
 
 #if HAVE_DECL_MSG_WAITALL
 #define PEEK_FLAGS (MSG_PEEK | MSG_WAITALL)
 #else
 #define PEEK_FLAGS (MSG_PEEK)
 #endif
-
-#define TAPBYTESSLOP 512
 
 /* -------------------------------------------------------------------
 
@@ -110,7 +111,6 @@ Listener::Listener (thread_Settings *inSettings) {
     mSettings = inSettings;
     // alloc and initialize the buffer (mBuf) used for test messages in the payload
     mBufLen = (mSettings->mBufLen > MINMBUFALLOCSIZE) ? mSettings->mBufLen : MINMBUFALLOCSIZE;
-    mBufLen += TAPBYTESSLOP;
     mBuf = new char[mBufLen]; // defined in payloads.h
     FAIL_errno(mBuf == NULL, "No memory for buffer\n", mSettings);
 } // end Listener
@@ -315,8 +315,8 @@ void Listener::Run () {
 	}
 	// server settings flags should now be set per the client's first message exchange
 	// so the server setting's flags per the client can now be checked
-	if (isUDP(server)){
-	    if (!isCompat(mSettings) && !isTapDev(mSettings) && (isL2LengthCheck(mSettings) || isL2LengthCheck(server)) && !L2_setup(server, server->mSock)) {
+	if (isUDP(server) && !isCompat(mSettings)  && (isL2LengthCheck(mSettings) || isL2LengthCheck(server))) {
+	    if (!L2_setup(server, server->mSock)) {
 		// Requested L2 testing but L2 setup failed
 		Iperf_remove_host(server);
 		if (DecrSumReportRefCounter(server->mSumReport) <= 0) {
@@ -410,26 +410,14 @@ void Listener::Run () {
  * ------------------------------------------------------------------- */
 void Listener::my_listen () {
     int rc;
-    int type;
-    int domain;
+
     SockAddr_localAddr(mSettings);
 
-#if (((HAVE_TUNTAP_TUN) || (HAVE_TUNTAP_TAP)) && (AF_PACKET))
-    if (isTapDev(mSettings)) {
-	ListenSocket = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
-	FAIL_errno(ListenSocket == SOCKET_ERROR, "tuntap socket()", mSettings);
-	mSettings->mSock = ListenSocket;
-	rc = SockAddr_v4_Accept_BPF(ListenSocket, mSettings->mPort);
-	WARN_errno((rc == SOCKET_ERROR), "tap accept bpf");
-	SetSocketOptions(mSettings);
-    } else
-#endif
-    {
-	// create an AF_INET socket for the accepts
-	// for the case of L2 testing and UDP, a new AF_PACKET
-	// will be created to supercede this one
-	type = (isUDP(mSettings)  ?  SOCK_DGRAM  :  SOCK_STREAM);
-	domain = (SockAddr_isIPv6(&mSettings->local) ?
+    // create an AF_INET socket for the accepts
+    // for the case of L2 testing and UDP, a new AF_PACKET
+    // will be created to supercede this one
+    int type = (isUDP(mSettings)  ?  SOCK_DGRAM  :  SOCK_STREAM);
+    int domain = (SockAddr_isIPv6(&mSettings->local) ?
 #ifdef HAVE_IPV6
 		  AF_INET6
 #else
@@ -438,36 +426,37 @@ void Listener::my_listen () {
 		  : AF_INET);
 
 #ifdef WIN32
-	if (SockAddr_isMulticast(&mSettings->local)) {
-	    // Multicast on Win32 requires special handling
-	    ListenSocket = WSASocket(domain, type, 0, 0, 0, WSA_FLAG_MULTIPOINT_C_LEAF | WSA_FLAG_MULTIPOINT_D_LEAF);
-	    WARN_errno(ListenSocket == INVALID_SOCKET, "socket");
+    if (SockAddr_isMulticast(&mSettings->local)) {
+	// Multicast on Win32 requires special handling
+	ListenSocket = WSASocket(domain, type, 0, 0, 0, WSA_FLAG_MULTIPOINT_C_LEAF | WSA_FLAG_MULTIPOINT_D_LEAF);
+	WARN_errno(ListenSocket == INVALID_SOCKET, "socket");
 
-	} else
+    } else
 #endif
-	    {
-		ListenSocket = socket(domain, type, 0);
-		WARN_errno(ListenSocket == INVALID_SOCKET, "socket");
-	    }
-	mSettings->mSock = ListenSocket;
-	SetSocketOptions(mSettings);
-	// reuse the address, so we can run if a former server was killed off
-	int boolean = 1;
-	Socklen_t len = sizeof(boolean);
-	rc = setsockopt(ListenSocket, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char*>(&boolean), len);
-	// bind socket to server address
+	{
+	    ListenSocket = socket(domain, type, 0);
+	    WARN_errno(ListenSocket == INVALID_SOCKET, "socket");
+	}
+    mSettings->mSock = ListenSocket;
+
+    SetSocketOptions(mSettings);
+
+    // reuse the address, so we can run if a former server was killed off
+    int boolean = 1;
+    Socklen_t len = sizeof(boolean);
+    rc = setsockopt(ListenSocket, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char*>(&boolean), len);
+    // bind socket to server address
 #ifdef WIN32
-	if (SockAddr_isMulticast(&mSettings->local)) {
-	    // Multicast on Win32 requires special handling
-	    rc = WSAJoinLeaf(ListenSocket, (sockaddr*) &mSettings->local, mSettings->size_local,0,0,0,0,JL_BOTH);
-	    WARN_errno(rc == SOCKET_ERROR, "WSAJoinLeaf (aka bind)");
-	} else
+    if (SockAddr_isMulticast(&mSettings->local)) {
+	// Multicast on Win32 requires special handling
+	rc = WSAJoinLeaf(ListenSocket, (sockaddr*) &mSettings->local, mSettings->size_local,0,0,0,0,JL_BOTH);
+	WARN_errno(rc == SOCKET_ERROR, "WSAJoinLeaf (aka bind)");
+    } else
 #endif
-	    {
-		rc = bind(ListenSocket, reinterpret_cast<sockaddr*>(&mSettings->local), mSettings->size_local);
-		FAIL_errno(rc == SOCKET_ERROR, "listener bind", mSettings);
-	    }
-    }
+	{
+	    rc = bind(ListenSocket, reinterpret_cast<sockaddr*>(&mSettings->local), mSettings->size_local);
+	    FAIL_errno(rc == SOCKET_ERROR, "bind", mSettings);
+	}
 
     // update the reporter thread
     if (isReport(mSettings) && isSettingsReport(mSettings)) {
@@ -845,58 +834,6 @@ bool Listener::L2_setup (thread_Settings *server, int sockfd) {
 #endif
 }
 
-bool Listener::tap_setup (thread_Settings *server, int sockfd) {
-#if defined(HAVE_IF_TUNTAP) && defined(HAVE_AF_PACKET) && defined(HAVE_DECL_SO_BINDTODEVICE)
-    struct sockaddr *p = reinterpret_cast<sockaddr *>(&server->peer);
-    struct sockaddr *l = reinterpret_cast<sockaddr *>(&server->local);
-    int rc = 0;
-
-    //
-    // Establish a packet (raw) socket to be used by the server thread giving it full L2 packets
-    //
-    struct sockaddr s;
-    socklen_t len = sizeof(s);
-    getpeername(sockfd, &s, &len);
-    if (isIPV6(server)) {
-	server->l4offset = IPV6HDRLEN + sizeof(struct ether_header);
-    } else {
-	server->l4offset = sizeof(struct iphdr) + sizeof(struct ether_header);
-    }
-    // Didn't get a valid socket, return now
-    if (server->mSock < 0) {
-	return false;
-    }
-    // More per thread settings based on using a packet socket
-    server->l4payloadoffset = server->l4offset + sizeof(struct udphdr);
-    server->recvflags = MSG_TRUNC;
-    // Now optimize packet flow up the raw socket
-    // Establish the flow BPF to forward up only "connected" packets to this raw socket
-    if (l->sa_family == AF_INET6) {
-#ifdef HAVE_IPV6
-	struct in6_addr *v6peer = SockAddr_get_in6_addr(&server->peer);
-	struct in6_addr *v6local = SockAddr_get_in6_addr(&server->local);
-	if (isIPV6(server)) {
-	    rc = SockAddr_v6_Connect_BPF(server->mSock, v6local, v6peer, (reinterpret_cast<struct sockaddr_in6 *>(l))->sin6_port, (reinterpret_cast<struct sockaddr_in6 *>(p))->sin6_port);
-	    WARN_errno(rc == SOCKET_ERROR, "l2 connect ipv6 bpf");
-	} else {
-	    // This is an ipv4 address in a v6 family (structure), just pull the lower 32 bits for the v4 addr
-	    rc = SockAddr_v4_Connect_BPF(server->mSock, v6local->s6_addr32[3], v6peer->s6_addr32[3], (reinterpret_cast<struct sockaddr_in6 *>(l))->sin6_port, (reinterpret_cast<struct sockaddr_in6 *>(p))->sin6_port);
-	    WARN_errno(rc == SOCKET_ERROR, "l2 v4in6 connect ip bpf");
-	}
-#else
-	fprintf(stderr, "Unfortunately, IPv6 is not supported on this platform\n");
-	return false;
-#endif /* HAVE_IPV6 */
-    } else {
-	rc = SockAddr_v4_Connect_BPF(server->mSock, (reinterpret_cast<struct sockaddr_in *>(l))->sin_addr.s_addr, (reinterpret_cast<struct sockaddr_in *>(p))->sin_addr.s_addr, (reinterpret_cast<struct sockaddr_in *>(l))->sin_port, (reinterpret_cast<struct sockaddr_in *>(p))->sin_port);
-	WARN_errno(rc == SOCKET_ERROR, "l2 connect ip bpf");
-    }
-    return rc >= 0;
-#else
-    fprintf(stderr, "Client requested --l2checks but not supported on this platform\n");
-    return false;
-#endif
-}
 
 /* ------------------------------------------------------------------------
  * Do the equivalent of an accept() call for UDP sockets. This checks
@@ -949,35 +886,6 @@ int Listener::udp_accept (thread_Settings *server) {
     }
     return server->mSock;
 }
-
-
-#if (((HAVE_TUNTAP_TUN) || (HAVE_TUNTAP_TAP)) && (AF_PACKET))
-int Listener::tuntap_accept(thread_Settings *server) {
-    int rc = recv(server->mSock, mBuf, (mBufLen + TAPBYTESSLOP + sizeof(struct iphdr) + sizeof(struct ether_header) + sizeof(struct udphdr)), MSG_PEEK);
-    if (rc <= 0)
-	return 0;
-//	rc = udpchecksum((void *)ip_hdr, (void *)udp_hdr, udplen, (isIPV6(mSettings) ? 1 : 0));
-    struct iphdr *l3hdr = (struct iphdr *)((char *)mBuf + sizeof(struct ether_header));
-    struct udphdr *l4hdr = (struct udphdr *)((char *)mBuf + sizeof(struct iphdr) + sizeof(struct ether_header));
-//    uint16_t ipver = (uint16_t) ntohs(mBuf + sizeof(struct ether_header));
-//    printf ("*** version = %d\n", ipver);
-    // Note: sockaddrs are stored in network bytes order
-    struct sockaddr_in *local = (struct sockaddr_in *) &server->local;
-    struct sockaddr_in *peer = (struct sockaddr_in *) &server->peer;
-    server->size_peer = sizeof(iperf_sockaddr);
-    server->size_local = sizeof(iperf_sockaddr);
-    peer->sin_family = AF_INET;
-    local->sin_family = AF_INET;
-    peer->sin_addr.s_addr = l3hdr->saddr;
-    local->sin_addr.s_addr = l3hdr->daddr;
-    peer->sin_port = l4hdr->source;
-    local->sin_port = l4hdr->dest;
-    server->l4offset = sizeof(struct iphdr) + sizeof(struct ether_header);
-    SockAddr_v4_Connect_TAP_BPF(server->mSock, local->sin_addr.s_addr, peer->sin_addr.s_addr, local->sin_port, peer->sin_port);
-    server->l4payloadoffset = sizeof(struct iphdr) + sizeof(struct ether_header) + sizeof(struct udphdr);
-    return server->mSock;
-}
-#endif
 /* -------------------------------------------------------------------
  * This is called by the Listener thread main loop, return a socket or error
  * ------------------------------------------------------------------- */
@@ -995,14 +903,7 @@ int Listener::my_accept (thread_Settings *server) {
     server->accept_time.tv_sec = 0;
     server->accept_time.tv_usec = 0;
     if (isUDP(server)) {
-#if (((HAVE_TUNTAP_TUN) || (HAVE_TUNTAP_TAP)) && (AF_PACKET))
-	if (isTapDev(server) || isTunDev(server)) {
-	    server->mSock = tuntap_accept(server);
-	} else
-#endif
-	{
-	    server->mSock = udp_accept(server);
-	}
+	server->mSock = udp_accept(server);
 	// note udp_accept will update the active host table
     } else {
 	// accept a TCP  connection
@@ -1081,7 +982,7 @@ inline bool Listener::test_permit_key(uint32_t flags, thread_Settings *server, i
 }
 
 bool Listener::apply_client_settings_udp (thread_Settings *server) {
-    struct client_udp_testhdr *hdr = reinterpret_cast<struct client_udp_testhdr *>(mBuf + server->l4payloadoffset);
+    struct client_udp_testhdr *hdr = reinterpret_cast<struct client_udp_testhdr *>(mBuf);
     uint32_t flags = ntohl(hdr->base.flags);
     uint16_t upperflags = 0;
     if (flags & HEADER_SEQNO64B) {
