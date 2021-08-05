@@ -1080,12 +1080,14 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
     fflush(stdout);
 }
 static void reporter_output_client_settings (struct ReportSettings *report) {
+    char *hoststr = (isHideIPs(report->common) ? report->common->HideHost \
+		      : report->common->Host);
     if (!report->common->Ifrnametx) {
-	printf(isEnhanced(report->common) ? client_pid_port : client_port, report->common->Host,
+	printf(isEnhanced(report->common) ? client_pid_port : client_port, hoststr,
 	       (isUDP(report->common) ? "UDP" : "TCP"), report->common->Port, report->pid, \
 	       (!report->common->threads ? 1 : report->common->threads));
     } else {
-	printf(client_pid_port_dev, report->common->Host,
+	printf(client_pid_port_dev, hoststr,
 	       (isUDP(report->common) ? "UDP" : "TCP"), report->common->Port, report->pid, \
 	       report->common->Ifrnametx, (!report->common->threads ? 1 : report->common->threads));
     }

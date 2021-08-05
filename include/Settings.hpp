@@ -156,6 +156,7 @@ struct thread_Settings {
     // Pointers
     char*  mFileName;               // -F
     char*  mHost;                   // -c
+    char*  mHideHost;
     char*  mLocalhost;              // -B
     char*  mOutputFileName;         // -o
     char*  mIfrname;                // %<device> name (for rx)

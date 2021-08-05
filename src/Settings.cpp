@@ -425,6 +425,7 @@ void Settings_Destroy (struct thread_Settings *mSettings) {
 	close(mSettings->tuntapdev);
     Condition_Destroy(&mSettings->awake_me);
     DELETE_ARRAY(mSettings->mHost);
+    DELETE_ARRAY(mSettings->mHideHost);
     DELETE_ARRAY(mSettings->mLocalhost);
     DELETE_ARRAY(mSettings->mFileName);
     DELETE_ARRAY(mSettings->mOutputFileName);
@@ -1202,6 +1203,13 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    fprintf(stderr, "WARNING: tcp congestion control will only be applied on transmit traffic, use -Z on the server\n");
 	}
     }
+    if (isHideIPs(mExtSettings)) {
+        char hide_string[] = "(**hidden**)";
+        mExtSettings->mHideHost = new char[strlen(hide_string) + 1];
+	if (mExtSettings->mHideHost)
+	    strcpy(mExtSettings->mHideHost, &hide_string[0]);
+    }
+
     // Bail outs
     bool bail = false;
     // compat mode doesn't support these test settings
