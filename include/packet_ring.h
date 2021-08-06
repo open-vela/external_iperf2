@@ -81,6 +81,7 @@ struct ReportStruct {
     intmax_t retry_tot;
     bool tcpistat_valid;
 #endif
+    double select_delay;
 };
 
 struct PacketRing {
