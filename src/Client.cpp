@@ -538,7 +538,7 @@ void Client::Run () {
 	} else if (isNearCongest(mSettings)) {
 	    RunNearCongestionTCP();
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
-	} else if (isWritePrefetch(mSettings)) {
+	} else if (isWritePrefetch(mSettings) && !isIsochronous(mSettings)) {
 	    RunWriteEventsTCP();
 #endif
 	} else {
@@ -875,7 +875,10 @@ inline bool Client::AwaitWriteSelectEventTCP (void) {
 	timeout.tv_sec = 10; // longest is 10 seconds
 	timeout.tv_usec = 0;
     }
+
+    Timestamp t1;
     if ((rc = select(mySocket + 1, NULL, &writeset, NULL, &timeout)) <= 0) {
+        reportstruct->select_delay = -1;
 	WARN_errno((rc < 0), "select");
 #ifdef HAVE_THREAD_DEBUG
 	if (rc == 0)
@@ -883,6 +886,9 @@ inline bool Client::AwaitWriteSelectEventTCP (void) {
 #endif
 	return false;
     }
+    Timestamp t2;
+    reportstruct->select_delay = t2.subSec(t1);
+    //    printf("*****t1 = %f\n", t2.subSec(t1));
     return true;
 }
 
@@ -901,14 +907,11 @@ void Client::RunWriteEventsTCP () {
 	bool rc = AwaitWriteSelectEventTCP();
 	reportstruct->emptyreport = (rc == false) ? 1 : 0;
         if (rc) {
-	    reportstruct->prevPacketTime = myReport->info.ts.prevpacketTime;
-	    myReport->info.ts.prevpacketTime = reportstruct->packetTime;
 	    now.setnow();
 	    reportstruct->packetTime.tv_sec = now.getSecs();
 	    reportstruct->packetTime.tv_usec = now.getUsecs();
 	    WriteTcpTxHdr(reportstruct, writelen, ++burst_id);
 	    reportstruct->sentTime = reportstruct->packetTime;
-	    myReport->info.ts.prevsendTime = reportstruct->packetTime;
 	    reportstruct->packetLen = writen(mySocket, mBuf, writelen);
 	    if (reportstruct->packetLen <= 0) {
 		WARN_errno((reportstruct->packetLen < 0), "event writen()");

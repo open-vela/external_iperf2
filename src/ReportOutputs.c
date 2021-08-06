@@ -425,6 +425,11 @@ void tcp_output_write_enhanced_isoch (struct TransferInfo *stats) {
 	       netpower_buf);
     }
 #endif
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+    if (stats->latency_histogram) {
+	histogram_print(stats->latency_histogram, stats->ts.iStart, stats->ts.iEnd);
+    }
+#endif
     fflush(stdout);
 }
 
