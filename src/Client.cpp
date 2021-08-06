@@ -538,7 +538,8 @@ void Client::Run () {
 	} else if (isNearCongest(mSettings)) {
 	    RunNearCongestionTCP();
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
-	} else if (isWritePrefetch(mSettings) && !isIsochronous(mSettings)) {
+	} else if (isWritePrefetch(mSettings) && \
+		   !isIsochronous(mSettings) && !isPeriodicBurst(mSettings)) {
 	    RunWriteEventsTCP();
 #endif
 	} else {
@@ -594,7 +595,7 @@ void Client::RunTCP () {
 		    }
 		}
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
-		else if (isWritePrefetch(mSettings)) {
+		if (isWritePrefetch(mSettings)) {
 		    AwaitWriteSelectEventTCP();
 		}
 #endif
