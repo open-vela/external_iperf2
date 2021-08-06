@@ -857,14 +857,13 @@ void Client::RunRateLimitedTCP () {
 
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
 inline bool Client::AwaitWriteSelectEventTCP (void) {
-    bool ready;
     int rc;
-    Timestamp write_event_timeout(0,0);
     struct timeval timeout;
     fd_set writeset;
     FD_ZERO(&writeset);
     FD_SET(mySocket, &writeset);
     if (isModeTime(mSettings)) {
+        Timestamp write_event_timeout(0,0);
 	if (mSettings->mInterval && (mSettings->mIntervalMode == kInterval_Time)) {
 	    write_event_timeout.add((double) mSettings->mInterval / 1e6 * 2.0);
 	} else {
@@ -882,11 +881,9 @@ inline bool Client::AwaitWriteSelectEventTCP (void) {
 	if (rc == 0)
 	    thread_debug("AwaitWrite timeout");
 #endif
-	ready = false;
-    } else {
-	ready = true;
+	return false;
     }
-    return ready;
+    return true;
 }
 
 void Client::RunWriteEventsTCP () {
