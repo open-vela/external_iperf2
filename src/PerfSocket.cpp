@@ -116,7 +116,7 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
 	FAIL_errno((inSettings->tuntapdev == -1), "open tun dev", inSettings);
 	ifr.ifr_flags |= isTapDev(inSettings) ? IFF_TAP : IFF_TUN;
 	ifr.ifr_flags |= IFF_NO_PI;
-	rc = ioctl(inSettings->tuntapdev, TUNSETIFF, (void*) &ifr);
+	int rc = ioctl(inSettings->tuntapdev, TUNSETIFF, (void*) &ifr);
 	FAIL_errno((rc == -1), "tunsetiff", inSettings);
 	if (!(*device)) {
 	    int len = snprintf(NULL, 0, "tap%d", inSettings->tuntapdev);
