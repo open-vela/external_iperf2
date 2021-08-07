@@ -396,7 +396,7 @@ bool Server::InitTrafficLoop () {
 	uint32_t flags = 0;
 	int peeklen = 0;
 	if (isUDP(mSettings)) {
-	    n = recvn(mSettings->mSock, mBuf, mBufLen, MSG_PEEK);
+	    n = recvn(mSettings->mSock, mBuf, mBufLen, PEEKNBYTES_FLAGS);
 	    if (n == 0) {
 		//peer closed the socket, with no writes e.g. a connect-only test
 		return false;
@@ -408,7 +408,7 @@ bool Server::InitTrafficLoop () {
 	    mSettings->accept_time.tv_usec = ntohl(udp_pkt->start_fq.start_tv_usec);
 	    reportstruct->packetLen = n;
 	} else {
-	    n = recvn(mSettings->mSock, mBuf, sizeof(uint32_t), MSG_PEEK);
+	    n = recvn(mSettings->mSock, mBuf, sizeof(uint32_t), PEEKNBYTES_FLAGS);
 	    if (n == 0) {
 		fprintf(stderr, "WARN: zero read on header flags\n");
 		//peer closed the socket, with no writes e.g. a connect-only test

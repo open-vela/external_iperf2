@@ -85,6 +85,10 @@
    don't. */
 #undef HAVE_DECL_MSG_DONTWAIT
 
+/* Define to 1 if you have the declaration of `MSG_PEEK', and to 0 if you
+   don't. */
+#undef HAVE_DECL_MSG_PEEK
+
 /* Define to 1 if you have the declaration of `MSG_WAITALL', and to 0 if you
    don't. */
 #undef HAVE_DECL_MSG_WAITALL
