@@ -107,14 +107,13 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
 	char **device = (inSettings->mThreadMode == kMode_Client) ? &inSettings->mIfrnametx : &inSettings->mIfrname;
 	struct ifreq ifr;
 	struct sockaddr_ll saddr;
-	int rc;
 	memset(&ifr, 0, sizeof(ifr));
 	if (*device) {
 	    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", *device);
 //	    ifr.ifr_flags = IFF_MULTI_QUEUE;
 	}
 	inSettings->tuntapdev = open("/dev/net/tun", O_RDWR);
-	FAIL_errno((rc == -1), "open tun dev", inSettings);
+	FAIL_errno((inSettings->tuntapdev == -1), "open tun dev", inSettings);
 	ifr.ifr_flags |= isTapDev(inSettings) ? IFF_TAP : IFF_TUN;
 	ifr.ifr_flags |= IFF_NO_PI;
 	rc = ioctl(inSettings->tuntapdev, TUNSETIFF, (void*) &ifr);
