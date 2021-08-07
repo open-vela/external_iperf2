@@ -170,6 +170,7 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
     ptr   = outBuf;
     nleft = inLen;
 
+#if (PEEKNBYTES_FLAGS)
     if (!(flags & MSG_PEEK)) {
 	while (nleft >  0) {
 	    nread = recv(inSock, ptr, nleft, flags);
@@ -200,7 +201,9 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
 	    }
 	    nread = inLen - nleft;
 	}
-    } else {
+    } else
+#endif // PEEK_FLAGS
+      {
 	while (nleft != nread) {
 	    nread = recv(inSock, ptr, nleft, flags);
 	    switch (nread) {
@@ -219,7 +222,7 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
 		break;
 	    }
 	}
-    }
+      }
   DONE:
     return(nread);
 } /* end readn */
