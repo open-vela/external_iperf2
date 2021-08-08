@@ -170,8 +170,29 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
     ptr   = outBuf;
     nleft = inLen;
 
-#if (PEEKNBYTES_FLAGS)
-    if (!(flags & MSG_PEEK)) {
+    if (flags & MSG_PEEK) {
+	while (nleft != nread) {
+	    nread = recv(inSock, ptr, nleft, flags);
+	    switch (nread) {
+	    case SOCKET_ERROR :
+		// Note: use TCP fatal error codes even for UDP
+		if (FATALTCPREADERR(errno)) {
+		    WARN_errno(1, "recvn peek");
+		    nread = -1;
+		    goto DONE;
+		}
+		break;
+	    case 0:
+#ifdef HAVE_THREAD_DEBUG
+		WARN(1, "recvn peer close");
+#endif
+		goto DONE;
+		break;
+	    default :
+		break;
+	    }
+	}
+    } else {
 	while (nleft >  0) {
 	    nread = recv(inSock, ptr, nleft, flags);
 	    switch (nread) {
@@ -201,28 +222,7 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
 	    }
 	    nread = inLen - nleft;
 	}
-    } else
-#endif // PEEK_FLAGS
-      {
-	while (nleft != nread) {
-	    nread = recv(inSock, ptr, nleft, flags);
-	    switch (nread) {
-	    case SOCKET_ERROR :
-		// Note: use TCP fatal error codes even for UDP
-		if (FATALTCPREADERR(errno)) {
-		    WARN_errno(1, "recvn peek");
-		    nread = -1;
-		    goto DONE;
-		}
-		break;
-	    case 0:
-		// read timeout - retry
-		break;
-	    default :
-		break;
-	    }
-	}
-      }
+    }
   DONE:
     return(nread);
 } /* end readn */
