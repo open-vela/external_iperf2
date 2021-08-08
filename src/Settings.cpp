@@ -1382,7 +1382,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		bail = true;
 	    }
 #endif
-	    if (isBWSet(mExtSettings) && !(mExtSettings->mAppRateUnits = kRate_PPS) \
+	    if (isBWSet(mExtSettings) && !(mExtSettings->mAppRateUnits == kRate_PPS) \
 		&& ((mExtSettings->mAppRate / 8) < static_cast<uintmax_t>(mExtSettings->mBufLen))) {
 		fprintf(stderr, "ERROR: option -b and -l of %d are incompatible, consider setting -l to %d or lower\n", \
 			mExtSettings->mBufLen, static_cast<int>(mExtSettings->mAppRate / 8));
