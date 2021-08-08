@@ -1186,7 +1186,8 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 	    // figure out the length of the test header
 	    if ((peeklen = Settings_ClientHdrPeekLen(flags)) > 0) {
 		// read the test settings passed to the server by the client
-		int n = recvn(server->mSock, mBuf, peeklen, PEEKNBYTES_FLAGS);
+		int n = 0;
+		n = recvn(server->mSock, (PEEKNBYTES_FLAGS ? mBuf : (mBuf + n)), peeklen, PEEKNBYTES_FLAGS);
 		FAIL_errno((n < peeklen), "read tcp test info", server);
 		server->skip = n;
 		if (isPermitKey(mSettings)) {
