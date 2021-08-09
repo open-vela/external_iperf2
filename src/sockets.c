@@ -196,7 +196,11 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
 #endif
     {
 	while (nleft >  0) {
-	    nread = recv(inSock, ptr, nleft, flags);
+#if (HAVE_DECL_MSG_WAITALL)
+	    nread = recv(inSock, ptr, nleft, MSG_WAITALL);
+#else
+	    nread = recv(inSock, ptr, nleft, 0);
+#endif
 	    switch (nread) {
 	    case SOCKET_ERROR :
 		// Note: use TCP fatal error codes even for UDP
