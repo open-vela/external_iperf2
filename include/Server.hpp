@@ -93,6 +93,7 @@ private:
     void udp_isoch_processing(int);
     bool InProgress(void);
     int SkipFirstPayload(void);
+    void ClientReverseFirstRead(void);
     Timestamp connect_done;
     bool peerclose;
     bool isburst;

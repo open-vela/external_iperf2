@@ -366,7 +366,62 @@ inline void Server::SetReportStartTime () {
 #endif
 }
 
-bool Server::InitTrafficLoop () {
+void Server::ClientReverseFirstRead (void) {
+    // Handle the case when the client spawns a server (no listener) and need the initial header
+    // Case of --trip-times and --reverse or --fullduplex, listener handles normal case
+    // Handle the case when the client spawns a server (no listener) and need the initial header
+    // Case of --trip-times and --reverse or --fullduplex, listener handles normal case
+    if (isReverse(mSettings) && (isTripTime(mSettings) || isPeriodicBurst(mSettings) || isIsochronous(mSettings))) {
+	int n = 0;
+	uint32_t flags = 0;
+	int peeklen = 0;
+	if (isUDP(mSettings)) {
+	    n = recvn(mSettings->mSock, mBuf, mBufLen, 0);
+	    if (n == 0) {
+		//peer closed the socket, with no writes e.g. a connect-only test
+		peerclose = true;
+	    }
+	    FAIL_errno(n < 0, "recvn-reverse", mSettings);
+	    struct client_udp_testhdr *udp_pkt = reinterpret_cast<struct client_udp_testhdr *>(mBuf);
+	    flags = ntohl(udp_pkt->base.flags);
+	    mSettings->accept_time.tv_sec = ntohl(udp_pkt->start_fq.start_tv_sec);
+	    mSettings->accept_time.tv_usec = ntohl(udp_pkt->start_fq.start_tv_usec);
+	    reportstruct->packetLen = n;
+	    reportstruct->packetID = 1;
+	} else {
+	    int offset=0;
+	    n = recvn(mSettings->mSock, mBuf, sizeof(uint32_t), 0);
+	    if (n == 0) {
+		fprintf(stderr, "WARN: zero read on header flags\n");
+		//peer closed the socket, with no writes e.g. a connect-only test
+		peerclose = true;
+	    }
+	    FAIL_errno((n < (int) sizeof(uint32_t)), "read tcp flags", mSettings);
+	    offset +=n;
+	    struct client_tcp_testhdr *tcp_pkt = reinterpret_cast<struct client_tcp_testhdr *>(mBuf);
+	    flags = ntohl(tcp_pkt->base.flags);
+	    // figure out the length of the test header
+	    if ((peeklen = Settings_ClientHdrPeekLen(flags)) > 0) {
+		peeklen -= offset;
+		// read the test settings passed to the mSettings by the client
+		n = recvn(mSettings->mSock, mBuf + offset, peeklen, 0);
+		if (n == 0) {
+		    peerclose = true;
+		}
+		FAIL_errno((n < peeklen), "read tcp test info", mSettings);
+		offset += n;
+		struct client_tcp_testhdr *tcp_pkt = reinterpret_cast<struct client_tcp_testhdr *>(mBuf);
+		mSettings->accept_time.tv_sec = ntohl(tcp_pkt->start_fq.start_tv_sec);
+		mSettings->accept_time.tv_usec = ntohl(tcp_pkt->start_fq.start_tv_usec);
+		reportstruct->packetLen = offset;
+		mSettings->skip	= 0;
+		reportstruct->packetID = (n > 0) ? 1 : 0;
+	    }
+	}
+    }
+}
+
+bool Server::InitTrafficLoop (void) {
     myJob = InitIndividualReport(mSettings);
     myReport = static_cast<struct ReporterData *>(myJob->this_report);
     assert(myJob != NULL);
@@ -389,54 +444,10 @@ bool Server::InitTrafficLoop () {
 	    exit(-1);
     }
 
-    // Handle the case when the client spawns a server (no listener) and need the initial header
-    // Case of --trip-times and --reverse or --fullduplex, listener handles normal case
-    if (isReverse(mSettings) && (isTripTime(mSettings) || isPeriodicBurst(mSettings) || isIsochronous(mSettings))) {
-	int n = 0;
-	uint32_t flags = 0;
-	int peeklen = 0;
-	if (isUDP(mSettings)) {
-	    n = recvn(mSettings->mSock, mBuf, mBufLen, PEEKNBYTES_FLAGS);
-	    if (n == 0) {
-		//peer closed the socket, with no writes e.g. a connect-only test
-		return false;
-	    }
-	    FAIL_errno(n < 0, "recvn-reverse", mSettings);
-	    struct client_udp_testhdr *udp_pkt = reinterpret_cast<struct client_udp_testhdr *>(mBuf);
-	    flags = ntohl(udp_pkt->base.flags);
-	    mSettings->accept_time.tv_sec = ntohl(udp_pkt->start_fq.start_tv_sec);
-	    mSettings->accept_time.tv_usec = ntohl(udp_pkt->start_fq.start_tv_usec);
-	    reportstruct->packetLen = n;
-	} else {
-	    int offset=0;
-	    n = recvn(mSettings->mSock, mBuf, sizeof(uint32_t), 0);
-	    if (n == 0) {
-		fprintf(stderr, "WARN: zero read on header flags\n");
-		//peer closed the socket, with no writes e.g. a connect-only test
-		return false;
-	    }
-	    FAIL_errno((n < (int) sizeof(uint32_t)), "read tcp flags", mSettings);
-	    offset +=n;
-	    struct client_tcp_testhdr *tcp_pkt = reinterpret_cast<struct client_tcp_testhdr *>(mBuf);
-	    flags = ntohl(tcp_pkt->base.flags);
-	    // figure out the length of the test header
-	    if ((peeklen = Settings_ClientHdrPeekLen(flags)) > 0) {
-		peeklen -= offset;
-		// read the test settings passed to the mSettings by the client
-		n = recvn(mSettings->mSock, mBuf + offset, peeklen, 0);
-		FAIL_errno((n < peeklen), "read tcp test info", mSettings);
-		offset += n;
-		struct client_tcp_testhdr *tcp_pkt = reinterpret_cast<struct client_tcp_testhdr *>(mBuf);
-		mSettings->accept_time.tv_sec = ntohl(tcp_pkt->start_fq.start_tv_sec);
-		mSettings->accept_time.tv_usec = ntohl(tcp_pkt->start_fq.start_tv_usec);
-		reportstruct->packetLen = offset;
-		mSettings->skip	= 0;
-		if (n == 0)
-		    return false;
-		reportstruct->packetID = (n > 0) ? 1 : 0;
-	    }
-	}
+    if (isReverse(mSettings)) {
+	ClientReverseFirstRead();
     }
+
     if (isTripTime(mSettings)) {
 	Timestamp now;
 	if ((abs(now.getSecs() - mSettings->accept_time.tv_sec)) > MAXDIFFTIMESTAMPSECS) {
