@@ -169,7 +169,7 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
 
     ptr   = outBuf;
     nleft = inLen;
-
+#if (HAVE_DECL_MSG_PEEK)
     if (flags & MSG_PEEK) {
 	while (nleft != nread) {
 	    nread = recv(inSock, ptr, nleft, flags);
@@ -192,7 +192,9 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
 		break;
 	    }
 	}
-    } else {
+    } else
+#endif
+    {
 	while (nleft >  0) {
 	    nread = recv(inSock, ptr, nleft, flags);
 	    switch (nread) {
