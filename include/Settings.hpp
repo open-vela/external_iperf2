@@ -166,6 +166,7 @@ struct thread_Settings {
     char*  mHistogramStr;         // --histograms (packets)
     char*  mTransferIDStr;          //
     FILE*  Extractor_file;
+
     struct ReportHeader* reporthdr;
     struct SumReport* mSumReport;
     struct SumReport* mFullDuplexReport;
@@ -214,7 +215,6 @@ struct thread_Settings {
     int flags;
     int flags_extend;
     int flags_extend2;
-    int skip;
     // enums (which should be special int's)
     enum ThreadMode mThreadMode;         // -s or -c
     enum ReportMode mReportMode;

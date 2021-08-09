@@ -372,50 +372,54 @@ void Server::ClientReverseFirstRead (void) {
     // Handle the case when the client spawns a server (no listener) and need the initial header
     // Case of --trip-times and --reverse or --fullduplex, listener handles normal case
     if (isReverse(mSettings) && (isTripTime(mSettings) || isPeriodicBurst(mSettings) || isIsochronous(mSettings))) {
-	int n = 0;
+	int nread = 0;
 	uint32_t flags = 0;
 	int peeklen = 0;
 	if (isUDP(mSettings)) {
-	    n = recvn(mSettings->mSock, mBuf, mBufLen, 0);
-	    if (n == 0) {
+	    nread = recvn(mSettings->mSock, mBuf, mBufLen, 0);
+	    switch (nread) {
+	    case 0:
 		//peer closed the socket, with no writes e.g. a connect-only test
 		peerclose = true;
+		break;
+	    case -1 :
+		FAIL_errno(1, "recvn-reverse", mSettings);
+		break;
+	    default :
+		struct client_udp_testhdr *udp_pkt = reinterpret_cast<struct client_udp_testhdr *>(mBuf);
+		flags = ntohl(udp_pkt->base.flags);
+		mSettings->accept_time.tv_sec = ntohl(udp_pkt->start_fq.start_tv_sec);
+		mSettings->accept_time.tv_usec = ntohl(udp_pkt->start_fq.start_tv_usec);
+		reportstruct->packetLen = nread;
+		reportstruct->packetID = 1;
+		break;
 	    }
-	    FAIL_errno(n < 0, "recvn-reverse", mSettings);
-	    struct client_udp_testhdr *udp_pkt = reinterpret_cast<struct client_udp_testhdr *>(mBuf);
-	    flags = ntohl(udp_pkt->base.flags);
-	    mSettings->accept_time.tv_sec = ntohl(udp_pkt->start_fq.start_tv_sec);
-	    mSettings->accept_time.tv_usec = ntohl(udp_pkt->start_fq.start_tv_usec);
-	    reportstruct->packetLen = n;
-	    reportstruct->packetID = 1;
 	} else {
-	    int offset=0;
-	    n = recvn(mSettings->mSock, mBuf, sizeof(uint32_t), 0);
-	    if (n == 0) {
+	    nread = recvn(mSettings->mSock, mBuf, sizeof(uint32_t), 0);
+	    if (nread == 0) {
 		fprintf(stderr, "WARN: zero read on header flags\n");
 		//peer closed the socket, with no writes e.g. a connect-only test
 		peerclose = true;
 	    }
-	    FAIL_errno((n < (int) sizeof(uint32_t)), "read tcp flags", mSettings);
-	    offset +=n;
+	    FAIL_errno((nread < (int) sizeof(uint32_t)), "read tcp flags", mSettings);
+	    reportstruct->packetID = 1;
 	    struct client_tcp_testhdr *tcp_pkt = reinterpret_cast<struct client_tcp_testhdr *>(mBuf);
 	    flags = ntohl(tcp_pkt->base.flags);
 	    // figure out the length of the test header
 	    if ((peeklen = Settings_ClientHdrPeekLen(flags)) > 0) {
-		peeklen -= offset;
+		peeklen -= (int) sizeof(uint32_t); //adjust for flags
 		// read the test settings passed to the mSettings by the client
-		n = recvn(mSettings->mSock, mBuf + offset, peeklen, 0);
-		if (n == 0) {
+		nread = recvn(mSettings->mSock, mBuf, peeklen, 0);
+		if (nread == 0) {
 		    peerclose = true;
 		}
-		FAIL_errno((n < peeklen), "read tcp test info", mSettings);
-		offset += n;
-		struct client_tcp_testhdr *tcp_pkt = reinterpret_cast<struct client_tcp_testhdr *>(mBuf);
-		mSettings->accept_time.tv_sec = ntohl(tcp_pkt->start_fq.start_tv_sec);
-		mSettings->accept_time.tv_usec = ntohl(tcp_pkt->start_fq.start_tv_usec);
-		reportstruct->packetLen = offset;
-		mSettings->skip	= 0;
-		reportstruct->packetID = (n > 0) ? 1 : 0;
+		FAIL_errno((nread < peeklen), "read tcp test info", mSettings);
+		if (nread > 0) {
+		    struct client_tcp_testhdr *tcp_pkt = reinterpret_cast<struct client_tcp_testhdr *>(mBuf);
+		    mSettings->accept_time.tv_sec = ntohl(tcp_pkt->start_fq.start_tv_sec);
+		    mSettings->accept_time.tv_usec = ntohl(tcp_pkt->start_fq.start_tv_usec);
+		}
+		reportstruct->packetLen = nread + (int) sizeof(uint32_t);
 	    }
 	}
     }
@@ -454,11 +458,6 @@ bool Server::InitTrafficLoop (void) {
 	    unsetTripTime(mSettings);
 	    fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
 	}
-    }
-    // skip the test exchange header to get to the first burst
-    // The test exchange header was read in listener context
-    if (mSettings->skip && (isTripTime(mSettings) || isPeriodicBurst(mSettings) || isIsochronous(mSettings))) {
-	reportstruct->packetLen = recvn(mSettings->mSock, mBuf, mSettings->skip, 0);
     }
     SetReportStartTime();
     if (setfullduplexflag)

@@ -181,10 +181,13 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
 		    nread = -1;
 		    goto DONE;
 		}
+#ifdef HAVE_THREAD_DEBUG
+		WARN_errno(1, "recvn peek non-fatal");
+#endif
 		break;
 	    case 0:
 #ifdef HAVE_THREAD_DEBUG
-		WARN(1, "recvn peer close");
+		WARN(1, "recvn peek peer close");
 #endif
 		goto DONE;
 		break;
@@ -205,8 +208,8 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
 	    case SOCKET_ERROR :
 		// Note: use TCP fatal error codes even for UDP
 		if (FATALTCPREADERR(errno)) {
-		    WARN_errno(1, "recvn fatal");
-		    nread = inLen - nleft;
+		    WARN_errno(1, "recvn");
+		    nread = -1;
 		    goto DONE;
 		}
 #ifdef HAVE_THREAD_DEBUG
@@ -219,7 +222,6 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
 #endif
 		nread = inLen - nleft;
 		goto DONE;
-		// read timeout - retry
 		break;
 	    default :
 		nleft -= nread;

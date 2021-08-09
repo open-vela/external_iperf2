@@ -278,13 +278,6 @@ typedef struct sockaddr_in iperf_sockaddr;
     #define SHUT_RDWR 2
 #endif // SHUT_RD
 
-// Work around case were windows claims to support MSG_PEEKN but doesn't actuall do so
-#if (HAVE_DECL_MSG_PEEK)
-    #define PEEKNBYTES_FLAGS MSG_PEEK
-#else
-    #define PEEKNBYTES_FLAGS 0
-#endif
-
 
 /* Internal debug */
 //#define INITIAL_PACKETID 0x7FFFFF00LL
