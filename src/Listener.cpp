@@ -1061,9 +1061,9 @@ inline bool Listener::test_permit_key(uint32_t flags, thread_Settings *server, i
 	return false;
     }
     if (!isUDP(server)) {
-	int n = recvn(server->mSock, mBuf, keyoffset + keylen, PEEKNBYTES_FLAGS);
-	FAIL_errno((n < (keyoffset + keylen)), "read key", server);
-	server->skip = n;
+	int nread = 0;
+	nread = recvn(server->mSock, mBuf, keyoffset + keylen, 0);
+	FAIL_errno((nread < (keyoffset + keylen)), "read key", server);
     }
     strncpy(server->mPermitKey, thiskey->value, MAX_PERMITKEY_LEN + 1);
     if (strncmp(server->mPermitKey, mSettings->mPermitKey, keylen) != 0) {
@@ -1167,17 +1167,19 @@ bool Listener::apply_client_settings_udp (thread_Settings *server) {
 }
 bool Listener::apply_client_settings_tcp (thread_Settings *server) {
     bool rc = false;
-    int n = recvn(server->mSock, mBuf, sizeof(uint32_t), PEEKNBYTES_FLAGS);
-    if (n == 0) {
+    int nread = recvn(server->mSock, mBuf, sizeof(uint32_t), 0);
+    char *readptr = mBuf;
+    if (nread == 0) {
 	//peer closed the socket, with no writes e.g. a connect-only test
 	WARN(1, "read tcp flags (peer close)");
 	goto DONE;
     }
-    if (n < (int) sizeof(uint32_t)) {
+    if (nread < (int) sizeof(uint32_t)) {
 	WARN(1, "read tcp flags (runt)");
 	goto DONE;
     } else {
 	rc = true;
+	readptr += nread;
 	struct client_tcp_testhdr *hdr = reinterpret_cast<struct client_tcp_testhdr *>(mBuf);
 	uint32_t flags = ntohl(hdr->base.flags);
 	uint16_t upperflags = 0;
@@ -1186,10 +1188,8 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 	    // figure out the length of the test header
 	    if ((peeklen = Settings_ClientHdrPeekLen(flags)) > 0) {
 		// read the test settings passed to the server by the client
-		int n = 0;
-		n = recvn(server->mSock, (PEEKNBYTES_FLAGS ? mBuf : (mBuf + n)), peeklen, PEEKNBYTES_FLAGS);
-		FAIL_errno((n < peeklen), "read tcp test info", server);
-		server->skip = n;
+		nread += recvn(server->mSock, readptr, (peeklen - (int) sizeof(uint32_t)), 0);
+		FAIL_errno((nread < peeklen), "read tcp test info", server);
 		if (isPermitKey(mSettings)) {
 		    if (!test_permit_key(flags, server, peeklen)) {
 			rc = false;
