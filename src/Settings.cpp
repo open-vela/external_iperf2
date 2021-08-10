@@ -2209,7 +2209,7 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
     return (len);
 }
 
-int Settings_ClientHdrPeekLen (uint32_t flags, struct thread_Settings *inSettings) {
+int Settings_ClientTestHdrLen (uint32_t flags, struct thread_Settings *inSettings) {
     int peeklen = 0;
     if ((flags & HEADER_VERSION1) || (flags & HEADER_VERSION2) || (flags & HEADER_EXTEND) || isPermitKey(inSettings)) {
 	if (flags & HEADER_LEN_BIT) {
