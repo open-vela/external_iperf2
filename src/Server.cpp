@@ -392,19 +392,19 @@ void Server::ClientReverseFirstRead (void) {
 		//peer closed the socket, with no writes e.g. a connect-only test
 		peerclose = true;
 	    }
-	    FAIL_errno((nread < (int) sizeof(uint32_t)), "read tcp flags", mSettings);
+	    FAIL_errno((nread < (int) sizeof(uint32_t)), "client read tcp flags", mSettings);
 	    reportstruct->packetID = 1;
 	    struct client_tcp_testhdr *tcp_pkt = reinterpret_cast<struct client_tcp_testhdr *>(mSettings->mBuf);
 	    flags = ntohl(tcp_pkt->base.flags);
 	    // figure out the length of the test header
 	    if ((readlen = Settings_ClientTestHdrLen(flags, mSettings)) > 0) {
-		readlen -= (int) sizeof(uint32_t); //adjust for flags
 		// read the test settings passed to the mSettings by the client
-		nread = recvn(mSettings->mSock, mSettings->mBuf, readlen, 0);
+	        int adj = (readlen - sizeof(uint32_t));
+	        nread = recvn(mSettings->mSock, (mSettings->mBuf + sizeof(uint32_t)), adj, 0);
 		if (nread == 0) {
 		    peerclose = true;
 		}
-		FAIL_errno((nread < readlen), "read tcp test info", mSettings);
+		FAIL_errno((nread < adj), "client read tcp test info", mSettings);
 		if (nread > 0) {
 		    struct client_tcp_testhdr *tcp_pkt = reinterpret_cast<struct client_tcp_testhdr *>(mSettings->mBuf);
 		    mSettings->accept_time.tv_sec = ntohl(tcp_pkt->start_fq.start_tv_sec);
