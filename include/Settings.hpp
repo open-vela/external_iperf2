@@ -281,6 +281,7 @@ struct thread_Settings {
     bool mKeyCheck;
     double mListenerTimeout;
     int tuntapdev;
+    int readptr_offset;
 #if HAVE_DECL_TCP_WINDOW_CLAMP
     int mClampSize;
 #endif
@@ -603,7 +604,7 @@ void Settings_GenerateClientSettings(struct thread_Settings *server, struct thre
 // generate client header for server
 int Settings_GenerateClientHdr(struct thread_Settings *client, void * hdr, struct timeval startTime);
 
-int Settings_ClientHdrPeekLen(uint32_t flags);
+int Settings_ClientHdrPeekLen(uint32_t flags, struct thread_Settings *inSettings);
 
 #ifdef __cplusplus
 } /* end extern "C" */
