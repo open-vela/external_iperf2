@@ -447,6 +447,8 @@ bool Server::InitTrafficLoop (void) {
 	if ((abs(now.getSecs() - mSettings->accept_time.tv_sec)) > MAXDIFFTIMESTAMPSECS) {
 	    unsetTripTime(mSettings);
 	    fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
+	    mSettings->accept_time.tv_sec = now.getSecs();
+	    mSettings->accept_time.tv_usec = now.getUsecs();
 	}
     }
     SetReportStartTime();
