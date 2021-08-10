@@ -397,7 +397,7 @@ void Server::ClientReverseFirstRead (void) {
 	    struct client_tcp_testhdr *tcp_pkt = reinterpret_cast<struct client_tcp_testhdr *>(mSettings->mBuf);
 	    flags = ntohl(tcp_pkt->base.flags);
 	    // figure out the length of the test header
-	    if ((peeklen = Settings_ClientHdrPeekLen(flags)) > 0) {
+	    if ((peeklen = Settings_ClientHdrPeekLen(flags, mSettings)) > 0) {
 		peeklen -= (int) sizeof(uint32_t); //adjust for flags
 		// read the test settings passed to the mSettings by the client
 		nread = recvn(mSettings->mSock, mSettings->mBuf, peeklen, 0);

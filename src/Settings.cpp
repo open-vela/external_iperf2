@@ -2209,21 +2209,22 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
     return (len);
 }
 
-int Settings_ClientHdrPeekLen (uint32_t flags) {
-    //* determine peek length and permit key
+int Settings_ClientHdrPeekLen (uint32_t flags, struct thread_Settings *inSettings) {
     int peeklen = 0;
-    if (flags & HEADER_LEN_BIT) {
-	peeklen = static_cast<int>((flags & HEADER_LEN_MASK) >> 1);
-	if (peeklen > MAX_HEADER_LEN) {
-	    fprintf(stderr, "WARN: header of %d length too large\n", peeklen);
-	    peeklen = -1;
-	}
-    } else {
-	if (flags & (HEADER_VERSION1 | HEADER_EXTEND)) {
-	    peeklen = sizeof(struct client_hdr_v1);
-	}
-	if (flags & (HEADER_VERSION2 | HEADER_EXTEND)) {
-	    peeklen += sizeof(struct client_hdrext);
+    if ((flags & HEADER_VERSION1) || (flags & HEADER_VERSION2) || (flags & HEADER_EXTEND) || isPermitKey(inSettings)) {
+	if (flags & HEADER_LEN_BIT) {
+	    peeklen = static_cast<int>((flags & HEADER_LEN_MASK) >> 1);
+	    if (peeklen > MAX_HEADER_LEN) {
+		fprintf(stderr, "WARN: header of %d length too large\n", peeklen);
+		peeklen = -1;
+	    }
+	} else {
+	    if (flags & (HEADER_VERSION1 | HEADER_EXTEND)) {
+		peeklen = sizeof(struct client_hdr_v1);
+	    }
+	    if (flags & (HEADER_VERSION2 | HEADER_EXTEND)) {
+		peeklen += sizeof(struct client_hdrext);
+	    }
 	}
     }
     return peeklen;
