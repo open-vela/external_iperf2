@@ -54,6 +54,9 @@ extern "C" {
 /*
  * Message header flags
  */
+
+#define TAPBYTESSLOP 512
+
 /* key for permit */
 #define HEADER_KEYCHECK     0x10000000
 #define HEADER_KEYL1        0x01000000

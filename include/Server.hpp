@@ -75,8 +75,6 @@ public:
 
 private:
     thread_Settings *mSettings;
-    char* mBuf;
-    int mBufLen;
     Timestamp mEndTime;
     Timestamp now;
     ReportStruct scratchpad;

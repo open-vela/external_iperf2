@@ -131,7 +131,6 @@ private:
     int mySocket;
 #endif
     struct ReporterData *myReport;
-    char* mBuf;
     Timestamp mEndTime;
     Timestamp lastPacketTime;
     Timestamp now;
