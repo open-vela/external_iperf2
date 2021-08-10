@@ -157,7 +157,6 @@ void Server::RunTCP () {
 
     burst_info.send_tt.write_tv_sec = 0;
     burst_info.send_tt.write_tv_usec = 0;
-
     now.setnow();
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
@@ -397,7 +396,7 @@ void Server::ClientReverseFirstRead (void) {
 	    struct client_tcp_testhdr *tcp_pkt = reinterpret_cast<struct client_tcp_testhdr *>(mSettings->mBuf);
 	    flags = ntohl(tcp_pkt->base.flags);
 	    // figure out the length of the test header
-	    if ((peeklen = Settings_ClientHdrPeekLen(flags, mSettings)) > 0) {
+	    if ((peeklen = Settings_ClientTestHdrLen(flags, mSettings)) > 0) {
 		peeklen -= (int) sizeof(uint32_t); //adjust for flags
 		// read the test settings passed to the mSettings by the client
 		nread = recvn(mSettings->mSock, mSettings->mBuf, peeklen, 0);
@@ -474,12 +473,17 @@ bool Server::InitTrafficLoop (void) {
 	PostReport(myJob);
     // The first payload is different for TCP so read it and report it
     // before entering the main loop
-    if (reportstruct->packetLen > 0) {
+
+    if (mSettings->firstreadbytes > 0) {
 	// printf("**** burst size = %d id = %d\n", burst_info.burst_size, burst_info.burst_id);
 	reportstruct->frameID = 0;
 	reportstruct->sentTime.tv_sec = myReport->info.ts.startTime.tv_sec;
 	reportstruct->sentTime.tv_usec = myReport->info.ts.startTime.tv_usec;
 	reportstruct->packetTime = reportstruct->sentTime;
+	reportstruct->packetLen = mSettings->firstreadbytes;
+	if (isUDP(mSettings)) {
+	    ReadPacketID();
+	}
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 	ReportPacket(myReport, reportstruct, NULL);
 #else

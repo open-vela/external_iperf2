@@ -890,12 +890,12 @@ bool Listener::tap_setup (thread_Settings *server, int sockfd) {
  * ------------------------------------------------------------------- ----*/
 int Listener::udp_accept (thread_Settings *server) {
     assert(server != NULL);
-    int rc;
+    int nread = 0;
     assert(ListenSocket > 0);
     // Preset the server socket to INVALID, hang recvfrom on the Listener's socket
     // The INVALID socket is used to keep the while loop going
     server->mSock = INVALID_SOCKET;
-    rc = recvfrom(ListenSocket, server->mBuf, server->mBufLen, MSG_PEEK, \
+    nread = recvfrom(ListenSocket, server->mBuf, server->mBufLen, 0, \
 		  reinterpret_cast<struct sockaddr*>(&server->peer), &server->size_peer);
 #if HAVE_THREAD_DEBUG
     {
@@ -903,11 +903,11 @@ int Listener::udp_accept (thread_Settings *server) {
 	size_t len=200;
 	unsigned short port = SockAddr_getPort(&server->peer);
 	SockAddr_getHostAddress(&server->peer, tmpaddr, len);
-	thread_debug("rcvfrom peer: %s port %d len=%d", tmpaddr, port, rc);
+	thread_debug("rcvfrom peer: %s port %d len=%d", tmpaddr, port, nread);
     }
 #endif
-    FAIL_errno(rc == SOCKET_ERROR, "recvfrom", mSettings);
-    if (!(rc < 0) && !sInterupted) {
+    FAIL_errno(nread == SOCKET_ERROR, "recvfrom", mSettings);
+    if (!(nread < 0) && !sInterupted) {
 	// Handle connection for UDP sockets
 	int gid = Iperf_push_host_port_conditional(server);
 #if HAVE_THREAD_DEBUG
@@ -915,6 +915,7 @@ int Listener::udp_accept (thread_Settings *server) {
 	    thread_debug("rcvfrom peer: drop duplicate");
 #endif
 	if (gid > 0) {
+	    int rc;
 	    // We have a new UDP flow (based upon key of quintuple)
 	    // so let's hand off this socket
 	    // to the server and create a new listener socket
@@ -931,6 +932,7 @@ int Listener::udp_accept (thread_Settings *server) {
 	    server->size_local = sizeof(iperf_sockaddr);
 	    getsockname(server->mSock, reinterpret_cast<sockaddr*>(&server->local), &server->size_local);
 	    SockAddr_Ifrname(server);
+	    server->firstreadbytes = nread;
 	}
     }
     return server->mSock;
@@ -939,7 +941,7 @@ int Listener::udp_accept (thread_Settings *server) {
 
 #if (((HAVE_TUNTAP_TUN) || (HAVE_TUNTAP_TAP)) && (AF_PACKET))
 int Listener::tuntap_accept(thread_Settings *server) {
-    int rc = recv(server->mSock, server->mBuf, (server->mBufLen + TAPBYTESSLOP + sizeof(struct iphdr) + sizeof(struct ether_header) + sizeof(struct udphdr)), MSG_PEEK);
+    int rc = recv(server->mSock, server->mBuf, (server->mBufLen + TAPBYTESSLOP + sizeof(struct iphdr) + sizeof(struct ether_header) + sizeof(struct udphdr)), 0);
     if (rc <= 0)
 	return 0;
 //	rc = udpchecksum((void *)ip_hdr, (void *)udp_hdr, udplen, (isIPV6(mSettings) ? 1 : 0));
@@ -961,6 +963,7 @@ int Listener::tuntap_accept(thread_Settings *server) {
     server->l4offset = sizeof(struct iphdr) + sizeof(struct ether_header);
     SockAddr_v4_Connect_TAP_BPF(server->mSock, local->sin_addr.s_addr, peer->sin_addr.s_addr, local->sin_port, peer->sin_port);
     server->l4payloadoffset = sizeof(struct iphdr) + sizeof(struct ether_header) + sizeof(struct udphdr);
+    server->firstreadbytes = rc;
     return server->mSock;
 }
 #endif
@@ -1173,14 +1176,14 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 	struct client_tcp_testhdr *hdr = reinterpret_cast<struct client_tcp_testhdr *>(server->mBuf);
 	uint32_t flags = ntohl(hdr->base.flags);
 	uint16_t upperflags = 0;
-	int peeklen;
+	int readlen;
 	// figure out the length of the test header
-	if ((peeklen = Settings_ClientHdrPeekLen(flags, server)) > 0) {
+	if ((readlen = Settings_ClientTestHdrLen(flags, server)) > 0) {
 	    // read the test settings passed to the server by the client
-	    nread += recvn(server->mSock, readptr, (peeklen - (int) sizeof(uint32_t)), 0);
-	    FAIL_errno((nread < peeklen), "read tcp test info", server);
+	    nread += recvn(server->mSock, readptr, (readlen - (int) sizeof(uint32_t)), 0);
+	    FAIL_errno((nread < readlen), "read tcp test info", server);
 	    if (isPermitKey(mSettings)) {
-		if (!test_permit_key(flags, server, peeklen)) {
+		if (!test_permit_key(flags, server, readlen)) {
 		    rc = false;
 		    goto DONE;
 		}
@@ -1189,7 +1192,7 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 		server->mKeyCheck = false;
 		goto DONE;
 	    }
-	    server->readptr_offset = nread;
+	    server->firstreadbytes = nread;
 	    struct client_tcp_testhdr *hdr = reinterpret_cast<struct client_tcp_testhdr*>(server->mBuf);
 	    if ((flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2)) {
 		if (flags & RUN_NOW)
