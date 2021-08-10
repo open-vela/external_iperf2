@@ -1174,91 +1174,90 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 	uint32_t flags = ntohl(hdr->base.flags);
 	uint16_t upperflags = 0;
 	int peeklen;
-	if ((flags & HEADER_VERSION1) || (flags & HEADER_VERSION2) || (flags & HEADER_EXTEND) || isPermitKey(mSettings)) {
-	    // figure out the length of the test header
-	    if ((peeklen = Settings_ClientHdrPeekLen(flags)) > 0) {
-		// read the test settings passed to the server by the client
-		nread += recvn(server->mSock, readptr, (peeklen - (int) sizeof(uint32_t)), 0);
-		FAIL_errno((nread < peeklen), "read tcp test info", server);
-		if (isPermitKey(mSettings)) {
-		    if (!test_permit_key(flags, server, peeklen)) {
-			rc = false;
-			goto DONE;
-		    }
-		} else if (flags & HEADER_KEYCHECK) {
+	// figure out the length of the test header
+	if ((peeklen = Settings_ClientHdrPeekLen(flags, server)) > 0) {
+	    // read the test settings passed to the server by the client
+	    nread += recvn(server->mSock, readptr, (peeklen - (int) sizeof(uint32_t)), 0);
+	    FAIL_errno((nread < peeklen), "read tcp test info", server);
+	    if (isPermitKey(mSettings)) {
+		if (!test_permit_key(flags, server, peeklen)) {
 		    rc = false;
-		    server->mKeyCheck = false;
 		    goto DONE;
 		}
-		struct client_tcp_testhdr *hdr = reinterpret_cast<struct client_tcp_testhdr*>(server->mBuf);
-		if ((flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2)) {
-		    if (flags & RUN_NOW)
-			server->mMode = kTest_DualTest;
-		    else
-			server->mMode = kTest_TradeOff;
+	    } else if (flags & HEADER_KEYCHECK) {
+		rc = false;
+		server->mKeyCheck = false;
+		goto DONE;
+	    }
+	    server->readptr_offset = nread;
+	    struct client_tcp_testhdr *hdr = reinterpret_cast<struct client_tcp_testhdr*>(server->mBuf);
+	    if ((flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2)) {
+		if (flags & RUN_NOW)
+		    server->mMode = kTest_DualTest;
+		else
+		    server->mMode = kTest_TradeOff;
+	    }
+	    if (flags & HEADER_EXTEND) {
+		upperflags = htons(hdr->extend.upperflags);
+		server->mTOS = ntohs(hdr->extend.tos);
+		server->peer_version_u = ntohl(hdr->extend.version_u);
+		server->peer_version_l = ntohl(hdr->extend.version_l);
+		if (upperflags & HEADER_ISOCH) {
+		    setIsochronous(server);
 		}
-		if (flags & HEADER_EXTEND) {
-		    upperflags = htons(hdr->extend.upperflags);
-		    server->mTOS = ntohs(hdr->extend.tos);
-		    server->peer_version_u = ntohl(hdr->extend.version_u);
-		    server->peer_version_l = ntohl(hdr->extend.version_l);
-		    if (upperflags & HEADER_ISOCH) {
-			setIsochronous(server);
+		if (upperflags & HEADER_EPOCH_START) {
+		    server->txstart_epoch.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
+		    server->txstart_epoch.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
+		    Timestamp now;
+		    if ((abs(now.getSecs() - server->txstart_epoch.tv_sec)) > (MAXDIFFTXSTART + 1)) {
+			fprintf(stdout,"WARN: ignore --txstart-time because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTXSTART);
+			unsetTxStartTime(server);
+		    } else {
+			setTxStartTime(server);
 		    }
-		    if (upperflags & HEADER_EPOCH_START) {
-			server->txstart_epoch.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
-			server->txstart_epoch.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
-			Timestamp now;
-			if ((abs(now.getSecs() - server->txstart_epoch.tv_sec)) > (MAXDIFFTXSTART + 1)) {
-			    fprintf(stdout,"WARN: ignore --txstart-time because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTXSTART);
-			    unsetTxStartTime(server);
-			} else {
-			    setTxStartTime(server);
-			}
-		    }
-		    if (upperflags & HEADER_TRIPTIME) {
-			Timestamp now;
-			if (!isTxStartTime(server) && ((abs(now.getSecs() - server->accept_time.tv_sec)) > (MAXDIFFTIMESTAMPSECS + 1))) {
-			    fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
-			} else {
-			    setTripTime(server);
-			    setEnhanced(server);
-			}
-		    }
-		    if (upperflags & HEADER_PERIODICBURST) {
+		}
+		if (upperflags & HEADER_TRIPTIME) {
+		    Timestamp now;
+		    if (!isTxStartTime(server) && ((abs(now.getSecs() - server->accept_time.tv_sec)) > (MAXDIFFTIMESTAMPSECS + 1))) {
+			fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
+		    } else {
+			setTripTime(server);
 			setEnhanced(server);
-			setFrameInterval(server);
-			setPeriodicBurst(server);
-			{
-			    struct client_tcp_testhdr *hdr = reinterpret_cast<struct client_tcp_testhdr *>(server->mBuf);
-			    server->mFPS = ntohl(hdr->isoch_settings.FPSl);
-			    server->mFPS += ntohl(hdr->isoch_settings.FPSu) / static_cast<double>(rMillion);
-			}
-			if (!server->mFPS) {
-			    server->mFPS = 1.0;
-			}
 		    }
-		    if (flags & HEADER_VERSION2) {
-			if (upperflags & HEADER_FULLDUPLEX) {
-			    setFullDuplex(server);
-			    setServerReverse(server);
-			}
-			if (upperflags & HEADER_REVERSE) {
-			    server->mThreadMode=kMode_Client;
-			    setServerReverse(server);
-			}
+		}
+		if (upperflags & HEADER_PERIODICBURST) {
+		    setEnhanced(server);
+		    setFrameInterval(server);
+		    setPeriodicBurst(server);
+		    {
+			struct client_tcp_testhdr *hdr = reinterpret_cast<struct client_tcp_testhdr *>(server->mBuf);
+			server->mFPS = ntohl(hdr->isoch_settings.FPSl);
+			server->mFPS += ntohl(hdr->isoch_settings.FPSu) / static_cast<double>(rMillion);
+		    }
+		    if (!server->mFPS) {
+			server->mFPS = 1.0;
+		    }
+		}
+		if (flags & HEADER_VERSION2) {
+		    if (upperflags & HEADER_FULLDUPLEX) {
+			setFullDuplex(server);
+			setServerReverse(server);
+		    }
+		    if (upperflags & HEADER_REVERSE) {
+			server->mThreadMode=kMode_Client;
+			setServerReverse(server);
 		    }
 		}
 	    }
-	    // Handle case that requires an ack back to the client
-	    // Signaled by not UDP (only supported by TCP)
-	    // and either 2.0.13 flags or the newer 2.0.14 flag of
-	    // V2PEERDETECT
-	    if (!isUDP(server) && !isCompat(mSettings) && \
-		((!(flags & HEADER_VERSION2) && (flags & HEADER_EXTEND)) || \
-		 (flags & HEADER_V2PEERDETECT))) {
-		client_test_ack(server);
-	    }
+	}
+	// Handle case that requires an ack back to the client
+	// Signaled by not UDP (only supported by TCP)
+	// and either 2.0.13 flags or the newer 2.0.14 flag of
+	// V2PEERDETECT
+	if (!isUDP(server) && !isCompat(mSettings) && \
+	    ((!(flags & HEADER_VERSION2) && (flags & HEADER_EXTEND)) || \
+	     (flags & HEADER_V2PEERDETECT))) {
+	    client_test_ack(server);
 	}
     }
   DONE:
