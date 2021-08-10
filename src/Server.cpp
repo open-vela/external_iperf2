@@ -321,6 +321,7 @@ inline void Server::SetFullDuplexReportStartTime () {
     thread_debug("Server fullduplex report start=%ld.%ld next=%ld.%ld", fullduplexstats->ts.startTime.tv_sec, fullduplexstats->ts.startTime.tv_usec, fullduplexstats->ts.nextTime.tv_sec, fullduplexstats->ts.nextTime.tv_usec);
 #endif
 }
+
 inline void Server::SetReportStartTime () {
     if (TimeZero(myReport->info.ts.startTime)) {
 	if (!TimeZero(mSettings->accept_time) && !isTxStartTime(mSettings)) {
@@ -362,9 +363,9 @@ void Server::ClientReverseFirstRead (void) {
     // Handle the case when the client spawns a server (no listener) and need the initial header
     // Case of --trip-times and --reverse or --fullduplex, listener handles normal case
     if (isReverse(mSettings) && (isTripTime(mSettings) || isPeriodicBurst(mSettings) || isIsochronous(mSettings))) {
-	int nread = 0;
+        int nread = 0;
 	uint32_t flags = 0;
-	int peeklen = 0;
+	int readlen = 0;
 	if (isUDP(mSettings)) {
 	    nread = recvn(mSettings->mSock, mSettings->mBuf, mSettings->mBufLen, 0);
 	    switch (nread) {
@@ -396,20 +397,20 @@ void Server::ClientReverseFirstRead (void) {
 	    struct client_tcp_testhdr *tcp_pkt = reinterpret_cast<struct client_tcp_testhdr *>(mSettings->mBuf);
 	    flags = ntohl(tcp_pkt->base.flags);
 	    // figure out the length of the test header
-	    if ((peeklen = Settings_ClientTestHdrLen(flags, mSettings)) > 0) {
-		peeklen -= (int) sizeof(uint32_t); //adjust for flags
+	    if ((readlen = Settings_ClientTestHdrLen(flags, mSettings)) > 0) {
+		readlen -= (int) sizeof(uint32_t); //adjust for flags
 		// read the test settings passed to the mSettings by the client
-		nread = recvn(mSettings->mSock, mSettings->mBuf, peeklen, 0);
+		nread = recvn(mSettings->mSock, mSettings->mBuf, readlen, 0);
 		if (nread == 0) {
 		    peerclose = true;
 		}
-		FAIL_errno((nread < peeklen), "read tcp test info", mSettings);
+		FAIL_errno((nread < readlen), "read tcp test info", mSettings);
 		if (nread > 0) {
 		    struct client_tcp_testhdr *tcp_pkt = reinterpret_cast<struct client_tcp_testhdr *>(mSettings->mBuf);
 		    mSettings->accept_time.tv_sec = ntohl(tcp_pkt->start_fq.start_tv_sec);
 		    mSettings->accept_time.tv_usec = ntohl(tcp_pkt->start_fq.start_tv_usec);
 		}
-		reportstruct->packetLen = nread + (int) sizeof(uint32_t);
+		mSettings->firstreadbytes = readlen;
 	    }
 	}
     }
