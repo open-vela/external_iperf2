@@ -165,6 +165,7 @@ struct thread_Settings {
     char*  mIsochronousStr;         // --isochronous
     char*  mHistogramStr;         // --histograms (packets)
     char*  mTransferIDStr;          //
+    char*  mBuf;
     FILE*  Extractor_file;
 
     struct ReportHeader* reporthdr;

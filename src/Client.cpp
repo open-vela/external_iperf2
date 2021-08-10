@@ -79,7 +79,6 @@ Client::Client (thread_Settings *inSettings) {
   thread_debug("Client constructor with thread %p sum=%p (flags=%x)", (void *) inSettings, (void *)inSettings->mSumReport, inSettings->flags);
 #endif
     mSettings = inSettings;
-    mBuf = NULL;
     myJob = NULL;
     myReport = NULL;
     framecounter = NULL;
@@ -97,13 +96,7 @@ Client::Client (thread_Settings *inSettings) {
 	unsetPeerVerDetect(mSettings);
     }
 
-    int payloadsize = (mSettings->mBufLen > MINMBUFALLOCSIZE) ? mSettings->mBufLen : MINMBUFALLOCSIZE; // defined in payloads.h
-    mBuf = new char[payloadsize]; // defined in payloads.h
-#ifdef HAVE_THREAD_DEBUG
-    thread_debug("Client constructor: MBUF malloc %d bytes (%p)", payloadsize, (void *) mBuf);
-#endif
-    FAIL_errno(mBuf == NULL, "No memory for buffer\n", mSettings);
-    pattern(mBuf, mSettings->mBufLen);
+    pattern(mSettings->mBuf, mSettings->mBufLen);
     if (isFileInput(mSettings)) {
         if (!isSTDIN(mSettings))
             Extractor_Initialize(mSettings->mFileName, mSettings->mBufLen, mSettings);
@@ -130,7 +123,6 @@ Client::~Client () {
 		 mySocket, (void *) mSettings->reporthdr, \
 		 (isServerReverse(mSettings) ? "true" : "false"), (isFullDuplex(mSettings) ? "true" : "false"));
 #endif
-    DELETE_ARRAY(mBuf);
     DELETE_PTR(framecounter);
 } // end ~Client
 
@@ -482,7 +474,7 @@ void Client::InitTrafficLoop () {
         mEndTime.setnow();
         mEndTime.add(mSettings->mAmount / 100.0);
     }
-    readAt = mBuf;
+    readAt = mSettings->mBuf;
     lastPacketTime.set(myReport->info.ts.startTime.tv_sec, myReport->info.ts.startTime.tv_usec);
     if (isConnectionReport(mSettings) && isPeerVerDetect(mSettings) && !isSumOnly(mSettings))
 	PostReport(InitConnectionReport(mSettings, mSettings->connecttime));
@@ -608,7 +600,7 @@ void Client::RunTCP () {
 	    myReport->info.ts.prevsendTime = reportstruct->packetTime;
 	    writelen = (mSettings->mBufLen > burst_remaining) ? burst_remaining : mSettings->mBufLen;
 	    // perform write, full header must succeed
-	    reportstruct->packetLen = writen(mySocket, mBuf, writelen);
+	    reportstruct->packetLen = writen(mySocket, mSettings->mBuf, writelen);
 	    FAIL_errno(reportstruct->packetLen < (intmax_t) sizeof(struct TCP_burst_payload), "burst written", mSettings);
 	} else {
 	    // printf("pl=%ld\n",reportstruct->packetLen);
@@ -620,7 +612,7 @@ void Client::RunTCP () {
 		AwaitWriteSelectEventTCP();
 	    }
 #endif
-	    reportstruct->packetLen = write(mySocket, mBuf, writelen);
+	    reportstruct->packetLen = write(mySocket, mSettings->mBuf, writelen);
 	    now.setnow();
 	    reportstruct->packetTime.tv_sec = now.getSecs();
 	    reportstruct->packetTime.tv_usec = now.getUsecs();
@@ -694,7 +686,7 @@ void Client::RunNearCongestionTCP () {
 	    myReport->info.ts.prevsendTime = reportstruct->packetTime;
 	    // perform write
 	    int writelen = (mSettings->mBufLen > burst_remaining) ? burst_remaining : mSettings->mBufLen;
-	    reportstruct->packetLen = write(mySocket, mBuf, writelen);
+	    reportstruct->packetLen = write(mySocket, mSettings->mBuf, writelen);
 	    assert(reportstruct->packetLen >= (intmax_t) sizeof(struct TCP_burst_payload));
 	    goto ReportNow;
 	}
@@ -703,7 +695,7 @@ void Client::RunNearCongestionTCP () {
 	}
 	// printf("pl=%ld\n",reportstruct->packetLen);
 	// perform write
-	reportstruct->packetLen = write(mySocket, mBuf, reportstruct->packetLen);
+	reportstruct->packetLen = write(mySocket, mSettings->mBuf, reportstruct->packetLen);
 	now.setnow();
 	reportstruct->packetTime.tv_sec = now.getSecs();
 	reportstruct->packetTime.tv_usec = now.getUsecs();
@@ -801,7 +793,7 @@ void Client::RunRateLimitedTCP () {
 		    reportstruct->sentTime = reportstruct->packetTime;
 		    burst_remaining = burst_size;
 		    // perform write
-		    n = writen(mySocket, mBuf, sizeof(struct TCP_burst_payload));
+		    n = writen(mySocket, mSettings->mBuf, sizeof(struct TCP_burst_payload));
 		    WARN(n != sizeof(struct TCP_burst_payload), "burst hdr write failed");
 		    burst_remaining -= n;
 		    reportstruct->packetLen -= n;
@@ -810,7 +802,7 @@ void Client::RunRateLimitedTCP () {
 		    reportstruct->packetLen = burst_remaining;
 		}
 	    }
-	    int len = write(mySocket, mBuf, reportstruct->packetLen);
+	    int len = write(mySocket, mSettings->mBuf, reportstruct->packetLen);
 	    if (len < 0) {
 	        if (NONFATALTCPWRITERR(errno)) {
 		    reportstruct->errwrite=WriteErrAccount;
@@ -913,7 +905,7 @@ void Client::RunWriteEventsTCP () {
 	    reportstruct->packetTime.tv_usec = now.getUsecs();
 	    WriteTcpTxHdr(reportstruct, writelen, ++burst_id);
 	    reportstruct->sentTime = reportstruct->packetTime;
-	    reportstruct->packetLen = writen(mySocket, mBuf, writelen);
+	    reportstruct->packetLen = writen(mySocket, mSettings->mBuf, writelen);
 	    if (reportstruct->packetLen <= 0) {
 		WARN_errno((reportstruct->packetLen < 0), "event writen()");
 		if (reportstruct->packetLen == 0) {
@@ -959,7 +951,7 @@ double Client::get_delay_target () {
 }
 
 void Client::RunUDP () {
-    struct UDP_datagram* mBuf_UDP = reinterpret_cast<struct UDP_datagram*>(mBuf);
+    struct UDP_datagram* mBuf_UDP = reinterpret_cast<struct UDP_datagram*>(mSettings->mBuf);
     int currLen;
 
     double delay_target = get_delay_target();
@@ -1034,9 +1026,9 @@ void Client::RunUDP () {
 	reportstruct->emptyreport = 0;
 	// perform write
 	if (isModeAmount(mSettings)) {
-	    currLen = write(mySocket, mBuf, (mSettings->mAmount < static_cast<unsigned>(mSettings->mBufLen)) ? mSettings->mAmount : mSettings->mBufLen);
+	    currLen = write(mySocket, mSettings->mBuf, (mSettings->mAmount < static_cast<unsigned>(mSettings->mBufLen)) ? mSettings->mAmount : mSettings->mBufLen);
 	} else {
-	    currLen = write(mySocket, mBuf, mSettings->mBufLen);
+	    currLen = write(mySocket, mSettings->mBuf, mSettings->mBufLen);
 	}
 	if (currLen < 0) {
 	    reportstruct->packetID--;
@@ -1081,9 +1073,9 @@ void Client::RunUDP () {
  * UDP isochronous send loop
  */
 void Client::RunUDPIsochronous () {
-    struct UDP_datagram* mBuf_UDP = reinterpret_cast<struct UDP_datagram*>(mBuf);
+    struct UDP_datagram* mBuf_UDP = reinterpret_cast<struct UDP_datagram*>(mSettings->mBuf);
     // skip over the UDP datagram (seq no, timestamp) to reach the isoch fields
-    struct client_udp_testhdr *udp_payload = reinterpret_cast<client_udp_testhdr *>(mBuf);
+    struct client_udp_testhdr *udp_payload = reinterpret_cast<client_udp_testhdr *>(mSettings->mBuf);
 
     double delay_target = mSettings->mBurstIPG * 1000000;  // convert from milliseconds to nanoseconds
     double delay = 0;
@@ -1162,11 +1154,11 @@ void Client::RunUDPIsochronous () {
 	    if (isModeAmount(mSettings) && (mSettings->mAmount < static_cast<unsigned>(mSettings->mBufLen))) {
 	        udp_payload->isoch.remaining = htonl(mSettings->mAmount);
 		reportstruct->remaining=mSettings->mAmount;
-	        currLen = write(mySocket, mBuf, mSettings->mAmount);
+	        currLen = write(mySocket, mSettings->mBuf, mSettings->mAmount);
 	    } else {
 	        udp_payload->isoch.remaining = htonl(bytecnt);
 		reportstruct->remaining=bytecnt;
-	        currLen = write(mySocket, mBuf, (bytecnt < mSettings->mBufLen) ? bytecnt : mSettings->mBufLen);
+	        currLen = write(mySocket, mSettings->mBuf, (bytecnt < mSettings->mBufLen) ? bytecnt : mSettings->mBufLen);
 	    }
 
 	    if (currLen < 0) {
@@ -1223,7 +1215,7 @@ void Client::RunUDPIsochronous () {
 // end RunUDPIsoch
 
 inline void Client::WritePacketID (intmax_t packetID) {
-    struct UDP_datagram * mBuf_UDP = reinterpret_cast<struct UDP_datagram *>(mBuf);
+    struct UDP_datagram * mBuf_UDP = reinterpret_cast<struct UDP_datagram *>(mSettings->mBuf);
     // store datagram ID into buffer
 #ifdef HAVE_INT64_T
     // Pack signed 64bit packetID into unsigned 32bit id1 + unsigned
@@ -1246,7 +1238,7 @@ inline void Client::WritePacketID (intmax_t packetID) {
 }
 
 inline void Client::WriteTcpTxHdr (struct ReportStruct *reportstruct, int burst_size, int burst_id) {
-    struct TCP_burst_payload * mBuf_burst = reinterpret_cast<struct TCP_burst_payload *>(mBuf);
+    struct TCP_burst_payload * mBuf_burst = reinterpret_cast<struct TCP_burst_payload *>(mSettings->mBuf);
     // store packet ID into buffer
     reportstruct->packetID += burst_size;
     mBuf_burst->start_tv_sec = htonl(myReport->info.ts.startTime.tv_sec);
@@ -1344,10 +1336,10 @@ void Client::FinishTrafficActions () {
 	// but didn't count our first datagram, so we're even now.
 	// The negative datagram ID signifies termination to the server.
 	WritePacketID(-reportstruct->packetID);
-	struct UDP_datagram * mBuf_UDP = reinterpret_cast<struct UDP_datagram *>(mBuf);
+	struct UDP_datagram * mBuf_UDP = reinterpret_cast<struct UDP_datagram *>(mSettings->mBuf);
 	mBuf_UDP->tv_sec = htonl(reportstruct->packetTime.tv_sec);
 	mBuf_UDP->tv_usec = htonl(reportstruct->packetTime.tv_usec);
-	int len = write(mySocket, mBuf, mSettings->mBufLen);
+	int len = write(mySocket, mSettings->mBuf, mSettings->mBufLen);
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug("UDP client sent final packet per negative seqno %ld", -reportstruct->packetID);
 #endif
@@ -1404,7 +1396,7 @@ void Client::AwaitServerFinPacket () {
 	    // try to trigger another FIN by resending a negative seq no
 	    WritePacketID(-(++reportstruct->packetID));
 	    // write data
-	    rc = write(mySocket, mBuf, mSettings->mBufLen);
+	    rc = write(mySocket, mSettings->mBuf, mSettings->mBufLen);
 	    WARN_errno(rc < 0, "write-fin");
 #ifdef HAVE_THREAD_DEBUG
 	    thread_debug("UDP client retransmit final packet per negative seqno %ld", -reportstruct->packetID);
@@ -1413,11 +1405,11 @@ void Client::AwaitServerFinPacket () {
             // socket ready to read, this packet size
 	    // is set by the server.  Assume it's large enough
 	    // to contain the final server packet
-	    rc = read(mySocket, mBuf, MAXUDPBUF);
+	    rc = read(mySocket, mSettings->mBuf, MAXUDPBUF);
 
 	    // dump any 2.0.13 client acks sent at the start of traffic
 	    if (rc == sizeof(client_hdr_ack)) {
-		struct client_hdr_ack *ack =  reinterpret_cast<struct client_hdr_ack *>(mBuf);
+		struct client_hdr_ack *ack =  reinterpret_cast<struct client_hdr_ack *>(mSettings->mBuf);
 		if (ntohl(ack->typelen.type) == CLIENTHDRACK) {
 		    // printf("**** dump stale ack \n");
 		    continue;
@@ -1431,7 +1423,7 @@ void Client::AwaitServerFinPacket () {
 		thread_debug("UDP client received server relay report ack (%d)", -reportstruct->packetID);
 #endif
 		if (mSettings->mReportMode != kReport_CSV) {
-		    PostReport(InitServerRelayUDPReport(mSettings, reinterpret_cast<server_hdr*>(reinterpret_cast<UDP_datagram*>(mBuf) + 1)));
+		    PostReport(InitServerRelayUDPReport(mSettings, reinterpret_cast<server_hdr*>(reinterpret_cast<UDP_datagram*>(mSettings->mBuf) + 1)));
 		}
 		break;
 	    }
@@ -1469,7 +1461,7 @@ void Client::AwaitServerCloseEvent () {
 	amount_usec = MINAWAITCLOSEUSECS;
     SetSocketOptionsReceiveTimeout(mSettings, amount_usec);
     int rc;
-    while ((rc = recv(mySocket, mBuf, mSettings->mBufLen, 0) > 0)) {};
+    while ((rc = recv(mySocket, mSettings->mBuf, mSettings->mBufLen, 0) > 0)) {};
     if (rc < 0)
 	WARN_errno(1, "client await server close");
 #ifdef HAVE_THREAD_DEBUG
@@ -1489,28 +1481,28 @@ int Client::SendFirstPayload () {
 	    reportstruct->packetTime.tv_usec = now.getUsecs();
 	}
 	if (isTxStartTime(mSettings)) {
-	    pktlen += Settings_GenerateClientHdr(mSettings, (void *) mBuf, mSettings->txstart_epoch);
+	    pktlen += Settings_GenerateClientHdr(mSettings, (void *) mSettings->mBuf, mSettings->txstart_epoch);
 	} else {
-	    pktlen += Settings_GenerateClientHdr(mSettings, (void *) mBuf, reportstruct->packetTime);
+	    pktlen += Settings_GenerateClientHdr(mSettings, (void *) mSettings->mBuf, reportstruct->packetTime);
 	}
 	if (pktlen > 0) {
 	    if (isUDP(mSettings)) {
-		struct client_udp_testhdr *tmphdr = reinterpret_cast<struct client_udp_testhdr *>(mBuf);
+		struct client_udp_testhdr *tmphdr = reinterpret_cast<struct client_udp_testhdr *>(mSettings->mBuf);
 		WritePacketID(reportstruct->packetID);
 		tmphdr->seqno_ts.tv_sec  = htonl(reportstruct->packetTime.tv_sec);
 		tmphdr->seqno_ts.tv_usec = htonl(reportstruct->packetTime.tv_usec);
 		udp_payload_minimum = pktlen;
 #if HAVE_DECL_MSG_DONTWAIT
-		pktlen = send(mySocket, mBuf, (pktlen > mSettings->mBufLen) ? pktlen : mSettings->mBufLen, MSG_DONTWAIT);
+		pktlen = send(mySocket, mSettings->mBuf, (pktlen > mSettings->mBufLen) ? pktlen : mSettings->mBufLen, MSG_DONTWAIT);
 #else
-		pktlen = send(mySocket, mBuf, (pktlen > mSettings->mBufLen) ? pktlen : mSettings->mBufLen, 0);
+		pktlen = send(mySocket, mSettings->mBuf, (pktlen > mSettings->mBufLen) ? pktlen : mSettings->mBufLen, 0);
 #endif
 		apply_first_udppkt_delay = true;
 	    } else {
 #if HAVE_DECL_MSG_DONTWAIT
-		pktlen = send(mySocket, mBuf, pktlen, MSG_DONTWAIT);
+		pktlen = send(mySocket, mSettings->mBuf, pktlen, MSG_DONTWAIT);
 #else
-		pktlen = send(mySocket, mBuf, pktlen, 0);
+		pktlen = send(mySocket, mSettings->mBuf, pktlen, 0);
 #endif
 		if (isPeerVerDetect(mSettings) && !isServerReverse(mSettings)) {
 		    PeerXchange();

@@ -70,6 +70,7 @@
 #include "active_hosts.h"
 #include "util.h"
 #include "Reporter.h"
+#include "payloads.h"
 
 #ifdef WIN32
 #include "service.h"
@@ -223,6 +224,12 @@ int main(int argc, char **argv) {
 #endif
 
     }
+
+    int mbuflen = (ext_gSettings->mBufLen > MINMBUFALLOCSIZE) ? ext_gSettings->mBufLen : MINMBUFALLOCSIZE;
+#if (((HAVE_TUNTAP_TUN) || (HAVE_TUNTAP_TAP)) && (AF_PACKET))
+    mbuflen += TAPBYTESSLOP;
+#endif
+    ext_gSettings->mBuf = new char[mbuflen];
 
     unsetReport(ext_gSettings);
     switch (ext_gSettings->mThreadMode) {

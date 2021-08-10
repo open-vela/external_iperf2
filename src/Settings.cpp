@@ -408,6 +408,14 @@ void Settings_Copy (struct thread_Settings *from, struct thread_Settings **into,
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
     (*into)->mSockDrop = INVALID_SOCKET;
 #endif
+    int mbuflen = (from->mBufLen > MINMBUFALLOCSIZE) ? from->mBufLen : MINMBUFALLOCSIZE; // defined in payloads.h
+#if (((HAVE_TUNTAP_TUN) || (HAVE_TUNTAP_TAP)) && (AF_PACKET))
+    mbuflen += TAPBYTESSLOP;
+#endif
+    (*into)->mBuf = new char[mbuflen];
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Copy Settings: MBUF malloc %d bytes (%p)", mbuflen, (void *) (*into)->mBuf);
+#endif
     Condition_Initialize(&(*into)->awake_me);
     // default copied settings to no reporter reporting
     unsetReport((*into));
@@ -436,6 +444,7 @@ void Settings_Destroy (struct thread_Settings *mSettings) {
     FREE_ARRAY(mSettings->mIfrnametx);
     FREE_ARRAY(mSettings->mTransferIDStr);
     DELETE_ARRAY(mSettings->mIsochronousStr);
+    DELETE_ARRAY(mSettings->mBuf);
     DELETE_PTR(mSettings);
 } // end ~Settings
 

@@ -84,9 +84,6 @@
 #include "payloads.h"
 #include "delay.h"
 
-
-#define TAPBYTESSLOP 512
-
 /* -------------------------------------------------------------------
 
  * Stores local hostname and socket info.
@@ -103,11 +100,6 @@ Listener::Listener (thread_Settings *inSettings) {
      * 3) Server thread
      */
     mSettings = inSettings;
-    // alloc and initialize the buffer (mBuf) used for test messages in the payload
-    mBufLen = (mSettings->mBufLen > MINMBUFALLOCSIZE) ? mSettings->mBufLen : MINMBUFALLOCSIZE;
-    mBufLen += TAPBYTESSLOP;
-    mBuf = new char[mBufLen]; // defined in payloads.h
-    FAIL_errno(mBuf == NULL, "No memory for buffer\n", mSettings);
 } // end Listener
 
 /* -------------------------------------------------------------------
@@ -121,7 +113,6 @@ Listener::~Listener () {
         int rc = close(ListenSocket);
         WARN_errno(rc == SOCKET_ERROR, "listener close");
     }
-    DELETE_ARRAY(mBuf);
 } // end ~Listener
 
 /* -------------------------------------------------------------------
@@ -340,7 +331,7 @@ void Listener::Run () {
 	    (isFullDuplex(server) || isServerReverse(server) || (server->mMode != kTest_Normal))) {
 	    thread_Settings *listener_client_settings = NULL;
 	    // read client header for reverse settings
-	    Settings_GenerateClientSettings(server, &listener_client_settings, mBuf);
+	    Settings_GenerateClientSettings(server, &listener_client_settings, server->mBuf);
 	    if (listener_client_settings) {
 		if (server->mMode != kTest_Normal)
 		    listener_client_settings->mTransferID = 0;
@@ -904,7 +895,7 @@ int Listener::udp_accept (thread_Settings *server) {
     // Preset the server socket to INVALID, hang recvfrom on the Listener's socket
     // The INVALID socket is used to keep the while loop going
     server->mSock = INVALID_SOCKET;
-    rc = recvfrom(ListenSocket, mBuf, mBufLen, MSG_PEEK, \
+    rc = recvfrom(ListenSocket, server->mBuf, server->mBufLen, MSG_PEEK, \
 		  reinterpret_cast<struct sockaddr*>(&server->peer), &server->size_peer);
 #if HAVE_THREAD_DEBUG
     {
@@ -948,12 +939,12 @@ int Listener::udp_accept (thread_Settings *server) {
 
 #if (((HAVE_TUNTAP_TUN) || (HAVE_TUNTAP_TAP)) && (AF_PACKET))
 int Listener::tuntap_accept(thread_Settings *server) {
-    int rc = recv(server->mSock, mBuf, (mBufLen + TAPBYTESSLOP + sizeof(struct iphdr) + sizeof(struct ether_header) + sizeof(struct udphdr)), MSG_PEEK);
+    int rc = recv(server->mSock, server->mBuf, (server->mBufLen + TAPBYTESSLOP + sizeof(struct iphdr) + sizeof(struct ether_header) + sizeof(struct udphdr)), MSG_PEEK);
     if (rc <= 0)
 	return 0;
 //	rc = udpchecksum((void *)ip_hdr, (void *)udp_hdr, udplen, (isIPV6(mSettings) ? 1 : 0));
-    struct iphdr *l3hdr = (struct iphdr *)((char *)mBuf + sizeof(struct ether_header));
-    struct udphdr *l4hdr = (struct udphdr *)((char *)mBuf + sizeof(struct iphdr) + sizeof(struct ether_header));
+    struct iphdr *l3hdr = (struct iphdr *)((char *)server->mBuf + sizeof(struct ether_header));
+    struct udphdr *l4hdr = (struct udphdr *)((char *)server->mBuf + sizeof(struct iphdr) + sizeof(struct ether_header));
 //    uint16_t ipver = (uint16_t) ntohs(mBuf + sizeof(struct ether_header));
 //    printf ("*** version = %d\n", ipver);
     // Note: sockaddrs are stored in network bytes order
@@ -1025,7 +1016,6 @@ int Listener::my_accept (thread_Settings *server) {
 // Description of bits and fields is in include/payloads.h
 bool Listener::apply_client_settings (thread_Settings *server) {
     assert(server != NULL);
-    assert(mBuf != NULL);
     bool rc;
 
     // Set the receive timeout for the very first read
@@ -1048,7 +1038,7 @@ inline bool Listener::test_permit_key(uint32_t flags, thread_Settings *server, i
 	server->mKeyCheck= false;
 	return false;
     }
-    struct permitKey *thiskey = reinterpret_cast<struct permitKey *>(mBuf + (keyoffset - sizeof(thiskey->length)));
+    struct permitKey *thiskey = reinterpret_cast<struct permitKey *>(server->mBuf + (keyoffset - sizeof(thiskey->length)));
     int keylen = ntohs(thiskey->length);
     if ((keylen < MIN_PERMITKEY_LEN) || (keylen > MAX_PERMITKEY_LEN)) {
 	server->mKeyCheck= false;
@@ -1062,7 +1052,7 @@ inline bool Listener::test_permit_key(uint32_t flags, thread_Settings *server, i
     }
     if (!isUDP(server)) {
 	int nread = 0;
-	nread = recvn(server->mSock, mBuf, keyoffset + keylen, 0);
+	nread = recvn(server->mSock, server->mBuf, keyoffset + keylen, 0);
 	FAIL_errno((nread < (keyoffset + keylen)), "read key", server);
     }
     strncpy(server->mPermitKey, thiskey->value, MAX_PERMITKEY_LEN + 1);
@@ -1076,7 +1066,7 @@ inline bool Listener::test_permit_key(uint32_t flags, thread_Settings *server, i
 }
 
 bool Listener::apply_client_settings_udp (thread_Settings *server) {
-    struct client_udp_testhdr *hdr = reinterpret_cast<struct client_udp_testhdr *>(mBuf + server->l4payloadoffset);
+    struct client_udp_testhdr *hdr = reinterpret_cast<struct client_udp_testhdr *>(server->mBuf + server->l4payloadoffset);
     uint32_t flags = ntohl(hdr->base.flags);
     uint16_t upperflags = 0;
     if (flags & HEADER_SEQNO64B) {
@@ -1167,8 +1157,8 @@ bool Listener::apply_client_settings_udp (thread_Settings *server) {
 }
 bool Listener::apply_client_settings_tcp (thread_Settings *server) {
     bool rc = false;
-    int nread = recvn(server->mSock, mBuf, sizeof(uint32_t), 0);
-    char *readptr = mBuf;
+    int nread = recvn(server->mSock, server->mBuf, sizeof(uint32_t), 0);
+    char *readptr = server->mBuf;
     if (nread == 0) {
 	//peer closed the socket, with no writes e.g. a connect-only test
 	WARN(1, "read tcp flags (peer close)");
@@ -1180,7 +1170,7 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
     } else {
 	rc = true;
 	readptr += nread;
-	struct client_tcp_testhdr *hdr = reinterpret_cast<struct client_tcp_testhdr *>(mBuf);
+	struct client_tcp_testhdr *hdr = reinterpret_cast<struct client_tcp_testhdr *>(server->mBuf);
 	uint32_t flags = ntohl(hdr->base.flags);
 	uint16_t upperflags = 0;
 	int peeklen;
@@ -1200,7 +1190,7 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 		    server->mKeyCheck = false;
 		    goto DONE;
 		}
-		struct client_tcp_testhdr *hdr = reinterpret_cast<struct client_tcp_testhdr*>(mBuf);
+		struct client_tcp_testhdr *hdr = reinterpret_cast<struct client_tcp_testhdr*>(server->mBuf);
 		if ((flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2)) {
 		    if (flags & RUN_NOW)
 			server->mMode = kTest_DualTest;
@@ -1240,7 +1230,7 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 			setFrameInterval(server);
 			setPeriodicBurst(server);
 			{
-			    struct client_tcp_testhdr *hdr = reinterpret_cast<struct client_tcp_testhdr *>(mBuf);
+			    struct client_tcp_testhdr *hdr = reinterpret_cast<struct client_tcp_testhdr *>(server->mBuf);
 			    server->mFPS = ntohl(hdr->isoch_settings.FPSl);
 			    server->mFPS += ntohl(hdr->isoch_settings.FPSu) / static_cast<double>(rMillion);
 			}
