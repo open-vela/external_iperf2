@@ -1466,9 +1466,6 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	if (isTxHoldback(mExtSettings)) {
 	    fprintf(stderr, "WARN: option of --txdelay-time is not supported on the server\n");
 	}
-        if (isConnectOnly(mExtSettings)) {
-	    fprintf(stderr, "WARN: option of --connect-only is not supported on the server\n");
-	}
 	if (isIPG(mExtSettings)) {
 	    fprintf(stderr, "WARN: option of --ipg is not supported on the server\n");
 	}
