@@ -1481,9 +1481,9 @@ int Client::SendFirstPayload () {
 	    reportstruct->packetTime.tv_usec = now.getUsecs();
 	}
 	if (isTxStartTime(mSettings)) {
-	    pktlen += Settings_GenerateClientHdr(mSettings, (void *) mSettings->mBuf, mSettings->txstart_epoch);
+	    pktlen = Settings_GenerateClientHdr(mSettings, (void *) mSettings->mBuf, mSettings->txstart_epoch);
 	} else {
-	    pktlen += Settings_GenerateClientHdr(mSettings, (void *) mSettings->mBuf, reportstruct->packetTime);
+	    pktlen = Settings_GenerateClientHdr(mSettings, (void *) mSettings->mBuf, reportstruct->packetTime);
 	}
 	if (pktlen > 0) {
 	    if (isUDP(mSettings)) {
