@@ -1499,6 +1499,16 @@ int Client::SendFirstPayload () {
 #endif
 		apply_first_udppkt_delay = true;
 	    } else {
+#if HAVE_DECL_TCP_NODELAY
+		if (!isNoDelay(mSettings) && isPeerVerDetect(mSettings) && isTripTime(mSettings)) {
+		    int optflag=1;
+		    int rc;
+		    // Disable Nagle to reduce latency of this intial message
+		    if ((rc = setsockopt(mSettings->mSock, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char *>(&optflag), sizeof(int))) < 0) {
+			WARN_errno(rc < 0, "tcpnodelay");
+		    }
+		}
+#endif
 #if HAVE_DECL_MSG_DONTWAIT
 		pktlen = send(mySocket, mSettings->mBuf, pktlen, MSG_DONTWAIT);
 #else
@@ -1507,6 +1517,16 @@ int Client::SendFirstPayload () {
 		if (isPeerVerDetect(mSettings) && !isServerReverse(mSettings)) {
 		    PeerXchange();
 		}
+#if HAVE_DECL_TCP_NODELAY
+		if (!isNoDelay(mSettings) && isPeerVerDetect(mSettings) && isTripTime(mSettings)) {
+		    int optflag=0;
+		    int rc;
+		    // Disable Nagle to reduce latency of this intial message
+		    if ((rc = setsockopt(mSettings->mSock, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char *>(&optflag), sizeof(int))) < 0) {
+			WARN_errno(rc < 0, "tcpnodelay");
+		    }
+		}
+#endif
 	    }
 	    WARN_errno(pktlen < 0, "send_hdr");
 	}

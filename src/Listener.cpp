@@ -1272,7 +1272,6 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 int Listener::client_test_ack(thread_Settings *server) {
     client_hdr_ack ack;
     int sotimer = 0;
-    int optflag;
     int size = sizeof(struct client_hdr_ack);
     ack.typelen.type  = htonl(CLIENTHDRACK);
 
@@ -1310,8 +1309,8 @@ int Listener::client_test_ack(thread_Settings *server) {
 	    sotimer = HDRXACKMIN;
 	}
 	SetSocketOptionsSendTimeout(server, sotimer);
-#ifdef TCP_NODELAY
-	optflag=1;
+#ifdef HAVE_DECL_TCP_NODELAY
+	int optflag=1;
 	// Disable Nagle to reduce latency of this intial message
 	if ((rc = setsockopt(server->mSock, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char *>(&optflag), sizeof(int))) < 0) {
 	    WARN_errno(rc < 0, "tcpnodelay");
@@ -1322,10 +1321,12 @@ int Listener::client_test_ack(thread_Settings *server) {
 	WARN_errno(rc <= 0, "send_ack");
 	rc = 0;
     }
+#ifdef HAVE_DECL_TCP_NODELAY
     // Re-nable Nagle
-    optflag=0;
+    int optflag=0;
     if (!isUDP(server) && (rc = setsockopt(server->mSock, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char *>(&optflag), sizeof(int))) < 0) {
 	WARN_errno(rc < 0, "tcpnodelay");
     }
+#endif
     return rc;
 }
