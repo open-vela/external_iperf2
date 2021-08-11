@@ -281,7 +281,7 @@ void Listener::Run () {
 	// Note 2: The mBuf read is a peek so the server's traffic thread started later
 	// will also process the first message from an accounting perspective.
 	// This is required for accurate traffic statistics
-	if (!isCompat(server) && !apply_client_settings(server)) {
+	if (!isCompat(server) && (isConnectOnly(server) || !apply_client_settings(server))) {
 	    if (isConnectionReport(server) && !isSumOnly(server)) {
 		struct ReportHeader *reporthdr = InitConnectionReport(server, 0);
 		struct ConnectionInfo *cr = static_cast<struct ConnectionInfo *>(reporthdr->this_report);
@@ -1019,7 +1019,7 @@ int Listener::my_accept (thread_Settings *server) {
 // Description of bits and fields is in include/payloads.h
 bool Listener::apply_client_settings (thread_Settings *server) {
     assert(server != NULL);
-    bool rc;
+    bool rc = false;
 
     // Set the receive timeout for the very first read
     int sorcvtimer = TESTEXCHANGETIMEOUT; // 4 sec in usecs
@@ -1030,7 +1030,7 @@ bool Listener::apply_client_settings (thread_Settings *server) {
 
     if (isUDP(server)) {
 	rc = apply_client_settings_udp(server);
-    } else {
+    } else if (!isConnectOnly(server)) {
 	rc = apply_client_settings_tcp(server);
     }
     return rc;
