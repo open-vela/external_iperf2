@@ -1524,9 +1524,18 @@ void Client::PeerXchange () {
 	if (ntohl(ack.typelen.type) == CLIENTHDRACK && ntohl(ack.typelen.length) == sizeof(client_hdr_ack)) {
 	    mSettings->peer_version_u = ntohl(ack.version_u);
 	    mSettings->peer_version_l = ntohl(ack.version_l);
-	    Timestamp now;
-	    fprintf(stderr,"****%d.%d %d.%d %d.%d\n", ntohl(ack.sent_tv_sec), ntohl(ack.sent_tv_usec), \
-		    ntohl(ack.sentrx_tv_sec), ntohl(ack.sentrx_tv_usec), ntohl(ack.ack_tv_sec), ntohl(ack.ack_tv_usec));
+	    if (isTripTime(mSettings)) {
+		Timestamp now;
+		Timestamp senttx(ntohl(ack.ts.sent_tv_sec), ntohl(ack.ts.sent_tv_usec));
+		Timestamp sentrx(ntohl(ack.ts.sentrx_tv_sec), ntohl(ack.ts.sentrx_tv_usec));
+		Timestamp acktx(ntohl(ack.ts.ack_tv_sec), ntohl(ack.ts.ack_tv_usec));
+		Timestamp ackrx(now.getSecs(), now.getUsecs());
+		double str = senttx.get() - sentrx.get();
+		double atr = now.get() - acktx.get();
+		double rtt = str + atr;
+		double halfrtt = rtt / 2;
+		fprintf(stderr,"%sClock check: RTT/Half=(%f/%f)  Delays send/ack=(%f/%f)\n",mSettings->mTransferIDStr, rtt, halfrtt, str, atr);
+	    }
 	}
     } else {
 	WARN_errno(1, "recvack");

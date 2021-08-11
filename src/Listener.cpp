@@ -1273,20 +1273,26 @@ int Listener::client_test_ack(thread_Settings *server) {
     client_hdr_ack ack;
     int sotimer = 0;
     int optflag;
+    int size = sizeof(struct client_hdr_ack);
     ack.typelen.type  = htonl(CLIENTHDRACK);
-    ack.typelen.length = htonl(sizeof(client_hdr_ack));
+
     ack.flags = 0;
     ack.reserved1 = 0;
     ack.reserved2 = 0;
     ack.version_u = htonl(IPERF_VERSION_MAJORHEX);
     ack.version_l = htonl(IPERF_VERSION_MINORHEX);
-    ack.sent_tv_sec = htonl(server->sent_time.tv_sec);
-    ack.sent_tv_usec = htonl(server->sent_time.tv_usec);
-    ack.sentrx_tv_sec = htonl(server->accept_time.tv_sec);
-    ack.sentrx_tv_usec = htonl(server->accept_time.tv_usec);
-    Timestamp now;
-    ack.ack_tv_sec = htonl(now.getSecs());
-    ack.ack_tv_usec = htonl(now.getUsecs());
+    if (isTripTime(server)) {
+	ack.ts.sent_tv_sec = htonl(server->sent_time.tv_sec);
+	ack.ts.sent_tv_usec = htonl(server->sent_time.tv_usec);
+	ack.ts.sentrx_tv_sec = htonl(server->accept_time.tv_sec);
+	ack.ts.sentrx_tv_usec = htonl(server->accept_time.tv_usec);
+	Timestamp now;
+	ack.ts.ack_tv_sec = htonl(now.getSecs());
+	ack.ts.ack_tv_usec = htonl(now.getUsecs());
+    } else {
+	size -= sizeof (struct client_hdr_ack_ts);
+    }
+    ack.typelen.length = htonl(size);
     int rc = 1;
     // This is a version 2.0.10 or greater client
     // write back to the client so it knows the server
