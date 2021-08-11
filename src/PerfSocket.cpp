@@ -225,7 +225,7 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
 	    // set the TCP maximum segment size
 	    setsock_tcp_mss(inSettings->mSock, inSettings->mMSS);
 	}
-#ifdef TCP_NODELAY
+#if HAVE_DECL_TCP_NODELAY
         // set TCP nodelay option
         if (isNoDelay(inSettings)) {
             int nodelay = 1;

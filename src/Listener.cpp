@@ -1309,7 +1309,7 @@ int Listener::client_test_ack(thread_Settings *server) {
 	    sotimer = HDRXACKMIN;
 	}
 	SetSocketOptionsSendTimeout(server, sotimer);
-#ifdef HAVE_DECL_TCP_NODELAY
+#if HAVE_DECL_TCP_NODELAY
 	int optflag=1;
 	// Disable Nagle to reduce latency of this intial message
 	if ((rc = setsockopt(server->mSock, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char *>(&optflag), sizeof(int))) < 0) {
@@ -1322,9 +1322,9 @@ int Listener::client_test_ack(thread_Settings *server) {
 	WARN_errno(rc <= 0, "send_ack");
 	rc = 0;
     }
-#ifdef HAVE_DECL_TCP_NODELAY
+#if HAVE_DECL_TCP_NODELAY
     // Re-nable Nagle
-    int optflag=0;
+    int optflag= isNoDelay(server) ? 1 : 0;
     if (!isUDP(server) && (rc = setsockopt(server->mSock, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char *>(&optflag), sizeof(int))) < 0) {
 	WARN_errno(rc < 0, "tcpnodelay");
     }
