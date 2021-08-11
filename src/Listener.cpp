@@ -1270,6 +1270,9 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 }
 
 int Listener::client_test_ack(thread_Settings *server) {
+    if (isUDP(server))
+	return 1;
+
     client_hdr_ack ack;
     int sotimer = 0;
     int size = sizeof(struct client_hdr_ack);
@@ -1296,35 +1299,33 @@ int Listener::client_test_ack(thread_Settings *server) {
     // This is a version 2.0.10 or greater client
     // write back to the client so it knows the server
     // version
-    if (!isUDP(server)) {
-	// sotimer units microseconds convert
-	if (server->mInterval) {
-	    sotimer = static_cast<int>((server->mInterval) / 4);
-	} else if (isModeTime(server)) {
-	    sotimer = static_cast<int>((server->mAmount * 10000) / 4);
-	}
-	if (sotimer > HDRXACKMAX) {
-	    sotimer = HDRXACKMAX;
-	} else if (sotimer < HDRXACKMIN) {
-	    sotimer = HDRXACKMIN;
-	}
-	SetSocketOptionsSendTimeout(server, sotimer);
-#if HAVE_DECL_TCP_NODELAY
-	int optflag=1;
-	// Disable Nagle to reduce latency of this intial message
-	if ((rc = setsockopt(server->mSock, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char *>(&optflag), sizeof(int))) < 0) {
-	    WARN_errno(rc < 0, "tcpnodelay");
-	}
-#endif
+
+    // sotimer units microseconds convert
+    if (server->mInterval) {
+	sotimer = static_cast<int>((server->mInterval) / 4);
+    } else if (isModeTime(server)) {
+	sotimer = static_cast<int>((server->mAmount * 10000) / 4);
     }
-    int readlen = isTripTime(server) ? sizeof(struct client_hdr_ack) : (sizeof(struct client_hdr_ack) - sizeof(struct client_hdr_ack_ts));
-    if ((rc = send(server->mSock, reinterpret_cast<const char*>(&ack), readlen,0)) < 0) {
+    if (sotimer > HDRXACKMAX) {
+	sotimer = HDRXACKMAX;
+    } else if (sotimer < HDRXACKMIN) {
+	sotimer = HDRXACKMIN;
+    }
+    SetSocketOptionsSendTimeout(server, sotimer);
+#if HAVE_DECL_TCP_NODELAY
+    int optflag = 1;
+    // Disable Nagle to reduce latency of this intial message
+    if ((rc = setsockopt(server->mSock, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char *>(&optflag), sizeof(int))) < 0) {
+	WARN_errno(rc < 0, "tcpnodelay");
+    }
+#endif
+    if ((rc = send(server->mSock, reinterpret_cast<const char*>(&ack), size, 0)) < 0) {
 	WARN_errno(rc <= 0, "send_ack");
 	rc = 0;
     }
 #if HAVE_DECL_TCP_NODELAY
     // Re-nable Nagle
-    int optflag= isNoDelay(server) ? 1 : 0;
+    optflag = isNoDelay(server) ? 1 : 0;
     if (!isUDP(server) && (rc = setsockopt(server->mSock, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char *>(&optflag), sizeof(int))) < 0) {
 	WARN_errno(rc < 0, "tcpnodelay");
     }
