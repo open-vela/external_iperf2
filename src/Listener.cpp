@@ -1317,7 +1317,8 @@ int Listener::client_test_ack(thread_Settings *server) {
 	}
 #endif
     }
-    if ((rc = send(server->mSock, reinterpret_cast<const char*>(&ack), sizeof(client_hdr_ack),0)) < 0) {
+    int readlen = isTripTime(server) ? sizeof(struct client_hdr_ack) : (sizeof(struct client_hdr_ack) - sizeof(struct client_hdr_ack_ts));
+    if ((rc = send(server->mSock, reinterpret_cast<const char*>(&ack), readlen,0)) < 0) {
 	WARN_errno(rc <= 0, "send_ack");
 	rc = 0;
     }
