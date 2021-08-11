@@ -1542,7 +1542,7 @@ void Client::PeerXchange () {
      */
     int readlen = isTripTime(mSettings) ? sizeof(struct client_hdr_ack) : (sizeof(struct client_hdr_ack) - sizeof(struct client_hdr_ack_ts));
     if ((n = recvn(mySocket, reinterpret_cast<char *>(&ack), readlen, 0)) == readlen) {
-	if (ntohl(ack.typelen.type) == CLIENTHDRACK && ntohl(ack.typelen.length) == sizeof(client_hdr_ack)) {
+	if (ntohl(ack.typelen.type) == CLIENTHDRACK) {
 	    mSettings->peer_version_u = ntohl(ack.version_u);
 	    mSettings->peer_version_l = ntohl(ack.version_l);
 	    if (isTripTime(mSettings)) {
