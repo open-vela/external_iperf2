@@ -1551,11 +1551,11 @@ void Client::PeerXchange () {
 		Timestamp sentrx(ntohl(ack.ts.sentrx_tv_sec), ntohl(ack.ts.sentrx_tv_usec));
 		Timestamp acktx(ntohl(ack.ts.ack_tv_sec), ntohl(ack.ts.ack_tv_usec));
 		Timestamp ackrx(now.getSecs(), now.getUsecs());
-		double str = sentrx.get() - senttx.get();
-		double atr = now.get() - acktx.get();
+		double str = 1e3 * sentrx.get() - senttx.get();
+		double atr = 1e3 * now.get() - acktx.get();
 		double rtt = str + atr;
 		double halfrtt = rtt / 2;
-		fprintf(stderr,"%sClock sync check: RTT/Half=(%f/%f) OWD-send/ack/asym=(%f/%f/%f)\n",mSettings->mTransferIDStr, rtt, halfrtt, str, atr, abs(str-atr));
+		fprintf(stderr,"%sClock sync check (ms): RTT/Half=(%0.3f/%0.3f) OWD-send/ack/asym=(%0.3f/%0.3f/%0.3f)\n",mSettings->mTransferIDStr, rtt, halfrtt, str, atr, abs(str-atr));
 	    }
 	}
     } else {
