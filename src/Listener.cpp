@@ -1082,8 +1082,8 @@ bool Listener::apply_client_settings_udp (thread_Settings *server) {
 #if HAVE_THREAD_DEBUG
         thread_debug("UDP small header");
 #endif
-	server->accept_time.tv_sec = ntohl(hdr->seqno_ts.tv_sec);
-	server->accept_time.tv_usec = ntohl(hdr->seqno_ts.tv_usec);
+	server->sent_time.tv_sec = ntohl(hdr->seqno_ts.tv_sec);
+	server->sent_time.tv_usec = ntohl(hdr->seqno_ts.tv_usec);
 	uint32_t seqno = ntohl(hdr->seqno_ts.id);
 	if (seqno != 1) {
 	    fprintf(stderr, "WARN: first received packet (id=%d) was not first sent packet, report start time will be off\n", seqno);
@@ -1131,10 +1131,10 @@ bool Listener::apply_client_settings_udp (thread_Settings *server) {
 		}
 	    }
 	    if (upperflags & HEADER_TRIPTIME) {
-		server->accept_time.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
-		server->accept_time.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
+		server->sent_time.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
+		server->sent_time.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
 		Timestamp now;
-		if (!isTxStartTime(server) && ((abs(now.getSecs() - server->accept_time.tv_sec)) > (MAXDIFFTIMESTAMPSECS + 1))) {
+		if (!isTxStartTime(server) && ((abs(now.getSecs() - server->sent_time.tv_sec)) > (MAXDIFFTIMESTAMPSECS + 1))) {
 		    fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
 		} else {
 		    setTripTime(server);
@@ -1221,7 +1221,9 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 		}
 		if (upperflags & HEADER_TRIPTIME) {
 		    Timestamp now;
-		    if (!isTxStartTime(server) && ((abs(now.getSecs() - server->accept_time.tv_sec)) > (MAXDIFFTIMESTAMPSECS + 1))) {
+		    server->sent_time.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
+		    server->sent_time.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
+		    if (!isTxStartTime(server) && ((abs(now.getSecs() - server->sent_time.tv_sec)) > (MAXDIFFTIMESTAMPSECS + 1))) {
 			fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
 		    } else {
 			setTripTime(server);
@@ -1278,6 +1280,13 @@ int Listener::client_test_ack(thread_Settings *server) {
     ack.reserved2 = 0;
     ack.version_u = htonl(IPERF_VERSION_MAJORHEX);
     ack.version_l = htonl(IPERF_VERSION_MINORHEX);
+    ack.sent_tv_sec = htonl(server->sent_time.tv_sec);
+    ack.sent_tv_usec = htonl(server->sent_time.tv_usec);
+    ack.sentrx_tv_sec = htonl(server->accept_time.tv_sec);
+    ack.sentrx_tv_usec = htonl(server->accept_time.tv_usec);
+    Timestamp now;
+    ack.ack_tv_sec = htonl(now.getSecs());
+    ack.ack_tv_usec = htonl(now.getUsecs());
     int rc = 1;
     // This is a version 2.0.10 or greater client
     // write back to the client so it knows the server

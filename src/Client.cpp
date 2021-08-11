@@ -1524,6 +1524,9 @@ void Client::PeerXchange () {
 	if (ntohl(ack.typelen.type) == CLIENTHDRACK && ntohl(ack.typelen.length) == sizeof(client_hdr_ack)) {
 	    mSettings->peer_version_u = ntohl(ack.version_u);
 	    mSettings->peer_version_l = ntohl(ack.version_l);
+	    Timestamp now;
+	    fprintf(stderr,"****%d.%d %d.%d %d.%d\n", ntohl(ack.sent_tv_sec), ntohl(ack.sent_tv_usec), \
+		    ntohl(ack.sentrx_tv_sec), ntohl(ack.sentrx_tv_usec), ntohl(ack.ack_tv_sec), ntohl(ack.ack_tv_usec));
 	}
     } else {
 	WARN_errno(1, "recvack");
