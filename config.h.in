@@ -125,6 +125,10 @@
    don't. */
 #undef HAVE_DECL_SO_TIMESTAMP
 
+/* Define to 1 if you have the declaration of `TCP_NODELAY', and to 0 if you
+   don't. */
+#undef HAVE_DECL_TCP_NODELAY
+
 /* Define to 1 if you have the declaration of `TCP_NOTSENT_LOWAT', and to 0 if
    you don't. */
 #undef HAVE_DECL_TCP_NOTSENT_LOWAT
