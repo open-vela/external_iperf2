@@ -1540,7 +1540,8 @@ void Client::PeerXchange () {
     /*
      * Hang read and see if this is a header ack message
      */
-    if ((n = recvn(mySocket, reinterpret_cast<char *>(&ack), sizeof(client_hdr_ack), 0)) == sizeof(client_hdr_ack)) {
+    int readlen = isTripTime(mSettings) ? sizeof(struct client_hdr_ack) : (sizeof(struct client_hdr_ack) - sizeof(struct client_hdr_ack_ts));
+    if ((n = recvn(mySocket, reinterpret_cast<char *>(&ack), readlen, 0)) == readlen) {
 	if (ntohl(ack.typelen.type) == CLIENTHDRACK && ntohl(ack.typelen.length) == sizeof(client_hdr_ack)) {
 	    mSettings->peer_version_u = ntohl(ack.version_u);
 	    mSettings->peer_version_l = ntohl(ack.version_l);
