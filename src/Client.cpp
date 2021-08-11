@@ -1534,7 +1534,7 @@ void Client::PeerXchange () {
 		double atr = now.get() - acktx.get();
 		double rtt = str + atr;
 		double halfrtt = rtt / 2;
-		fprintf(stderr,"%sClock check: RTT/Half=(%f/%f) OWD-send/ack=(%f/%f)\n",mSettings->mTransferIDStr, rtt, halfrtt, str, atr);
+		fprintf(stderr,"%sClock sync check: RTT/Half=(%f/%f) OWD-send/ack=(%f/%f)\n",mSettings->mTransferIDStr, rtt, halfrtt, str, atr);
 	    }
 	}
     } else {
