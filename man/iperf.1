@@ -452,6 +452,37 @@ Network power defined as (throughput / one way latency)
 
 .PP
 
+.B TCP tests (with one way delay sync check -X and --trip-times on the client)
+
+.B iperf -c 192.168.1.4 -X -e --trip-times -i 1  -t 2
+.br
+------------------------------------------------------------
+.br
+Client connecting to 192.168.1.4, TCP port 5001 with pid 16762 (1 flows)
+.br
+Write buffer size: 131072 Byte
+.br
+TCP window size: 85.0 KByte (default)
+.br
+------------------------------------------------------------
+.br
+.B [  1] Clock sync check (ms): RTT/Half=(3.361/1.680) OWD-send/ack/asym=(2.246/1.115/1.131)
+.br
+[  1] local 192.168.1.1%ap0 port 47466 connected with 192.168.1.4 port 5001 (MSS=1448) (trip-times) (sock=3) (peer 2.1.4-master)
+.br
+[ ID] Interval        Transfer    Bandwidth       Write/Err  Rtry     Cwnd/RTT        NetPwr
+.br
+[  1] 0.00-1.00 sec  9.50 MBytes  79.7 Mbits/sec  77/0          0     2309K/113914 us  87
+.br
+[  1] 1.00-2.00 sec  7.12 MBytes  59.8 Mbits/sec  57/0          0     2492K/126113 us  59
+.br
+[  1] 2.00-2.42 sec   128 KBytes  2.47 Mbits/sec  2/0          0     2492K/126113 us  2
+.br
+[  1] 0.00-2.42 sec  16.8 MBytes  58.0 Mbits/sec  136/0          0     2492K/126113 us  57
+.br
+
+.PP
+
 .B UDP tests (client)
 
 .B iperf -c <host> -e -i 1 -u -b 10m
