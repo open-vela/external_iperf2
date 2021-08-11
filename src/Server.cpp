@@ -324,7 +324,11 @@ inline void Server::SetFullDuplexReportStartTime () {
 
 inline void Server::SetReportStartTime () {
     if (TimeZero(myReport->info.ts.startTime)) {
-	if (!TimeZero(mSettings->accept_time) && !isTxStartTime(mSettings)) {
+	if (!TimeZero(mSettings->sent_time) && !isTxStartTime(mSettings)) {
+	    // Servers that aren't full duplex use the accept timestamp for start
+	    myReport->info.ts.startTime.tv_sec = mSettings->sent_time.tv_sec;
+	    myReport->info.ts.startTime.tv_usec = mSettings->sent_time.tv_usec;
+	} else if (!TimeZero(mSettings->accept_time) && !isTxStartTime(mSettings)) {
 	    // Servers that aren't full duplex use the accept timestamp for start
 	    myReport->info.ts.startTime.tv_sec = mSettings->accept_time.tv_sec;
 	    myReport->info.ts.startTime.tv_usec = mSettings->accept_time.tv_usec;
@@ -379,8 +383,8 @@ void Server::ClientReverseFirstRead (void) {
 	    default :
 		struct client_udp_testhdr *udp_pkt = reinterpret_cast<struct client_udp_testhdr *>(mSettings->mBuf);
 		flags = ntohl(udp_pkt->base.flags);
-		mSettings->accept_time.tv_sec = ntohl(udp_pkt->start_fq.start_tv_sec);
-		mSettings->accept_time.tv_usec = ntohl(udp_pkt->start_fq.start_tv_usec);
+		mSettings->sent_time.tv_sec = ntohl(udp_pkt->start_fq.start_tv_sec);
+		mSettings->sent_time.tv_usec = ntohl(udp_pkt->start_fq.start_tv_usec);
 		reportstruct->packetLen = nread;
 		reportstruct->packetID = 1;
 		break;
@@ -407,8 +411,8 @@ void Server::ClientReverseFirstRead (void) {
 		FAIL_errno((nread < adj), "client read tcp test info", mSettings);
 		if (nread > 0) {
 		    struct client_tcp_testhdr *tcp_pkt = reinterpret_cast<struct client_tcp_testhdr *>(mSettings->mBuf);
-		    mSettings->accept_time.tv_sec = ntohl(tcp_pkt->start_fq.start_tv_sec);
-		    mSettings->accept_time.tv_usec = ntohl(tcp_pkt->start_fq.start_tv_usec);
+		    mSettings->sent_time.tv_sec = ntohl(tcp_pkt->start_fq.start_tv_sec);
+		    mSettings->sent_time.tv_usec = ntohl(tcp_pkt->start_fq.start_tv_usec);
 		}
 		mSettings->firstreadbytes = readlen;
 	    }
@@ -438,14 +442,14 @@ bool Server::InitTrafficLoop (void) {
 	if ((setfullduplexflag = fullduplex_start_barrier(&mSettings->mFullDuplexReport->fullduplex_barrier)) < 0)
 	    exit(-1);
     }
-
+    Timestamp now;
     if (isReverse(mSettings)) {
+	mSettings->accept_time.tv_sec = now.getSecs();
+	mSettings->accept_time.tv_usec = now.getUsecs();
 	ClientReverseFirstRead();
     }
-
     if (isTripTime(mSettings)) {
-	Timestamp now;
-	if ((abs(now.getSecs() - mSettings->accept_time.tv_sec)) > MAXDIFFTIMESTAMPSECS) {
+	if ((abs(now.getSecs() - mSettings->sent_time.tv_sec)) > MAXDIFFTIMESTAMPSECS) {
 	    unsetTripTime(mSettings);
 	    fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
 	    mSettings->accept_time.tv_sec = now.getSecs();

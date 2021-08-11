@@ -417,6 +417,12 @@ struct client_hdr_ack {
     uint32_t version_l;
     uint32_t reserved1;
     uint32_t reserved2;
+    uint32_t sent_tv_sec;
+    uint32_t sent_tv_usec;
+    uint32_t sentrx_tv_sec;
+    uint32_t sentrx_tv_usec;
+    uint32_t ack_tv_sec;
+    uint32_t ack_tv_usec;
 };
 
 /*
