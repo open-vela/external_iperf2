@@ -1551,7 +1551,7 @@ void Client::PeerXchange () {
 		Timestamp sentrx(ntohl(ack.ts.sentrx_tv_sec), ntohl(ack.ts.sentrx_tv_usec));
 		Timestamp acktx(ntohl(ack.ts.ack_tv_sec), ntohl(ack.ts.ack_tv_usec));
 		Timestamp ackrx(now.getSecs(), now.getUsecs());
-		double str = senttx.get() - sentrx.get();
+		double str = sentrx.get() - senttx.get();
 		double atr = now.get() - acktx.get();
 		double rtt = str + atr;
 		double halfrtt = rtt / 2;
