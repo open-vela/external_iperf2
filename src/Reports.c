@@ -870,19 +870,9 @@ void write_UDP_AckFIN (struct TransferInfo *stats, int len) {
     fd_set readSet;
     int rc = 1;
     struct timeval timeout;
+    int readlen = ((ackpacket_length * 2) > len * 2) ? (ackpacket_length * 2) : (len * 2);
 
     if (ackPacket) {
-	FD_ZERO(&readSet);
-	while (rc > 0) {
-	    // drain extra end of traffic packets
-	    FD_SET(stats->common->socket, &readSet);
-	    timeout.tv_sec  = 0;
-	    timeout.tv_usec = 100000;
-	    rc = select(stats->common->socket+1, &readSet, NULL, NULL, &timeout);
-	    if (rc > 0) {
-		read(stats->common->socket, ackPacket, ackpacket_length);
-	    }
-	}
 	struct UDP_datagram *UDP_Hdr = (struct UDP_datagram *)ackPacket;
 	struct server_hdr *hdr = (struct server_hdr *)(UDP_Hdr+1);
 
@@ -958,15 +948,16 @@ void write_UDP_AckFIN (struct TransferInfo *stats, int len) {
 		success = 1;
 		break;
 	    }
-	    rc = read(stats->common->socket, ackPacket, ackpacket_length);
-	    WARN_errno(rc < 0, "ack read");
-	    if (rc <= 0)
+	    rc = read(stats->common->socket, ackPacket, readlen);
+	    WARN_errno(rc < 0, "ack await silence");
+	    if ((rc < 0) && FATALUDPREADERR(errno)) {
 		break;
-	    if (rc > 0) {
-#ifdef HAVE_THREAD_DEBUG
-		thread_debug("UDP server thinks server stats packet lost, will retransmit and try again", rc);
-#endif
 	    }
+#ifdef HAVE_THREAD_DEBUG
+	    if (rc > 0) {
+		thread_debug("UDP server thinks server stats packet maybe lost, will retransmit and try again", rc);
+	    }
+#endif
 	}
 	free(ackPacket);
     }
