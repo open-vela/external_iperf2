@@ -1,7 +1,7 @@
 See doc/DESIGN_NOTES for some description around the software design
 See doc/CLOCKSYNC_NOTES for some description around synchronizing the realtime clocks
 
-2.1.4 change set as of (July 24, 2021)
+2.1.4 change set as of (August 12, 2021)
 --------------------------------------
 o fix TCP isoch regression
 o fix regression in UDP header exchange for tests like --reverse
@@ -12,6 +12,9 @@ o Add support for --histograms on select with --tcp-write-prefetch
 o Add support for bind to device on the listener, i.e. iperf -s -i 1 -e -B 0.0.0.0%eth0, will only accept/receive on the eth0 interface
 o Add support for virtual/tap interfaces
 o Add support for --hide-ips (don't show the ip addresses in the report outputs)
+o Fix units of -pps with --reverse, --fullduplex, -r and -d
+o Remove use of MSG_PEEK by moving the mBuf buffer from client/server object to settings context
+o Use MSG_WAITALL in recvn (collided with MSG_PEEK on Windows)
 
 2.1.3 change set as of (July 13, 2021)
 --------------------------------------
