@@ -2035,7 +2035,7 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	hdr->extend.tos = htons(client->mTOS & 0xFF);
 	if (isBWSet(client) && (client->mAppRate > 0)) {
 	    uint64_t bw = 0;
-	    if ((client->mAppRateUnits == kRate_PPS) && (isFullDuplex(client) || isReverse(client))) {
+	    if ((client->mAppRateUnits == kRate_PPS) && (isFullDuplex(client) || isReverse(client) || (client->mMode != kTest_Normal))) {
 		bw = client->mAppRate * 8 * client->mBufLen;
 	    } else {
 		bw = client->mAppRate;
