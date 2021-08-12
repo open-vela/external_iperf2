@@ -776,7 +776,7 @@ void Server::RunUDP () {
 	// 1) we're NOT receiving multicast
 	// 2) the user requested no final exchange
 	// 3) this is a full duplex test
-	write_UDP_AckFIN(&myReport->info);
+	write_UDP_AckFIN(&myReport->info, mSettings->mBufLen);
     }
     if (do_close) {
 #if HAVE_THREAD_DEBUG

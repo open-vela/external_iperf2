@@ -551,7 +551,7 @@ void PrintMSS(struct ReporterData *data);
 void reporter_default_heading_flags(int);
 void reporter_connect_printf_tcp_final(struct ConnectionInfo *report);
 
-void write_UDP_AckFIN(struct TransferInfo *stats);
+void write_UDP_AckFIN(struct TransferInfo *stats, int len);
 
 int reporter_process_transfer_report (struct ReporterData *this_ireport);
 int reporter_process_report (struct ReportHeader *reporthdr);
