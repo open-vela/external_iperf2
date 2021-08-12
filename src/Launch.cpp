@@ -230,6 +230,7 @@ static void clientside_client_fullduplex (struct thread_Settings *thread, Client
 	reverse_client->mSumReport = thread->mSumReport;
 	reverse_client->mSock = thread->mSock; // use the same socket for both directions
 	reverse_client->mThreadMode = kMode_Server;
+	setReverse(reverse_client);
 	if (isModeTime(reverse_client)) {
 	    reverse_client->mAmount += (SLOPSECS * 100);  // add 2 sec for slop on reverse, units are 10 ms
 	}
