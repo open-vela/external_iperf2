@@ -2033,10 +2033,16 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	hdr->extend.version_u = htonl(IPERF_VERSION_MAJORHEX);
 	hdr->extend.version_l = htonl(IPERF_VERSION_MINORHEX);
 	hdr->extend.tos = htons(client->mTOS & 0xFF);
-	if (isBWSet(client)) {
-	    hdr->extend.lRate = htonl((uint32_t)(client->mAppRate));
+	if (isBWSet(client) && (client->mAppRate > 0)) {
+	    uint64_t bw = 0;
+	    if ((client->mAppRateUnits == kRate_PPS) && (isFullDuplex(client) || isReverse(client))) {
+		bw = client->mAppRate * 8 * client->mBufLen;
+	    } else {
+		bw = client->mAppRate;
+	    }
+	    hdr->extend.lRate = htonl((uint32_t)(bw));
 #ifdef HAVE_INT64_T
-	    hdr->extend.uRate = htonl(((uint32_t)(client->mAppRate >> 32)) << 8);
+	    hdr->extend.uRate = htonl(((uint32_t)(bw >> 32)) << 8);
 #endif
 	} else {
 	    hdr->extend.lRate = htonl(kDefault_UDPRate);
