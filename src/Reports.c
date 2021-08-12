@@ -861,13 +861,28 @@ struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings
  * termination datagrams, so re-transmit our AckFIN.
  * Sent by server to client
  * ------------------------------------------------------------------- */
-void write_UDP_AckFIN (struct TransferInfo *stats) {
+void write_UDP_AckFIN (struct TransferInfo *stats, int len) {
     assert(stats!= NULL);
     int ackpacket_length = (int) (sizeof(struct UDP_datagram) + sizeof(struct server_hdr));
-    char *ackPacket = (char *) calloc(1, ackpacket_length);
+    char *ackPacket = (char *) calloc(1, len);
     int success = 0;
     assert(ackPacket);
+    fd_set readSet;
+    int rc = 1;
+    struct timeval timeout;
+
     if (ackPacket) {
+	FD_ZERO(&readSet);
+	while (rc > 0) {
+	    // drain extra end of traffic packets
+	    FD_SET(stats->common->socket, &readSet);
+	    timeout.tv_sec  = 0;
+	    timeout.tv_usec = 100000;
+	    rc = select(stats->common->socket+1, &readSet, NULL, NULL, &timeout);
+	    if (rc > 0) {
+		read(stats->common->socket, ackPacket, ackpacket_length);
+	    }
+	}
 	struct UDP_datagram *UDP_Hdr = (struct UDP_datagram *)ackPacket;
 	struct server_hdr *hdr = (struct server_hdr *)(UDP_Hdr+1);
 
@@ -917,8 +932,6 @@ void write_UDP_AckFIN (struct TransferInfo *stats) {
 #define TRYCOUNT 10
 	int count = TRYCOUNT;
 	while (--count) {
-	    int rc;
-	    struct timeval timeout;
 	    // write data
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
 	    // If in l2mode, use the AF_INET socket to write this packet
@@ -932,7 +945,7 @@ void write_UDP_AckFIN (struct TransferInfo *stats) {
 #endif
 	    WARN_errno(rc < 0, "write-ackfin");
 	    // wait here is for silence, no more packets from the client
-	    fd_set readSet;
+
 	    FD_ZERO(&readSet);
 	    FD_SET(stats->common->socket, &readSet);
 	    timeout.tv_sec  = 0;
@@ -946,8 +959,8 @@ void write_UDP_AckFIN (struct TransferInfo *stats) {
 		break;
 	    }
 	    rc = read(stats->common->socket, ackPacket, ackpacket_length);
-	    WARN_errno(rc < 0, "read");
-	    if (rc < 0)
+	    WARN_errno(rc < 0, "ack read");
+	    if (rc <= 0)
 		break;
 	    if (rc > 0) {
 #ifdef HAVE_THREAD_DEBUG
