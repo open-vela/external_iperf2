@@ -91,7 +91,7 @@ class iperf_flow(object):
         iperf_flow.loop.close()
 
     @classmethod
-    def run(cls, time=None, amount=None, flows='all', sample_delay=None, io_timer=None, preclean=False, parallel=None, triptime=False) :
+    def run(cls, time=None, amount=None, flows='all', sample_delay=None, io_timer=None, preclean=False, parallel=None) :
         if flows == 'all' :
             flows = iperf_flow.get_instances()
         if not flows:
@@ -116,7 +116,7 @@ class iperf_flow(object):
         except asyncio.TimeoutError:
             logging.error('flow server start timeout')
             raise
-        tasks = [asyncio.ensure_future(flow.tx.start(time=time, amount=amount, parallel=parallel, triptime=triptime), loop=iperf_flow.loop) for flow in flows]
+        tasks = [asyncio.ensure_future(flow.tx.start(time=time, amount=amount, parallel=parallel), loop=iperf_flow.loop) for flow in flows]
         try :
             iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=10, loop=iperf_flow.loop))
         except asyncio.TimeoutError:
@@ -132,7 +132,7 @@ class iperf_flow(object):
                 logging.error('flow traffic check timeout')
                 raise
         if time :
-            iperf_flow.sleep(time=time, text="Running traffic start", stoptext="Stopping flows")
+            iperf_flow.sleep(time=time + 4, text="Running traffic start", stoptext="Stopping flows")
             # Signal the remote iperf client sessions to stop them
             tasks = [asyncio.ensure_future(flow.tx.signal_stop(), loop=iperf_flow.loop) for flow in flows]
             try :
@@ -283,14 +283,13 @@ class iperf_flow(object):
         }
         return switcher.get(txt.upper(), None)
 
-    def __init__(self, name='iperf', server='localhost', client = 'localhost', user = None, proto = 'TCP', dstip = '127.0.0.1', interval = 0.5, flowtime=10, offered_load = '1m', tos='BE', window='4M', src=None, srcip = None, srcport = None, dstport = None,  debug = False, udptriggers = False, length = None, latency=False, ipg=0.005, amount=None):
+    def __init__(self, name='iperf', server='localhost', client = 'localhost', user = None, proto = 'TCP', dstip = '127.0.0.1', interval = 0.5, flowtime=10, offered_load = None, tos='BE', window='4M', src=None, srcip = None, srcport = None, dstport = None,  debug = False, length = None, latency=False, ipg=0.005, amount=None, triptimes=False):
         iperf_flow.instances.add(self)
         if not iperf_flow.loop :
             iperf_flow.set_loop()
         self.loop = iperf_flow.loop
         self.name = name
         self.latency = latency
-        self.udptriggers = udptriggers;
         if not dstport :
             iperf_flow.port += 1
             self.dstport = iperf_flow.port
@@ -319,6 +318,8 @@ class iperf_flow(object):
 
         if amount :
             self.amount = amount
+        if triptimes :
+            self.triptimes = triptimes
         self.interval = round(interval,3)
         self.offered_load = offered_load
         if self.offered_load :
@@ -617,8 +618,6 @@ class iperf_server(object):
             self.sshcmd.extend(['-i ', str(self.interval)])
         if self.proto == 'UDP' :
             self.sshcmd.extend(['-u'])
-        if self.udptriggers or self.latency :
-            self.sshcmd.extend(['--udp-histogram=10u,200000'])
 
         logging.info('{}'.format(str(self.sshcmd)))
         self._transport, self._protocol = await self.loop.subprocess_exec(lambda: self.IperfServerProtocol(self, self.flow), *self.sshcmd)
@@ -811,7 +810,7 @@ class iperf_client(object):
     def __getattr__(self, attr):
         return getattr(self.flow, attr)
 
-    async def start(self, time=None, amount=None, parallel=None, triptime=False):
+    async def start(self, time=None, amount=None, parallel=None):
         if not self.closed.is_set() :
             return
 
@@ -822,7 +821,7 @@ class iperf_client(object):
 
         # Client connecting to 192.168.100.33, TCP port 61009 with pid 1903
         self.regex_open_pid = re.compile(r'Client connecting to .*, {} port {} with pid (?P<pid>\d+)'.format(self.proto, str(self.dstport)))
-        self.sshcmd=[self.ssh, self.user + '@' + self.host, self.iperf, '-c', self.dstip, '-p ' + str(self.dstport), '-e', '-fb', '-S ', iperf_flow.txt_to_tos(self.tos), '-w' , self.window ,'--realtime']
+        self.sshcmd=[self.ssh, self.user + '@' + self.host, self.iperf, '-c', self.dstip, '-p ' + str(self.dstport), '-e', '-X', '-fb', '-S ', iperf_flow.txt_to_tos(self.tos), '-w' , self.window ,'--realtime']
         if self.length :
             self.sshcmd.extend(['-l ', str(self.length)])
         if time:
@@ -832,16 +831,14 @@ class iperf_client(object):
             self.sshcmd.extend(['-n ',  amount])
         if parallel :
             self.sshcmd.extend(['-P', str(parallel)])
-        if triptime :
-            self.sshcmd.extend(['--trip-time'])
+        if self.triptimes :
+            self.sshcmd.extend(['--trip-times'])
 
         if self.srcip :
             if self.srcport :
                 self.sshcmd.extend(['-B {}:{}'.format(self.srcip, self.srcport)])
             else :
                 self.sshcmd.extend(['-B {}'.format(self.srcip)])
-        if self.udptriggers :
-            self.sshcmd.extend(['--udp-triggers'])
 
         if self.interval >= 0.005 :
             self.sshcmd.extend(['-i ', str(self.interval)])
