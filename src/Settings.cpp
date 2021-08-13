@@ -1409,6 +1409,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		fprintf(stderr,"ERROR: Fail because --txdelay-time and --connect-only cannot be applied together\n");
 		bail = true;			;
 	    }
+	    if (mExtSettings->mAppRateUnits == kRate_PPS) {
+		fprintf(stderr, "ERROR: units of pps not supported with TCP\n");
+		bail = true;
+	    }
 	}
 	if (isHistogram(mExtSettings) && !isWritePrefetch(mExtSettings)) {
 	    fprintf(stderr, "WARN: option of --histograms on the client requires --tcp-write-prefetch\n");
