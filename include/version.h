@@ -1,3 +1,8 @@
+#define IPERF_VERSION "2.1.4-rc"
+#define IPERF_VERSION_DATE "14 August 2021"
+#define IPERF_VERSION_MAJORHEX 0x00020001
+#define IPERF_VERSION_MINORHEX 0x00040001
+
 /*
  * 	case 0:
  *	    sprintf(report->peerversion + strlen(report->peerversion) - 1,"-dev)");
@@ -19,7 +24,3 @@
  *	default:
  *	    sprintf(report->peerversion + strlen(report->peerversion) - 1, "-unk)");
  */
-#define IPERF_VERSION "2.1.4-rc"
-#define IPERF_VERSION_DATE "12 August 2021"
-#define IPERF_VERSION_MAJORHEX 0x00020001
-#define IPERF_VERSION_MINORHEX 0x00040001
