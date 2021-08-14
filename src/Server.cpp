@@ -84,6 +84,7 @@ Server::Server (thread_Settings *inSettings) {
     reportstruct = &scratchpad;
     memset(&scratchpad, 0, sizeof(struct ReportStruct));
     mySocket = inSettings->mSock;
+    reportstruct->prevPacketTime = inSettings->accept_time;
     peerclose = false;
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
     myDropSocket = inSettings->mSockDrop;
