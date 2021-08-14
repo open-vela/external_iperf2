@@ -1253,6 +1253,14 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 			setServerReverse(server);
 		    }
 		}
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+		if ((isServerReverse(server) || isFullDuplex(server)) && (upperflags & HEADER_WRITEPREFETCH)) {
+		    server->mWritePrefetch = ntohl(hdr->extend.TCPWritePrefetch);
+		    if (server->mWritePrefetch > 0) {
+			setWritePrefetch(server);
+		    }
+		}
+#endif
 	    }
 	}
 	// Handle case that requires an ack back to the client
