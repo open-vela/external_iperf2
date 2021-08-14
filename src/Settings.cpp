@@ -2170,6 +2170,12 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 		upperflags |= HEADER_FQRATESET;
 	    }
 	}
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+	if (isWritePrefetch(client) && (isReverse(client) || isFullDuplex(client))) {
+	    upperflags  |= HEADER_WRITEPREFETCH;
+		hdr->extend.TCPWritePrefetch = htonl((long)client->mWritePrefetch);
+	}
+#endif
 	if (isIsochronous(client) || isPeriodicBurst(client)) {
 	    if (isPeriodicBurst(client)) {
 		upperflags |= HEADER_PERIODICBURST;  // overload the isoch settings
