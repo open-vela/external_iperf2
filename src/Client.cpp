@@ -218,7 +218,7 @@ bool Client::my_connect (bool close_on_fail) {
 	setNoSettReport(mSettings);
     }
     // Post the connect report unless peer version exchange is set
-    if (isConnectionReport(mSettings) && !isSumOnly(mSettings) && !isPeerVerDetect(mSettings)) {
+    if (isConnectionReport(mSettings) && !isSumOnly(mSettings)) {
 	if (connected) {
 	    struct ReportHeader *reporthdr = InitConnectionReport(mSettings, connecttime);
 	    struct ConnectionInfo *cr = static_cast<struct ConnectionInfo *>(reporthdr->this_report);
@@ -476,8 +476,6 @@ void Client::InitTrafficLoop () {
     }
     readAt = mSettings->mBuf;
     lastPacketTime.set(myReport->info.ts.startTime.tv_sec, myReport->info.ts.startTime.tv_usec);
-    if (isConnectionReport(mSettings) && isPeerVerDetect(mSettings) && !isSumOnly(mSettings))
-	PostReport(InitConnectionReport(mSettings, mSettings->connecttime));
     reportstruct->errwrite=WriteNoErr;
     reportstruct->emptyreport=0;
     reportstruct->packetLen = 0;
