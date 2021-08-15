@@ -90,7 +90,7 @@
 #define PEEK_FLAGS (MSG_PEEK)
 #endif
 
-#define TAPBYTESSLOP (512 + sizeof(struct iphdr) + sizeof(struct ether_header) + sizeof(struct udphdr))
+#define TAPBYTESSLOP 512
 
 /* -------------------------------------------------------------------
 
@@ -950,8 +950,8 @@ int Listener::udp_accept (thread_Settings *server) {
     return server->mSock;
 }
 
-//RJM fix these
 
+#if (((HAVE_TUNTAP_TUN) || (HAVE_TUNTAP_TAP)) && (AF_PACKET))
 int Listener::tuntap_accept(thread_Settings *server) {
     int rc = recv(server->mSock, mBuf, (mBufLen + TAPBYTESSLOP + sizeof(struct iphdr) + sizeof(struct ether_header) + sizeof(struct udphdr)), MSG_PEEK);
     if (rc <= 0)
@@ -977,6 +977,7 @@ int Listener::tuntap_accept(thread_Settings *server) {
     server->l4payloadoffset = sizeof(struct iphdr) + sizeof(struct ether_header) + sizeof(struct udphdr);
     return server->mSock;
 }
+#endif
 /* -------------------------------------------------------------------
  * This is called by the Listener thread main loop, return a socket or error
  * ------------------------------------------------------------------- */
@@ -994,9 +995,12 @@ int Listener::my_accept (thread_Settings *server) {
     server->accept_time.tv_sec = 0;
     server->accept_time.tv_usec = 0;
     if (isUDP(server)) {
+#if (((HAVE_TUNTAP_TUN) || (HAVE_TUNTAP_TAP)) && (AF_PACKET))
 	if (isTapDev(server) || isTunDev(server)) {
 	    server->mSock = tuntap_accept(server);
-	} else {
+	} else
+#endif
+	{
 	    server->mSock = udp_accept(server);
 	}
 	// note udp_accept will update the active host table
