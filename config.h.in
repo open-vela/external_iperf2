@@ -37,6 +37,14 @@
    don't. */
 #undef HAVE_DECL_EWOULDBLOCK
 
+/* Define to 1 if you have the declaration of `IFF_TAP', and to 0 if you
+   don't. */
+#undef HAVE_DECL_IFF_TAP
+
+/* Define to 1 if you have the declaration of `IFF_TUN', and to 0 if you
+   don't. */
+#undef HAVE_DECL_IFF_TUN
+
 /* Define to 1 if you have the declaration of `IPV6_ADD_MEMBERSHIP', and to 0
    if you don't. */
 #undef HAVE_DECL_IPV6_ADD_MEMBERSHIP
@@ -178,6 +186,9 @@
 
 /* Define to 1 if you have the <linux/if_packet.h> header file. */
 #undef HAVE_LINUX_IF_PACKET_H
+
+/* Define to 1 if you have the <linux/if_tun.h> header file. */
+#undef HAVE_LINUX_IF_TUN_H
 
 /* Define to 1 if you have the <linux/ip.h> header file. */
 #undef HAVE_LINUX_IP_H
@@ -335,6 +346,12 @@
 
 /* Define for thread level debugging of the code */
 #undef HAVE_THREAD_DEBUG
+
+/* TUNTAP_TAP support is available */
+#undef HAVE_TUNTAP_TAP
+
+/* TUNTAP_TUN support is available */
+#undef HAVE_TUNTAP_TUN
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H

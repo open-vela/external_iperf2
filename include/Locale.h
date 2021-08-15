@@ -106,6 +106,8 @@ extern const char bind_address[];
 
 extern const char bind_address_iface[];
 
+extern const char bind_address_iface_taptun[];
+
 extern const char multicast_ttl[];
 
 extern const char join_multicast[];

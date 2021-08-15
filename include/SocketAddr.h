@@ -60,53 +60,55 @@
 extern "C" {
 #endif
 /* ------------------------------------------------------------------- */
-    void SockAddr_localAddr( struct thread_Settings *inSettings );
-    void SockAddr_remoteAddr( struct thread_Settings *inSettings );
+void SockAddr_localAddr(struct thread_Settings *inSettings);
+void SockAddr_remoteAddr(struct thread_Settings *inSettings);
 
-    void SockAddr_setHostname( const char* inHostname,
-                               iperf_sockaddr *inSockAddr,
-                               int isIPv6 );          // DNS lookup
-    void SockAddr_getHostname( iperf_sockaddr *inSockAddr,
-                               char* outHostname,
-                               size_t len );   // reverse DNS lookup
-    void SockAddr_getHostAddress( iperf_sockaddr *inSockAddr,
-                                  char* outAddress,
-                                  size_t len ); // dotted decimal
+void SockAddr_setHostname(const char* inHostname,
+                           iperf_sockaddr *inSockAddr,
+                           int isIPv6);  // DNS lookup
+void SockAddr_getHostname(iperf_sockaddr *inSockAddr,
+                           char* outHostname,
+                           size_t len);   // reverse DNS lookup
+void SockAddr_getHostAddress(iperf_sockaddr *inSockAddr,
+                              char* outAddress,
+                              size_t len); // dotted decimal
 
-    void SockAddr_setPort( iperf_sockaddr *inSockAddr, unsigned short inPort );
-    void SockAddr_setPortAny( iperf_sockaddr *inSockAddr );
-    unsigned short SockAddr_getPort( iperf_sockaddr *inSockAddr );
+void SockAddr_setPort(iperf_sockaddr *inSockAddr, unsigned short inPort);
+void SockAddr_setPortAny(iperf_sockaddr *inSockAddr);
+unsigned short SockAddr_getPort(iperf_sockaddr *inSockAddr);
 
-    void SockAddr_setAddressAny( iperf_sockaddr *inSockAddr );
+void SockAddr_setAddressAny(iperf_sockaddr *inSockAddr);
 
-    // return pointer to the struct in_addr
-    struct in_addr* SockAddr_get_in_addr( iperf_sockaddr *inSockAddr );
+// return pointer to the struct in_addr
+struct in_addr* SockAddr_get_in_addr(iperf_sockaddr *inSockAddr);
 #ifdef HAVE_IPV6
-    // return pointer to the struct in_addr
-    struct in6_addr* SockAddr_get_in6_addr( iperf_sockaddr *inSockAddr );
+// return pointer to the struct in_addr
+struct in6_addr* SockAddr_get_in6_addr(iperf_sockaddr *inSockAddr);
 #endif
-    // return the sizeof the addess structure (struct sockaddr_in)
-    Socklen_t SockAddr_get_sizeof_sockaddr( iperf_sockaddr *inSockAddr );
+// return the sizeof the addess structure (struct sockaddr_in)
+Socklen_t SockAddr_get_sizeof_sockaddr(iperf_sockaddr *inSockAddr);
 
-    int SockAddr_isMulticast( iperf_sockaddr *inSockAddr );
-    int SockAddr_isLinklocal( iperf_sockaddr *inSockAddr );
+int SockAddr_isMulticast(iperf_sockaddr *inSockAddr);
+int SockAddr_isLinklocal(iperf_sockaddr *inSockAddr);
 
-    int SockAddr_isIPv6( iperf_sockaddr *inSockAddr );
+int SockAddr_isIPv6(iperf_sockaddr *inSockAddr);
 
-    int SockAddr_are_Equal(iperf_sockaddr *first, iperf_sockaddr *second);
-    int SockAddr_Hostare_Equal(iperf_sockaddr *first, iperf_sockaddr *second);
+int SockAddr_are_Equal(iperf_sockaddr *first, iperf_sockaddr *second);
+int SockAddr_Hostare_Equal(iperf_sockaddr *first, iperf_sockaddr *second);
 
-    void SockAddr_zeroAddress( iperf_sockaddr *inSockAddr );
-    int SockAddr_isZeroAddress(iperf_sockaddr *inSockAddr);
-    void SockAddr_incrAddress( iperf_sockaddr *inSockAddr, int value);
-    int SockAddr_Ifrname(struct thread_Settings *inSettings);
+void SockAddr_zeroAddress(iperf_sockaddr *inSockAddr);
+int SockAddr_isZeroAddress(iperf_sockaddr *inSockAddr);
+void SockAddr_incrAddress(iperf_sockaddr *inSockAddr, int value);
+int SockAddr_Ifrname(struct thread_Settings *inSettings);
 #ifdef HAVE_LINUX_FILTER_H
-    int SockAddr_Accept_BPF(int socket, uint16_t port);
-    int SockAddr_Drop_All_BPF(int socket);
-    int SockAddr_v4_Connect_BPF(int socket, uint32_t dstip, uint32_t srcip, uint16_t dstport, uint16_t srcport);
-    int SockAddr_v4_Connect_BPF_Drop(int socket, uint32_t dstip, uint32_t srcip, uint16_t dstport, uint16_t srcport);
+int SockAddr_v4_Accept_BPF(int socket, uint16_t port);
+int SockAddr_Accept_v4_TAP_BPF(int socket, uint32_t dstip, uint16_t port);
+int SockAddr_Drop_All_BPF(int socket);
+int SockAddr_v4_Connect_BPF(int socket, uint32_t dstip, uint32_t srcip, uint16_t dstport, uint16_t srcport);
+int SockAddr_v4_Connect_TAP_BPF(int socket, uint32_t dstip, uint32_t srcip, uint16_t dstport, uint16_t srcport);
+int SockAddr_v4_Connect_BPF_Drop(int socket, uint32_t dstip, uint32_t srcip, uint16_t dstport, uint16_t srcport);
 #  ifdef HAVE_IPV6
-    int SockAddr_v6_Connect_BPF (int sock, struct in6_addr *dst, struct in6_addr *src, uint16_t dstport, uint16_t srcport);
+int SockAddr_v6_Connect_BPF (int sock, struct in6_addr *dst, struct in6_addr *src, uint16_t dstport, uint16_t srcport);
 #  endif // v6
 #endif // linux_filter
 
