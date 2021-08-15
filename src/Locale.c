@@ -72,6 +72,7 @@ Client/Server:\n\
   -b, --bandwidth #[kmgKMG | pps]  bandwidth to read/send at in bits/sec or packets/sec\n\
   -e, --enhanced    use enhanced reporting giving more tcp/udp and traffic information\n\
   -f, --format    [kmgKMG]   format to report: Kbits, Mbits, KBytes, MBytes\n\
+      --hide-ips           hide ip addresses and host names within outputs\n\
   -i, --interval  #        seconds between periodic bandwidth reports\n\
   -l, --len       #[kmKM]    length of buffer in bytes to read or write (Defaults: TCP=128K, v4 UDP=1470, v6 UDP=1450)\n\
   -m, --print_mss          print TCP maximum segment size (MTU - TCP/IP header)\n\
@@ -98,6 +99,7 @@ Server specific:\n\
       --histograms         enable latency histograms\n\
       --permit-key-timeout set the timeout for a permit key in seconds\n\
       --tcp-rx-window-clamp set the TCP receive window clamp size in bytes\n\
+      --tap-dev   #[<dev>] use TAP device to receive at L2 layer\n\
   -t, --time      #        time in seconds to listen for new connections as well as to receive traffic (default not set)\n\
       --udp-histogram #,#  enable UDP latency histogram(s) with bin width and count, e.g. 1,1000=1(ms),1000(bins)\n\
   -B, --bind <ip>[%<dev>]  bind to multicast address and optional device\n\
@@ -211,6 +213,9 @@ const char bind_address[] =
 
 const char bind_address_iface[] =
 "Binding to local address %s and iface %s\n";
+
+const char bind_address_iface_taptun[] =
+"Using virtual iface %s (AF_PACKET & SOCK_RAW)\n";
 
 const char multicast_ttl[] =
 "Setting multicast TTL to %d\n";
