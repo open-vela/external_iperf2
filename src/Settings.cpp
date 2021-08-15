@@ -73,7 +73,6 @@
 #include "payloads.h"
 #include <math.h>
 
-
 static int reversetest = 0;
 static int fullduplextest = 0;
 static int histogram = 0;
@@ -102,6 +101,9 @@ static int permitkey = 0;
 static int permitkeytimeout = 0;
 static int rxwinclamp = 0;
 static int txnotsentlowwater = 0;
+static int tapif = 0;
+static int tunif = 0;
+static int hideips = 0;
 
 void Settings_Interpret(char option, const char *optarg, struct thread_Settings *mExtSettings);
 // apply compound settings after the command line has been fully parsed
@@ -167,6 +169,7 @@ const struct option long_options[] =
 {"peer-detect",      no_argument, NULL, 'X'},
 {"tcp-congestion", required_argument, NULL, 'Z'},
 {"histograms", optional_argument, &histogram, 1},
+{"hide-ips", no_argument, &hideips, 1},
 {"udp-histograms", optional_argument, &histogram, 1}, // keep support per 2.0.13 usage
 {"l2checks", no_argument, &l2checks, 1},
 {"incr-dstip", no_argument, &incrdstip, 1},
@@ -192,6 +195,8 @@ const struct option long_options[] =
 {"burst-period", optional_argument, &burstperiodic, 1},
 {"tcp-rx-window-clamp", required_argument, &rxwinclamp, 1},
 {"tcp-write-prefetch", required_argument, &txnotsentlowwater, 1}, // see doc/DESIGN_NOTES
+{"tap-dev", optional_argument, &tapif, 1},
+{"tun-dev", optional_argument, &tunif, 1},
 {"NUM_REPORT_STRUCTS", required_argument, &numreportstructs, 1},
 #ifdef WIN32
 {"reverse", no_argument, &reversetest, 1},
@@ -314,7 +319,7 @@ void Settings_Initialize (struct thread_Settings *main) {
     //main->mSuggestWin = false;         // -W,  Suggest the window size.
     main->mListenerTimeout = -1;         //
     main->mKeyCheck = true;
-#if (HAVE_DECL_SO_DONTROUTE) && (HAVE_DEFAULT_DONTROUTE_ON)
+#if defined(HAVE_DECL_SO_DONTROUTE) && defined(HAVE_DEFAULT_DONTROUTE_ON)
     setDontRoute(main);
 #endif
     main->mFPS = 1;
@@ -416,8 +421,11 @@ void Settings_Destroy (struct thread_Settings *mSettings) {
 #if HAVE_THREAD_DEBUG
     thread_debug("Free thread settings=%p", mSettings);
 #endif
+    if (mSettings->tuntapdev)
+	close(mSettings->tuntapdev);
     Condition_Destroy(&mSettings->awake_me);
     DELETE_ARRAY(mSettings->mHost);
+    DELETE_ARRAY(mSettings->mHideHost);
     DELETE_ARRAY(mSettings->mLocalhost);
     DELETE_ARRAY(mSettings->mFileName);
     DELETE_ARRAY(mSettings->mOutputFileName);
@@ -1061,6 +1069,33 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		numreportstructs = 0;
 		mExtSettings->numreportstructs = byte_atoi(optarg);
 	    }
+	    if (tapif) {
+		tapif = 0;
+#if HAVE_TUNTAP_TAP
+		if (optarg) {
+		    mExtSettings->mIfrname = static_cast<char *>(calloc(strlen(optarg) + 1, sizeof(char)));
+		    strcpy(mExtSettings->mIfrname, optarg);
+		}
+		setTapDev(mExtSettings);
+		setEnhanced(mExtSettings);
+		setL2LengthCheck(mExtSettings);
+#endif
+	    }
+	    if (tunif) {
+		tunif = 0;
+#if HAVE_TUNTAP_TUN
+		if (optarg) {
+		    mExtSettings->mIfrname = static_cast<char *>(calloc(strlen(optarg) + 1, sizeof(char)));
+		    strcpy(mExtSettings->mIfrname, optarg);
+		}
+		setTunDev(mExtSettings);
+		setEnhanced(mExtSettings);
+#endif
+	    }
+	    if (hideips) {
+		hideips = 0;
+		setHideIPs(mExtSettings);
+	    }
 	    break;
         default: // ignore unknown
             break;
@@ -1168,6 +1203,13 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    fprintf(stderr, "WARNING: tcp congestion control will only be applied on transmit traffic, use -Z on the server\n");
 	}
     }
+    if (isHideIPs(mExtSettings)) {
+        char hide_string[] = "(**hidden**)";
+        mExtSettings->mHideHost = new char[strlen(hide_string) + 1];
+	if (mExtSettings->mHideHost)
+	    strcpy(mExtSettings->mHideHost, &hide_string[0]);
+    }
+
     // Bail outs
     bool bail = false;
     // compat mode doesn't support these test settings
