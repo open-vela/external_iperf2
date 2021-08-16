@@ -39,8 +39,8 @@ root = logging.getLogger(__name__)
 loop = asyncio.get_event_loop()
 loop.set_debug(False)
 
-count = 8
+count = 1
 time = 4
 
-flows = [iperf_flow(name="TCP{}".format(str(i)), user='root', server='10.19.87.10', client='10.19.87.9', dstip='192.168.1.4', proto='TCP', interval=1, triptimes=True, flowtime=time) for i in range(count)]
+flows = [iperf_flow(name="TCP{}".format(str(i)), user='root', server='10.19.87.10', client='10.19.87.9', dstip='192.168.1.4', proto='TCP', interval=1, triptimes=True, flowtime=time, prefetch='128K') for i in range(count)]
 iperf_flow.run(time=time, flows='all', preclean=False)
