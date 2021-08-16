@@ -283,7 +283,7 @@ class iperf_flow(object):
         }
         return switcher.get(txt.upper(), None)
 
-    def __init__(self, name='iperf', server='localhost', client = 'localhost', user = None, proto = 'TCP', dstip = '127.0.0.1', interval = 0.5, flowtime=10, offered_load = None, tos='BE', window='4M', src=None, srcip = None, srcport = None, dstport = None,  debug = False, length = None, latency=False, ipg=0.005, amount=None, triptimes=False):
+    def __init__(self, name='iperf', server='localhost', client = 'localhost', user = None, proto = 'TCP', dstip = '127.0.0.1', interval = 0.5, flowtime=10, offered_load = None, tos='BE', window='4M', src=None, srcip = None, srcport = None, dstport = None,  debug = False, length = None, latency=False, ipg=0.005, amount=None, triptimes=False, prefetch=None):
         iperf_flow.instances.add(self)
         if not iperf_flow.loop :
             iperf_flow.set_loop()
@@ -328,6 +328,7 @@ class iperf_flow(object):
                 self.name += '-isoch'
             else :
                 self.isoch = False
+        self.prefetch = prefetch
         self.ipg = ipg
         self.debug = debug
         self.TRAFFIC_EVENT_TIMEOUT = round(self.interval * 4, 3)
@@ -618,6 +619,8 @@ class iperf_server(object):
             self.sshcmd.extend(['-i ', str(self.interval)])
         if self.proto == 'UDP' :
             self.sshcmd.extend(['-u'])
+        if self.prefetch :
+            self.sshcmd.extend(['--histograms=1m,100000'])
 
         logging.info('{}'.format(str(self.sshcmd)))
         self._transport, self._protocol = await self.loop.subprocess_exec(lambda: self.IperfServerProtocol(self, self.flow), *self.sshcmd)
@@ -833,6 +836,9 @@ class iperf_client(object):
             self.sshcmd.extend(['-P', str(parallel)])
         if self.triptimes :
             self.sshcmd.extend(['--trip-times'])
+        if self.prefetch :
+            self.sshcmd.extend(['--tcp-write-prefetch', self.prefetch])
+            self.sshcmd.extend(['--histograms=1m,100000'])
 
         if self.srcip :
             if self.srcport :
