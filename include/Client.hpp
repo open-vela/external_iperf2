@@ -115,6 +115,7 @@ private:
     void RunRateLimitedTCP(void);
     void RunNearCongestionTCP(void);
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
+    bool AwaitWriteSelectEventTCP(void);
     void RunWriteEventsTCP(void);
 #endif
     // UDP traffic with isochronous and vbr support
