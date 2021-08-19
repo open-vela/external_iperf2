@@ -3329,7 +3329,7 @@ else
 fi
 
 
-if test "x$enable_static_bin" == xyes; then :
+if test "x$enable_static_bin" = xyes; then :
   CFLAGS="$CFLAGS --static"; CXXFLAGS="$CXXFLAGS --static"; LDFLAGS="$LDFLAGS --static"
 
 fi
