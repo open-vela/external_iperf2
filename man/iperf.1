@@ -129,6 +129,9 @@ Set a key value that must match for the server to accept traffic from a client (
 .BR "    --permit-key-timeout " \fI<value>\fR
 Set the lifetime of the permit key in seconds. Defaults to 20 seconds if not set. A value of zero will disable the timer.
 .TP
+.BR "    --tap-dev " \fI<dev>\fR
+Set the receive interface to the TAP device as specified.
+.TP
 .BR "    --tcp-rx-window-clamp "  \fIn\fR[kmKM]
 Set the socket option of TCP_WINDOW_CLAMP, units is bytes.
 .TP

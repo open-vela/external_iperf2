@@ -1088,10 +1088,15 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		setTapDev(mExtSettings);
 		setEnhanced(mExtSettings);
 		setL2LengthCheck(mExtSettings);
+#else
+		fprintf(stderr, "ERROR: tap devices not supported\n");
+		exit(1);
 #endif
 	    }
 	    if (tunif) {
 		tunif = 0;
+		fprintf(stderr, "ERROR: tun devices not yet supported\n");
+		exit(1);
 #if HAVE_TUNTAP_TUN
 		if (optarg) {
 		    mExtSettings->mIfrname = static_cast<char *>(calloc(strlen(optarg) + 1, sizeof(char)));
