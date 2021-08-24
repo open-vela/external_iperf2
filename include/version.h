@@ -1,5 +1,6 @@
-#define IPERF_VERSION "2.1.n-master"
-#define IPERF_VERSION_DATE "14 August 2021"
+#include "config.h"
+#define IPERF_VERSION VERSION
+#define IPERF_VERSION_DATE "22 August 2021"
 #define IPERF_VERSION_MAJORHEX 0x00020001
 #define IPERF_VERSION_MINORHEX 0x00040005
 
