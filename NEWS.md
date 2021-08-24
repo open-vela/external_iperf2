@@ -1,28 +1,49 @@
-Iperf 2 - network testing tool based from iperf 2.0.5
-See the end of the file for license conditions.
+**Iperf 2 - Network testing tool** *(based from 2.0.5)* 
 
-Here is a history of user visible changes to Iperf 2 since iperf 2.0.13
+This document is not done. RJM 8/24/2021  
+    
+Man page: https:://iperf2.sourceforge.io/iperf-manpage.html    
 
-* Iperf 2.1.4 has many user visible changes since 2.0.13
-The focus of 2.1.n has bee around latency. The below describes
-these changes.
+---
+Iperf 2, this program, is different from the iperf 3 found 
+at https://github.com/esnet/iperf 
 
-** configure '--enable-fast-sampling'
+Each can be used to 
+measure network performance, however, **iperf 2 and iperf 3 DO NOT interoperate.**   
+They are completely different implementations with different strengths, capabilities and 
+different options. Iperf 2 took its code base from the original iperf code (that stalled at 2.0.5.) 
+Iperf 3 is a rewrite from scratch.
+  
+Both Iperf 2 (now at 2.1.4) and iperf 3 are both under active development (as of mid-2021)  
+  
+Iperf 2 vs 3 table: https://iperf2.sourceforge.io/IperfCompare.html
+  
+***See the end of the file for license conditions***
+
+---
+Iperf 2.1.4 has many user visible changes since 2.0.13 and even more since
+2.0.5 The below describes many of these user visible changes with
+a focus on 2.1.4 compared to 2.0.13
+
+* **-e** or **--enhanced-reports** 
+
+
+* configure '**--enable-fast-sampling**'
 
   This configuration causes the iperf binary to support units
   of microseconds. It casues iperf to use four units of precision
   in it's timing interval output, i.e. 1e-4, as one example
 
-    iperf -c 192.168.1.64 -n 4 -C
-    ------------------------------------------------------------
-    Client connecting to 192.168.1.64, TCP port 5001
-    TCP window size: 85.0 KByte (default)
-    ------------------------------------------------------------
-    [  1] local 192.168.1.133 port 56568 connected with 192.168.1.64 port 5001
-    [ ID] Interval       Transfer     Bandwidth
-    [  1] 0.0000-0.0172 sec  4.00 Bytes  1.86 Kbits/sec
+>     iperf -c 192.168.1.64 -n 4 -C
+>     ------------------------------------------------------------
+>     Client connecting to 192.168.1.64, TCP port 5001
+>     TCP window size: 85.0 KByte (default)
+>     ------------------------------------------------------------
+>     [  1] local 192.168.1.133 port 56568 connected with 192.168.1.64 port 5001
+>     [ ID] Interval       Transfer     Bandwidth
+>     [  1] 0.0000-0.0172 sec  4.00 Bytes  1.86 Kbits/sec
 
-** '--trip-times' on the client
+* '**--trip-times**' on the client
 
   This option indicates to iperf a few things. First, that the user
   has syncrhonized the clients' and servers' clocks. A good way to do
@@ -36,24 +57,24 @@ these changes.
 
   Both UDP an TCP support '--trip-times'
 
-    iperf -c 192.168.1.64 --trip-times
-    ------------------------------------------------------------
-    Client connecting to 192.168.1.64, TCP port 5001
-    TCP window size: 85.0 KByte (default)
-    ------------------------------------------------------------
-    [  1] local 192.168.1.133 port 56580 connected with 192.168.1.64 port 5001 (trip-times)
-
-    iperf -s
-    ------------------------------------------------------------
-    Server listening on TCP port 5001
-    TCP window size:  128 KByte (default)
-    ------------------------------------------------------------
-    [  1] local 192.168.1.64%enp2s0 port 5001 connected with 192.168.1.133 port 56580 (MSS=1448) (trip-times) (sock=4) (peer 2.1.4) on 2021-08-22 11:12:08 (PDT)
+>     iperf -c 192.168.1.64 --trip-times
+>     ------------------------------------------------------------
+>     Client connecting to 192.168.1.64, TCP port 5001
+>     TCP window size: 85.0 KByte (default)
+>     ------------------------------------------------------------
+>     [  1] local 192.168.1.133 port 56580 connected with 192.168.1.64 port 5001 (trip-times)
+> 
+>     iperf -s
+>     ------------------------------------------------------------
+>     Server listening on TCP port 5001
+>     TCP window size:  128 KByte (default)
+>     ------------------------------------------------------------
+>     [  1] local 192.168.1.64%enp2s0 port 5001 connected with 192.168.1.133 port 56580 (MSS=1448) (trip-times) (sock=4) (peer 2.1.4) on 2021-08-22 11:12:08 (PDT)
 
 ---
-** Iperf 2 new metrics
+**Iperf 2 new metrics**
 
-  NetPwr
+*   **NetPwr**
 
     Network power: The network power (NetPwr) metric originates from Kleinrock and Jaffe circa 1980.
     It is a measure of a desirable property divided by an undesirable property.
@@ -64,7 +85,7 @@ these changes.
     Note, one must use -i interval with TCP to get this as that's what sets the RTT sampling rate.
     The metric is scaled to assist with human readability.
 
-  InP
+*   **InP**
 
     The InP metric is derived from Little's Law or Little's Lamma. LL in queuing theory is a
     theorem that determines the average number of items (L) in a stationary queuing system
