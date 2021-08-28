@@ -104,6 +104,7 @@ static int txnotsentlowwater = 0;
 static int tapif = 0;
 static int tunif = 0;
 static int hideips = 0;
+static int bounceback = 0;
 
 void Settings_Interpret(char option, const char *optarg, struct thread_Settings *mExtSettings);
 // apply compound settings after the command line has been fully parsed
@@ -147,6 +148,7 @@ const struct option long_options[] =
 // more esoteric options
 {"awdl",             no_argument, NULL, 'A'},
 {"bind",       required_argument, NULL, 'B'},
+{"bounce-back", optional_argument, &bounceback, 1},
 {"compatibility",    no_argument, NULL, 'C'},
 {"daemon",           no_argument, NULL, 'D'},
 {"file_input", required_argument, NULL, 'F'},
@@ -244,7 +246,7 @@ const struct option env_options[] =
 {"IPERF_TTL",        required_argument, NULL, 'T'},
 {"IPERF_SINGLE_UDP",       no_argument, NULL, 'U'},
 {"IPERF_SUGGEST_WIN_SIZE", required_argument, NULL, 'W'},
-{"IPERF_PEER_DETECT", required_argument, NULL, 'X'},
+{"IPERF_PEER_DETECT", no_argument, NULL, 'X'},
 {"IPERF_CONGESTION_CONTROL",  required_argument, NULL, 'Z'},
 {0, 0, 0, 0}
 };
@@ -1110,6 +1112,19 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		hideips = 0;
 		setHideIPs(mExtSettings);
 	    }
+	    if (bounceback) {
+		bounceback = 0;
+		setBounceBack(mExtSettings);
+		if (optarg) {
+		    mExtSettings->mBounceBack = byte_atoi(optarg);
+		} else {
+		    mExtSettings->mBounceBack = DEFAULT_BOUNCEBACK_BYTES;
+		}
+		if (mExtSettings->mBounceBack <= 0) {
+		    fprintf(stderr, "ERROR: --bounce-back size must be greater than zero\n");
+		    exit(1);
+		}
+	    }
 	    break;
         default: // ignore unknown
             break;
@@ -1458,6 +1473,9 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	}
         if (isTripTime(mExtSettings)) {
             fprintf(stderr, "WARN: setting of option --trip-times is not supported on the server\n");
+	}
+        if (isBounceBack(mExtSettings)) {
+            fprintf(stderr, "WARN: setting of option --bounce-back is not supported on the server\n");
 	}
         if (isWritePrefetch(mExtSettings)) {
             fprintf(stderr, "WARN: setting of option --tcp-write-prefetch is not supported on the server\n");
@@ -2178,7 +2196,7 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
 	if (isWritePrefetch(client) && (isReverse(client) || isFullDuplex(client))) {
 	    upperflags  |= HEADER_WRITEPREFETCH;
-		hdr->extend.TCPWritePrefetch = htonl((long)client->mWritePrefetch);
+	    hdr->extend.TCPWritePrefetch = htonl((long)client->mWritePrefetch);
 	}
 #endif
 	if (isIsochronous(client) || isPeriodicBurst(client)) {
