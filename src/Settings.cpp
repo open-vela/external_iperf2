@@ -1434,7 +1434,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		bail = true;
 	    }
 	}
-	if (isHistogram(mExtSettings) && !isWritePrefetch(mExtSettings)) {
+	if (!isReverse(mExtSettings) && !isFullDuplex(mExtSettings) && isHistogram(mExtSettings) && !isWritePrefetch(mExtSettings)) {
 	    fprintf(stderr, "WARN: option of --histograms on the client requires --tcp-write-prefetch\n");
 	}
 	if (isCongestionControl(mExtSettings) && isReverse(mExtSettings)) {
