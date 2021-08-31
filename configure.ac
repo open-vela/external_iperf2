@@ -94,7 +94,7 @@ AS_IF([test "x$enable_af_packet" = "xyes"], [
       AC_DEFINE([HAVE_AF_PACKET],[1],[AF_PACKET support is available]),
       [enable_af_packet="no"],
       [[#include <sys/socket.h>
-      #include <linux/if_packet.h>]]),
+      #include <linux/if_packet.h>]])
    AM_CONDITIONAL([AF_PACKET], [test "x${enable_af_packet}" = "xyes"])
 ])
 
