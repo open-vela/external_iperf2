@@ -290,8 +290,10 @@ int main(int argc, char **argv) {
 	into->runNow = ext_gSettings;
 	// Start all the threads that are ready to go
 	thread_start_all(into);
+	Condition_Lock(threads_start.await);
 	threads_start.ready = 1;
         Condition_Signal(&threads_start.await);
+	Condition_Unlock(threads_start.await);
     }
 #else
     // No need to make a reporter thread because we don't have threads
