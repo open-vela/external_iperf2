@@ -1506,7 +1506,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    fprintf(stderr, "WARN: option of --reverse is not supported on the server\n");
 	}
 	if (isIncrDstIP(mExtSettings)) {
-	    fprintf(stderr, "WARN: option of --incr-dstpip is not supported on the server\n");
+	    fprintf(stderr, "WARN: option of --incr-dstip is not supported on the server\n");
 	}
 	if (isFQPacing(mExtSettings)) {
 	    fprintf(stderr, "WARN: option of --fq-rate is not supported on the server\n");
