@@ -79,6 +79,7 @@ static int histogram = 0;
 static int l2checks = 0;
 static int incrdstip = 0;
 static int incrsrcip = 0;
+static int incrdstport = 0;
 static int sumdstip = 0;
 static int txstarttime = 0;
 static int noconnectsync = 0;
@@ -176,6 +177,7 @@ const struct option long_options[] =
 {"l2checks", no_argument, &l2checks, 1},
 {"incr-dstip", no_argument, &incrdstip, 1},
 {"incr-srcip", no_argument, &incrsrcip, 1},
+{"incr-dstport", no_argument, &incrdstport, 1},
 {"sum-dstip", no_argument, &sumdstip, 1},
 {"txstart-time", required_argument, &txstarttime, 1},
 {"txdelay-time", required_argument, &txholdback, 1},
@@ -871,6 +873,10 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    if (incrdstip) {
 		incrdstip = 0;
 		setIncrDstIP(mExtSettings);
+	    }
+	    if (incrdstport) {
+		incrdstport = 0;
+		setIncrDstPort(mExtSettings);
 	    }
 	    if (incrsrcip) {
 		incrsrcip = 0;
@@ -1684,8 +1690,19 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    fprintf(stderr, "WARNING: Client src addr (per -B) must be ip unicast\n");
 	}
     }
-    // Parse client (-c) addresses for multicast, link-local and bind to device
+    // Parse client (-c) addresses for multicast, link-local and bind to device, port incr
     if (mExtSettings->mThreadMode == kMode_Client) {
+	if (mExtSettings->mPortLast) {
+	    int prcnt = ((mExtSettings->mPortLast - mExtSettings->mPort) + 1);
+	    int threads_needed = (prcnt > mExtSettings->mThreads) ? prcnt : mExtSettings->mThreads;
+	    if (mExtSettings->mThreads < prcnt) {
+		fprintf(stderr, "WARNING: port-range and -P mismatch (adjusting -P to %d)\n", threads_needed);
+		mExtSettings->mThreads = threads_needed;
+	    } else if ((mExtSettings->mThreads > 1) && (threads_needed > prcnt)) {
+		fprintf(stderr, "WARNING: port-range and -P mismatch (adjusting port-range to %d-%d)\n", \
+			mExtSettings->mPort, mExtSettings->mPort + threads_needed);
+	    }
+	}
 	mExtSettings->mIfrnametx = NULL; // default off SO_BINDTODEVICE
 	if (((results = strtok(mExtSettings->mHost, "%")) != NULL) && ((results = strtok(NULL, "%")) != NULL)) {
 	    mExtSettings->mIfrnametx = static_cast<char *>(calloc(strlen(results) + 1, sizeof(char)));
