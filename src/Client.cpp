@@ -1275,7 +1275,7 @@ inline void Client::WriteTcpTxHdr (struct ReportStruct *reportstruct, int burst_
 //    printf("**** Write tcp burst header size= %d id = %d\n", burst_size, burst_id);
 }
 
-inline bool Client::InProgress () {
+inline bool Client::InProgress (void) {
     // Read the next data block from
     // the file if it's file input
     if (isFileInput(mSettings)) {
@@ -1285,6 +1285,21 @@ inline bool Client::InProgress () {
     return !(sInterupted || peerclose || \
 	(isModeTime(mSettings) && mEndTime.before(reportstruct->packetTime))  ||
 	(isModeAmount(mSettings) && (mSettings->mAmount <= 0)));
+}
+
+inline void Client::tcp_shutdown (void) {
+    if ((mySocket != INVALID_SOCKET) && isConnected()) {
+#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+	// gettcpistats(myReport, true, NULL);
+#endif
+	int rc = shutdown(mySocket, SHUT_WR);
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug("Client calls shutdown() SHUTW_WR on tcp socket %d", mySocket);
+#endif
+	WARN_errno(rc == SOCKET_ERROR, "shutdown");
+	if (!rc && !isFullDuplex(mSettings))
+	    AwaitServerCloseEvent();
+    }
 }
 
 /*
@@ -1303,18 +1318,7 @@ void Client::FinishTrafficActions () {
     disarm_itimer();
     // Shutdown the TCP socket's writes as the event for the server to end its traffic loop
     if (!isUDP(mSettings)) {
-	if ((mySocket != INVALID_SOCKET) && isConnected()) {
-#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-	  // gettcpistats(myReport, true, NULL);
-#endif
-	    int rc = shutdown(mySocket, SHUT_WR);
-#ifdef HAVE_THREAD_DEBUG
-	    thread_debug("Client calls shutdown() SHUTW_WR on tcp socket %d", mySocket);
-#endif
-	    WARN_errno(rc == SOCKET_ERROR, "shutdown");
-	    if (!rc && !isFullDuplex(mSettings))
-		AwaitServerCloseEvent();
-	}
+	tcp_shutdown();
 	now.setnow();
 	reportstruct->packetTime.tv_sec = now.getSecs();
 	reportstruct->packetTime.tv_usec = now.getUsecs();
@@ -1465,10 +1469,13 @@ void Client::AwaitServerCloseEvent () {
     while ((rc = recv(mySocket, mSettings->mBuf, mSettings->mBufLen, 0) > 0)) {};
     if (rc < 0)
 	WARN_errno(1, "client await server close");
+
+    if (rc==0) {
+	connected = false;
 #ifdef HAVE_THREAD_DEBUG
-    if (rc==0)
 	thread_debug("Client detected server close %d", mySocket);
 #endif
+    }
 }
 
 int Client::SendFirstPayload () {
