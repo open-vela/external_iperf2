@@ -719,6 +719,12 @@ Network Time Protocol (NTP) or Precision Time Protocol (PTP) are commonly used f
 this. The reference clock(s) error and the synchronization protocols will affect
 the accuracy of any end to end latency measurements.
 .P
+.B Histograms and non-parametric statisitics:
+The --histograms option provides the raw data where nothing is averaged. This is useful for non-parametric
+distribtions, e.g. latency. The standard output does use the central limit theorem to produce average,
+mininimum, maximum and variation. This loses information when the underlining distribution is not gaussian.
+Histograms are supported so this information is made available.
+.P
 .B
 Binding
 is done at the logical level (ip address or layer 3) using the -B option
