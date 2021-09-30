@@ -96,6 +96,7 @@ private:
     bool InProgress(void);
     void PostNullEvent(void);
     void AwaitServerCloseEvent(void);
+    inline void tcp_shutdown(void);
     bool connected;
     ReportStruct scratchpad;
     ReportStruct *reportstruct;

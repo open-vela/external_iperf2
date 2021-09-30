@@ -356,7 +356,7 @@ void client_init(struct thread_Settings *clients) {
     // For each of the needed threads create a copy of the
     // provided settings, unsetting the report flag and add
     // to the list of threads to start
-    for (int i = 0; i < clients->mThreads; i++) {
+    for (int i = 1; i < clients->mThreads; i++) {
 	Settings_Copy(clients, &next, 1);
 	// printf("*****port/thread = %d/%d\n", next->mPort + i, i);
 	if (next) {
