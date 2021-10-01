@@ -97,6 +97,7 @@ private:
     void PostNullEvent(void);
     void AwaitServerCloseEvent(void);
     inline void tcp_shutdown(void);
+    inline void tcp_drain(void);
     bool connected;
     ReportStruct scratchpad;
     ReportStruct *reportstruct;

@@ -1287,6 +1287,23 @@ inline bool Client::InProgress (void) {
 	(isModeAmount(mSettings) && (mSettings->mAmount <= 0)));
 }
 
+inline void Client::tcp_drain (void) {
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+    int value;
+    int rc;
+    Socklen_t len = sizeof(value);
+    value = 0;
+    rc = setsockopt(mSettings->mSock, IPPROTO_TCP, TCP_NOTSENT_LOWAT,
+		    reinterpret_cast<char*>(&value), len);
+    WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_NOTSENT_LOWAT");
+    value = 1;
+    rc = setsockopt(mSettings->mSock, IPPROTO_TCP, TCP_NODELAY,
+		    reinterpret_cast<char*>(&value), len);
+    WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_NODELAY");
+    AwaitWriteSelectEventTCP();
+#endif
+}
+
 inline void Client::tcp_shutdown (void) {
     if ((mySocket != INVALID_SOCKET) && isConnected()) {
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
