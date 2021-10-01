@@ -246,7 +246,7 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
         }
 #endif
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
-        // set TCP clamp option
+        // set TCP not sent low watermark
         if (isWritePrefetch(inSettings)) {
             int bytecnt = inSettings->mWritePrefetch;
             Socklen_t len = sizeof(bytecnt);
