@@ -383,8 +383,14 @@ void Server::ClientReverseFirstRead (void) {
 	    default :
 		struct client_udp_testhdr *udp_pkt = reinterpret_cast<struct client_udp_testhdr *>(mSettings->mBuf);
 		flags = ntohl(udp_pkt->base.flags);
-		mSettings->sent_time.tv_sec = ntohl(udp_pkt->start_fq.start_tv_sec);
-		mSettings->sent_time.tv_usec = ntohl(udp_pkt->start_fq.start_tv_usec);
+		if (isTripTime(mSettings)) {
+		    mSettings->sent_time.tv_sec = ntohl(udp_pkt->start_fq.start_tv_sec);
+		    mSettings->sent_time.tv_usec = ntohl(udp_pkt->start_fq.start_tv_usec);
+		} else {
+		    now.setnow();
+		    mSettings->sent_time.tv_sec = now.getSecs();
+		    mSettings->sent_time.tv_usec = now.getUsecs();
+		}
 		reportstruct->packetLen = nread;
 		reportstruct->packetID = 1;
 		break;
@@ -410,9 +416,15 @@ void Server::ClientReverseFirstRead (void) {
 		}
 		FAIL_errno((nread < adj), "client read tcp test info", mSettings);
 		if (nread > 0) {
-		    struct client_tcp_testhdr *tcp_pkt = reinterpret_cast<struct client_tcp_testhdr *>(mSettings->mBuf);
-		    mSettings->sent_time.tv_sec = ntohl(tcp_pkt->start_fq.start_tv_sec);
-		    mSettings->sent_time.tv_usec = ntohl(tcp_pkt->start_fq.start_tv_usec);
+		    if (isTripTime(mSettings)) {
+			struct client_tcp_testhdr *tcp_pkt = reinterpret_cast<struct client_tcp_testhdr *>(mSettings->mBuf);
+			mSettings->sent_time.tv_sec = ntohl(tcp_pkt->start_fq.start_tv_sec);
+			mSettings->sent_time.tv_usec = ntohl(tcp_pkt->start_fq.start_tv_usec);
+		    } else {
+			now.setnow();
+			mSettings->sent_time.tv_sec = now.getSecs();
+			mSettings->sent_time.tv_sec = now.getUsecs();
+		    }
 		}
 		mSettings->firstreadbytes = readlen;
 	    }
