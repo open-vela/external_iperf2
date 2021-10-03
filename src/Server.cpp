@@ -494,16 +494,16 @@ bool Server::InitTrafficLoop (void) {
 	PostReport(myJob);
     // The first payload is different for TCP so read it and report it
     // before entering the main loop
-
     if (mSettings->firstreadbytes > 0) {
-	// printf("**** burst size = %d id = %d\n", burst_info.burst_size, burst_info.burst_id);
 	reportstruct->frameID = 0;
-	reportstruct->sentTime.tv_sec = myReport->info.ts.startTime.tv_sec;
-	reportstruct->sentTime.tv_usec = myReport->info.ts.startTime.tv_usec;
-	reportstruct->packetTime = reportstruct->sentTime;
 	reportstruct->packetLen = mSettings->firstreadbytes;
 	if (isUDP(mSettings)) {
 	    ReadPacketID();
+	    reportstruct->packetTime = mSettings->accept_time;
+	} else {
+	    reportstruct->sentTime.tv_sec = myReport->info.ts.startTime.tv_sec;
+	    reportstruct->sentTime.tv_usec = myReport->info.ts.startTime.tv_usec;
+	    reportstruct->packetTime = reportstruct->sentTime;
 	}
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 	ReportPacket(myReport, reportstruct, NULL);
