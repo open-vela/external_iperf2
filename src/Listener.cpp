@@ -896,7 +896,11 @@ int Listener::udp_accept (thread_Settings *server) {
     // The INVALID socket is used to keep the while loop going
     server->mSock = INVALID_SOCKET;
     nread = recvfrom(ListenSocket, server->mBuf, server->mBufLen, 0, \
-		  reinterpret_cast<struct sockaddr*>(&server->peer), &server->size_peer);
+		     reinterpret_cast<struct sockaddr*>(&server->peer), &server->size_peer);
+    Timestamp now;
+    server->accept_time.tv_sec = now.getSecs();
+    server->accept_time.tv_usec = now.getUsecs();
+
 #if HAVE_THREAD_DEBUG
     {
 	char tmpaddr[200];
@@ -997,16 +1001,14 @@ int Listener::my_accept (thread_Settings *server) {
 	// accept a TCP  connection
 	server->mSock = accept(ListenSocket, reinterpret_cast<sockaddr*>(&server->peer), &server->size_peer);
 	if (server->mSock > 0) {
+	    Timestamp now;
+	    server->accept_time.tv_sec = now.getSecs();
+	    server->accept_time.tv_usec = now.getUsecs();
 	    server->size_local = sizeof(iperf_sockaddr);
 	    getsockname(server->mSock, reinterpret_cast<sockaddr*>(&server->local), &server->size_local);
 	    SockAddr_Ifrname(server);
 	    Iperf_push_host(server);
 	}
-    }
-    if (server->mSock > 0) {
-	Timestamp now;
-	server->accept_time.tv_sec = now.getSecs();
-	server->accept_time.tv_usec = now.getUsecs();
     }
     return server->mSock;
 } // end my_accept
