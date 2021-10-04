@@ -254,6 +254,19 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
                                  reinterpret_cast<char*>(&bytecnt), len);
             WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_NOTSENT_LOWAT");
         }
+	if (isTcpDrain(inSettings)) {
+	    int value;
+	    int rc;
+	    Socklen_t len = sizeof(value);
+	    value = 0;
+	    rc = setsockopt(inSettings->mSock, IPPROTO_TCP, TCP_NOTSENT_LOWAT,
+			    reinterpret_cast<char*>(&value), len);
+	    WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_NOTSENT_LOWAT");
+	    value = 1;
+	    rc = setsockopt(inSettings->mSock, IPPROTO_TCP, TCP_NODELAY,
+			    reinterpret_cast<char*>(&value), len);
+	    WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_NODELAY");
+	}
 #endif
     }
 

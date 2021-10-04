@@ -1298,18 +1298,7 @@ inline bool Client::InProgress (void) {
 
 inline double Client::tcp_drain (void) {
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
-    int value;
-    int rc;
     Timestamp drain_start;
-    Socklen_t len = sizeof(value);
-    value = 0;
-    rc = setsockopt(mSettings->mSock, IPPROTO_TCP, TCP_NOTSENT_LOWAT,
-		    reinterpret_cast<char*>(&value), len);
-    WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_NOTSENT_LOWAT");
-    value = 1;
-    rc = setsockopt(mSettings->mSock, IPPROTO_TCP, TCP_NODELAY,
-		    reinterpret_cast<char*>(&value), len);
-    WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_NODELAY");
     AwaitWriteSelectEventTCP();
     Timestamp drain_end;
     return (drain_end.subSec(drain_start));
