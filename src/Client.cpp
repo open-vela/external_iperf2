@@ -643,6 +643,10 @@ void Client::RunTCP () {
 		    reportstruct->transit_ready = 0;
 		} else {
 		    reportstruct->transit_ready = 1;
+		    if (isTcpDrain(mSettings)) {
+			reportstruct->drain_time = tcp_drain();
+			printf("*****drain time = %f\n", reportstruct->drain_time);
+		    }
 		}
 	    }
 	}
@@ -722,6 +726,10 @@ void Client::RunNearCongestionTCP () {
 	    burst_remaining -= reportstruct->packetLen;
 	    if (burst_remaining <= 0) {
 		reportstruct->transit_ready = 1;
+		if (isTcpDrain(mSettings)) {
+		    reportstruct->drain_time = tcp_drain();
+		    printf("*****drain time = %f\n", reportstruct->drain_time);
+		}
 	    }
 	}
 	if (isModeAmount(mSettings) && !reportstruct->emptyreport) {
@@ -737,6 +745,10 @@ void Client::RunNearCongestionTCP () {
 	if (reportstruct->transit_ready && myReportPacket(true)) {
 	    int pacing_timer = static_cast<int>(std::ceil(static_cast<double>(my_tcpi_stats.tcpi_rtt) * mSettings->rtt_nearcongest_divider));
 //		printf("**** delaytime = %d\n", delaytime);
+	    if (isTcpDrain(mSettings)) {
+		reportstruct->drain_time = tcp_drain();
+		printf("*****drain time = %f\n", reportstruct->drain_time);
+	    }
 	    delay_loop(pacing_timer);
 	} else
 #endif
@@ -1287,10 +1299,11 @@ inline bool Client::InProgress (void) {
 	(isModeAmount(mSettings) && (mSettings->mAmount <= 0)));
 }
 
-inline void Client::tcp_drain (void) {
+inline double Client::tcp_drain (void) {
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
     int value;
     int rc;
+    Timestamp drain_start;
     Socklen_t len = sizeof(value);
     value = 0;
     rc = setsockopt(mSettings->mSock, IPPROTO_TCP, TCP_NOTSENT_LOWAT,
@@ -1301,6 +1314,8 @@ inline void Client::tcp_drain (void) {
 		    reinterpret_cast<char*>(&value), len);
     WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_NODELAY");
     AwaitWriteSelectEventTCP();
+    Timestamp drain_end;
+    return (drain_end.subSec(drain_start));
 #endif
 }
 

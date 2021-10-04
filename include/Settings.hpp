@@ -380,6 +380,7 @@ struct thread_Settings {
 #define FLAG_TAPDEV         0x00000040
 #define FLAG_HIDEIPS        0x00000080
 #define FLAG_BOUNCEBACK     0x00000100
+#define FLAG_TCPDRAIN       0x00000200
 
 #define isBuflenSet(settings)      ((settings->flags & FLAG_BUFLENSET) != 0)
 #define isCompat(settings)         ((settings->flags & FLAG_COMPAT) != 0)
@@ -449,6 +450,7 @@ struct thread_Settings {
 #define isTunDev(settings)         ((settings->flags_extend2 & FLAG_TUNDEV) != 0)
 #define isHideIPs(settings)        ((settings->flags_extend2 & FLAG_HIDEIPS) != 0)
 #define isBounceBack(settings)     ((settings->flags_extend2 & FLAG_BOUNCEBACK) != 0)
+#define isTcpDrain(settings)       ((settings->flags_extend2 & FLAG_TCPDRAIN) != 0)
 
 #define setBuflenSet(settings)     settings->flags |= FLAG_BUFLENSET
 #define setCompat(settings)        settings->flags |= FLAG_COMPAT
@@ -515,6 +517,7 @@ struct thread_Settings {
 #define setTunDev(settings)        settings->flags_extend2 |= FLAG_TUNDEV
 #define setHideIPs(settings)       settings->flags_extend2 |= FLAG_HIDEIPS
 #define setBounceBack(settings)    settings->flags_extend2 |= FLAG_BOUNCEBACK
+#define setTcpDrain(settings)      settings->flags_extend2 |= FLAG_TCPDRAIN
 
 #define unsetBuflenSet(settings)   settings->flags &= ~FLAG_BUFLENSET
 #define unsetCompat(settings)      settings->flags &= ~FLAG_COMPAT
@@ -580,6 +583,7 @@ struct thread_Settings {
 #define unsetTunDev(settings)        settings->flags_extend2 &= ~FLAG_TUNDEV
 #define unsetHideIPs(settings)       settings->flags_extend2 &= ~FLAG_HIDEIPS
 #define unsetBounceBack(settings)    settings->flags_extend2 &= ~FLAG_BOUNCEBACK
+#define unsetTcpDrain(settings)      settings->flags_extend2 &= ~FLAG_TCPDRAIN
 
 // set to defaults
 void Settings_Initialize(struct thread_Settings* main);
