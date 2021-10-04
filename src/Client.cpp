@@ -645,7 +645,6 @@ void Client::RunTCP () {
 		    reportstruct->transit_ready = 1;
 		    if (isTcpDrain(mSettings)) {
 			reportstruct->drain_time = tcp_drain();
-			printf("*****drain time = %f\n", reportstruct->drain_time);
 		    }
 		}
 	    }
@@ -728,7 +727,6 @@ void Client::RunNearCongestionTCP () {
 		reportstruct->transit_ready = 1;
 		if (isTcpDrain(mSettings)) {
 		    reportstruct->drain_time = tcp_drain();
-		    printf("*****drain time = %f\n", reportstruct->drain_time);
 		}
 	    }
 	}
@@ -747,7 +745,6 @@ void Client::RunNearCongestionTCP () {
 //		printf("**** delaytime = %d\n", delaytime);
 	    if (isTcpDrain(mSettings)) {
 		reportstruct->drain_time = tcp_drain();
-		printf("*****drain time = %f\n", reportstruct->drain_time);
 	    }
 	    delay_loop(pacing_timer);
 	} else
