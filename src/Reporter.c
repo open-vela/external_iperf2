@@ -946,6 +946,10 @@ void reporter_handle_packet_client (struct ReporterData *data, struct ReportStru
 	if (stats->latency_histogram && (packet->select_delay > 0.0)) {
 	   histogram_insert(stats->latency_histogram, packet->select_delay, &packet->packetTime);
        }
+       if (stats->drain_histogram && (packet->drain_time > 0.0)) {
+//	   fprintf(stderr,"**** drain time = %f\n", packet->drain_time);
+	   histogram_insert(stats->drain_histogram, packet->drain_time, &packet->packetTime);
+       }
 #endif
     }
     if (isUDP(stats->common)) {
@@ -1397,6 +1401,9 @@ void reporter_transfer_protocol_client_tcp (struct ReporterData *data, int final
     if (stats->latency_histogram) {
         stats->latency_histogram->final = 0;
     }
+    if (stats->drain_histogram) {
+        stats->drain_histogram->final = 0;
+    }
 #endif
     if (isIsochronous(stats->common)) {
 	if (final) {
@@ -1428,6 +1435,9 @@ void reporter_transfer_protocol_client_tcp (struct ReporterData *data, int final
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
 	if (stats->latency_histogram) {
 	    stats->latency_histogram->final = 1;
+	}
+	if (stats->drain_histogram) {
+	    stats->drain_histogram->final = 1;
 	}
 #endif
 	if ((stats->cntBytes > 0) && stats->output_handler && !TimeZero(stats->ts.intervalTime)) {

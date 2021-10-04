@@ -369,6 +369,9 @@ struct TransferInfo {
     char csv_peer[CSVPEERLIMIT];
     bool final;
     bool burstid_transition;
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+    struct histogram *drain_histogram;
+#endif
 };
 
 struct SumReport {
