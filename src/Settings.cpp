@@ -106,6 +106,7 @@ static int tapif = 0;
 static int tunif = 0;
 static int hideips = 0;
 static int bounceback = 0;
+static int tcpdrain;
 
 void Settings_Interpret(char option, const char *optarg, struct thread_Settings *mExtSettings);
 // apply compound settings after the command line has been fully parsed
@@ -197,6 +198,7 @@ const struct option long_options[] =
 {"permit-key-timeout", required_argument, &permitkeytimeout, 1},
 {"burst-size", optional_argument, &burstsize, 1},
 {"burst-period", optional_argument, &burstperiodic, 1},
+{"tcp-drain", no_argument, &tcpdrain, 1},
 {"tcp-rx-window-clamp", required_argument, &rxwinclamp, 1},
 {"tcp-write-prefetch", required_argument, &txnotsentlowwater, 1}, // see doc/DESIGN_NOTES
 {"tap-dev", optional_argument, &tapif, 1},
@@ -1052,6 +1054,14 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		setRxClamp(mExtSettings);
 #else
 		fprintf(stderr, "--tcp-rx-window-clamp not supported on this platform\n");
+#endif
+	    }
+	    if (tcpdrain) {
+		tcpdrain = 0;
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+		setTcpDrain(mExtSettings);
+#else
+		fprintf(stderr, "--tcp-drain not supported on this platform\n");
 #endif
 	    }
 	    if (txnotsentlowwater) {
