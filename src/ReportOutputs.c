@@ -386,6 +386,9 @@ void tcp_output_write_enhanced (struct TransferInfo *stats) {
     if (stats->latency_histogram) {
 	histogram_print(stats->latency_histogram, stats->ts.iStart, stats->ts.iEnd);
     }
+    if (stats->drain_histogram) {
+	histogram_print(stats->drain_histogram, stats->ts.iStart, stats->ts.iEnd);
+    }
 #endif
     fflush(stdout);
 }
