@@ -1301,7 +1301,11 @@ inline double Client::tcp_drain (void) {
     Timestamp drain_start;
     AwaitWriteSelectEventTCP();
     Timestamp drain_end;
-    return (drain_end.subSec(drain_start));
+    double drain_time = drain_end.subSec(drain_start);
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Drain time  = %f", drain_time);
+#endif    
+    return (drain_time);
 #endif
 }
 
