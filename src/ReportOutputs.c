@@ -1102,7 +1102,11 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
     if ((isEnhanced(report->common) || isNearCongest(report->common)) && !isUDP(report->common)) {
 	byte_snprintf(outbuffer, sizeof(outbuffer), report->common->BufLen, 'B');
 	outbuffer[(sizeof(outbuffer)-1)] = '\0';
-	printf("%s: %s\n", client_write_size, outbuffer);
+	if (isTcpDrain(report->common)) {
+	    printf("%s: %s (drain-enabled)\n", client_write_size, outbuffer);
+	} else {
+	    printf("%s: %s\n", client_write_size, outbuffer);
+	}
     }
     if (isIsochronous(report->common)) {
 	char meanbuf[40];
