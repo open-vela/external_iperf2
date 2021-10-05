@@ -1383,9 +1383,14 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		bail = true;
 	    }
 	    if (isWritePrefetch(mExtSettings)) {
-		fprintf(stderr, "WARN: setting of option --tcp-write-prefetch is not with -u UDP\n");
+		fprintf(stderr, "WARN: setting of option --tcp-write-prefetch is not supported with -u UDP\n");
 		unsetWritePrefetch(mExtSettings);
 	    }
+	    if (isTcpDrain(mExtSettings)) {
+		fprintf(stderr, "WARN: setting of option --tcp-drain is not supported with -u UDP\n");
+		unsetTcpDrain(mExtSettings);
+	    }
+
 	    {
 		double delay_target;
 		if (isIPG(mExtSettings)) {
@@ -1496,6 +1501,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
         if (isWritePrefetch(mExtSettings)) {
             fprintf(stderr, "WARN: setting of option --tcp-write-prefetch is not supported on the server\n");
 	    unsetWritePrefetch(mExtSettings);
+	}
+        if (isTcpDrain(mExtSettings)) {
+            fprintf(stderr, "WARN: setting of option --tcp-drain is not supported on the server\n");
+	    unsetTcpDrain(mExtSettings);
 	}
         if (isIncrSrcIP(mExtSettings)) {
             fprintf(stderr, "WARN: setting of option --incr-srcip is not supported on the server\n");

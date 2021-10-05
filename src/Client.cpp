@@ -111,7 +111,7 @@ Client::Client (thread_Settings *inSettings) {
 	FAIL_errno(!(mSettings->mFPS > 0.0), "Invalid value for frames per second in the isochronous settings\n", mSettings);
     }
     peerclose = false;
-    isburst = (isIsochronous(mSettings) || isPeriodicBurst(mSettings) || (isTripTime(mSettings) && !isUDP(mSettings)));
+    isburst = (isIsochronous(mSettings) || isPeriodicBurst(mSettings) || ((isTripTime(mSettings) || isTcpDrain(mSettings)) && !isUDP(mSettings)));
 } // end Client
 
 /* -------------------------------------------------------------------
