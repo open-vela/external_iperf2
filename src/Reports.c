@@ -959,7 +959,7 @@ void write_UDP_AckFIN (struct TransferInfo *stats, int len) {
 		break;
 	    }
 	    rc = read(stats->common->socket, ackPacket, readlen);
-	    WARN_errno(rc < 0, "ack await silence");
+	    // WARN_errno(rc < 0, "ack await silence");
 	    if ((rc < 0) && FATALUDPREADERR(errno)) {
 		break;
 	    }
