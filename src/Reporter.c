@@ -1102,7 +1102,7 @@ void reporter_transfer_protocol_server_udp (struct ReporterData *data, int final
     stats->cntDatagrams = stats->PacketID - stats->total.Datagrams.prev;
     stats->cntIPG = stats->total.IPG.current - stats->total.IPG.prev;
     if (stats->latency_histogram) {
-        stats->latency_histogram->final = 1;
+        stats->latency_histogram->final = final;
     }
 
     if (isIsochronous(stats->common)) {
@@ -1110,7 +1110,7 @@ void reporter_transfer_protocol_server_udp (struct ReporterData *data, int final
 	stats->isochstats.cntFramesMissed = stats->isochstats.framelostcnt.current - stats->isochstats.framelostcnt.prev;
 	stats->isochstats.cntSlips = stats->isochstats.slipcnt.current - stats->isochstats.slipcnt.prev;
 	if (stats->framelatency_histogram) {
-	    stats->framelatency_histogram->final = 1;
+	    stats->framelatency_histogram->final = final;
 	}
 
     }
@@ -1323,7 +1323,7 @@ void reporter_transfer_protocol_server_tcp (struct ReporterData *data, int final
     stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
     int ix;
     if (stats->framelatency_histogram) {
-        stats->framelatency_histogram->final = 0;
+        stats->framelatency_histogram->final = final;
     }
     if (sumstats) {
 	sumstats->threadcnt++;
@@ -1399,10 +1399,10 @@ void reporter_transfer_protocol_client_tcp (struct ReporterData *data, int final
     stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
     if (stats->latency_histogram) {
-        stats->latency_histogram->final = 0;
+        stats->latency_histogram->final = final;
     }
     if (stats->drain_histogram) {
-        stats->drain_histogram->final = 0;
+        stats->drain_histogram->final = final;
     }
 #endif
     if (isIsochronous(stats->common)) {
