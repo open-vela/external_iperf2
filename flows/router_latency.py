@@ -102,11 +102,11 @@ if args.test_name == 'lat1' :
 
 ssh_node.open_consoles(silent_mode=True)
 
-flows = iperf_flow.get_instances()
+traffic_flows = iperf_flow.get_instances()
 try:
-    if flows:    
+    if traffic_flows:
         for runid in range(args.runcount) :
-            for traffic_flow in iperf_flow.get_instances():
+            for traffic_flow in traffic_flows:
                 print("Running ({}/{}) {} traffic client={} server={} dest={} with load {} for {} seconds".format(str(runid+1), str(args.runcount), traffic_flow.proto, traffic_flow.client, traffic_flow.server, traffic_flow.dstip, traffic_flow.offered_load, args.time))
             gc.disable()
             iperf_flow.run(time=args.time, flows='all')
@@ -116,10 +116,10 @@ try:
             except:
                 pass
     else:
-        print("No Flows instantiated per test {}".format(args.test_name))
-    
+        print("No traffic Flows instantiated per test {}".format(args.test_name))
+
 finally :
     ssh_node.close_consoles()
-    if flows:    
+    if flows:
         iperf_flow.close_loop()
     logging.shutdown()
