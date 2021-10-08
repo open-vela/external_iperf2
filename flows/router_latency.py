@@ -120,6 +120,6 @@ try:
 
 finally :
     ssh_node.close_consoles()
-    if flows:
+    if traffic_flows:
         iperf_flow.close_loop()
     logging.shutdown()
