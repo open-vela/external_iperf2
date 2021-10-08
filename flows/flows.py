@@ -283,13 +283,13 @@ class iperf_flow(object):
         }
         return switcher.get(txt.upper(), None)
 
-    def __init__(self, name='iperf', server='localhost', client = 'localhost', user = None, proto = 'TCP', dstip = '127.0.0.1', interval = 0.5, flowtime=10, offered_load = None, tos='BE', window='4M', src=None, srcip = None, srcport = None, dstport = None,  debug = False, length = None, latency=False, ipg=0.005, amount=None, triptimes=False, prefetch=None):
+    def __init__(self, name='iperf', server='localhost', client = 'localhost', user = None, proto = 'TCP', dstip = '127.0.0.1', interval = 1, offered_load = '10M', tos='BE', window='4M', src=None, srcip = None, srcport = None, dstport = None,  debug = False, length = None, ipg=0.005, amount=None, trip_times=True, prefetch=None, histograms=False):
         iperf_flow.instances.add(self)
         if not iperf_flow.loop :
             iperf_flow.set_loop()
         self.loop = iperf_flow.loop
         self.name = name
-        self.latency = latency
+        self.histograms = histograms
         if not dstport :
             iperf_flow.port += 1
             self.dstport = iperf_flow.port
@@ -306,6 +306,8 @@ class iperf_flow(object):
             self.client = client.ipaddr
         except AttributeError:
             self.client = client
+        self.client_device = client.device
+        self.server_device = server.device
 
         if not user :
             self.user = getpass.getuser()
@@ -318,8 +320,8 @@ class iperf_flow(object):
 
         if amount :
             self.amount = amount
-        if triptimes :
-            self.triptimes = triptimes
+        if trip_times :
+            self.trip_times = trip_times
         self.interval = round(interval,3)
         self.offered_load = offered_load
         if self.offered_load :
@@ -332,7 +334,6 @@ class iperf_flow(object):
         self.ipg = ipg
         self.debug = debug
         self.TRAFFIC_EVENT_TIMEOUT = round(self.interval * 4, 3)
-        self.flowtime = flowtime
         # use python composition for the server and client
         # i.e. a flow has a server and a client
         self.rx = iperf_server(name='{}->RX({})'.format(name, str(self.server)), loop=self.loop, host=self.server, flow=self, debug=self.debug)
@@ -619,8 +620,8 @@ class iperf_server(object):
             self.sshcmd.extend(['-i ', str(self.interval)])
         if self.proto == 'UDP' :
             self.sshcmd.extend(['-u'])
-        if self.prefetch :
-            self.sshcmd.extend(['--histograms=1m,100000'])
+        if self.histograms :
+            self.sshcmd.extend(['--histograms=100u,100000'])
 
         logging.info('{}'.format(str(self.sshcmd)))
         self._transport, self._protocol = await self.loop.subprocess_exec(lambda: self.IperfServerProtocol(self, self.flow), *self.sshcmd)
@@ -824,7 +825,7 @@ class iperf_client(object):
 
         # Client connecting to 192.168.100.33, TCP port 61009 with pid 1903
         self.regex_open_pid = re.compile(r'Client connecting to .*, {} port {} with pid (?P<pid>\d+)'.format(self.proto, str(self.dstport)))
-        self.sshcmd=[self.ssh, self.user + '@' + self.host, self.iperf, '-c', self.dstip, '-p ' + str(self.dstport), '-e', '-X', '-fb', '-S ', iperf_flow.txt_to_tos(self.tos), '-w' , self.window ,'--realtime']
+        self.sshcmd=[self.ssh, self.user + '@' + self.host, self.iperf, '-c', self.dstip + '%' + self.client_device, '-p ' + str(self.dstport), '-e', '-fb', '-S ', iperf_flow.txt_to_tos(self.tos), '-w' , self.window ,'--realtime']
         if self.length :
             self.sshcmd.extend(['-l ', str(self.length)])
         if time:
@@ -834,7 +835,7 @@ class iperf_client(object):
             self.sshcmd.extend(['-n ',  amount])
         if parallel :
             self.sshcmd.extend(['-P', str(parallel)])
-        if self.triptimes :
+        if self.trip_times :
             self.sshcmd.extend(['--trip-times'])
         if self.prefetch :
             self.sshcmd.extend(['--tcp-write-prefetch', self.prefetch])
