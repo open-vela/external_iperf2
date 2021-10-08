@@ -245,8 +245,7 @@ void redirect(const char *inOutputFileName);
 // Define fatal and nonfatal write errors
 #ifdef WIN32
 #define FATALTCPREADERR(errno) (WSAGetLastError() != WSAEWOULDBLOCK)
-#define FATALUDPREADERR(errno)  (((errno = WSAGetLastError()) != WSAEWOULDBLOCK) \
-				 && (errno != WSAECONNREFUSED))
+#define FATALUDPREADERR(errno)  (((errno = WSAGetLastError()) != WSAEWOULDBLOCK))
 #define FATALTCPWRITERR(errno)  ((errno = WSAGetLastError()) != WSAETIMEDOUT)
 #define NONFATALTCPWRITERR(errno) ((errno = WSAGetLastError()) == WSAETIMEDOUT)
 #define FATALUDPWRITERR(errno)  (((errno = WSAGetLastError()) != WSAETIMEDOUT) \
@@ -254,7 +253,7 @@ void redirect(const char *inOutputFileName);
 #else
 #define FATALTCPREADERR(errno) ((errno != EAGAIN) && (errno != EWOULDBLOCK) && (errno != EINTR))
 #define FATALUDPREADERR(errno) ((errno != EAGAIN) && (errno != EWOULDBLOCK) && \
-				(errno != EINTR) && (errno != ECONNREFUSED))
+				(errno != EINTR))
 #define FATALTCPWRITERR(errno)  (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)
 #define NONFATALTCPWRITERR(errno)  (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
 #define FATALUDPWRITERR(errno) 	((errno != EAGAIN) && (errno != EWOULDBLOCK) && (errno != EINTR) \
