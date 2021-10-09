@@ -80,6 +80,7 @@ static int l2checks = 0;
 static int incrdstip = 0;
 static int incrsrcip = 0;
 static int incrdstport = 0;
+static int incrsrcport = 0;
 static int sumdstip = 0;
 static int txstarttime = 0;
 static int noconnectsync = 0;
@@ -179,6 +180,7 @@ const struct option long_options[] =
 {"incr-dstip", no_argument, &incrdstip, 1},
 {"incr-srcip", no_argument, &incrsrcip, 1},
 {"incr-dstport", no_argument, &incrdstport, 1},
+{"incr-srcport", no_argument, &incrsrcport, 1},
 {"sum-dstip", no_argument, &sumdstip, 1},
 {"txstart-time", required_argument, &txstarttime, 1},
 {"txdelay-time", required_argument, &txholdback, 1},
@@ -884,6 +886,10 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		incrsrcip = 0;
 		setIncrSrcIP(mExtSettings);
 	    }
+	    if (incrsrcport) {
+		incrsrcport = 0;
+		setIncrSrcPort(mExtSettings);
+	    }
 	    if (sumdstip) {
 		sumdstip = 0;
 		setSumServerDstIP(mExtSettings);
@@ -1298,6 +1304,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    fprintf(stderr, "WARN: option of --tcp-rx-window-clamp not supported on the client\n");
 	    unsetRxClamp(mExtSettings);
 	}
+	if (isIncrSrcPort(mExtSettings) && !mExtSettings->mBindPort) {
+	    fprintf(stderr, "WARN: option of --incr-srcport requires -B bind option w/port to be set\n");
+	    unsetIncrSrcPort(mExtSettings);
+	}
 	if (isPeriodicBurst(mExtSettings)) {
 	    setEnhanced(mExtSettings);
 	    setFrameInterval(mExtSettings);
@@ -1711,7 +1721,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
     }
     // Parse client (-c) addresses for multicast, link-local and bind to device, port incr
     if (mExtSettings->mThreadMode == kMode_Client) {
-	if (mExtSettings->mPortLast) {
+	if (mExtSettings->mPortLast > mExtSettings->mPort) {
 	    int prcnt = ((mExtSettings->mPortLast - mExtSettings->mPort) + 1);
 	    int threads_needed = (prcnt > mExtSettings->mThreads) ? prcnt : mExtSettings->mThreads;
 	    if (mExtSettings->mThreads < prcnt) {
