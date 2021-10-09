@@ -368,8 +368,11 @@ void client_init(struct thread_Settings *clients) {
 		// force a setHostname
 		SockAddr_zeroAddress(&next->peer);
 	    } else if (clients->mBindPort) {
-		// case -B with src port and -P > 1
-		next->incrsrcport = i;
+		// Increment the source port of none of the quintuple is being change or the user requests it
+		if ((!isIncrDstPort(clients) && !isIncrDstIP(clients) && !isIncrSrcIP(clients)) || isIncrSrcPort(clients)) {
+		    // case -B with src port and -P > 1
+		    next->incrsrcport = i;
+		}
 	    }
 	    if (isIncrDstPort(clients)) {
 		next->mPort += i;
