@@ -193,13 +193,16 @@ run a full duplex test, i.e. traffic in both transmit and receive directions usi
 enable select()/write() histograms with --tcp-write-prefetch. The binning can be modified. Bin widths (default 100 microseconds, append u for microseconds, m for milliseconds) bincount is total bins (default 10000), ci is confidence interval between 0-100% (default lower 5%, upper 95%, 3 stdev 99.7%)
 .TP
 .BR "    --incr-dstip"
-increment the destination ip address when using the parallel (-P) option
+increment the destination ip address when using the parallel (-P) or port range option
 .TP
 .BR "    --incr-dstport"
-increment the destination port when using the parallel (-P) option
+increment the destination port when using the parallel (-P) or port range option
 .TP
 .BR "    --incr-srcip"
-increment the source ip address when using the parallel (-P) option
+increment the source ip address when using the parallel (-P) or port range option
+.TP
+.BR "    --incr-srcport"
+increment the source ip address when using the parallel (-P) or port range option, requires -B to set the src port
 .TP
 .BR "    --ipg "\fIn\fR
 set the inter-packet gap to \fIn\fR (units of seconds) for packets or within a frame/burst when --isochronous is set
