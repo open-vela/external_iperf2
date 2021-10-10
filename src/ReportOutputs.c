@@ -1122,6 +1122,12 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
 	tmpbuf[39]='\0';
 	printf(client_burstperiod, (1.0 / report->common->FPS), tmpbuf);
     }
+    if (isBounceBack(report->common)) {
+	char tmpbuf[40];
+	byte_snprintf(tmpbuf, sizeof(tmpbuf), report->common->BurstSize, 'A');
+	tmpbuf[39]='\0';
+	printf(client_bounceback, tmpbuf);
+    }
     if (isFQPacing(report->common)) {
 	byte_snprintf(outbuffer, sizeof(outbuffer), report->common->FQPacingRate, 'a');
 	outbuffer[(sizeof(outbuffer)-1)] = '\0';
@@ -1237,6 +1243,10 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 	}
 	if (isTxStartTime(report->common)) {
 	    snprintf(b, SNBUFFERSIZE-strlen(b), " (epoch-start)");
+	    b += strlen(b);
+	}
+	if (isBounceBack(report->common)) {
+	    snprintf(b, SNBUFFERSIZE-strlen(b), " (bounce-back)");
 	    b += strlen(b);
 	}
 	if (isL2LengthCheck(report->common)) {
