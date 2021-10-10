@@ -2202,91 +2202,95 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug("Client header init size %d (%p)", sizeof(struct client_tcp_testhdr), (void *) hdr);
 #endif
-	memset(hdr, 0, sizeof(struct client_tcp_testhdr));
-	flags |= HEADER_EXTEND;
-	hdr->extend.version_u = htonl(IPERF_VERSION_MAJORHEX);
-	hdr->extend.version_l = htonl(IPERF_VERSION_MINORHEX);
-	hdr->extend.tos = htons(client->mTOS & 0xFF);
-	if (isBWSet(client)) {
-	    hdr->extend.lRate = htonl((uint32_t)(client->mAppRate));
+	if (isBounceBack(client)) {
+	    flags = HEADER_BOUNCEBACK;
+	} else {
+	    memset(hdr, 0, sizeof(struct client_tcp_testhdr));
+	    flags |= HEADER_EXTEND;
+	    hdr->extend.version_u = htonl(IPERF_VERSION_MAJORHEX);
+	    hdr->extend.version_l = htonl(IPERF_VERSION_MINORHEX);
+	    hdr->extend.tos = htons(client->mTOS & 0xFF);
+	    if (isBWSet(client)) {
+		hdr->extend.lRate = htonl((uint32_t)(client->mAppRate));
 #ifdef HAVE_INT64_T
-	    hdr->extend.uRate = htonl(((uint32_t)(client->mAppRate >> 32)) << 8);
+		hdr->extend.uRate = htonl(((uint32_t)(client->mAppRate >> 32)) << 8);
 #endif
-	}
-	len += sizeof(struct client_hdrext);
-	len += Settings_GenerateClientHdrV1(client, &hdr->base);
-	if (!isCompat(client) && (client->mMode != kTest_Normal)) {
-	    flags |= HEADER_VERSION1;
-	    if (client->mMode == kTest_DualTest)
-		flags |= RUN_NOW;
-	}
-	if (isPeerVerDetect(client)) {
-	    flags |= (HEADER_V2PEERDETECT | HEADER_VERSION2);
-	}
-	if (isTripTime(client) || isFQPacing(client) || isIsochronous(client) || isTxStartTime(client)) {
-	    hdr->start_fq.start_tv_sec = htonl(startTime.tv_sec);
-	    hdr->start_fq.start_tv_usec = htonl(startTime.tv_usec);
-	    hdr->start_fq.fqratel = htonl((uint32_t) client->mFQPacingRate);
+	    }
+	    len += sizeof(struct client_hdrext);
+	    len += Settings_GenerateClientHdrV1(client, &hdr->base);
+	    if (!isCompat(client) && (client->mMode != kTest_Normal)) {
+		flags |= HEADER_VERSION1;
+		if (client->mMode == kTest_DualTest)
+		    flags |= RUN_NOW;
+	    }
+	    if (isPeerVerDetect(client)) {
+		flags |= (HEADER_V2PEERDETECT | HEADER_VERSION2);
+	    }
+	    if (isTripTime(client) || isFQPacing(client) || isIsochronous(client) || isTxStartTime(client)) {
+		hdr->start_fq.start_tv_sec = htonl(startTime.tv_sec);
+		hdr->start_fq.start_tv_usec = htonl(startTime.tv_usec);
+		hdr->start_fq.fqratel = htonl((uint32_t) client->mFQPacingRate);
 #ifdef HAVE_INT64_T
-	    hdr->start_fq.fqrateu = htonl((uint32_t) (client->mFQPacingRate >> 32));
+		hdr->start_fq.fqrateu = htonl((uint32_t) (client->mFQPacingRate >> 32));
 #endif
-	    len += sizeof(struct client_hdrext_starttime_fq);
-	    // Set flags on
-	    if (isTripTime(client)) {
-		upperflags |= HEADER_TRIPTIME;
-	    }
-	    if (isFQPacing(client)) {
-		upperflags |= HEADER_FQRATESET;
-	    }
-	}
-#if HAVE_DECL_TCP_NOTSENT_LOWAT
-	if (isWritePrefetch(client) && (isReverse(client) || isFullDuplex(client))) {
-	    upperflags  |= HEADER_WRITEPREFETCH;
-	    hdr->extend.TCPWritePrefetch = htonl((long)client->mWritePrefetch);
-	}
-#endif
-	if (isIsochronous(client) || isPeriodicBurst(client)) {
-	    if (isPeriodicBurst(client)) {
-		upperflags |= HEADER_PERIODICBURST;  // overload the isoch settings
-	    } else {
-		upperflags |= HEADER_ISOCH;
-	    }
-	    if (isFullDuplex(client) || isReverse(client) || isPeriodicBurst(client)) {
-		hdr->isoch_settings.FPSl = htonl((long)client->mFPS);
-		hdr->isoch_settings.FPSu = htonl((long)((client->mFPS - (long)(client->mFPS)) * rMillion));
-		hdr->isoch_settings.Variancel = htonl((long)(client->mVariance));
-		hdr->isoch_settings.Varianceu = htonl((long)((client->mVariance - (long)(client->mVariance)) * rMillion));
-		if (!isPeriodicBurst(client)) {
-		    hdr->isoch_settings.Meanl = htonl((long)(client->mMean));
-		    hdr->isoch_settings.Meanu = htonl((long)(((client->mMean) - (long)(client->mMean)) * rMillion));
-		    hdr->isoch_settings.BurstIPGl = htonl((long)client->mBurstIPG);
-		    hdr->isoch_settings.BurstIPGu = htonl(((long)(client->mBurstIPG) - (long)client->mBurstIPG * rMillion));
-		} else {
-		    hdr->isoch_settings.Meanl = htonl((long)(client->mBurstSize));
+		len += sizeof(struct client_hdrext_starttime_fq);
+		// Set flags on
+		if (isTripTime(client)) {
+		    upperflags |= HEADER_TRIPTIME;
 		}
-		len += sizeof(struct client_hdrext_isoch_settings);
+		if (isFQPacing(client)) {
+		    upperflags |= HEADER_FQRATESET;
+		}
 	    }
-	}
-	if (isReverse(client) || isFullDuplex(client)) {
-	    flags |= HEADER_VERSION2;
-	}
-	hdr->extend.upperflags = htons(upperflags);
-	hdr->extend.lowerflags = htons(lowerflags);
-	if (len > 0) {
-	    flags |= HEADER_LEN_BIT;
-	    int keylen = 0;
-	    if (!isServerReverse(client) && isPermitKey(client) && (client->mPermitKey[0] != '\0')) {
-		keylen = static_cast<int>(strnlen(client->mPermitKey, MAX_PERMITKEY_LEN));
-		flags |= HEADER_KEYCHECK;
-		struct permitKey *thiskey = reinterpret_cast<struct permitKey *>(static_cast<char *>(testhdr) + len);
-		thiskey->length = htons((uint16_t)keylen);
-		memcpy(thiskey->value, client->mPermitKey, keylen);
-		len += sizeof(thiskey->length);
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+	    if (isWritePrefetch(client) && (isReverse(client) || isFullDuplex(client))) {
+		upperflags  |= HEADER_WRITEPREFETCH;
+		hdr->extend.TCPWritePrefetch = htonl((long)client->mWritePrefetch);
 	    }
-	    flags |= ((len << 1) & HEADER_KEYLEN_MASK); // this is the key value offset passed to the server
-	    len += keylen;
+#endif
+	    if (isIsochronous(client) || isPeriodicBurst(client)) {
+		if (isPeriodicBurst(client)) {
+		    upperflags |= HEADER_PERIODICBURST;  // overload the isoch settings
+		} else {
+		    upperflags |= HEADER_ISOCH;
+		}
+		if (isFullDuplex(client) || isReverse(client) || isPeriodicBurst(client)) {
+		    hdr->isoch_settings.FPSl = htonl((long)client->mFPS);
+		    hdr->isoch_settings.FPSu = htonl((long)((client->mFPS - (long)(client->mFPS)) * rMillion));
+		    hdr->isoch_settings.Variancel = htonl((long)(client->mVariance));
+		    hdr->isoch_settings.Varianceu = htonl((long)((client->mVariance - (long)(client->mVariance)) * rMillion));
+		    if (!isPeriodicBurst(client)) {
+			hdr->isoch_settings.Meanl = htonl((long)(client->mMean));
+			hdr->isoch_settings.Meanu = htonl((long)(((client->mMean) - (long)(client->mMean)) * rMillion));
+			hdr->isoch_settings.BurstIPGl = htonl((long)client->mBurstIPG);
+			hdr->isoch_settings.BurstIPGu = htonl(((long)(client->mBurstIPG) - (long)client->mBurstIPG * rMillion));
+		    } else {
+			hdr->isoch_settings.Meanl = htonl((long)(client->mBurstSize));
+		    }
+		    len += sizeof(struct client_hdrext_isoch_settings);
+		}
+	    }
+	    if (isReverse(client) || isFullDuplex(client)) {
+		flags |= HEADER_VERSION2;
+	    }
+	    hdr->extend.upperflags = htons(upperflags);
+	    hdr->extend.lowerflags = htons(lowerflags);
+	    if (len > 0) {
+		flags |= HEADER_LEN_BIT;
+		int keylen = 0;
+		if (!isServerReverse(client) && isPermitKey(client) && (client->mPermitKey[0] != '\0')) {
+		    keylen = static_cast<int>(strnlen(client->mPermitKey, MAX_PERMITKEY_LEN));
+		    flags |= HEADER_KEYCHECK;
+		    struct permitKey *thiskey = reinterpret_cast<struct permitKey *>(static_cast<char *>(testhdr) + len);
+		    thiskey->length = htons((uint16_t)keylen);
+		    memcpy(thiskey->value, client->mPermitKey, keylen);
+		    len += sizeof(thiskey->length);
+		}
+		flags |= ((len << 1) & HEADER_KEYLEN_MASK); // this is the key value offset passed to the server
+		len += keylen;
+	    }
+	    hdr->base.flags = htonl(flags);
 	}
-	hdr->base.flags = htonl(flags);
     }
     return (len);
 }
