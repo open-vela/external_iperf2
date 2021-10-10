@@ -2204,6 +2204,7 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 #endif
 	if (isBounceBack(client)) {
 	    flags = HEADER_BOUNCEBACK;
+	    len = sizeof(struct TCP_bounce_back_datagram);
 	} else {
 	    memset(hdr, 0, sizeof(struct client_tcp_testhdr));
 	    flags |= HEADER_EXTEND;
@@ -2289,8 +2290,8 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 		flags |= ((len << 1) & HEADER_KEYLEN_MASK); // this is the key value offset passed to the server
 		len += keylen;
 	    }
-	    hdr->base.flags = htonl(flags);
 	}
+	hdr->base.flags = htonl(flags);
     }
     return (len);
 }
