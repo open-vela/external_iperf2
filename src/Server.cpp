@@ -283,6 +283,9 @@ void Server::RunTCP () {
     FreeReport(myJob);
 }
 
+void Server::RunTcpBounceBack () {
+}
+
 void Server::InitKernelTimeStamping () {
 #if HAVE_DECL_SO_TIMESTAMP
     iov[0].iov_base=mSettings->mBuf;
@@ -802,4 +805,5 @@ void Server::RunUDP () {
     Iperf_remove_host(mSettings);
     FreeReport(myJob);
 }
+
 // end Recv

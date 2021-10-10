@@ -1137,15 +1137,6 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    if (bounceback) {
 		bounceback = 0;
 		setBounceBack(mExtSettings);
-		if (optarg) {
-		    mExtSettings->mBounceBack = byte_atoi(optarg);
-		} else {
-		    mExtSettings->mBounceBack = DEFAULT_BOUNCEBACK_BYTES;
-		}
-		if (mExtSettings->mBounceBack <= 0) {
-		    fprintf(stderr, "ERROR: --bounce-back size must be greater than zero\n");
-		    exit(1);
-		}
 	    }
 	    break;
         default: // ignore unknown
@@ -1348,6 +1339,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		bail = true;
 	    }
 	}
+	if (isBounceBack(mExtSettings) && (static_cast<int> (mExtSettings->mBurstSize) < mExtSettings->mBufLen)) {
+	    fprintf(stderr, "WARN: options of --burst-size for bounce-back is being set to -l length of %d\n", mExtSettings->mBufLen);
+	    mExtSettings->mBurstSize = mExtSettings->mBufLen;
+	}
 	if (isPeriodicBurst(mExtSettings)) {
 	    if (isIsochronous(mExtSettings)) {
 		fprintf(stderr, "ERROR: options of --burst-period and --isochronous cannot be applied together\n");
@@ -1357,12 +1352,15 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		bail = true;
 	    } else if (static_cast<int> (mExtSettings->mBurstSize) == 0) {
 	        mExtSettings->mBurstSize = byte_atoi("1M"); //default to 1 Mbyte
+	    } else if (isBounceBack(mExtSettings)) {
+		fprintf(stderr, "ERROR: options of --burst-period and --bounce-back cannot be applied together\n");
+		bail = true;
 	    }
 	    if (static_cast<int> (mExtSettings->mBurstSize) < mExtSettings->mBufLen) {
 		fprintf(stderr, "ERROR: option of --burst-size must be equal or larger to write length (-l)\n");
 		bail = true;
 	    }
-	} else if (static_cast<int> (mExtSettings->mBurstSize) > 0) {
+	} else if (!isBounceBack(mExtSettings) && (static_cast<int> (mExtSettings->mBurstSize) > 0)) {
 	    setPeriodicBurst(mExtSettings);
 	    mExtSettings->mFPS = 1.0;
 	    fprintf(stderr, "WARN: option of --burst-size without --burst-period defaults --burst-period to 1 second\n");
@@ -1502,11 +1500,12 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		mExtSettings->mListenerTimeout = DEFAULT_PERMITKEY_LIFE;
 	    }
 	}
+        if (isBounceBack(mExtSettings)) {
+            fprintf(stderr, "ERROR: setting of option --bounce-back is not supported on the server\n");
+	    bail = true;
+	}
         if (isTripTime(mExtSettings)) {
             fprintf(stderr, "WARN: setting of option --trip-times is not supported on the server\n");
-	}
-        if (isBounceBack(mExtSettings)) {
-            fprintf(stderr, "WARN: setting of option --bounce-back is not supported on the server\n");
 	}
         if (isWritePrefetch(mExtSettings)) {
             fprintf(stderr, "WARN: setting of option --tcp-write-prefetch is not supported on the server\n");
@@ -1971,6 +1970,7 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
     } else { //tcp first payload
 	struct client_tcp_testhdr *hdr = static_cast<struct client_tcp_testhdr *>(mBuf);
 	Settings_ReadClientSettingsV1(&reversed_thread, &hdr->base);
+
 	if (isFullDuplex(server) || v1test) {
 	    server->mAmount = reversed_thread->mAmount + (SLOPSECS * 100);
 	}
