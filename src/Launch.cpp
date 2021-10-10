@@ -137,8 +137,12 @@ void listener_spawn(struct thread_Settings *thread) {
 void server_spawn(struct thread_Settings *thread) {
     Server *theServer = NULL;
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("spawn server settings=%p GroupSumReport=%p sock=%d", \
-		 (void *) thread, (void *)thread->mSumReport, thread->mSock);
+    if (isBounceBack(thread)) {
+	thread_debug("spawn server bounce-back");
+    } else {
+	thread_debug("spawn server settings=%p GroupSumReport=%p sock=%d", \
+		     (void *) thread, (void *)thread->mSumReport, thread->mSock);
+    }
 #endif
     // set traffic thread to realtime if needed
 #if HAVE_SCHED_SETSCHEDULER
@@ -154,9 +158,6 @@ void server_spawn(struct thread_Settings *thread) {
         theServer->RunUDP();
     } else {
 	if (isBounceBack(thread)) {
-#ifdef HAVE_THREAD_DEBUG
-	    thread_debug("spawn server bounce-back mode");
-#endif
 	    theServer->RunTcpBounceBack();
 	} else {
 	    theServer->RunTCP();
@@ -170,7 +171,11 @@ static void clientside_client_basic (struct thread_Settings *thread, Client *the
     SockAddr_remoteAddr(thread);
     theClient->my_connect(true);
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Client spawn thread basic (sock=%d)", thread->mSock);
+    if (isBounceBack(thread)) {
+	thread_debug("spawn client bounce-back mode, size = %d", thread->mBurstSize);
+    } else {
+	thread_debug("Client spawn thread basic (sock=%d)", thread->mSock);
+    }
 #endif
     if ((thread->mThreads > 1) && !isNoConnectSync(thread) && !isCompat(thread))
 	// When -P > 1 then all threads finish connect before starting traffic
@@ -179,7 +184,11 @@ static void clientside_client_basic (struct thread_Settings *thread, Client *the
         if ((thread->mThreads > 1) || isSumOnly(thread))
 	    Iperf_push_host(thread);
 	theClient->StartSynch();
-	theClient->Run();
+	if (isBounceBack(thread)) {
+	    theClient->RunBounceBackTCP();
+	} else {
+	    theClient->Run();
+	}
     }
 }
 
@@ -248,12 +257,6 @@ static void clientside_client_fullduplex (struct thread_Settings *thread, Client
     }
 }
 
-static void clientside_client_bounceback (struct thread_Settings *thread, Client *theClient) {
-#ifdef HAVE_THREAD_DEBUG
-    thread_debug("spawn client boune-back mode, size = %d", thread->mBurstSize);
-#endif
-}
-
 static void serverside_client_fullduplex (struct thread_Settings *thread, Client *theClient) {
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Listener spawn client thread (fd sock=%d)", thread->mSock);
@@ -319,9 +322,7 @@ void client_spawn (struct thread_Settings *thread) {
 	theClient->ConnectPeriodic();
     } else if (!isServerReverse(thread)) {
 	// These are the client side spawning of clients
-	if (isBounceBack(thread)) {
-	    clientside_client_bounceback(thread, theClient);
-	} else if (!isReverse(thread) && !isFullDuplex(thread)) {
+	if (!isReverse(thread) && !isFullDuplex(thread)) {
 	    clientside_client_basic(thread, theClient);
 	} else if (isReverse(thread) && !isFullDuplex(thread)) {
 	    clientside_client_reverse(thread, theClient);

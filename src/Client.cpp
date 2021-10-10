@@ -940,6 +940,9 @@ void Client::RunWriteEventsTCP () {
     FinishTrafficActions();
 }
 #endif
+void Client::RunBounceBackTCP () {
+
+}
 /*
  * UDP send loop
  */
