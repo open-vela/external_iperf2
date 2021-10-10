@@ -1263,6 +1263,9 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 		    }
 		}
 #endif
+		if (upperflags & HEADER_BOUNCEBACK) {
+		    setBounceBack(server);
+		}
 	    }
 	}
 	// Handle case that requires an ack back to the client
