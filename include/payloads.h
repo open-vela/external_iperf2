@@ -186,6 +186,19 @@ struct client_hdr_v1 {
     int32_t mAmount;
 };
 
+struct TCP_bounce_back_datagram {
+    uint32_t flags;
+    uint32_t burstsize;
+    uint32_t write_tv_sec;
+    uint32_t write_tv_usec;
+    uint32_t read_tv_sec;
+    uint32_t read_tv_usec;
+    uint32_t write_bb_tv_sec;
+    uint32_t write_bb_tv_usec;
+    uint32_t drain_tv_sec;
+    uint32_t drain_tv_usec;
+};
+
 struct client_hdrext_isoch_settings {
     int32_t FPSl;
     int32_t FPSu;
