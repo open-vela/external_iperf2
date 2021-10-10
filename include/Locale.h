@@ -138,6 +138,8 @@ extern const char client_isochronous[];
 
 extern const char client_burstperiod[];
 
+extern const char client_bounceback[];
+
 extern const char server_burstperiod[];
 
 extern const char client_fq_pacing[];
