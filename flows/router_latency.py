@@ -115,6 +115,10 @@ try:
                 gc.collect()
             except:
                 pass
+
+        for traffc_flow in traffic_flows :
+            flow.compute_ks_table(directory=args.output_directory, title=args.test_name)
+
     else:
         print("No traffic Flows instantiated per test {}".format(args.test_name))
 
