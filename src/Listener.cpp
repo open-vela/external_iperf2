@@ -1177,6 +1177,9 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 	readptr += nread;
 	struct client_tcp_testhdr *hdr = reinterpret_cast<struct client_tcp_testhdr *>(server->mBuf);
 	uint32_t flags = ntohl(hdr->base.flags);
+	if (flags & HEADER_BOUNCEBACK) {
+	    setBounceBack(server);
+	}
 	uint16_t upperflags = 0;
 	int readlen;
 	// figure out the length of the test header
