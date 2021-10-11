@@ -14,7 +14,21 @@ python3 -m py_compile aeroflex.py  flows.py  netlink.py  rf_topology.py  ssh_nod
 
 5) Configure the IP addresses and LAN addresses in the router_latency.py
 
-6) Run the test:
+6) Make sure passwordless ssh is configured for all the ssh DUTs, e.g.
+
+[bm932125@rjm-wifibt-ctrl:/ltf-local/Code/LTF/pyflows/scripts] $ ssh-copy-id -i ~/.ssh/id_rsa.pub root@10.19.85.40
+/usr/bin/ssh-copy-id: INFO: Source of key(s) to be installed: "/home/bm932125/.ssh/id_rsa.pub"
+/usr/bin/ssh-copy-id: INFO: attempting to log in with the new key(s), to filter out any that are already installed
+/usr/bin/ssh-copy-id: INFO: 1 key(s) remain to be installed -- if you are prompted now it is to install the new keys
+root@10.19.85.40's password:
+
+Number of key(s) added: 1
+
+Now try logging into the machine, with:   "ssh 'root@10.19.85.40'"
+and check to make sure that only the key(s) you wanted were added.
+
+7) Make sure all the wireless devices are loaded and connected to the SSID
+
+8) Run the test:
 cd /your_local_dir/iperf2-code/flows
 python3 router_latency.py
-
