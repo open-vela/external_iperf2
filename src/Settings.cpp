@@ -1605,6 +1605,8 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		}
 		mExtSettings->mHistBinsize = atoi(tmp);
 		delete [] tmp;
+		mExtSettings->mHistci_lower = 5;
+		mExtSettings->mHistci_upper = 95;
 		if ((results = strtok(results+strlen(results)+1, ",")) != NULL) {
 		    mExtSettings->mHistBins = byte_atoi(results);
 		    if ((results = strtok(NULL, ",")) != NULL) {
