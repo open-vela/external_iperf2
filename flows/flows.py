@@ -621,7 +621,7 @@ class iperf_server(object):
         if self.proto == 'UDP' :
             self.sshcmd.extend(['-u'])
         if self.histograms :
-            self.sshcmd.extend(['--histograms=100u,100000'])
+            self.sshcmd.extend(['--histograms=100u,100000,5,95'])
 
         logging.info('{}'.format(str(self.sshcmd)))
         self._transport, self._protocol = await self.loop.subprocess_exec(lambda: self.IperfServerProtocol(self, self.flow), *self.sshcmd)
@@ -839,7 +839,7 @@ class iperf_client(object):
             self.sshcmd.extend(['--trip-times'])
         if self.prefetch :
             self.sshcmd.extend(['--tcp-write-prefetch', self.prefetch])
-            self.sshcmd.extend(['--histograms=1m,100000'])
+            self.sshcmd.extend(['--histograms=1m,100000,5,95'])
 
         if self.srcip :
             if self.srcport :
