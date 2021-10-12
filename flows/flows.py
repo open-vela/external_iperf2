@@ -283,13 +283,13 @@ class iperf_flow(object):
         }
         return switcher.get(txt.upper(), None)
 
-    def __init__(self, name='iperf', server='localhost', client = 'localhost', user = None, proto = 'TCP', dstip = '127.0.0.1', interval = 1, offered_load = '10M', tos='BE', window='4M', src=None, srcip = None, srcport = None, dstport = None,  debug = False, length = None, ipg=0.005, amount=None, trip_times=True, prefetch=None, histograms=False):
+    def __init__(self, name='iperf', server='localhost', client = 'localhost', user = None, proto = 'TCP', dstip = '127.0.0.1', interval = 1, offered_load = '10M', tos='BE', window='4M', src=None, srcip = None, srcport = None, dstport = None,  debug = False, length = None, ipg=0.005, amount=None, trip_times=True, prefetch=None, latency=True):
         iperf_flow.instances.add(self)
         if not iperf_flow.loop :
             iperf_flow.set_loop()
         self.loop = iperf_flow.loop
         self.name = name
-        self.histograms = histograms
+        self.latency = latency
         if not dstport :
             iperf_flow.port += 1
             self.dstport = iperf_flow.port
@@ -619,7 +619,7 @@ class iperf_server(object):
             self.sshcmd.extend(['-i ', str(self.interval)])
         if self.proto == 'UDP' :
             self.sshcmd.extend(['-u'])
-        if self.histograms :
+        if self.latency :
             self.sshcmd.extend(['--histograms=100u,100000,5,95'])
 
         logging.info('{}'.format(str(self.sshcmd)))
