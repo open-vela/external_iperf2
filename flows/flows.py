@@ -429,7 +429,7 @@ class iperf_flow(object):
                 logging.info('KS: {0}({1:3d}):{2} minp={3} ptest={4}'.format(this_name, rowindex, resultstr, str(minp), str(self.ks_critical_p)))
                 if tasks :
                     try :
-                        logging.debug('runnings KS table plotting coroutines for {} row {}'.format(this_name,str(rowindex)))
+                        logging.debug('running KS table plotting coroutines for {} row {}'.format(this_name,str(rowindex)))
                         iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=300, loop=iperf_flow.loop))
                     except asyncio.TimeoutError:
                         logging.error('plot timed out')
