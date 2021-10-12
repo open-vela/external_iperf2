@@ -95,9 +95,9 @@ sta3 = ssh_node(name='4388c', ipaddr=args.host_sta3, device='eth1', devip='192.1
 
 if args.test_name == 'lat1' :
     #instantiate traffic objects
-    trfc1=iperf_flow(name='UDP-LA1', user='root', server=sta1, client=pc_wan, dstip=sta1.devip, proto='UDP', interval=1, histograms=True, debug=False, window='24M', srcip=pc_wan.devip, srcport='6001', dstport='6001', offered_load='1M')
-    trfc2=iperf_flow(name='UDP-LA2', user='root', server=sta2, client=pc_wan, dstip=sta2.devip, proto='UDP', interval=1, histograms=True, debug=False, window='24M', srcip=pc_wan.devip, srcport='6002', dstport='6002', offered_load='1M')
-    trfc3=iperf_flow(name='UDP-LIA', user='root', server=sta3, client=pc_wan, dstip=sta3.devip, proto='UDP', interval=1, histograms=True, debug=False, window='24M', srcip=pc_wan.devip, srcport='7001', dstport='7001', offered_load='3G')
+    trfc1=iperf_flow(name='UDP-LA1', user='root', server=sta1, client=pc_wan, dstip=sta1.devip, proto='UDP', interval=1, debug=False, window='24M', srcip=pc_wan.devip, srcport='6001', dstport='6001', offered_load='1M')
+    trfc2=iperf_flow(name='UDP-LA2', user='root', server=sta2, client=pc_wan, dstip=sta2.devip, proto='UDP', interval=1, debug=False, window='24M', srcip=pc_wan.devip, srcport='6002', dstport='6002', offered_load='1M')
+    trfc3=iperf_flow(name='UDP-LIA', user='root', server=sta3, client=pc_wan, dstip=sta3.devip, proto='UDP', interval=1, debug=False, window='24M', srcip=pc_wan.devip, srcport='7001', dstport='7001', offered_load='3G')
 
 
 ssh_node.open_consoles(silent_mode=True)
