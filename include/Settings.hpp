@@ -424,7 +424,7 @@ struct thread_Settings {
 #define isIncrDstIP(settings)      ((settings->flags_extend & FLAG_INCRDSTIP) != 0)
 #define isIncrSrcIP(settings)      ((settings->flags_extend & FLAG_INCRSRCIP) != 0)
 #define isIncrDstPort(settings)    ((settings->flags_extend & FLAG_INCRDSTPORT) != 0)
-#define isIncrSrcPort(settings)    ((settings->flags_extend & FLAG_INCRSRCPORT) != 0)
+#define isIncrSrcPort(settings)    ((settings->flags_extend2 & FLAG_INCRSRCPORT) != 0)
 #define isTxStartTime(settings)    ((settings->flags_extend & FLAG_TXSTARTTIME) != 0)
 #define isTxHoldback(settings)     ((settings->flags_extend & FLAG_TXHOLDBACK) != 0)
 #define isVaryLoad(settings)       ((settings->flags_extend & FLAG_VARYLOAD) != 0)
@@ -493,7 +493,7 @@ struct thread_Settings {
 #define setIncrDstIP(settings)     settings->flags_extend |= FLAG_INCRDSTIP
 #define setIncrSrcIP(settings)     settings->flags_extend |= FLAG_INCRSRCIP
 #define setIncrDstPort(settings)   settings->flags_extend |= FLAG_INCRDSTPORT
-#define setIncrSrcPort(settings)   settings->flags_extend |= FLAG_INCRSRCPORT
+#define setIncrSrcPort(settings)   settings->flags_extend2 |= FLAG_INCRSRCPORT
 #define setTxStartTime(settings)   settings->flags_extend |= FLAG_TXSTARTTIME
 #define setTxHoldback(settings)    settings->flags_extend |= FLAG_TXHOLDBACK
 #define setVaryLoad(settings)      settings->flags_extend |= FLAG_VARYLOAD
@@ -561,7 +561,7 @@ struct thread_Settings {
 #define unsetIncrDstIP(settings)    settings->flags_extend &= ~FLAG_INCRDSTIP
 #define unsetIncrSrcIP(settings)    settings->flags_extend &= ~FLAG_INCRSRCIP
 #define unsetIncrDstPort(settings)  settings->flags_extend &= ~FLAG_INCRDSTPORT
-#define unsetIncrSrcPort(settings)  settings->flags_extend &= ~FLAG_INCRSRCPORT
+#define unsetIncrSrcPort(settings)  settings->flags_extend2 &= ~FLAG_INCRSRCPORT
 #define unsetTxStartTime(settings)  settings->flags_extend &= ~FLAG_TXSTARTTIME
 #define unsetTxHoldback(settings)   settings->flags_extend &= ~FLAG_TXHOLDBACK
 #define unsetVaryLoad(settings)     settings->flags_extend &= ~FLAG_VARYLOAD
