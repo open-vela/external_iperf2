@@ -258,7 +258,7 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
 	    int value;
 	    int rc;
 	    Socklen_t len = sizeof(value);
-	    value = 0;
+	    value = 64; // a small value, zero disables
 	    rc = setsockopt(inSettings->mSock, IPPROTO_TCP, TCP_NOTSENT_LOWAT,
 			    reinterpret_cast<char*>(&value), len);
 	    WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_NOTSENT_LOWAT");
