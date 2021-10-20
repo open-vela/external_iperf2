@@ -1323,7 +1323,7 @@ void reporter_transfer_protocol_server_tcp (struct ReporterData *data, int final
     stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
     int ix;
     if (stats->framelatency_histogram) {
-        stats->framelatency_histogram->final = final;
+        stats->framelatency_histogram->final = 0;
     }
     if (sumstats) {
 	sumstats->threadcnt++;
@@ -1339,9 +1339,6 @@ void reporter_transfer_protocol_server_tcp (struct ReporterData *data, int final
 	fullduplexstats->total.Bytes.current += stats->cntBytes;
     }
     if (final) {
-        if (stats->framelatency_histogram) {
-	    stats->framelatency_histogram->final = 1;
-	}
 	if ((stats->cntBytes > 0) && stats->output_handler && !TimeZero(stats->ts.intervalTime)) {
 	    // print a partial interval report if enable and this a final
 	    if ((stats->output_handler) && !(stats->filter_this_sample_output)) {
@@ -1356,6 +1353,9 @@ void reporter_transfer_protocol_server_tcp (struct ReporterData *data, int final
 		reporter_reset_transfer_stats_server_tcp(stats);
 	    }
         }
+        if (stats->framelatency_histogram) {
+	    stats->framelatency_histogram->final = 1;
+	}
 	stats->final = true;
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
         stats->cntBytes = stats->total.Bytes.current;
