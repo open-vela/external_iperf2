@@ -226,4 +226,3 @@ int getsock_tcp_notsent_low_watermark (int inSock) {
 #ifdef __cplusplus
 } /* end extern "C" */
 #endif
-

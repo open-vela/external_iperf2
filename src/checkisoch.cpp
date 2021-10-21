@@ -70,7 +70,7 @@ int main (int argc, char **argv) {
     bool forceslip = false;
 
     Isochronous::FrameCounter *fc = NULL;
-    
+
     while ((c = getopt(argc, argv, "c:f:m:sv:")) != -1) {
         switch (c) {
         case 'c':
