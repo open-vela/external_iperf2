@@ -1307,7 +1307,7 @@ inline double Client::tcp_drain (void) {
     double drain_time = drain_end.subSec(drain_start);
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Drain time  = %f", drain_time);
-#endif    
+#endif
     return (drain_time);
 #endif
 }
