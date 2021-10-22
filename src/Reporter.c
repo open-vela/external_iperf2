@@ -802,7 +802,7 @@ static inline void reporter_handle_burst_tcp_client_transit (struct ReporterData
     if (stats->burstid_transition && packet->frameID && packet->transit_ready) {
 	stats->burstid_transition = false;
 	// printf("***Burst id = %ld, transit = %f\n", packet->frameID, stats->transit.lastTransit);
-    } else if (!stats->burstid_transition) {
+    } else if (isIsochronous(stats->common) && !stats->burstid_transition) {
 	stats->burstid_transition = true;
 	if (packet->frameID && (packet->frameID != (stats->isochstats.frameID + 1))) {
 	    fprintf(stderr,"%sError: expected burst id %u but got %" PRIdMAX "\n", \
