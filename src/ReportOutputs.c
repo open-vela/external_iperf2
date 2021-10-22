@@ -66,6 +66,7 @@ static int HEADING_FLAG(report_bw_jitter_loss) = 0;
 static int HEADING_FLAG(report_bw_read_enhanced) = 0;
 static int HEADING_FLAG(report_bw_read_enhanced_netpwr) = 0;
 static int HEADING_FLAG(report_bw_write_enhanced) = 0;
+static int HEADING_FLAG(report_write_enhanced_drain) = 0;
 static int HEADING_FLAG(report_bw_write_enhanced_netpwr) = 0;
 static int HEADING_FLAG(report_bw_pps_enhanced) = 0;
 static int HEADING_FLAG(report_bw_pps_enhanced_isoch) = 0;
@@ -95,6 +96,7 @@ void reporter_default_heading_flags (int flag) {
     HEADING_FLAG(report_bw_read_enhanced) = flag;
     HEADING_FLAG(report_bw_read_enhanced_netpwr) = flag;
     HEADING_FLAG(report_bw_write_enhanced) = flag;
+    HEADING_FLAG(report_write_enhanced_drain) = flag;
     HEADING_FLAG(report_write_enhanced_isoch) = flag;
     HEADING_FLAG(report_bw_write_enhanced_netpwr) = flag;
     HEADING_FLAG(report_bw_pps_enhanced) = flag;
@@ -386,13 +388,70 @@ void tcp_output_write_enhanced (struct TransferInfo *stats) {
     if (stats->latency_histogram) {
 	histogram_print(stats->latency_histogram, stats->ts.iStart, stats->ts.iEnd);
     }
-    if (stats->drain_histogram) {
-	histogram_print(stats->drain_histogram, stats->ts.iStart, stats->ts.iEnd);
-    }
 #endif
     fflush(stdout);
 }
 
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+void tcp_output_write_enhanced_drain (struct TransferInfo *stats) {
+    HEADING_PRINT_COND(report_write_enhanced_drain);
+    _print_stats_common(stats);
+#ifndef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+    printf(report_write_enhanced_drain_format,
+	   stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
+	   outbuffer, outbufferext,
+	   stats->sock_callstats.write.WriteCnt,
+	   stats->sock_callstats.write.WriteErr,
+
+	   stats->drain_mmm.current.mean * 1e-3,
+	   stats->drain_mmm.current.min * 1e-3,
+	   stats->drain_mmm.current.max * 1e-3,
+	   (stats->drain_mmm.current.cnt < 2) ? 0 : (1e-3 * sqrt(stats->drain_mmm.current.m2 / (stats->drain_mmm.current.cnt - 1))),
+	   stats->drain_mmm.current.cnt);
+#else
+    set_netpowerbuf(stats->sock_callstats.write.rtt * 1e-6, stats);
+    if (stats->sock_callstats.write.cwnd > 0) {
+	printf(report_write_enhanced_drain_format,
+	       stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
+	       outbuffer, outbufferext,
+	       stats->sock_callstats.write.WriteCnt,
+	       stats->sock_callstats.write.WriteErr,
+	       stats->sock_callstats.write.TCPretry,
+	       stats->sock_callstats.write.cwnd,
+	       stats->sock_callstats.write.rtt,
+	       netpower_buf,
+	       stats->drain_mmm.current.cnt,
+	       stats->drain_mmm.current.mean * 1e-3,
+	       stats->drain_mmm.current.min * 1e-3,
+	       stats->drain_mmm.current.max * 1e-3,
+	       (stats->drain_mmm.current.cnt < 2) ? 0 : (1e-3 * sqrt(stats->drain_mmm.current.m2 / (stats->drain_mmm.current.cnt - 1))),
+	       stats->drain_mmm.current.cnt);
+    } else {
+	printf(report_write_enhanced_nocwnd_drain_format,
+	       stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
+	       outbuffer, outbufferext,
+	       stats->sock_callstats.write.WriteCnt,
+	       stats->sock_callstats.write.WriteErr,
+	       stats->sock_callstats.write.TCPretry,
+	       stats->sock_callstats.write.rtt,
+	       netpower_buf,
+	       stats->drain_mmm.current.cnt,
+	       stats->drain_mmm.current.mean * 1e-3,
+	       stats->drain_mmm.current.min * 1e-3,
+	       stats->drain_mmm.current.max * 1e-3,
+	       (stats->drain_mmm.current.cnt < 2) ? 0 : (1e-3 * sqrt(stats->drain_mmm.current.m2 / (stats->drain_mmm.current.cnt - 1))),
+	       stats->drain_mmm.current.cnt);
+    }
+#endif
+    if (stats->latency_histogram) {
+	histogram_print(stats->latency_histogram, stats->ts.iStart, stats->ts.iEnd);
+    }
+    if (stats->drain_histogram) {
+	histogram_print(stats->drain_histogram, stats->ts.iStart, stats->ts.iEnd);
+    }
+    fflush(stdout);
+}
+#endif
 void tcp_output_write_enhanced_isoch (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_write_enhanced_isoch);
     _print_stats_common(stats);

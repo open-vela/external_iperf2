@@ -82,6 +82,8 @@ static void reporter_reset_transfer_stats_client_udp(struct TransferInfo *stats)
 static void reporter_reset_transfer_stats_server_udp(struct TransferInfo *stats);
 static void reporter_reset_transfer_stats_server_tcp(struct TransferInfo *stats);
 
+static void reporter_mmm_update (struct MeanMinMaxStats *stats, double value);
+
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 static inline bool sample_tcpistats(struct ReporterData *data, struct ReportStruct *sample, struct tcp_info *tcp_stats);
 static inline void reporter_handle_packet_tcpistats(struct ReporterData *data, struct ReportStruct *packet);
@@ -370,28 +372,57 @@ static inline struct ReportHeader *reporter_jobq_set_root (struct thread_Setting
     Condition_Unlock(ReportCond);
     return root;
 }
-
-static void reporter_update_connect_time (double connect_time) {
-    assert(myConnectionReport != NULL);
-    if (connect_time > 0.0) {
-	myConnectionReport->connect_times.sum += connect_time;
-	if ((myConnectionReport->connect_times.cnt++) == 1) {
-	    myConnectionReport->connect_times.vd = connect_time;
-	    myConnectionReport->connect_times.mean = connect_time;
-	    myConnectionReport->connect_times.m2 = connect_time * connect_time;
-	} else {
-	    myConnectionReport->connect_times.vd = connect_time - myConnectionReport->connect_times.mean;
-	    myConnectionReport->connect_times.mean = myConnectionReport->connect_times.mean + (myConnectionReport->connect_times.vd / myConnectionReport->connect_times.cnt);
-	    myConnectionReport->connect_times.m2 = myConnectionReport->connect_times.m2 + (myConnectionReport->connect_times.vd * (connect_time - myConnectionReport->connect_times.mean));
-	}
-	// mean min max tests
-	if (connect_time < myConnectionReport->connect_times.min)
-	    myConnectionReport->connect_times.min = connect_time;
-	if (connect_time > myConnectionReport->connect_times.max)
-	    myConnectionReport->connect_times.max = connect_time;
+/*
+ * Welford's online algorithm
+ *
+ * # For a new value newValue, compute the new count, new mean, the new M2.
+ * # mean accumulates the mean of the entire dataset
+ * # M2 aggregates the squared distance from the mean
+ * # count aggregates the number of samples seen so far
+ * def update(existingAggregate, newValue):
+ *   (count, mean, M2) = existingAggregate
+ *   count += 1
+ *   delta = newValue - mean
+ *   mean += delta / count
+ *   delta2 = newValue - mean
+ *   M2 += delta * delta2
+ *   return (count, mean, M2)
+ *
+ * # Retrieve the mean, variance and sample variance from an aggregate
+ * def finalize(existingAggregate):
+ *   (count, mean, M2) = existingAggregate
+ *   if count < 2:
+ *       return float("nan")
+ *   else:
+ *       (mean, variance, sampleVariance) = (mean, M2 / count, M2 / (count - 1))
+ *       return (mean, variance, sampleVariance)
+ *
+ */
+static void reporter_mmm_update (struct MeanMinMaxStats *stats, double value) {
+    assert(stats != NULL);
+    stats->cnt++;
+    if (stats->cnt == 1) {
+	// Very first entry
+	stats->min = value;
+	stats->max = value;
+	stats->sum = value;
+	stats->vd = value;
+	stats->mean = value;
+	stats->m2 = 0;
+	stats->sum = value;
     } else {
-	myConnectionReport->connect_times.err++;
+	stats->sum += value;
+	stats->vd = value - stats->mean;
+	stats->mean += (stats->vd / stats->cnt);
+	stats->m2 += stats->vd * (value - stats->mean);
+//`<	printf("*****m2=%f, mmm = %f/%f\n", stats->m2, stats->vd, (value - stats->mean));
+	// mean min max tests
+	if (value < stats->min)
+	    stats->min = value;
+	if (value > stats->max)
+	    stats->max = value;
     }
+//    printf("*****val=%f, mmm = %d/%f/%f/%f/%f/%f/%f\n", value, stats->cnt, stats->sum, stats->vd, stats->mean, stats->m2, stats->min, stats->max);
 }
 
 /*
@@ -613,7 +644,7 @@ inline int reporter_process_report (struct ReportHeader *reporthdr) {
 	assert(creport!=NULL);
 	if (!isCompat(creport->common) && (creport->common->ThreadMode == kMode_Client)) {
 	    // Clients' connect times will be inputs to the overall connect stats
-	    reporter_update_connect_time(creport->connecttime);
+	    reporter_mmm_update(&myConnectionReport->connect_times, creport->connecttime);
 	}
 	reporter_print_connection_report(creport);
 	fflush(stdout);
@@ -946,9 +977,13 @@ void reporter_handle_packet_client (struct ReporterData *data, struct ReportStru
 	if (stats->latency_histogram && (packet->select_delay > 0.0)) {
 	   histogram_insert(stats->latency_histogram, packet->select_delay, &packet->packetTime);
        }
-       if (stats->drain_histogram && (packet->drain_time > 0.0)) {
-//	   fprintf(stderr,"**** drain time = %f\n", packet->drain_time);
-	   histogram_insert(stats->drain_histogram, packet->drain_time, &packet->packetTime);
+       if (isTcpDrain(stats->common) && packet->transit_ready && (packet->drain_time)) {
+	   reporter_mmm_update(&stats->drain_mmm.current, (double) packet->drain_time);
+	   reporter_mmm_update(&stats->drain_mmm.total, (double) packet->drain_time);
+	   if (stats->drain_histogram ) {
+	       // convert drain time from microseconds to seconds prior to insert
+	       histogram_insert(stats->drain_histogram, (1e-6 * packet->drain_time), &packet->packetTime);
+	   }
        }
 #endif
     }
@@ -1020,6 +1055,17 @@ static inline void reporter_reset_transfer_stats_client_tcp (struct TransferInfo
     stats->isochstats.slipcnt.prev = stats->isochstats.slipcnt.current;
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
     stats->sock_callstats.write.TCPretry = 0;
+#endif
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+    if (isTcpDrain(stats->common)) {
+	stats->drain_mmm.current.cnt = 0;
+	stats->drain_mmm.current.min = FLT_MAX;
+	stats->drain_mmm.current.max = FLT_MIN;
+	stats->drain_mmm.current.sum = 0;
+	stats->drain_mmm.current.vd = 0;
+	stats->drain_mmm.current.mean = 0;
+	stats->drain_mmm.current.m2 = 0;
+    }
 #endif
 }
 
@@ -1468,6 +1514,7 @@ void reporter_transfer_protocol_client_tcp (struct ReporterData *data, int final
 	    stats->framelatency_histogram->final = 1;
 	}
 	stats->cntBytes = stats->total.Bytes.current;
+	stats->drain_mmm.current = stats->drain_mmm.total;
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
     } else if (isIsochronous(stats->common)) {
 	stats->isochstats.cntFrames = stats->isochstats.framecnt.current - stats->isochstats.framecnt.prev;

@@ -1066,6 +1066,7 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		tcpdrain = 0;
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
 		setTcpDrain(mExtSettings);
+		setEnhanced(mExtSettings);
 #else
 		fprintf(stderr, "--tcp-drain not supported on this platform\n");
 #endif
@@ -2206,7 +2207,7 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 #endif
 	if (isBounceBack(client)) {
 	    flags = HEADER_BOUNCEBACK;
-	    len = sizeof(struct TCP_bounce_back_datagram);
+	    len = sizeof(struct bounce_back_datagram_hdr);
 	} else {
 	    memset(hdr, 0, sizeof(struct client_tcp_testhdr));
 	    flags |= HEADER_EXTEND;

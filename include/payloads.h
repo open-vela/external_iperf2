@@ -186,17 +186,46 @@ struct client_hdr_v1 {
     int32_t mAmount;
 };
 
-struct TCP_bounce_back_datagram {
+//
+// Payload used for the bounce back feature
+//
+// Notes:
+//    o) flags is standard iperf 2 flags for test exchange info
+//    o) burst size is the payload size and size of bounce back write
+//    o) burst id is a running seq no
+//    o) send is the write timestamp
+//    o) bb_r2w_hold is an optional delay value between the read and bb write, typically expected as zero
+//    o) drain is the time from write to os indicating remote received payload (TCP only)
+//    o) drain times are deltas and not timestamps, computed by each end, units is microseconds
+//    o) triptimes will support OWD measurements in each direction (useful for asymmetry testing)
+//    o) min payload
+//         - seven 32b or 28 bytes with round trip only,
+//	   - nine 32b or 36 bytes when including drain times,
+//	   - eleven 32b or 44 bytes when including trip-times support
+//    o) no need for a bb read timestamp to be passed in the payload
+//    o) OWD calculations require e2e clock sync and --trip-times cli option
+//    o) no need to copy bb payload as rx buffer with be used for bounce back write
+//    o) single threaded design
+//    o) these are packed, be careful that the union doesn't break this
+//
+
+struct bb_ts {
+    uint32_t sec;
+    uint32_t usec;
+};
+union bb_r2w_info {
+    struct bb_ts bb_r2w_hold;
+    struct bb_ts bb_send;
+};
+struct bounce_back_datagram_hdr {
     uint32_t flags;
-    uint32_t burstsize;
-    uint32_t write_tv_sec;
-    uint32_t write_tv_usec;
-    uint32_t read_tv_sec;
-    uint32_t read_tv_usec;
-    uint32_t write_bb_tv_sec;
-    uint32_t write_bb_tv_usec;
-    uint32_t drain_tv_sec;
-    uint32_t drain_tv_usec;
+    uint32_t burst_size;
+    uint32_t burst_id;
+    struct bb_ts send_ts;
+    union bb_r2w_info bb_r2w; // up to here is mandatory
+    uint32_t drain; //units of usecs
+    uint32_t bb_drain;
+    struct bb_ts bb_read;
 };
 
 struct client_hdrext_isoch_settings {

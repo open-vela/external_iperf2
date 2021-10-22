@@ -548,6 +548,7 @@ void Client::RunTCP () {
     int burst_remaining = 0;
     int burst_id = 1;
     int writelen = mSettings->mBufLen;
+
     now.setnow();
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
@@ -601,6 +602,10 @@ void Client::RunTCP () {
 	    myReport->info.ts.prevsendTime = reportstruct->packetTime;
 	    writelen = (mSettings->mBufLen > burst_remaining) ? burst_remaining : mSettings->mBufLen;
 	    // perform write, full header must succeed
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+	    if (isTcpDrain(mSettings))
+		drain_start.setnow();
+#endif
 	    reportstruct->packetLen = writen(mySocket, mSettings->mBuf, writelen);
 	    FAIL_errno(reportstruct->packetLen < (intmax_t) sizeof(struct TCP_burst_payload), "burst written", mSettings);
 	} else {
@@ -643,9 +648,11 @@ void Client::RunTCP () {
 		    reportstruct->transit_ready = 0;
 		} else {
 		    reportstruct->transit_ready = 1;
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
 		    if (isTcpDrain(mSettings)) {
-			reportstruct->drain_time = tcp_drain();
+			tcp_drain();
 		    }
+#endif
 		}
 	    }
 	}
@@ -688,6 +695,10 @@ void Client::RunNearCongestionTCP () {
 	    WriteTcpTxHdr(reportstruct, burst_remaining, burst_id++);
 	    reportstruct->sentTime = reportstruct->packetTime;
 	    myReport->info.ts.prevsendTime = reportstruct->packetTime;
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+	    if (isTcpDrain(mSettings))
+		drain_start.setnow();
+#endif
 	    // perform write
 	    int writelen = (mSettings->mBufLen > burst_remaining) ? burst_remaining : mSettings->mBufLen;
 	    reportstruct->packetLen = write(mySocket, mSettings->mBuf, writelen);
@@ -725,9 +736,6 @@ void Client::RunNearCongestionTCP () {
 	    burst_remaining -= reportstruct->packetLen;
 	    if (burst_remaining <= 0) {
 		reportstruct->transit_ready = 1;
-		if (isTcpDrain(mSettings)) {
-		    reportstruct->drain_time = tcp_drain();
-		}
 	    }
 	}
 	if (isModeAmount(mSettings) && !reportstruct->emptyreport) {
@@ -743,9 +751,6 @@ void Client::RunNearCongestionTCP () {
 	if (reportstruct->transit_ready && myReportPacket(true)) {
 	    int pacing_timer = static_cast<int>(std::ceil(static_cast<double>(my_tcpi_stats.tcpi_rtt) * mSettings->rtt_nearcongest_divider));
 //		printf("**** delaytime = %d\n", delaytime);
-	    if (isTcpDrain(mSettings)) {
-		reportstruct->drain_time = tcp_drain();
-	    }
 	    delay_loop(pacing_timer);
 	} else
 #endif
@@ -1299,16 +1304,14 @@ inline bool Client::InProgress (void) {
 	(isModeAmount(mSettings) && (mSettings->mAmount <= 0)));
 }
 
-inline double Client::tcp_drain (void) {
+inline void Client::tcp_drain (void) {
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
-    Timestamp drain_start;
     AwaitWriteSelectEventTCP();
-    Timestamp drain_end;
-    double drain_time = drain_end.subSec(drain_start);
+    drain_end.setnow();
+    reportstruct->drain_time = drain_end.subUsec(drain_start);
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Drain time  = %f", drain_time);
+    thread_debug("Drain time  = %f", reportstruct->drain_time);
 #endif
-    return (drain_time);
 #endif
 }
 
