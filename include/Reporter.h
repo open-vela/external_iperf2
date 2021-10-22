@@ -168,6 +168,10 @@ struct L2Stats {
     intmax_t tot_lengtherr;
 };
 
+struct DrainStats {
+    struct MeanMinMaxStats current;
+    struct MeanMinMaxStats total;
+};
 /*
  * The type field of ReporterData is a bitmask
  * with one or more of the following
@@ -370,6 +374,7 @@ struct TransferInfo {
     bool final;
     bool burstid_transition;
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
+    struct DrainStats drain_mmm;
     struct histogram *drain_histogram;
 #endif
 };
@@ -508,6 +513,7 @@ void tcp_output_write(struct TransferInfo *stats);
 void tcp_output_sum_write(struct TransferInfo *stats);
 void tcp_output_sumcnt_write(struct TransferInfo *stats);
 void tcp_output_write_enhanced (struct TransferInfo *stats);
+void tcp_output_write_enhanced_drain (struct TransferInfo *stats);
 void tcp_output_write_enhanced_isoch (struct TransferInfo *stats);
 void tcp_output_sum_write_enhanced (struct TransferInfo *stats);
 void tcp_output_sumcnt_write_enhanced (struct TransferInfo *stats);
