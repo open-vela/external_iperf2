@@ -209,13 +209,23 @@ extern const char report_triptime_enhanced_format[];
 
 extern const char report_bw_write_enhanced_header[];
 
-extern const char report_sumcnt_bw_write_enhanced_header[];
+extern const char report_bw_write_enhanced_header[];
+
+extern const char report_sumcnt_write_enhanced_drain_header[];
 
 extern const char report_bw_write_enhanced_format[];
+
+extern const char report_write_enhanced_drain_header[];
+
+extern const char report_write_enhanced_drain_format[];
+
+extern const char report_write_enhanced_nocwnd_drain_format[];
 
 extern const char report_bw_write_enhanced_nocwnd_format[];
 
 extern const char report_sum_bw_write_enhanced_format[];
+
+extern const char report_sumcnt_bw_write_enhanced_header[];
 
 extern const char report_sumcnt_bw_write_enhanced_format[];
 

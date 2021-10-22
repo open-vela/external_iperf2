@@ -82,7 +82,7 @@ struct ReportStruct {
     bool tcpistat_valid;
 #endif
     double select_delay;
-    double drain_time;
+    long drain_time;
 };
 
 struct PacketRing {
