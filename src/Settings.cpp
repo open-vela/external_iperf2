@@ -198,8 +198,8 @@ const struct option long_options[] =
 {"near-congestion", optional_argument, &nearcongest, 1},
 {"permit-key", optional_argument, &permitkey, 1},
 {"permit-key-timeout", required_argument, &permitkeytimeout, 1},
-{"burst-size", optional_argument, &burstsize, 1},
-{"burst-period", optional_argument, &burstperiodic, 1},
+{"burst-size", required_argument, &burstsize, 1},
+{"burst-period", required_argument, &burstperiodic, 1},
 {"tcp-drain", no_argument, &tcpdrain, 1},
 {"tcp-rx-window-clamp", required_argument, &rxwinclamp, 1},
 {"tcp-write-prefetch", required_argument, &txnotsentlowwater, 1}, // see doc/DESIGN_NOTES
@@ -1095,6 +1095,7 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    }
 	    if (burstsize) {
 		burstsize = 0;
+		setPeriodicBurst(mExtSettings);
 		if (optarg) {
 		    mExtSettings->mBurstSize = byte_atoi(optarg);
 		}
@@ -1358,7 +1359,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		bail = true;
 	    }
 	    if (static_cast<int> (mExtSettings->mBurstSize) < mExtSettings->mBufLen) {
-		fprintf(stderr, "ERROR: option of --burst-size must be equal or larger to write length (-l)\n");
+		fprintf(stderr, "ERROR: option of --burst-size %d must be equal or larger to write length (-l) %d\n", mExtSettings->mBurstSize, mExtSettings->mBufLen);
 		bail = true;
 	    }
 	} else if (!isBounceBack(mExtSettings) && (static_cast<int> (mExtSettings->mBurstSize) > 0)) {
