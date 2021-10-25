@@ -193,8 +193,11 @@ void byte_snprintf(char* outString, int inLen, double inNum, char inFormat);
 
 #define TimeZero(timeval) ((timeval.tv_sec == 0) && (timeval.tv_usec == 0))
 
-#define TimeDifference(left, right) (left.tv_sec  - right.tv_sec) +   \
-        (left.tv_usec - right.tv_usec) / ((double) rMillion)
+#define TimeDifference(left, right) ((left.tv_sec  - right.tv_sec) +	\
+				     (left.tv_usec - right.tv_usec) / ((double) rMillion))
+
+#define TimeDifferenceUsec(left, right)  ((1e6 * (left.tv_sec  - right.tv_sec)) + \
+					  (double) (left.tv_usec - right.tv_usec))
 
 #define TimeDouble(timeval) (timeval.tv_sec + timeval.tv_usec / ((double) rMillion))
 
