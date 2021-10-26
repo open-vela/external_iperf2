@@ -4415,7 +4415,7 @@ $as_echo "#define HAVE_AF_PACKET 1" >>confdefs.h
 else
   enable_af_packet="no"
 fi
-,
+
     if test "x${enable_af_packet}" = "xyes"; then
   AF_PACKET_TRUE=
   AF_PACKET_FALSE='#'

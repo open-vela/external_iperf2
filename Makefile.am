@@ -1,4 +1,4 @@
-AUTOMAKE_OPTIONS = gnu
+AUTOMAKE_OPTIONS = foreign
 SUBDIRS = compat doc include src man
 
 AM_CPPFLAGS = @STRIP_BEGIN@ \
