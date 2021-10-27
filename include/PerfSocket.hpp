@@ -63,5 +63,6 @@
 void SetSocketOptions(struct thread_Settings *inSettings);
 void SetSocketOptionsSendTimeout(struct thread_Settings *mSettings, int timer);
 void SetSocketOptionsReceiveTimeout(struct thread_Settings *mSettings, int timer);
+void SetSocketOptionsIPTos (struct thread_Settings *mSettings, int tos);
 
 #endif // PERFSOCKET_H
