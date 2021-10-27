@@ -1035,6 +1035,11 @@ bool Listener::apply_client_settings (thread_Settings *server) {
     } else if (!isConnectOnly(server)) {
 	rc = apply_client_settings_tcp(server);
     }
+    if (isOverrideTOS(server)) {
+	SetSocketOptionsIPTos(server, server->mRTOS);
+    } else if (server->mTOS) {
+	SetSocketOptionsIPTos(server, server->mTOS);
+    }
     return rc;
 }
 
