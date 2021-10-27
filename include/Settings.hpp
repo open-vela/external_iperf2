@@ -177,6 +177,7 @@ struct thread_Settings {
     // int's
     int mThreads;                   // -P
     int mTOS;                       // -S
+    int mRTOS;                      // reflected TOS
     int mTransferID;
     int mConnectRetries;
 #if WIN32
@@ -382,6 +383,7 @@ struct thread_Settings {
 #define FLAG_BOUNCEBACK     0x00000100
 #define FLAG_TCPDRAIN       0x00000200
 #define FLAG_INCRSRCPORT    0x00000400
+#define FLAG_OVERRIDETOS    0x00000800
 
 #define isBuflenSet(settings)      ((settings->flags & FLAG_BUFLENSET) != 0)
 #define isCompat(settings)         ((settings->flags & FLAG_COMPAT) != 0)
@@ -453,6 +455,7 @@ struct thread_Settings {
 #define isHideIPs(settings)        ((settings->flags_extend2 & FLAG_HIDEIPS) != 0)
 #define isBounceBack(settings)     ((settings->flags_extend2 & FLAG_BOUNCEBACK) != 0)
 #define isTcpDrain(settings)       ((settings->flags_extend2 & FLAG_TCPDRAIN) != 0)
+#define isOverrideTOS(settings)    ((settings->flags_extend2 & FLAG_OVERRIDETOS) != 0)
 
 #define setBuflenSet(settings)     settings->flags |= FLAG_BUFLENSET
 #define setCompat(settings)        settings->flags |= FLAG_COMPAT
@@ -521,6 +524,7 @@ struct thread_Settings {
 #define setHideIPs(settings)       settings->flags_extend2 |= FLAG_HIDEIPS
 #define setBounceBack(settings)    settings->flags_extend2 |= FLAG_BOUNCEBACK
 #define setTcpDrain(settings)      settings->flags_extend2 |= FLAG_TCPDRAIN
+#define setOverrideTOS(settings)   settings->flags_extend2 |= FLAG_OVERRIDETOS
 
 #define unsetBuflenSet(settings)   settings->flags &= ~FLAG_BUFLENSET
 #define unsetCompat(settings)      settings->flags &= ~FLAG_COMPAT
@@ -588,6 +592,7 @@ struct thread_Settings {
 #define unsetHideIPs(settings)       settings->flags_extend2 &= ~FLAG_HIDEIPS
 #define unsetBounceBack(settings)    settings->flags_extend2 &= ~FLAG_BOUNCEBACK
 #define unsetTcpDrain(settings)      settings->flags_extend2 &= ~FLAG_TCPDRAIN
+#define unsetOverrideTOS(settings)   settings->flags_extend2 &= ~FLAG_OVERRIDETOS
 
 // set to defaults
 void Settings_Initialize(struct thread_Settings* main);

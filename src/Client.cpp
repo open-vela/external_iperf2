@@ -1,4 +1,3 @@
-
 /*---------------------------------------------------------------
  * Copyright (c) 1999,2000,2001,2002,2003
  * The Board of Trustees of the University of Illinois
@@ -576,7 +575,6 @@ void Client::RunTCP () {
 		if (isPeriodicBurst(mSettings)) {
 		    // low duty cycle traffic needs special event handling
 		    now.setnow();
-		    myReport->info.ts.prevsendTime = reportstruct->packetTime;
 		    reportstruct->packetTime.tv_sec = now.getSecs();
 		    reportstruct->packetTime.tv_usec = now.getUsecs();
 		    if (!InProgress()) {
@@ -650,7 +648,6 @@ void Client::RunTCP () {
 		    reportstruct->transit_ready = 0;
 		} else {
 		    reportstruct->transit_ready = 1;
-		    reportstruct->prevSentTime = myReport->info.ts.prevsendTime;
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
 		    if (isTcpDrain(mSettings)) {
 			tcp_drain();
@@ -750,7 +747,7 @@ void Client::RunNearCongestionTCP () {
 	    }
 	}
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-	// apply pacing after write burst completes
+	// apply placing after write burst completes
 	if (reportstruct->transit_ready && myReportPacket(true)) {
 	    int pacing_timer = static_cast<int>(std::ceil(static_cast<double>(my_tcpi_stats.tcpi_rtt) * mSettings->rtt_nearcongest_divider));
 //		printf("**** delaytime = %d\n", delaytime);

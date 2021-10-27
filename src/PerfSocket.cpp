@@ -201,23 +201,8 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
 	WARN_errno(rc == SOCKET_ERROR, "v4 ttl");
     }
 
-#ifdef IP_TOS
-#if HAVE_DECL_IPV6_TCLASS && ! defined HAVE_WINSOCK2_H
-    // IPV6_TCLASS is defined on Windows but not implemented.
-    if (isIPV6(inSettings)) {
-	const int dscp = inSettings->mTOS;
-	int rc = setsockopt(inSettings->mSock, IPPROTO_IPV6, IPV6_TCLASS, (char*) &dscp, sizeof(dscp));
-        WARN_errno(rc == SOCKET_ERROR, "setsockopt IPV6_TCLASS");
-    } else
-#endif
-    // set IP TOS (type-of-service) field
-    if (inSettings->mTOS > 0) {
-        int  tos = inSettings->mTOS;
-        Socklen_t len = sizeof(tos);
-        int rc = setsockopt(inSettings->mSock, IPPROTO_IP, IP_TOS,
-                             reinterpret_cast<char*>(&tos), len);
-        WARN_errno(rc == SOCKET_ERROR, "setsockopt IP_TOS");
-    }
+#if HAVE_DECL_IP_TOS
+    SetSocketOptionsIPTos(inSettings, inSettings->mTOS);
 #endif
 
     if (!isUDP(inSettings)) {
@@ -320,4 +305,31 @@ void SetSocketOptionsReceiveTimeout (struct thread_Settings *mSettings, int time
     }
 //    fprintf(stderr,"**** rx timeout %d usecs\n", timer);
 }
+
+
+void SetSocketOptionsIPTos (struct thread_Settings *mSettings, int tos) {
+#if  HAVE_DECL_IP_TOS
+#ifdef HAVE_THREAD_DEBUG
+    thread_debug("Set socket IP_TOS to 0x%x", tos);
+#endif
+#if HAVE_DECL_IPV6_TCLASS && ! defined HAVE_WINSOCK2_H
+    // IPV6_TCLASS is defined on Windows but not implemented.
+    if (isIPV6(mSettings)) {
+	const int dscp = tos;
+	int rc = setsockopt(mSettings->mSock, IPPROTO_IPV6, IPV6_TCLASS, (char*) &dscp, sizeof(dscp));
+        WARN_errno(rc == SOCKET_ERROR, "setsockopt IPV6_TCLASS");
+    } else
+#endif
+	// set IP TOS (type-of-service) field
+	if (isOverrideTOS(mSettings) || (tos > 0)) {
+	    int  tos = tos;
+	    Socklen_t len = sizeof(tos);
+	    int rc = setsockopt(mSettings->mSock, IPPROTO_IP, IP_TOS,
+				reinterpret_cast<char*>(&tos), len);
+	    WARN_errno(rc == SOCKET_ERROR, "setsockopt IP_TOS");
+	}
+#endif
+}
+
+
 // end SetSocketOptions

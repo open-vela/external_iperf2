@@ -138,6 +138,9 @@ Set the socket option of TCP_WINDOW_CLAMP, units is bytes.
 .BR -t ", " --time " \fIn\fR"
 time in seconds to listen for new traffic connections and/or receive traffic (defaults to infinite)
 .TP
+.BR "    --tos-override "  \fIn\fR
+set the socket's IP_TOS (byte) field for reverse or full duplex traffic. Supported in versions 2.1.5 or greater. Previous versions won't set IP_TOSq on reverse traffic.
+.TP
 .BR -B ", " --bind " \fIip\fR | \fIip\fR%\fIdevice\fR"
 bind src ip addr and optional src device for receiving
 .TP
@@ -168,10 +171,10 @@ set target bandwidth to \fIn\fR bits/sec (default 1 Mbit/sec) or
 .BR -c ", " --client " \fI\fIhost\fR | \fIhost\fR%\fIdevice\fR"
 run in client mode, connecting to \fIhost\fR  where the optional %dev will SO_BINDTODEVICE that output interface (requires root and see NOTES)
 .TP
-.BR "    --burst-period[ " \fIn\fR "]"
+.BR "    --burst-period " \fIn\fR
 Set the burst period in seconds. Defaults to one second. (Note: assumed use case is low duty cycle traffic bursts)
 .TP
-.BR "    --burst-size[ " \fIn\fR "]"
+.BR "    --burst-size " \fIn\fR
 Set the burst size in bytes. Defaults to 1M if no value is given.
 .TP
 .BR "    --connect-only[=" \fIn\fR "]"
@@ -232,12 +235,12 @@ number of bytes to transmit (instead of -t)
 .BR "    --permit-key [=" \fI<value>\fR "]"
 Set a key value that must match the server's value (also set with --permit-key) in order for the server to accept traffic from the client. TCP only, no UDP support.
 .TP
-.BR "    --tcp-drain "
-This is an experimental feature to measure the sending (client) host's sojourn times. Measure delay after completion of writing a burst (set via -l or --burst-size) and when TCP_NOTSENT_LOWAT set to a small value triggers the select() indicating all bytes per the burst are inflight. Output is a D8 histogram on the client side.
-.TP
 .BR -r ", " --tradeoff " "
 Do a bidirectional test individually - client-to-server, followed by
 a reversed test, server-to-client
+.TP
+.BR "    --tcp-drain "
+This is an experimental feature to measure the sending (client) host's sojourn times. Measure delay after completion of writing a burst (set via -l or --burst-size) and when TCP_NOTSENT_LOWAT set to a small value triggers the select() indicating all bytes per the burst are inflight. Output is a D8 histogram on the client side.
 .TP
 .BR "    --tcp-write-prefetch " \fIn\fR[kmKM]
 Set TCP_NOTSENT_LOWAT on the socket and use event based writes per select() on the socket.
@@ -272,8 +275,8 @@ number of parallel client threads to run
 .BR -R ", " --reverse " "
 reverse the traffic flow (useful for testing through firewalls, see NOTES)
 .TP
-.BR -S ", " --tos " "
-set the socket's IP_TOS (byte) field
+.BR -S ", " --tos " \fIn\fR"
+set the socket's IP_TOS (byte) field. Versions 2.1.5 or greater will reflect this tos setting back with --reverse or --full-duplex option. (Previous versions won't set tos on the reverse traffic.) Note: use server side --tos-override to override.
 .TP
 .BR -T ", " --ttl " \fIn\fR"
 time-to-live, for multicast (default 1)
