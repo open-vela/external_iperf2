@@ -172,9 +172,9 @@ static void clientside_client_basic (struct thread_Settings *thread, Client *the
     theClient->my_connect(true);
 #ifdef HAVE_THREAD_DEBUG
     if (isBounceBack(thread)) {
-	thread_debug("spawn client bounce-back mode, size = %d", thread->mBurstSize);
+	thread_debug("Launch: spawn client bounce-back mode, size = %d", thread->mBurstSize);
     } else {
-	thread_debug("Client spawn thread basic (sock=%d)", thread->mSock);
+	thread_debug("Launch: client spawn thread basic (sock=%d)", thread->mSock);
     }
 #endif
     if ((thread->mThreads > 1) && !isNoConnectSync(thread) && !isCompat(thread))
@@ -197,7 +197,7 @@ static void clientside_client_reverse (struct thread_Settings *thread, Client *t
     SockAddr_remoteAddr(thread);
     theClient->my_connect(true);
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Client spawn thread reverse (sock=%d)", thread->mSock);
+    thread_debug("Launch: client spawn thread reverse (sock=%d)", thread->mSock);
 #endif
     if ((thread->mThreads > 1) && !isNoConnectSync(thread))
 	// When -P > 1 then all threads finish connect before starting traffic
@@ -235,7 +235,7 @@ static void clientside_client_fullduplex (struct thread_Settings *thread, Client
     setTransferID(reverse_client, 1);
     theClient->my_connect(true);
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Client spawn thread fullduplex (sock=%d)", thread->mSock);
+    thread_debug("Launch: client spawn thread fullduplex (sock=%d)", thread->mSock);
 #endif
     if ((thread->mThreads > 1) && !isNoConnectSync(thread))
 	// When -P > 1 then all threads finish connect before starting traffic
@@ -259,7 +259,7 @@ static void clientside_client_fullduplex (struct thread_Settings *thread, Client
 
 static void serverside_client_fullduplex (struct thread_Settings *thread, Client *theClient) {
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Listener spawn client thread (fd sock=%d)", thread->mSock);
+    thread_debug("Launch: Listener spawn client thread (fd sock=%d)", thread->mSock);
 #endif
     setTransferID(thread, 1);
     if (theClient->StartSynch() != -1) {
@@ -269,7 +269,7 @@ static void serverside_client_fullduplex (struct thread_Settings *thread, Client
 
 static void serverside_client_bidir (struct thread_Settings *thread, Client *theClient) {
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Listener spawn client thread (bidir sock=%d)", thread->mSock);
+    thread_debug("Launch: Listener spawn client thread (bidir sock=%d)", thread->mSock);
 #endif
     setTransferID(thread, 1);
     SockAddr_zeroAddress(&thread->peer);

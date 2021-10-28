@@ -317,6 +317,7 @@ void Listener::Run () {
 	if (isUDP(server) && isCompat(mSettings)) {
 	    setSeqNo64b(server);
 	}
+	setTransferID(server, 0);
 
 	// Read any more test settings and test values (not just the flags) and instantiate
 	// any settings objects for client threads (e.g. bidir or full duplex)
