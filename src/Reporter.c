@@ -922,7 +922,7 @@ inline void reporter_handle_packet_server_udp (struct ReporterData *data, struct
     }
 }
 
-#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+#if HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 // This is done in traffic thread context
 static inline bool sample_tcpistats (struct ReporterData *data, struct ReportStruct *sample, struct tcp_info *tcp_stats) {
     assert(sample);

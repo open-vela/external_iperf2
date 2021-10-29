@@ -518,7 +518,7 @@ void tcp_output_write_enhanced (struct TransferInfo *stats);
 void tcp_output_write_enhanced_isoch (struct TransferInfo *stats);
 void tcp_output_sum_write_enhanced (struct TransferInfo *stats);
 void tcp_output_sumcnt_write_enhanced (struct TransferInfo *stats);
-#if HAVE_DECL_TCP_NOTSENT_LOWAT
+#if (HAVE_DECL_TCP_NOTSENT_LOWAT)
 void tcp_output_write_enhanced_drain (struct TransferInfo *stats);
 #endif
 // TCP fullduplex
