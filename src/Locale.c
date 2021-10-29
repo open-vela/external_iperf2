@@ -344,6 +344,17 @@ const char report_sum_bw_read_enhanced_format[] =
 const char report_triptime_enhanced_format[] =
 "%s" IPERFTimeFrmt " trip-time (3WHS done->fin+finack) = %.4f sec\n";
 
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+const char report_write_enhanced_drain_header[] =
+"[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth       Write/Err  Rtry     Cwnd/RTT        NetPwr  Drain avg/min/max/stdev (cnt)\n";
+
+const char report_write_enhanced_drain_format[] =
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %10d %8dK/%u us  %s  %.3f/%.3f/%.3f/%.3f ms (%d)\n";
+
+const char report_write_enhanced_nocwnd_drain_format[] =
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %10d       NA/%u us  %s  %.3f/%.3f/%.3f/%.3f ms (%d)\n";
+#endif
+
 #ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 const char report_bw_write_enhanced_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth       Write/Err  Rtry     Cwnd/RTT        NetPwr\n";
@@ -356,15 +367,6 @@ const char report_bw_write_enhanced_format[] =
 
 const char report_bw_write_enhanced_nocwnd_format[] =
 "%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %10d       NA/%u us  %s\n";
-
-const char report_write_enhanced_drain_header[] =
-"[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth       Write/Err  Rtry     Cwnd/RTT        NetPwr  Drain avg/min/max/stdev (cnt)\n";
-
-const char report_write_enhanced_drain_format[] =
-"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %10d %8dK/%u us  %s  %.3f/%.3f/%.3f/%.3f ms (%d)\n";
-
-const char report_write_enhanced_nocwnd_drain_format[] =
-"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %10d       NA/%u us  %s  %.3f/%.3f/%.3f/%.3f ms (%d)\n";
 
 const char report_write_enhanced_isoch_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer     Bandwidth      Write/Err  Rtry     Cwnd/RTT     isoch:tx/miss/slip  NetPwr\n";
