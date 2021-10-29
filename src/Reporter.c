@@ -966,8 +966,8 @@ void reporter_handle_packet_client (struct ReporterData *data, struct ReportStru
 	    stats->sock_callstats.write.totWriteErr++;
 	}
 	// These are valid packets that need standard iperf accounting
-	stats->sock_callstats.write.WriteCnt++;
-	stats->sock_callstats.write.totWriteCnt++;
+	stats->sock_callstats.write.WriteCnt += packet->writecnt;
+	stats->sock_callstats.write.totWriteCnt += packet->writecnt;
 	if (isIsochronous(stats->common)) {
 	    reporter_handle_packet_isochronous(data, packet);
 	} else if (isPeriodicBurst(stats->common)) {
@@ -1674,7 +1674,7 @@ int reporter_condprint_time_interval_report (struct ReporterData *data, struct R
 		data->GroupSumReport->threads = 0;
 		if ((data->GroupSumReport->reference.count > 1) || \
 		    isSumOnly(data->info.common)) {
-		    sumstats->filter_this_sample_output = 0;
+		    sumstats->filter_this_sample_output = 1;
 		} else {
 		    sumstats->filter_this_sample_output = 1;
 		}

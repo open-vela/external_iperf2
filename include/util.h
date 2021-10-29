@@ -82,7 +82,7 @@ int  getsock_tcp_notsent_low_watermark(int inSock);
 int  setsock_tcp_notsent_low_watermark(int inSock, int clampsize);
 #endif
 int recvn(int inSock, char *outBuf, int inLen, int flags);
-int writen(int inSock, const void *inBuf, int inLen);
+int writen(int inSock, const void *inBuf, int inLen, int *count);
 
 void disarm_itimer(void);
 /* -------------------------------------------------------------------
