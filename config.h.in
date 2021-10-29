@@ -129,6 +129,14 @@
    don't. */
 #undef HAVE_DECL_SO_TIMESTAMP
 
+/* Define to 1 if you have the declaration of `TCP_CONNECTION_INFO', and to 0
+   if you don't. */
+#undef HAVE_DECL_TCP_CONNECTION_INFO
+
+/* Define to 1 if you have the declaration of `TCP_INFO', and to 0 if you
+   don't. */
+#undef HAVE_DECL_TCP_INFO
+
 /* Define to 1 if you have the declaration of `TCP_NODELAY', and to 0 if you
    don't. */
 #undef HAVE_DECL_TCP_NODELAY
