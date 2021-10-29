@@ -553,6 +553,7 @@ void Client::RunTCP () {
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
     while (InProgress()) {
+	reportstruct->writecnt = 0;
         if (isModeAmount(mSettings)) {
 	    writelen = ((mSettings->mAmount < static_cast<unsigned>(mSettings->mBufLen)) ? mSettings->mAmount : mSettings->mBufLen);
 	}
@@ -606,7 +607,7 @@ void Client::RunTCP () {
 	    if (isTcpDrain(mSettings))
 		drain_start.setnow();
 #endif
-	    reportstruct->packetLen = writen(mySocket, mSettings->mBuf, writelen);
+	    reportstruct->packetLen = writen(mySocket, mSettings->mBuf, writelen, &reportstruct->writecnt);
 	    FAIL_errno(reportstruct->packetLen < (intmax_t) sizeof(struct TCP_burst_payload), "burst written", mSettings);
 	} else {
 	    // printf("pl=%ld\n",reportstruct->packetLen);
@@ -620,6 +621,7 @@ void Client::RunTCP () {
 #endif
 	    reportstruct->packetLen = write(mySocket, mSettings->mBuf, writelen);
 	    now.setnow();
+	    reportstruct->writecnt++;
 	    reportstruct->packetTime.tv_sec = now.getSecs();
 	    reportstruct->packetTime.tv_usec = now.getUsecs();
 	    reportstruct->sentTime = reportstruct->packetTime;
@@ -681,6 +683,7 @@ void Client::RunNearCongestionTCP () {
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
     while (InProgress()) {
+	reportstruct->writecnt = 0;
         if (isModeAmount(mSettings)) {
 	    reportstruct->packetLen = ((mSettings->mAmount < static_cast<unsigned>(mSettings->mBufLen)) ? mSettings->mAmount : mSettings->mBufLen);
 	} else {
@@ -702,6 +705,7 @@ void Client::RunNearCongestionTCP () {
 	    // perform write
 	    int writelen = (mSettings->mBufLen > burst_remaining) ? burst_remaining : mSettings->mBufLen;
 	    reportstruct->packetLen = write(mySocket, mSettings->mBuf, writelen);
+	    reportstruct->writecnt++;
 	    assert(reportstruct->packetLen >= (intmax_t) sizeof(struct TCP_burst_payload));
 	    goto ReportNow;
 	}
@@ -712,6 +716,7 @@ void Client::RunNearCongestionTCP () {
 	// perform write
 	reportstruct->packetLen = write(mySocket, mSettings->mBuf, reportstruct->packetLen);
 	now.setnow();
+	reportstruct->writecnt++;
 	reportstruct->packetTime.tv_sec = now.getSecs();
 	reportstruct->packetTime.tv_usec = now.getUsecs();
 	reportstruct->sentTime = reportstruct->packetTime;
@@ -778,6 +783,7 @@ void Client::RunRateLimitedTCP () {
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
     while (InProgress() && !fatalwrite_err) {
+	reportstruct->writecnt = 0;
 	// Add tokens per the loop time
 	time2.setnow();
         if (isVaryLoad(mSettings)) {
@@ -808,7 +814,7 @@ void Client::RunRateLimitedTCP () {
 		    reportstruct->sentTime = reportstruct->packetTime;
 		    burst_remaining = burst_size;
 		    // perform write
-		    n = writen(mySocket, mSettings->mBuf, sizeof(struct TCP_burst_payload));
+		    n = writen(mySocket, mSettings->mBuf, sizeof(struct TCP_burst_payload), &reportstruct->writecnt);
 		    WARN(n != sizeof(struct TCP_burst_payload), "burst hdr write failed");
 		    burst_remaining -= n;
 		    reportstruct->packetLen -= n;
@@ -818,6 +824,7 @@ void Client::RunRateLimitedTCP () {
 		}
 	    }
 	    int len = write(mySocket, mSettings->mBuf, reportstruct->packetLen);
+	    reportstruct->writecnt++;
 	    if (len < 0) {
 	        if (NONFATALTCPWRITERR(errno)) {
 		    reportstruct->errwrite=WriteErrAccount;
@@ -920,7 +927,7 @@ void Client::RunWriteEventsTCP () {
 	    reportstruct->packetTime.tv_usec = now.getUsecs();
 	    WriteTcpTxHdr(reportstruct, writelen, ++burst_id);
 	    reportstruct->sentTime = reportstruct->packetTime;
-	    reportstruct->packetLen = writen(mySocket, mSettings->mBuf, writelen);
+	    reportstruct->packetLen = writen(mySocket, mSettings->mBuf, writelen, &reportstruct->writecnt);
 	    if (reportstruct->packetLen <= 0) {
 		WARN_errno((reportstruct->packetLen < 0), "event writen()");
 		if (reportstruct->packetLen == 0) {
