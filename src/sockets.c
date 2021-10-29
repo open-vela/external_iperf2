@@ -243,7 +243,7 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
  * from Stevens, 1998, section 3.9
  * ------------------------------------------------------------------- */
 
-int writen (int inSock, const void *inBuf, int inLen) {
+int writen (int inSock, const void *inBuf, int inLen, int *count) {
     int nleft;
     int nwritten;
     const char *ptr;
@@ -255,9 +255,11 @@ int writen (int inSock, const void *inBuf, int inLen) {
     ptr   = (char*) inBuf;
     nleft = inLen;
     nwritten = 0;
+    *count = 0;
 
     while (nleft > 0) {
         nwritten = write(inSock, ptr, nleft);
+	(*count)++;
 	switch (nwritten) {
 	case SOCKET_ERROR :
 	    if (!(errno == EINTR) || (errno == EAGAIN) || (errno == EWOULDBLOCK)) {
