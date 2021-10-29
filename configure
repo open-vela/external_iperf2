@@ -8131,17 +8131,6 @@ fi
 cat >>confdefs.h <<_ACEOF
 #define HAVE_DECL_IPV6_JOIN_GROUP $ac_have_decl
 _ACEOF
-ac_fn_c_check_decl "$LINENO" "TCP_NODELAY" "ac_cv_have_decl_TCP_NODELAY" "$in_h
-"
-if test "x$ac_cv_have_decl_TCP_NODELAY" = xyes; then :
-  ac_have_decl=1
-else
-  ac_have_decl=0
-fi
-
-cat >>confdefs.h <<_ACEOF
-#define HAVE_DECL_TCP_NODELAY $ac_have_decl
-_ACEOF
 ac_fn_c_check_decl "$LINENO" "IPV6_ADD_MEMBERSHIP" "ac_cv_have_decl_IPV6_ADD_MEMBERSHIP" "$in_h
 "
 if test "x$ac_cv_have_decl_IPV6_ADD_MEMBERSHIP" = xyes; then :
@@ -8185,6 +8174,39 @@ fi
 
 cat >>confdefs.h <<_ACEOF
 #define HAVE_DECL_MSG_WAITALL $ac_have_decl
+_ACEOF
+ac_fn_c_check_decl "$LINENO" "TCP_NODELAY" "ac_cv_have_decl_TCP_NODELAY" "$in_h
+"
+if test "x$ac_cv_have_decl_TCP_NODELAY" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_TCP_NODELAY $ac_have_decl
+_ACEOF
+ac_fn_c_check_decl "$LINENO" "TCP_INFO" "ac_cv_have_decl_TCP_INFO" "$in_h
+"
+if test "x$ac_cv_have_decl_TCP_INFO" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_TCP_INFO $ac_have_decl
+_ACEOF
+ac_fn_c_check_decl "$LINENO" "TCP_CONNECTION_INFO" "ac_cv_have_decl_TCP_CONNECTION_INFO" "$in_h
+"
+if test "x$ac_cv_have_decl_TCP_CONNECTION_INFO" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_TCP_CONNECTION_INFO $ac_have_decl
 _ACEOF
 ac_fn_c_check_decl "$LINENO" "TCP_WINDOW_CLAMP" "ac_cv_have_decl_TCP_WINDOW_CLAMP" "$in_h
 "
