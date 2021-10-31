@@ -63,6 +63,7 @@
 #include "delay.h"
 #include "packet_ring.h"
 #include "payloads.h"
+#include "gettcpinfo.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -84,7 +85,9 @@ static void reporter_reset_transfer_stats_server_tcp(struct TransferInfo *stats)
 
 static void reporter_mmm_update (struct MeanMinMaxStats *stats, double value);
 
-
+#if HAVE_TCP_STATS
+static inline void reporter_handle_packet_tcpistats(struct ReporterData *data, struct ReportStruct *packet);
+#endif
 static struct ConnectionInfo *myConnectionReport;
 
 void PostReport (struct ReportHeader *reporthdr) {
@@ -138,16 +141,15 @@ bool ReportPacket (struct ReporterData* data, struct ReportStruct *packet) {
     }
   #endif
 #if HAVE_TCP_STATS
-    if (packet->tcpinfo_sample) {
-	struct TransferInfo *stats = &data->info;
-	if (!TimeZero(stats->ts.nextTCPStampleTime) && TimeDifference(stats->ts.nextTCPStampleTime, packet->packetTime)) < 0 {
-	    rc = gettcpinfo(data, packet);
+    struct TransferInfo *stats = &data->info;
+    if (stats->isEnableTcpInfo) {
+	if (!TimeZero(stats->ts.nextTCPStampleTime) && (TimeDifference(stats->ts.nextTCPStampleTime, packet->packetTime) < 0)) {
+	    gettcpinfo(data, packet);
 	    TimeAdd(stats->ts.nextTCPStampleTime, stats->ts.intervalTime);
 	} else {
-	    rc = gettcpinfo(data, packet);
+	    gettcpinfo(data, packet);
 	}
     }
-    packet->tcpstats.isValid = rc;
 #endif
 
     // Note for threaded operation all that needs
@@ -195,8 +197,9 @@ int EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
      */
 #if HAVE_TCP_STATS
     // tcpi stats are sampled on a final packet
-    if (stats->common->enable_sampleTCPstats) {
-	sample_tcpistats(report, &packet, NULL);
+    struct TransferInfo *stats = &report->info;
+    if (stats->isEnableTcpInfo) {
+	gettcpinfo(report, finalpacket);
     }
 #endif
     // clear the reporter done predicate
@@ -511,7 +514,7 @@ int reporter_process_transfer_report (struct ReporterData *this_ireport) {
 	consumption_detector.accounted_packets--;
 	// Check against a final packet event on this packet ring
 #if HAVE_TCP_STATS
-	if (this_ireport->info.common->enable_sampleTCPstats && packet->tcpistat_valid) {
+	if (this_ireport->info.isEnableTcpInfo && packet->tcpstats.isValid) {
 	    reporter_handle_packet_tcpistats(this_ireport, packet);
 	}
 #endif
@@ -891,10 +894,10 @@ inline void reporter_handle_packet_server_udp (struct ReporterData *data, struct
 static inline void reporter_handle_packet_tcpistats (struct ReporterData *data, struct ReportStruct *packet) {
     assert(data!=NULL);
     struct TransferInfo *stats = &data->info;
-    stats->sock_callstats.write.TCPretry += (packet->retry_tot - stats->sock_callstats.write.totTCPretry);
-    stats->sock_callstats.write.totTCPretry = packet->retry_tot;
-    stats->sock_callstats.write.cwnd = packet->cwnd;
-    stats->sock_callstats.write.rtt = packet->rtt;
+    stats->sock_callstats.write.TCPretry += (packet->tcpstats.retry_tot - stats->sock_callstats.write.totTCPretry);
+    stats->sock_callstats.write.totTCPretry = packet->tcpstats.retry_tot;
+    stats->sock_callstats.write.cwnd = packet->tcpstats.cwnd;
+    stats->sock_callstats.write.rtt = packet->tcpstats.rtt;
 }
 #endif
 
