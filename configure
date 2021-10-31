@@ -761,6 +761,7 @@ enable_silent_rules
 enable_maintainer_mode
 enable_ipv6
 enable_multicast
+enable_tcpstats
 enable_threads
 enable_debuginfo
 enable_web100
@@ -1416,6 +1417,7 @@ Optional Features:
                           sometimes confusing) to the casual installer
   --disable-ipv6          disable ipv6 support (default is autodetect)
   --disable-multicast     disable multicast support (default is autodetect)
+  --disable-tcpstats      disable tcpstats support (default is autodetect)
   --disable-threads       disable thread support (default is autodetect)
   --enable-debuginfo      enable asserts and debugging info for sockets
                           (default is no)
@@ -3210,6 +3212,12 @@ fi
 # Check whether --enable-multicast was given.
 if test "${enable_multicast+set}" = set; then :
   enableval=$enable_multicast; ac_cv_multicast=$enable_multicast
+fi
+
+
+# Check whether --enable-tcpstats was given.
+if test "${enable_tcpstats+set}" = set; then :
+  enableval=$enable_tcpstats; ac_cv_tcpstats=$enable_tcpstats
 fi
 
 
@@ -8345,11 +8353,6 @@ ac_fn_c_check_member "$LINENO" "struct tcp_info" "tcpi_total_retrans" "ac_cv_mem
 "
 if test "x$ac_cv_member_struct_tcp_info_tcpi_total_retrans" = xyes; then :
 
-cat >>confdefs.h <<_ACEOF
-#define HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS 1
-_ACEOF
-
-
 fi
 
 
@@ -8732,6 +8735,29 @@ $as_echo "$ac_cv_ssm_multicast" >&6; }
   if test "$ac_cv_ssm_multicast" = yes; then
 
 $as_echo "#define HAVE_SSM_MULTICAST 1" >>confdefs.h
+
+  fi
+fi
+
+if test "$ac_cv_tcpstats" != no; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for tcpstats support" >&5
+$as_echo_n "checking for tcpstats support... " >&6; }
+  ac_cv_tcpstats=no
+  if test "$ac_cv_have_decl_TCP_INFO" = yes; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for TCP_INFO_TCPI_TOTAL_RETRANS support" >&5
+$as_echo_n "checking for TCP_INFO_TCPI_TOTAL_RETRANS support... " >&6; }
+     if test "$ac_cv_member_struct_tcp_info_tcpi_total_retrans" = yes; then
+       ac_cv_tcpstats=yes
+     fi
+  fi
+  if test "$ac_cv_have_decl_TCP_CONNECTION_INFO" = yes; then
+    ac_cv_tcpstats=yes
+  fi
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_tcpstats" >&5
+$as_echo "$ac_cv_tcpstats" >&6; }
+  if test "$ac_cv_tcpstats" = yes; then
+
+$as_echo "#define HAVE_TCP_STATS 1" >>confdefs.h
 
   fi
 fi

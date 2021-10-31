@@ -52,6 +52,6 @@
 #include "Reporter.h"
 #include "packet_ring.h"
 
-inline void gettcpinfo(struct ReporterData *data, struct ReportStruct *sample);
+void gettcpinfo(struct ReporterData *data, struct ReportStruct *sample);
 
 #endif
