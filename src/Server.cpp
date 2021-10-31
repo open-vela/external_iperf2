@@ -249,11 +249,7 @@ void Server::RunTCP () {
 		tokens -= currLen;
 
 	    reportstruct->packetLen = currLen;
-#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-	    ReportPacket(myReport, reportstruct, NULL);
-#else
 	    ReportPacket(myReport, reportstruct);
-#endif
 	    // Check for reverse and amount where
 	    // the server stops after receiving
 	    // the expected byte count
@@ -508,11 +504,7 @@ bool Server::InitTrafficLoop (void) {
 	    reportstruct->sentTime.tv_usec = myReport->info.ts.startTime.tv_usec;
 	    reportstruct->packetTime = reportstruct->sentTime;
 	}
-#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-	ReportPacket(myReport, reportstruct, NULL);
-#else
 	ReportPacket(myReport, reportstruct);
-#endif
     }
     return true;
 }
@@ -780,11 +772,7 @@ void Server::RunUDP () {
 		}
 	    }
 	}
-#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-	ReportPacket(myReport, reportstruct, NULL);
-#else
 	ReportPacket(myReport, reportstruct);
-#endif
     }
     disarm_itimer();
     int do_close = EndJob(myJob, reportstruct);

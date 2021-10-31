@@ -14,6 +14,7 @@ libcompat_a_SOURCES = \
 		      error.c \
 		      delay.c \
 		      gettimeofday.c \
+		      getttcpinfo.c \
 		      inet_ntop.c \
 		      inet_pton.c \
 		      signal.c \

@@ -355,7 +355,7 @@ const char report_write_enhanced_nocwnd_drain_format[] =
 "%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %10d       NA/%u us  %s  %.3f/%.3f/%.3f/%.3f ms (%d)\n";
 #endif
 
-#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+#if HAVE_TCP_STATS
 const char report_bw_write_enhanced_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth       Write/Err  Rtry     Cwnd/RTT        NetPwr\n";
 

@@ -982,9 +982,9 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		nearcongest = 0;
 		setNearCongest(mExtSettings);
 		if (optarg && (atof(optarg) >=  0.0)) {
-		    mExtSettings->rtt_nearcongest_divider = atof(optarg);
+		    mExtSettings->rtt_nearcongest_weight_factor = atof(optarg);
 		} else {
-		    mExtSettings->rtt_nearcongest_divider = NEARCONGEST_DEFAULT;
+		    mExtSettings->rtt_nearcongest_weight_factor = NEARCONGEST_DEFAULT;
 		}
 	    }
 	    if (permitkey) {
@@ -1447,17 +1447,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		}
 	    }
 	} else {
-#ifndef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-	    if (isNearCongest(mExtSettings)) {
-		fprintf(stderr, "ERROR: option of --near-congestion not supported on this platform\n");
-		bail = true;
-	    }
-#else
 	    if ((mExtSettings->mAppRate > 0) && isNearCongest(mExtSettings)) {
 		fprintf(stderr, "ERROR: option of --near-congestion and -b rate limited are mutually exclusive\n");
 		bail = true;
 	    }
-#endif
 	    if (isBWSet(mExtSettings) && !(mExtSettings->mAppRateUnits == kRate_PPS) \
 		&& ((mExtSettings->mAppRate / 8) < static_cast<uintmax_t>(mExtSettings->mBufLen))) {
 		fprintf(stderr, "ERROR: option -b and -l of %d are incompatible, consider setting -l to %d or lower\n", \
