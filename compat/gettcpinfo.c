@@ -53,27 +53,26 @@
 #endif
 
 #if (HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS) && (HAVE_DECL_TCP_INFO)
-static inline bool gettcpinfo (struct ReporterData *data, struct ReportStruct *sample) {
+inline void gettcpinfo (struct ReporterData *data, struct ReportStruct *sample) {
     assert(sample);
     struct tcp_info tcp_info_buf;
     socklen_t tcp_info_length = sizeof(struct tcp_info);
-
-    if (data->info.common->socket > 0) &&				\
+    sample->tcpstats.isValid  = false;
+    if ((data->info.common->socket > 0) &&				\
 	!(getsockopt(data->info.common->socket, IPPROTO_TCP, TCP_INFO, &tcp_info_buf, &tcp_info_length) < 0)) {
-        sample->tcpstats.cwnd = this_tcp_stats->tcpi_snd_cwnd * this_tcp_stats->tcpi_snd_mss / 1024;
-	sample->tcpstats.rtt = this_tcp_stats->tcpi_rtt;
-	sample->tcpstats.retry_tot = this_tcp_stats->tcpi_total_retrans;
-	sample->tcpstats.tcpistat_valid  = true;
+        sample->tcpstats.cwnd = tcp_info_buf.tcpi_snd_cwnd * tcp_info_buf.tcpi_snd_mss / 1024;
+	sample->tcpstats.rtt = tcp_info_buf.tcpi_rtt;
+	sample->tcpstats.retry_tot = tcp_info_buf.tcpi_total_retrans;
+	sample->tcpstats.isValid  = true;
     } else {
         sample->tcpstats.cwnd = -1;
 	sample->tcpstats.rtt = 0;
 	sample->tcpstats.retry_tot = 0;
-	sample->tcpstats.tcpistat_valid  = false;
     }
-    return sample->tcpstats.tcpistat_valid;
+    return sample->tcpstats.isValid;
 }
 #elif HAVE_DECL_TCP_CONNECTION_INFO
-static inline bool gettcpinfo (struct ReporterData *data, struct ReportStruct *sample) {
+inline void gettcpinfo (struct ReporterData *data, struct ReportStruct *sample) {
     assert(sample);
     struct tcp_connection_info tcp_info_buf;
     socklen_t tcp_connection_info_length = sizeof(struct tcp_connection_info);
@@ -95,6 +94,6 @@ static inline bool gettcpinfo (struct ReporterData *data, struct ReportStruct *s
 #else
 static inline bool gettcpinfo (struct ReporterData *data, struct ReportStruct *sample) {
     sample->tcpstats.rtt = 1;
-    sample->tcpstats.tcpistat_valid  = false;
+    sample->tcpstats.isValid  = false;
 };
 #endif

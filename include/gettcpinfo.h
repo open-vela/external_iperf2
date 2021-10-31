@@ -48,14 +48,10 @@
 #ifndef GETTCPINFO_H
 #define GETTCPINFO_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "headers.h"
+#include "Reporter.h"
+#include "packet_ring.h"
 
-inline bool gettcpinfo(struct ReporterData *data, struct ReportStruct *sample);
-
-#ifdef __cplusplus
-} /* end extern "C" */
-#endif
+inline void gettcpinfo(struct ReporterData *data, struct ReportStruct *sample);
 
 #endif

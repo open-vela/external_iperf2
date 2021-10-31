@@ -110,9 +110,9 @@ am__v_AR_1 =
 libcompat_a_AR = $(AR) $(ARFLAGS)
 libcompat_a_LIBADD =
 am_libcompat_a_OBJECTS = Thread.$(OBJEXT) error.$(OBJEXT) \
-	delay.$(OBJEXT) gettimeofday.$(OBJEXT) inet_ntop.$(OBJEXT) \
-	inet_pton.$(OBJEXT) signal.$(OBJEXT) snprintf.$(OBJEXT) \
-	string.$(OBJEXT)
+	delay.$(OBJEXT) gettimeofday.$(OBJEXT) gettcpinfo.$(OBJEXT) \
+	inet_ntop.$(OBJEXT) inet_pton.$(OBJEXT) signal.$(OBJEXT) \
+	snprintf.$(OBJEXT) string.$(OBJEXT)
 libcompat_a_OBJECTS = $(am_libcompat_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -130,10 +130,10 @@ DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/Thread.Po ./$(DEPDIR)/delay.Po \
-	./$(DEPDIR)/error.Po ./$(DEPDIR)/gettimeofday.Po \
-	./$(DEPDIR)/inet_ntop.Po ./$(DEPDIR)/inet_pton.Po \
-	./$(DEPDIR)/signal.Po ./$(DEPDIR)/snprintf.Po \
-	./$(DEPDIR)/string.Po
+	./$(DEPDIR)/error.Po ./$(DEPDIR)/gettcpinfo.Po \
+	./$(DEPDIR)/gettimeofday.Po ./$(DEPDIR)/inet_ntop.Po \
+	./$(DEPDIR)/inet_pton.Po ./$(DEPDIR)/signal.Po \
+	./$(DEPDIR)/snprintf.Po ./$(DEPDIR)/string.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -301,6 +301,7 @@ libcompat_a_SOURCES = \
 		      error.c \
 		      delay.c \
 		      gettimeofday.c \
+		      gettcpinfo.c \
 		      inet_ntop.c \
 		      inet_pton.c \
 		      signal.c \
@@ -358,6 +359,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Thread.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/delay.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/error.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gettcpinfo.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gettimeofday.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/inet_ntop.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/inet_pton.Po@am__quote@ # am--include-marker
@@ -512,6 +514,7 @@ distclean: distclean-am
 		-rm -f ./$(DEPDIR)/Thread.Po
 	-rm -f ./$(DEPDIR)/delay.Po
 	-rm -f ./$(DEPDIR)/error.Po
+	-rm -f ./$(DEPDIR)/gettcpinfo.Po
 	-rm -f ./$(DEPDIR)/gettimeofday.Po
 	-rm -f ./$(DEPDIR)/inet_ntop.Po
 	-rm -f ./$(DEPDIR)/inet_pton.Po
@@ -566,6 +569,7 @@ maintainer-clean: maintainer-clean-am
 		-rm -f ./$(DEPDIR)/Thread.Po
 	-rm -f ./$(DEPDIR)/delay.Po
 	-rm -f ./$(DEPDIR)/error.Po
+	-rm -f ./$(DEPDIR)/gettcpinfo.Po
 	-rm -f ./$(DEPDIR)/gettimeofday.Po
 	-rm -f ./$(DEPDIR)/inet_ntop.Po
 	-rm -f ./$(DEPDIR)/inet_pton.Po

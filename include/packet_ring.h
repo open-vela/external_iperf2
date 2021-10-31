@@ -83,9 +83,7 @@ struct ReportStruct {
     intmax_t remaining;
     int transit_ready;
     int writecnt;
-#if HAVE_TCP_STATS
     struct reportstruct_tcpstats tcpstats;
-#endif
     double select_delay;
     long drain_time;
 };
