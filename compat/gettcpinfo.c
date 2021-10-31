@@ -82,7 +82,7 @@ inline void gettcpinfo (struct ReporterData *data, struct ReportStruct *sample) 
 	!(getsockopt(data->info.common->socket, IPPROTO_TCP, TCP_CONNECTION_INFO, &tcp_info_buf, &tcp_connection_info_length) < 0)) {
         sample->tcpstats.cwnd = tcp_info_buf.tcpi_snd_cwnd / 1024;
 	sample->tcpstats.rtt = tcp_info_buf.tcpi_rttcur;
-	sample->tcpstats.retry_tot = -1;
+	sample->tcpstats.retry_tot = tcp_info_buf.tcpi_txretransmitpackets;
 	sample->tcpstats.isValid = true;
     } else {
         sample->tcpstats.cwnd = -1;
