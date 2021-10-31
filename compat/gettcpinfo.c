@@ -91,7 +91,7 @@ inline void gettcpinfo (struct ReporterData *data, struct ReportStruct *sample) 
     }
 }
 #else
-static inline void gettcpinfo (struct ReporterData *data, struct ReportStruct *sample) {
+inline void gettcpinfo (struct ReporterData *data, struct ReportStruct *sample) {
     sample->tcpstats.rtt = 1;
     sample->tcpstats.isValid  = false;
 };
