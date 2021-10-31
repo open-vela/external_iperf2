@@ -321,11 +321,11 @@ int Client::StartSynch () {
 	// Near congestion and peridiodic need sampling on every report packet
 	if (isNearCongest(mSettings) || isPeriodicBurst(mSettings)) {
 	    myReport->info.isEnableTcpInfo = true;
-	    myReport->info.ts.nextTCPStampleTime = {.tv_sec = 0, .tv_usec = 0};
+	    myReport->info.ts.nextTCPStampleTime.tv_sec = 0;
+	    myReport->info.ts.nextTCPStampleTime.tv_usec = 0;	
 	} else if (isEnhanced(mSettings)) {
 	    myReport->info.isEnableTcpInfo = true;
 	    myReport->info.ts.nextTCPStampleTime = myReport->info.ts.nextTime;
-	    printf("**** set enable \n");
 	}
     }
 #endif
