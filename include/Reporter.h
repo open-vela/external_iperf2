@@ -134,7 +134,7 @@ struct WriteStats {
     int WriteErr;
     int totWriteCnt;
     int totWriteErr;
-#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+#if (HAVE_TCP_STATS)
     int TCPretry;
     int totTCPretry;
     int cwnd;
@@ -249,10 +249,6 @@ struct ReportCommon {
     double rtt_weight;
     double ListenerTimeout;
     double FPS;
-#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-    bool enable_sampleTCPstats;
-    bool intervalonly_sampleTCPstats;
-#endif
 #if WIN32
     SOCKET socket;
 #else
@@ -340,9 +336,7 @@ struct ReportTimeStamps {
     struct timeval nextTime;
     struct timeval intervalTime;
     struct timeval IPGstart;
-#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
     struct timeval nextTCPStampleTime;
-#endif
 };
 
 struct TransferInfo {
@@ -375,6 +369,7 @@ struct TransferInfo {
     char csv_peer[CSVPEERLIMIT];
     bool final;
     bool burstid_transition;
+    bool isEnableTcpInfo;
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
     struct DrainStats drain_mmm;
     struct histogram *drain_histogram;
@@ -434,11 +429,7 @@ struct ConnectionInfo* InitConnectOnlyReport(struct thread_Settings *thread);
 struct ReportHeader *InitSettingsReport(struct thread_Settings *inSettings);
 struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings, struct server_hdr *server);
 void PostReport(struct ReportHeader *reporthdr);
-#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-bool ReportPacket (struct ReporterData* data, struct ReportStruct *packet, struct tcp_info *tcp_stats);
-#else
-void ReportPacket (struct ReporterData* data, struct ReportStruct *packet);
-#endif
+bool ReportPacket (struct ReporterData* data, struct ReportStruct *packet);
 int EndJob(struct ReportHeader *reporthdr,  struct ReportStruct *packet);
 void FreeReport(struct ReportHeader *reporthdr);
 void FreeSumReport (struct SumReport *sumreport);
