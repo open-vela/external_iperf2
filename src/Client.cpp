@@ -319,12 +319,13 @@ int Client::StartSynch () {
 #if HAVE_TCP_STATS
     if (!isUDP(mSettings)) {
 	// Near congestion and peridiodic need sampling on every report packet
-	if (isNearCongest(inSettings) || isPeriodicBurst(inSettings)) {
+	if (isNearCongest(mSettings) || isPeriodicBurst(mSettings)) {
 	    myReport->info.isEnableTcpInfo = true;
-	    myReport->info.ts.nextTCPStampleTime = {.tv_sec = 0, .tv_val = 0};
-	} else if (isEnhanced(inSettings)) {
+	    myReport->info.ts.nextTCPStampleTime = {.tv_sec = 0, .tv_usec = 0};
+	} else if (isEnhanced(mSettings)) {
 	    myReport->info.isEnableTcpInfo = true;
 	    myReport->info.ts.nextTCPStampleTime = myReport->info.ts.nextTime;
+	    printf("**** set enable \n");
 	}
     }
 #endif
