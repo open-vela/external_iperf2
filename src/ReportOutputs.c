@@ -355,7 +355,7 @@ void tcp_output_write (struct TransferInfo *stats) {
 void tcp_output_write_enhanced (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw_write_enhanced);
     _print_stats_common(stats);
-#ifndef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+#if !(HAVE_TCP_STATS)
     printf(report_bw_write_enhanced_format,
 	   stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext,
@@ -396,7 +396,7 @@ void tcp_output_write_enhanced (struct TransferInfo *stats) {
 void tcp_output_write_enhanced_drain (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_write_enhanced_drain);
     _print_stats_common(stats);
-#ifndef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+#if !(HAVE_TCP_STATS)
     printf(report_write_enhanced_drain_format,
 	   stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext,
@@ -455,7 +455,7 @@ void tcp_output_write_enhanced_drain (struct TransferInfo *stats) {
 void tcp_output_write_enhanced_isoch (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_write_enhanced_isoch);
     _print_stats_common(stats);
-#ifndef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+#if !(HAVE_TCP_STATS)
     printf(report_write_enhanced_isoch_format,
 	   stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext,
@@ -905,7 +905,7 @@ void tcp_output_sum_write_enhanced (struct TransferInfo *stats) {
 	   outbuffer, outbufferext,
 	   stats->sock_callstats.write.WriteCnt,
 	   stats->sock_callstats.write.WriteErr
-#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+#if HAVE_TCP_STATS
 	   ,stats->sock_callstats.write.TCPretry
 #endif
     );
@@ -919,7 +919,7 @@ void tcp_output_sumcnt_write_enhanced (struct TransferInfo *stats) {
 	   outbuffer, outbufferext,
 	   stats->sock_callstats.write.WriteCnt,
 	   stats->sock_callstats.write.WriteErr
-#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+#if HAVE_TCP_STATS
 	   ,stats->sock_callstats.write.TCPretry
 #endif
     );

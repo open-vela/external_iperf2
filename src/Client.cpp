@@ -246,28 +246,10 @@ void Client::TxDelay () {
     }
 }
 
-// return true of tcpi stats were sampled
-#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-inline bool Client::myReportPacket (bool sample_tcpi) {
-    bool rc = false;
-    if (sample_tcpi) {
-	rc = ReportPacket(myReport, reportstruct, &my_tcpi_stats);
-    } else {
-	ReportPacket(myReport, reportstruct, NULL);
-    }
-    reportstruct->packetLen = 0;
-    return rc;
-}
-inline void Client::myReportPacket () {
-    ReportPacket(myReport, reportstruct, NULL);
-    reportstruct->packetLen = 0;
-}
-#else
 inline void Client::myReportPacket (void) {
     ReportPacket(myReport, reportstruct);
     reportstruct->packetLen = 0;
 }
-#endif
 
 
 // There are multiple startup synchronizations, this code
@@ -281,6 +263,7 @@ int Client::StartSynch () {
     myJob = InitIndividualReport(mSettings);
     myReport = static_cast<struct ReporterData *>(myJob->this_report);
     myReport->info.common->socket=mySocket;
+    myReport->info.isEnableTcpInfo = false; // default here, set in init traffic actions
 
     // Perform delays, usually between connect() and data xfer though before connect
     // Two delays are supported:
@@ -333,6 +316,19 @@ int Client::StartSynch () {
 	    return -1;
     }
     SetReportStartTime();
+#if HAVE_TCP_STATS
+    if (!isUDP(mSettings)) {
+	// Near congestion and peridiodic need sampling on every report packet
+	if (isNearCongest(inSettings) || isPeriodicBurst(inSettings)) {
+	    myReport->info.isEnableTcpInfo = true;
+	    myReport->info.ts.nextTCPStampleTime = {.tv_sec = 0, .tv_val = 0};
+	} else if (isEnhanced(inSettings)) {
+	    myReport->info.isEnableTcpInfo = true;
+	    myReport->info.ts.nextTCPStampleTime = myReport->info.ts.nextTime;
+	}
+    }
+#endif
+
     if (reportstruct->packetLen > 0) {
 	reportstruct->packetTime = myReport->info.ts.startTime;
 	reportstruct->sentTime = reportstruct->packetTime;
@@ -379,9 +375,6 @@ inline void Client::SetReportStartTime () {
     if (!TimeZero(myReport->info.ts.intervalTime)) {
 	myReport->info.ts.nextTime = myReport->info.ts.startTime;
 	TimeAdd(myReport->info.ts.nextTime, myReport->info.ts.intervalTime);
-#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-	myReport->info.ts.nextTCPStampleTime = myReport->info.ts.nextTime;
-#endif
     }
     if (myReport->GroupSumReport) {
 	struct TransferInfo *sumstats = &myReport->GroupSumReport->info;
@@ -751,17 +744,19 @@ void Client::RunNearCongestionTCP () {
 		mSettings->mAmount = 0;
 	    }
 	}
-#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
 	// apply placing after write burst completes
-	if (reportstruct->transit_ready && myReportPacket(true)) {
-	    int pacing_timer = static_cast<int>(std::ceil(static_cast<double>(my_tcpi_stats.tcpi_rtt) * mSettings->rtt_nearcongest_divider));
-//		printf("**** delaytime = %d\n", delaytime);
-	    delay_loop(pacing_timer);
-	} else
+	if (reportstruct->transit_ready) {
+	    myReportPacket(); // this will set the tcpstats in the report struct
+	    // pacing timer is weighted by the RTT (set to 1 when RTT is not supported)
+	    int pacing_timer = 0;
+#if HAVE_TCP_STATS
+	    pacing_timer = static_cast<int>(std::ceil(static_cast<double>(reportstruct->tcpstats.rtt) * mSettings->rtt_nearcongest_weight_factor));
+#else
+	    pacing_timer = static_cast<int>(100 * mSettings->rtt_nearcongest_weight_factor);
 #endif
-        {
-	   myReportPacket();
-        }
+	    if (pacing_timer)
+		delay_loop(pacing_timer);
+	}
     }
     FinishTrafficActions();
 }
@@ -1324,9 +1319,6 @@ inline void Client::tcp_drain (void) {
 
 inline void Client::tcp_shutdown (void) {
     if ((mySocket != INVALID_SOCKET) && isConnected()) {
-#ifdef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
-	// gettcpistats(myReport, true, NULL);
-#endif
 	int rc = shutdown(mySocket, SHUT_WR);
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug("Client calls shutdown() SHUTW_WR on tcp socket %d", mySocket);
