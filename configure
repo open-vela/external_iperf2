@@ -8356,6 +8356,21 @@ if test "x$ac_cv_member_struct_tcp_info_tcpi_total_retrans" = xyes; then :
 fi
 
 
+ac_fn_c_check_member "$LINENO" "struct tcp_info" "tcpi_total_retrans" "ac_cv_member_struct_tcp_info_tcpi_total_retrans" "
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+
+"
+if test "x$ac_cv_member_struct_tcp_info_tcpi_total_retrans" = xyes; then :
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS 1
+_ACEOF
+
+
+fi
+
+
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for stdbool.h that conforms to C99" >&5
 $as_echo_n "checking for stdbool.h that conforms to C99... " >&6; }

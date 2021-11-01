@@ -258,6 +258,11 @@ AC_CHECK_MEMBER([struct tcp_info.tcpi_total_retrans], [], [],[
 #include <netinet/tcp.h>
 ])
 
+AC_CHECK_MEMBERS([struct tcp_info.tcpi_total_retrans], [], [],[
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+])
+
 dnl ===================================================================
 dnl Check for compiler characteristics
 
