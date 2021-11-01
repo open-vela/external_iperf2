@@ -322,7 +322,7 @@ int Client::StartSynch () {
 	if (isNearCongest(mSettings) || isPeriodicBurst(mSettings)) {
 	    myReport->info.isEnableTcpInfo = true;
 	    myReport->info.ts.nextTCPStampleTime.tv_sec = 0;
-	    myReport->info.ts.nextTCPStampleTime.tv_usec = 0;	
+	    myReport->info.ts.nextTCPStampleTime.tv_usec = 0;
 	} else if (isEnhanced(mSettings)) {
 	    myReport->info.isEnableTcpInfo = true;
 	    myReport->info.ts.nextTCPStampleTime = myReport->info.ts.nextTime;
