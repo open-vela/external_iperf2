@@ -1527,8 +1527,6 @@ void reporter_transfer_protocol_fullduplex_udp (struct TransferInfo *stats, int 
 	stats->total.Bytes.prev = stats->total.Bytes.current;
 	stats->total.IPG.prev = stats->total.IPG.current;
 	stats->total.Datagrams.prev = stats->total.Datagrams.current;
-	if (stats->cntDatagrams)
-	    stats->IPGsum = 0.0;
     }
     if (final) {
 	stats->cntBytes = stats->total.Bytes.current;
@@ -1542,6 +1540,8 @@ void reporter_transfer_protocol_fullduplex_udp (struct TransferInfo *stats, int 
     }
     if ((stats->output_handler) && !(stats->isMaskOutput))
 	(*stats->output_handler)(stats);
+    if (stats->cntDatagrams)
+        stats->IPGsum = 0.0;
 }
 
 // Conditional print based on time
