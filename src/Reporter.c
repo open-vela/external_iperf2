@@ -1572,7 +1572,7 @@ int reporter_condprint_time_interval_report (struct ReporterData *data, struct R
 	if (sumstats) {
 	    if ((++data->GroupSumReport->threads) == data->GroupSumReport->reference.count)   {
 		data->GroupSumReport->threads = 0;
-		if ((data->GroupSumReport->reference.count > 1) || \
+		if ((data->GroupSumReport->reference.count > (fullduplexstats ? 2 : 1)) || \
 		    isSumOnly(data->info.common)) {
 		    sumstats->isMaskOutput = false;
 		} else {
