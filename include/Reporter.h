@@ -328,7 +328,7 @@ struct TransferInfo {
     void (*output_handler) (struct TransferInfo *stats);
     int groupID;
     int threadcnt;
-    int filter_this_sample_output;
+    bool isMaskOutput;
     uintmax_t cntBytes;
     intmax_t cntError;
     intmax_t cntOutofOrder;
