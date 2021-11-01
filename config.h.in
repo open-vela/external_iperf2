@@ -343,6 +343,9 @@
 /* Define to 1 if the system has the type `struct sockaddr_storage'. */
 #undef HAVE_STRUCT_SOCKADDR_STORAGE
 
+/* Define to 1 if `tcpi_total_retrans' is a member of `struct tcp_info'. */
+#undef HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS
+
 /* Define to 1 if you have the <syslog.h> header file. */
 #undef HAVE_SYSLOG_H
 
