@@ -963,7 +963,7 @@ static inline void reporter_transfer_protocol_missed_reports (struct TransferInf
 	emptystats.ts.iStart = stats->ts.iStart;
 	emptystats.ts.iEnd = stats->ts.iEnd;
 	emptystats.common = stats->common;
-	if ((stats->output_handler) && !(stats->filter_this_sample_output))
+	if ((stats->output_handler) && !(stats->isMaskOutput))
 	    (*stats->output_handler)(&emptystats);
     }
 }
@@ -1101,7 +1101,7 @@ void reporter_transfer_protocol_server_udp (struct ReporterData *data, int final
 	    if (stats->cntError < 0)
 		stats->cntError = 0;
 	    stats->cntDatagrams = stats->PacketID - stats->total.Datagrams.prev;
-	    if ((stats->output_handler) && !(stats->filter_this_sample_output)) {
+	    if ((stats->output_handler) && !(stats->isMaskOutput)) {
 		reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
 		if ((stats->ts.iEnd - stats->ts.iStart) > stats->ts.significant_partial)
 		    (*stats->output_handler)(stats);
@@ -1138,7 +1138,7 @@ void reporter_transfer_protocol_server_udp (struct ReporterData *data, int final
 	    stats->framelatency_histogram->final = 1;
 	}
     }
-    if ((stats->output_handler) && !(stats->filter_this_sample_output))
+    if ((stats->output_handler) && !(stats->isMaskOutput))
 	(*stats->output_handler)(stats);
     if (!final)
 	reporter_reset_transfer_stats_server_udp(stats);
@@ -1170,7 +1170,7 @@ void reporter_transfer_protocol_sum_server_udp (struct TransferInfo *stats, int 
 	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
 	stats->cntIPG = stats->total.IPG.current - stats->total.IPG.prev;
     }
-    if ((stats->output_handler) && !(stats->filter_this_sample_output))
+    if ((stats->output_handler) && !(stats->isMaskOutput))
 	(*stats->output_handler)(stats);
     if (!final) {
 	stats->threadcnt = 0;
@@ -1193,13 +1193,13 @@ void reporter_transfer_protocol_sum_client_udp (struct TransferInfo *stats, int 
 	stats->cntIPG = stats->total.IPG.current - stats->total.IPG.prev;
 	stats->cntDatagrams = stats->total.Datagrams.current - stats->total.Datagrams.prev;
     }
-    if ((stats->output_handler) && !(stats->filter_this_sample_output))
+    if ((stats->output_handler) && !(stats->isMaskOutput))
 	(*stats->output_handler)(stats);
 
     if (!final) {
 	stats->threadcnt = 0;
 	reporter_reset_transfer_stats_client_udp(stats);
-    } else if ((stats->common->ReportMode != kReport_CSV) && !(stats->filter_this_sample_output)) {
+    } else if ((stats->common->ReportMode != kReport_CSV) && !(stats->isMaskOutput)) {
 	printf(report_sumcnt_datagrams, stats->threadcnt, stats->total.Datagrams.current);
 	fflush(stdout);
     }
@@ -1256,7 +1256,7 @@ void reporter_transfer_protocol_client_udp (struct ReporterData *data, int final
 	    stats->cntIPG = 0;
 	}
     }
-    if ((stats->output_handler) && !(stats->filter_this_sample_output)) {
+    if ((stats->output_handler) && !(stats->isMaskOutput)) {
 	(*stats->output_handler)(stats);
 	if (final && (stats->common->ReportMode != kReport_CSV)) {
 	    printf(report_datagrams, stats->common->transferID, stats->total.Datagrams.current);
@@ -1291,7 +1291,7 @@ void reporter_transfer_protocol_server_tcp (struct ReporterData *data, int final
     if (final) {
 	if ((stats->cntBytes > 0) && stats->output_handler && !TimeZero(stats->ts.intervalTime)) {
 	    // print a partial interval report if enable and this a final
-	    if ((stats->output_handler) && !(stats->filter_this_sample_output)) {
+	    if ((stats->output_handler) && !(stats->isMaskOutput)) {
 		if (isIsochronous(stats->common)) {
 		    stats->isochstats.cntFrames = stats->isochstats.framecnt.current - stats->isochstats.framecnt.prev;
 		    stats->isochstats.cntFramesMissed = stats->isochstats.framelostcnt.current - stats->isochstats.framelostcnt.prev;
@@ -1328,7 +1328,7 @@ void reporter_transfer_protocol_server_tcp (struct ReporterData *data, int final
 	stats->isochstats.cntFramesMissed = stats->isochstats.framelostcnt.current - stats->isochstats.framelostcnt.prev;
 	stats->isochstats.cntSlips = stats->isochstats.slipcnt.current - stats->isochstats.slipcnt.prev;
     }
-    if ((stats->output_handler) && !stats->filter_this_sample_output) {
+    if ((stats->output_handler) && !stats->isMaskOutput) {
 	(*stats->output_handler)(stats);
 	if (isFrameInterval(stats->common) && stats->framelatency_histogram) {
 	    histogram_print(stats->framelatency_histogram, stats->ts.iStart, stats->ts.iEnd);
@@ -1388,7 +1388,7 @@ void reporter_transfer_protocol_client_tcp (struct ReporterData *data, int final
 #endif
 	if ((stats->cntBytes > 0) && stats->output_handler && !TimeZero(stats->ts.intervalTime)) {
 	    // print a partial interval report if enable and this a final
-	    if ((stats->output_handler) && !(stats->filter_this_sample_output)) {
+	    if ((stats->output_handler) && !(stats->isMaskOutput)) {
 		if (isIsochronous(stats->common)) {
 		    stats->isochstats.cntFrames = stats->isochstats.framecnt.current - stats->isochstats.framecnt.prev;
 		    stats->isochstats.cntFramesMissed = stats->isochstats.framelostcnt.current - stats->isochstats.framelostcnt.prev;
@@ -1423,7 +1423,7 @@ void reporter_transfer_protocol_client_tcp (struct ReporterData *data, int final
 	stats->isochstats.cntFramesMissed = stats->isochstats.framelostcnt.current - stats->isochstats.framelostcnt.prev;
 	stats->isochstats.cntSlips = stats->isochstats.slipcnt.current - stats->isochstats.slipcnt.prev;
     }
-    if ((stats->output_handler) && !(stats->filter_this_sample_output)) {
+    if ((stats->output_handler) && !(stats->isMaskOutput)) {
 	(*stats->output_handler)(stats);
     }
     if (!final)
@@ -1437,13 +1437,13 @@ void reporter_transfer_protocol_sum_client_tcp (struct TransferInfo *stats, int 
     if (!final || (final && (stats->cntBytes > 0) && !TimeZero(stats->ts.intervalTime))) {
 	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
 	if (final) {
-	    if ((stats->output_handler) && !(stats->filter_this_sample_output)) {
+	    if ((stats->output_handler) && !(stats->isMaskOutput)) {
 		reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
 		if ((stats->ts.iEnd - stats->ts.iStart) > stats->ts.significant_partial)
 		    (*stats->output_handler)(stats);
 		reporter_reset_transfer_stats_client_tcp(stats);
 	    }
-	} else if ((stats->output_handler) && !(stats->filter_this_sample_output)) {
+	} else if ((stats->output_handler) && !(stats->isMaskOutput)) {
 	    (*stats->output_handler)(stats);
 	    stats->threadcnt = 0;
 	}
@@ -1457,7 +1457,7 @@ void reporter_transfer_protocol_sum_client_tcp (struct TransferInfo *stats, int 
 #endif
 	stats->cntBytes = stats->total.Bytes.current;
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
-	if ((stats->output_handler) && !(stats->filter_this_sample_output))
+	if ((stats->output_handler) && !(stats->isMaskOutput))
 	    (*stats->output_handler)(stats);
     }
 }
@@ -1466,12 +1466,12 @@ void reporter_transfer_protocol_sum_server_tcp (struct TransferInfo *stats, int 
     if (!final || (final && (stats->cntBytes > 0) && !TimeZero(stats->ts.intervalTime))) {
 	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
 	if (final) {
-	    if ((stats->output_handler) && !(stats->filter_this_sample_output)) {
+	    if ((stats->output_handler) && !(stats->isMaskOutput)) {
 		reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
 		if ((stats->ts.iEnd - stats->ts.iStart) > stats->ts.significant_partial)
 		    (*stats->output_handler)(stats);
 	    }
-	} else if ((stats->output_handler) && !(stats->filter_this_sample_output)) {
+	} else if ((stats->output_handler) && !(stats->isMaskOutput)) {
 	    (*stats->output_handler)(stats);
 	    stats->threadcnt = 0;
 	}
@@ -1486,7 +1486,7 @@ void reporter_transfer_protocol_sum_server_tcp (struct TransferInfo *stats, int 
 	}
 	stats->cntBytes = stats->total.Bytes.current;
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
-	if ((stats->output_handler) && !(stats->filter_this_sample_output))
+	if ((stats->output_handler) && !(stats->isMaskOutput))
 	    (*stats->output_handler)(stats);
     }
 }
@@ -1494,7 +1494,7 @@ void reporter_transfer_protocol_fullduplex_tcp (struct TransferInfo *stats, int 
     if (!final || (final && (stats->cntBytes > 0) && !TimeZero(stats->ts.intervalTime))) {
 	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
 	if (final) {
-	    if ((stats->output_handler) && !(stats->filter_this_sample_output)) {
+	    if ((stats->output_handler) && !(stats->isMaskOutput)) {
 		reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
 		if ((stats->ts.iEnd - stats->ts.iStart) > stats->ts.significant_partial)
 		    (*stats->output_handler)(stats);
@@ -1508,7 +1508,7 @@ void reporter_transfer_protocol_fullduplex_tcp (struct TransferInfo *stats, int 
     } else {
 	reporter_set_timestamps_time(&stats->ts, INTERVAL);
     }
-    if ((stats->output_handler) && !(stats->filter_this_sample_output))
+    if ((stats->output_handler) && !(stats->isMaskOutput))
 	(*stats->output_handler)(stats);
 }
 
@@ -1518,7 +1518,7 @@ void reporter_transfer_protocol_fullduplex_udp (struct TransferInfo *stats, int 
 	stats->cntDatagrams = stats->total.Datagrams.current - stats->total.Datagrams.prev;
 	stats->cntIPG = stats->total.IPG.current - stats->total.IPG.prev;
 	if (final) {
-	    if ((stats->output_handler) && !(stats->filter_this_sample_output)) {
+	    if ((stats->output_handler) && !(stats->isMaskOutput)) {
 		reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
 		if ((stats->ts.iEnd - stats->ts.iStart) > stats->ts.significant_partial)
 		    (*stats->output_handler)(stats);
@@ -1540,7 +1540,7 @@ void reporter_transfer_protocol_fullduplex_udp (struct TransferInfo *stats, int 
     } else {
 	reporter_set_timestamps_time(&stats->ts, INTERVAL);
     }
-    if ((stats->output_handler) && !(stats->filter_this_sample_output))
+    if ((stats->output_handler) && !(stats->isMaskOutput))
 	(*stats->output_handler)(stats);
 }
 
@@ -1574,9 +1574,9 @@ int reporter_condprint_time_interval_report (struct ReporterData *data, struct R
 		data->GroupSumReport->threads = 0;
 		if ((data->GroupSumReport->reference.count > 1) || \
 		    isSumOnly(data->info.common)) {
-		    sumstats->filter_this_sample_output = 1;
+		    sumstats->isMaskOutput = false;
 		} else {
-		    sumstats->filter_this_sample_output = 1;
+		    sumstats->isMaskOutput = true;
 		}
 		reporter_set_timestamps_time(&sumstats->ts, INTERVAL);
 		assert(data->GroupSumReport->transfer_protocol_sum_handler != NULL);
@@ -1585,7 +1585,7 @@ int reporter_condprint_time_interval_report (struct ReporterData *data, struct R
 	}
         // In the (hopefully unlikely event) the reporter fell behind
         // output the missed reports to catch up
-	if ((stats->output_handler) && !(stats->filter_this_sample_output))
+	if ((stats->output_handler) && !(stats->isMaskOutput))
 	    reporter_transfer_protocol_missed_reports(stats, packet);
     }
     return advance_jobq;
@@ -1614,7 +1614,7 @@ int reporter_condprint_frame_interval_report_server_udp (struct ReporterData *da
 	if (stats->cntError < 0)
 	    stats->cntError = 0;
 	stats->cntDatagrams = stats->PacketID - stats->total.Datagrams.prev;
-	if ((stats->output_handler) && !(stats->filter_this_sample_output))
+	if ((stats->output_handler) && !(stats->isMaskOutput))
 	    (*stats->output_handler)(stats);
 	reporter_reset_transfer_stats_server_udp(stats);
 	advance_jobq = 1;
@@ -1637,7 +1637,7 @@ int reporter_condprint_burst_interval_report_server_tcp (struct ReporterData *da
 	stats->ts.packetTime = packet->packetTime;
 	reporter_set_timestamps_time(&stats->ts, INTERVALPARTIAL);
 	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
-	if ((stats->output_handler) && !(stats->filter_this_sample_output))
+	if ((stats->output_handler) && !(stats->isMaskOutput))
 	    (*stats->output_handler)(stats);
 	reporter_reset_transfer_stats_server_tcp(stats);
 	advance_jobq = 1;
