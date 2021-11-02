@@ -1637,7 +1637,7 @@ int reporter_condprint_burst_interval_report_server_tcp (struct ReporterData *da
 	stats->ts.packetTime = packet->packetTime;
 	reporter_set_timestamps_time(&stats->ts, INTERVALPARTIAL);
 	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
-	if ((stats->output_handler) && !(stats->filter_this_sample_output))
+	if ((stats->output_handler) && !(stats->isMaskOutput))
 	    (*stats->output_handler)(stats);
 	reporter_reset_transfer_stats_server_tcp(stats);
 	advance_jobq = 1;
