@@ -319,12 +319,12 @@ void tcp_output_burst_read (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_burst_read_tcp);
     _print_stats_common(stats);
     if (!stats->final) {
-	set_netpowerbuf(stats->tripTime, stats);
+	set_netpowerbuf(stats->transit.current.mean, stats);
 	printf(report_burst_read_tcp_format,
 	       stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
 	       outbuffer, outbufferext,
-	       stats->tripTime * 1e3,
-	       (1e3 * stats->tripTime * stats->common->FPS) / 10.0, // (1e3 / 100%)
+	       stats->transit.current.mean * 1e3,
+	       (1e2 * stats->transit.current.mean * stats->common->FPS), // (1e3 / 100%)
 	       stats->sock_callstats.read.cntRead,
 	       stats->sock_callstats.read.bins[0],
 	       stats->sock_callstats.read.bins[1],
