@@ -752,7 +752,12 @@ static void reporter_handle_rxmsg_oneway_transit (struct TransferInfo *stats, st
 	stats->isochstats.frameID = packet->frameID;
     }
     if (packet->frameID && packet->transit_ready) {
-        reporter_handle_packet_oneway_transit(stats, packet);
+	double transit = TimeDifference(packet->packetTime, packet->sentTime);
+	reporter_update_mmm(&stats->transit.total, transit);
+	reporter_update_mmm(&stats->transit.current, transit);
+	if (stats->framelatency_histogram) {
+	    histogram_insert(stats->framelatency_histogram, transit, &packet->sentTime);
+	}
 	if (!TimeZero(stats->ts.prevpacketTime)) {
 	    double delta = TimeDifference(packet->sentTime, stats->ts.prevpacketTime);
 	    stats->IPGsum += delta;
