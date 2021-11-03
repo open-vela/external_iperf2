@@ -1,3 +1,4 @@
+
 /*---------------------------------------------------------------
  * Copyright (c) 2020
  * Broadcom Corporation
@@ -368,12 +369,12 @@ void tcp_output_write (struct TransferInfo *stats) {
 
 void tcp_output_burst_write (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_burst_write_tcp);
-    set_netpowerbuf((stats->tripTime + stats->sock_callstats.write.rtt), stats);
+    set_netpowerbuf((stats->transit.current.mean + stats->sock_callstats.write.rtt), stats);
     _print_stats_common(stats);
     printf(report_burst_write_tcp_format, stats->common->transferIDStr,
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext,
-	   stats->tripTime,
+	   stats->transit.current.mean,
 	   stats->sock_callstats.write.WriteCnt,
 	   stats->sock_callstats.write.WriteErr,
 	   stats->sock_callstats.write.TCPretry,
