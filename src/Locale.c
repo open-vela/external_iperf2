@@ -126,6 +126,7 @@ Client specific:\n\
       --incr-dstip         Increment the destination ip with parallel (-P) traffic threads\n\
       --incr-dstport       Increment the destination port with parallel (-P) traffic threads\n\
       --incr-srcip         Increment the source ip with parallel (-P) traffic threads\n\
+      --incr-srcport       Increment the source port with parallel (-P) traffic threads\n\
       --local-only         Set don't route on socket\n\
       --near-congestion=[w] Use a weighted write delay per the sampled TCP RTT (experimental)\n\
       --no-connect-sync    No sychronization after connect when -P or parallel traffic threads\n\
