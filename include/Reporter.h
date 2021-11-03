@@ -336,7 +336,6 @@ struct TransferInfo {
     intmax_t cntIPG;
     intmax_t PacketID;
     double jitter;
-    double tripTime;
     double IPGsum;
     struct ShiftCounters total; // Shift counters used to calculate interval reports and hold totals
     union SendReadStats sock_callstats;
