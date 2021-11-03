@@ -151,8 +151,7 @@ static inline void _output_outoforder(struct TransferInfo *stats) {
 //
 #define LLAW_LOWERBOUNDS -1e7
 static inline void set_llawbuf(double lambda, double meantransit, struct TransferInfo *stats) {
-    double meantransit_sec = (1e-6 * meantransit);
-    double L  = lambda * meantransit_sec;
+    double L  = lambda * meantransit;
     if (L < LLAW_LOWERBOUNDS) {
 	strcpy(llaw_buf, "OBL");
     } else {
@@ -162,12 +161,10 @@ static inline void set_llawbuf(double lambda, double meantransit, struct Transfe
     }
 }
 static inline void set_llawbuf_udp (int lambda, double meantransit, double variance, struct TransferInfo *stats) {
-    double meantransit_sec = (1e-6 * meantransit);
-    double variance_sec = (1e-6 * variance);
     int Lvar = 0;
-    int L  = round(lambda * meantransit_sec);
+    int L  = round(lambda * meantransit);
     if (variance > 0.0) {
-	Lvar  = round(lambda * variance_sec);
+	Lvar  = round(lambda * variance);
     } else {
 	Lvar = 0;
     }
