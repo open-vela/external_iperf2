@@ -48,6 +48,10 @@
 #ifndef GETTCPINFO_H
 #define GETTCPINFO_H
 
+#if HAVE_NETINET_TCP_H
+#include <netinet/tcp.h>
+#endif
+
 #include "headers.h"
 #include "Reporter.h"
 #include "packet_ring.h"
