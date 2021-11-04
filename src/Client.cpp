@@ -454,9 +454,9 @@ void Client::InitTrafficLoop () {
     if (isPeriodicBurst(mSettings) && (mSettings->mFPS > 0.0)) {
 	sosndtimer = static_cast<int>(round(250000.0 / mSettings->mFPS));
     } else if (mSettings->mInterval > 0) {
-	sosndtimer = static_cast<int>(mSettings->mInterval / 2);
+        sosndtimer = static_cast<int>(round(0.5 * mSettings->mInterval));
     } else {
-	sosndtimer = static_cast<int>((mSettings->mAmount * 10000) / 2);
+	sosndtimer = static_cast<int>(mSettings->mAmount * 5e3);
     }
     SetSocketOptionsSendTimeout(mSettings, sosndtimer);
     // set the lower bounds delay based of the socket timeout timer
