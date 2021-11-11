@@ -231,7 +231,7 @@ int EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
 	    struct Condition *tmp = &report->FullDuplexReport->fullduplex_barrier.await;
 	    Condition_Destroy(tmp);
 #if HAVE_THREAD_DEBUG
-	    thread_debug("Socket fullduplex close sock=%d", stats->common->socket);
+	    thread_debug("Socket fullduplex close sock=%d", report->FullDuplexReport->info.common->socket);
 #endif
 	    FreeSumReport(report->FullDuplexReport);
 	} else {
