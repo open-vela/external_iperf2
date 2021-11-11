@@ -382,7 +382,7 @@ static void reporter_mmm_update (struct MeanMinMaxStats *stats, double value) {
 	stats->vd = value - stats->mean;
 	stats->mean += (stats->vd / stats->cnt);
 	stats->m2 += stats->vd * (value - stats->mean);
-//`<	printf("*****m2=%f, mmm = %f/%f\n", stats->m2, stats->vd, (value - stats->mean));
+//	printf("*****m2=%f, mmm = %f/%f\n", stats->m2, stats->vd, (value - stats->mean));
 	// mean min max tests
 	if (value < stats->min)
 	    stats->min = value;
@@ -609,7 +609,7 @@ inline int reporter_process_report (struct ReportHeader *reporthdr) {
     {
 	struct ConnectionInfo *creport = (struct ConnectionInfo *)reporthdr->this_report;
 	assert(creport!=NULL);
-	if (!isCompat(creport->common) && (creport->common->ThreadMode == kMode_Client)) {
+	if (!isCompat(creport->common) && (creport->common->ThreadMode == kMode_Client) && myConnectionReport) {
 	    // Clients' connect times will be inputs to the overall connect stats
 	    if (creport->connecttime > 0.0) {
 		reporter_mmm_update(&myConnectionReport->connect_times, creport->connecttime);
