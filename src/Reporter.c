@@ -611,8 +611,8 @@ inline int reporter_process_report (struct ReportHeader *reporthdr) {
 	assert(creport!=NULL);
 	if (!isCompat(creport->common) && (creport->common->ThreadMode == kMode_Client) && myConnectionReport) {
 	    // Clients' connect times will be inputs to the overall connect stats
-	    if (creport->connecttime > 0.0) {
-		reporter_mmm_update(&myConnectionReport->connect_times, creport->connecttime);
+	    if (creport->init_cond.connecttime > 0.0) {
+		reporter_mmm_update(&myConnectionReport->connect_times, creport->init_cond.connecttime);
 	    } else {
 		myConnectionReport->connect_times.err++;
 	    }

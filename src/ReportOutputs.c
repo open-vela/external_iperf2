@@ -1253,7 +1253,7 @@ void reporter_connect_printf_tcp_final (struct ConnectionInfo * report) {
 
 void reporter_print_connection_report (struct ConnectionInfo *report) {
     assert(report->common);
-    if (!(report->connecttime < 0)) {
+    if (report->init_cond.connecttime > 0) {
 	// copy the inet_ntop into temp buffers, to avoid overwriting
 	char local_addr[REPORT_ADDRLEN];
 	char remote_addr[REPORT_ADDRLEN];
