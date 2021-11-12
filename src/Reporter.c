@@ -144,10 +144,10 @@ bool ReportPacket (struct ReporterData* data, struct ReportStruct *packet) {
     struct TransferInfo *stats = &data->info;
     if (stats->isEnableTcpInfo) {
 	if (!TimeZero(stats->ts.nextTCPStampleTime) && (TimeDifference(stats->ts.nextTCPStampleTime, packet->packetTime) < 0)) {
-	    gettcpinfo(data, packet);
+	    gettcpinfo(data->info.common->socket, packet);
 	    TimeAdd(stats->ts.nextTCPStampleTime, stats->ts.intervalTime);
 	} else {
-	    gettcpinfo(data, packet);
+	    gettcpinfo(data->info.common->socket, packet);
 	}
     }
 #endif
@@ -199,7 +199,7 @@ int EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
     // tcpi stats are sampled on a final packet
     struct TransferInfo *stats = &report->info;
     if (stats->isEnableTcpInfo) {
-	gettcpinfo(report, finalpacket);
+	gettcpinfo(report->info.common->socket, finalpacket);
     }
 #endif
     // clear the reporter done predicate
