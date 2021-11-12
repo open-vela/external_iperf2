@@ -1360,7 +1360,7 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 		if (!isUDP(report->common) && (report->common->ThreadMode == kMode_Client)) {
 #if HAVE_TCP_STATS
 		    if (report->init_cond.connecttime > 0.0) {
-		        snprintf(b, SNBUFFERSIZE-strlen(b), " (irtt/cwnd=%u/%u)", report->init_cond.rtt, report->init_cond.cwnd);
+		        snprintf(b, SNBUFFERSIZE-strlen(b), " (irtt/icwnd=%u/%u)", report->init_cond.rtt, report->init_cond.cwnd);
 			b += strlen(b);
 		    }
 #endif
