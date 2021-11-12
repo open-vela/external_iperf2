@@ -705,7 +705,7 @@ struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, s
     common_copy(&creport->common, inSettings);
     if (!isUDP(inSettings) && (inSettings->mSock > 0) && !isDontRoute(inSettings) && \
 	(inSettings->mThreadMode == kMode_Client) && \
-	(init_cond && !(init_cond->connecttime > 0.0))) {
+	(init_cond && (init_cond->connecttime > 0.0))) {
 	creport->MSS = getsock_tcp_mss(inSettings->mSock);
     } else {
 	creport->MSS = -1;
