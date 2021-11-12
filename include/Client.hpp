@@ -141,6 +141,7 @@ private:
     bool peerclose;
     Timestamp drain_start;
     Timestamp drain_end;
+    struct tcp_init_conditions my_init_cond;
 }; // end class Client
 
 #endif // CLIENT_H

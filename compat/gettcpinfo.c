@@ -53,13 +53,13 @@
 #endif
 
 #if (HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS) && (HAVE_DECL_TCP_INFO)
-inline void gettcpinfo (struct ReporterData *data, struct ReportStruct *sample) {
+inline void gettcpinfo (int sock, struct ReportStruct *sample) {
     assert(sample);
     struct tcp_info tcp_info_buf;
     socklen_t tcp_info_length = sizeof(struct tcp_info);
     sample->tcpstats.isValid  = false;
-    if ((data->info.common->socket > 0) &&				\
-	!(getsockopt(data->info.common->socket, IPPROTO_TCP, TCP_INFO, &tcp_info_buf, &tcp_info_length) < 0)) {
+    if ((sock > 0) &&							\
+	!(getsockopt(sock, IPPROTO_TCP, TCP_INFO, &tcp_info_buf, &tcp_info_length) < 0)) {
         sample->tcpstats.cwnd = tcp_info_buf.tcpi_snd_cwnd * tcp_info_buf.tcpi_snd_mss / 1024;
 	sample->tcpstats.rtt = tcp_info_buf.tcpi_rtt;
 	sample->tcpstats.retry_tot = tcp_info_buf.tcpi_total_retrans;
@@ -71,14 +71,14 @@ inline void gettcpinfo (struct ReporterData *data, struct ReportStruct *sample) 
     }
 }
 #elif HAVE_DECL_TCP_CONNECTION_INFO
-inline void gettcpinfo (struct ReporterData *data, struct ReportStruct *sample) {
+inline void gettcpinfo (int sock, struct ReportStruct *sample) {
     assert(sample);
     struct tcp_connection_info tcp_info_buf;
     socklen_t tcp_connection_info_length = sizeof(struct tcp_connection_info);
 
     sample->tcpstats.isValid  = false;
-    if ((data->info.common->socket > 0) &&				\
-	!(getsockopt(data->info.common->socket, IPPROTO_TCP, TCP_CONNECTION_INFO, &tcp_info_buf, &tcp_connection_info_length) < 0)) {
+    if ((sock > 0) &&				\
+	!(getsockopt(sock, IPPROTO_TCP, TCP_CONNECTION_INFO, &tcp_info_buf, &tcp_connection_info_length) < 0)) {
         sample->tcpstats.cwnd = tcp_info_buf.tcpi_snd_cwnd / 1024;
 //	sample->tcpstats.rtt = tcp_info_buf.tcpi_rttcur * 1000; /current rtt units ms
 	sample->tcpstats.rtt = tcp_info_buf.tcpi_srtt * 1000; //average rtt units ms

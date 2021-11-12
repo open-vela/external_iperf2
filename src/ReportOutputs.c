@@ -53,7 +53,7 @@
 
 // These static variables are not thread safe but ok to use becase only
 // the repoter thread usses them
-#define SNBUFFERSIZE 256
+#define SNBUFFERSIZE 512
 #define SNBUFFEREXTENDSIZE 512
 static char outbuffer[SNBUFFERSIZE]; // Buffer for printing
 static char outbufferext[SNBUFFEREXTENDSIZE]; // Buffer for printing
@@ -1266,7 +1266,7 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 	if (!isUDP(report->common) && (report->common->socket > 0) && (isPrintMSS(report->common) || isEnhanced(report->common)))  {
 	    if (isPrintMSS(report->common) && (report->MSS <= 0)) {
 		printf(report_mss_unsupported, report->MSS);
-	    } else {
+	    } else if (report->MSS != -1) {
 		snprintf(b, SNBUFFERSIZE-strlen(b), " (%s%d)", "MSS=", report->MSS);
 		b += strlen(b);
 	    }
@@ -1358,7 +1358,13 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 		char now_timebuf[80];
 		strftime(now_timebuf, sizeof(now_timebuf), "%Y-%m-%d %H:%M:%S (%Z)", &ts);
 		if (!isUDP(report->common) && (report->common->ThreadMode == kMode_Client)) {
-		    snprintf(b, SNBUFFERSIZE-strlen(b), " (ct=%4.2f ms) on %s", report->connecttime, now_timebuf);
+#if HAVE_TCP_STATS
+		    if (report->init_cond.connecttime > 0.0) {
+		        snprintf(b, SNBUFFERSIZE-strlen(b), " (irtt/cwnd=%u/%u)", report->init_cond.rtt, report->init_cond.cwnd);
+			b += strlen(b);
+		    }
+#endif
+		    snprintf(b, SNBUFFERSIZE-strlen(b), " (ct=%4.2f ms) on %s", report->init_cond.connecttime, now_timebuf);
 		} else {
 		    snprintf(b, SNBUFFERSIZE-strlen(b), " on %s", now_timebuf);
 		}
