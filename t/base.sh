@@ -6,10 +6,8 @@ lo=localhost
 ip=127.0.0.1
 ip6=::1
 
-# Some versions of expr can't handle can't mix regexp and math
-test=$(expr $0 : '.*/t\([0-9]*\)_')
-port=$(expr 5000 + $test)
-lport=$(expr 6000 - $test)
+port=$(expr 5000 + $0 : '.*/t\([0-9]*\)_')
+lport=$(expr 6000 - $0 : '.*/t\([0-9]*\)_')
 
 run_iperf() {
     mode=server
