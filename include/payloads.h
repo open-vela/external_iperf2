@@ -225,6 +225,7 @@ struct bounce_back_datagram_hdr {
     union bb_r2w_info bb_r2w; // up to here is mandatory
     uint32_t drain; //units of usecs
     uint32_t bb_drain;
+    uint32_t bb_rtt;
     struct bb_ts bb_read;
 };
 
