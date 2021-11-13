@@ -1655,6 +1655,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	} else if (isTripTime(mExtSettings) && !(mExtSettings->mBurstSize > 0)) {
 	    mExtSettings->mBurstSize = mExtSettings->mBufLen;
 	}
+	if (isConnectOnly(mExtSettings) && (mExtSettings->mIntervalMode == kInterval_None)) {
+	    mExtSettings->mIntervalMode = kInterval_Time;
+	    mExtSettings->mInterval = 1000000; // 1 sec in units of usecs
+	}
     }
     if (isIsochronous(mExtSettings) && mExtSettings->mIsochronousStr) {
 	// parse client isochronous field,

@@ -67,6 +67,7 @@
 #include "version.h"
 #include "payloads.h"
 #include "active_hosts.h"
+#include "gettcpinfo.h"
 
 // const double kSecs_to_usecs = 1e6;
 const double kSecs_to_nsecs = 1e9;
@@ -135,7 +136,6 @@ Client::~Client () {
  * ------------------------------------------------------------------- */
 bool Client::my_connect (bool close_on_fail) {
     int rc;
-    double connecttime = -1.0;
     // create an internet socket
     int type = (isUDP(mSettings) ? SOCK_DGRAM : SOCK_STREAM);
     int domain = (SockAddr_isIPv6(&mSettings->peer) ?
@@ -162,6 +162,7 @@ bool Client::my_connect (bool close_on_fail) {
 
     // connect socket
     connected = false;
+    my_init_cond.connecttime = -1;
     if (!isUDP(mSettings)) {
 	int trycnt = mSettings->mConnectRetries + 1;
 	while (trycnt > 0) {
@@ -180,8 +181,8 @@ bool Client::my_connect (bool close_on_fail) {
 		}
 	    } else {
 		connect_done.setnow();
-		connecttime = 1e3 * connect_done.subSec(connect_start);
-		mSettings->connecttime = connecttime;
+		my_init_cond.connecttime = 1e3 * connect_done.subSec(connect_start);
+		mSettings->connecttime = my_init_cond.connecttime;
 		connected = true;
 		break;
 	    }
@@ -189,12 +190,22 @@ bool Client::my_connect (bool close_on_fail) {
     } else {
 	rc = connect(mySocket, reinterpret_cast<sockaddr*>(&mSettings->peer),
 		     SockAddr_get_sizeof_sockaddr(&mSettings->peer));
-	connecttime = 0.0; // UDP doesn't have a 3WHS
+	my_init_cond.connecttime = 0.0; // UDP doesn't have a 3WHS
         WARN_errno((rc == SOCKET_ERROR), "udp connect");
 	if (rc != SOCKET_ERROR)
 	    connected = true;
     }
+    my_init_cond.rtt = -1;
+    my_init_cond.cwnd = -1;
     if (connected) {
+#if HAVE_TCP_STATS
+        assert(reportstruct);
+	if (!isUDP(mSettings) && connected) {
+	    gettcpinfo(mySocket, reportstruct);
+	    my_init_cond.rtt = reportstruct->tcpstats.rtt;
+	    my_init_cond.cwnd = reportstruct->tcpstats.cwnd;
+	}
+#endif
 	// Set the send timeout for the very first write which has the test exchange
 	int sosndtimer = TESTEXCHANGETIMEOUT; // 4 sec in usecs
 	SetSocketOptionsSendTimeout(mSettings, sosndtimer);
@@ -205,7 +216,6 @@ bool Client::my_connect (bool close_on_fail) {
 	    mSettings->mBurstIPG = get_delay_target() / 1e3; // this is being set for the settings report only
 	}
     } else {
-	connecttime = -1;
 	if (mySocket != INVALID_SOCKET) {
 	    int rc = close(mySocket);
 	    WARN_errno(rc == SOCKET_ERROR, "client connect close");
@@ -221,14 +231,14 @@ bool Client::my_connect (bool close_on_fail) {
     // Post the connect report unless peer version exchange is set
     if (isConnectionReport(mSettings) && !isSumOnly(mSettings)) {
 	if (connected) {
-	    struct ReportHeader *reporthdr = InitConnectionReport(mSettings, connecttime);
+	    struct ReportHeader *reporthdr = InitConnectionReport(mSettings, &my_init_cond);
 	    struct ConnectionInfo *cr = static_cast<struct ConnectionInfo *>(reporthdr->this_report);
 	    cr->connect_timestamp.tv_sec = connect_start.getSecs();
 	    cr->connect_timestamp.tv_usec = connect_start.getUsecs();
 	    assert(reporthdr);
 	    PostReport(reporthdr);
 	} else {
-	    PostReport(InitConnectionReport(mSettings, -1));
+	    PostReport(InitConnectionReport(mSettings, &my_init_cond));
 	}
     }
     return connected;
@@ -454,9 +464,9 @@ void Client::InitTrafficLoop () {
     if (isPeriodicBurst(mSettings) && (mSettings->mFPS > 0.0)) {
 	sosndtimer = static_cast<int>(round(250000.0 / mSettings->mFPS));
     } else if (mSettings->mInterval > 0) {
-	sosndtimer = static_cast<int>(mSettings->mInterval / 2);
+        sosndtimer = static_cast<int>(round(0.5 * mSettings->mInterval));
     } else {
-	sosndtimer = static_cast<int>((mSettings->mAmount * 10000) / 2);
+	sosndtimer = static_cast<int>(mSettings->mAmount * 5e3);
     }
     SetSocketOptionsSendTimeout(mSettings, sosndtimer);
     // set the lower bounds delay based of the socket timeout timer

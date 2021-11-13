@@ -283,7 +283,7 @@ void Listener::Run () {
 	// This is required for accurate traffic statistics
 	if (!isCompat(server) && (isConnectOnly(server) || !apply_client_settings(server))) {
 	    if (isConnectionReport(server) && !isSumOnly(server)) {
-		struct ReportHeader *reporthdr = InitConnectionReport(server, 0);
+		struct ReportHeader *reporthdr = InitConnectionReport(server, NULL);
 		struct ConnectionInfo *cr = static_cast<struct ConnectionInfo *>(reporthdr->this_report);
 		cr->connect_timestamp.tv_sec = server->accept_time.tv_sec;
 		cr->connect_timestamp.tv_usec = server->accept_time.tv_usec;
@@ -372,7 +372,7 @@ void Listener::Run () {
 	}
 	setTransferID(server, 0);
 	if (isConnectionReport(server) && !isSumOnly(server)) {
-	    struct ReportHeader *reporthdr = InitConnectionReport(server, 0);
+	    struct ReportHeader *reporthdr = InitConnectionReport(server, NULL);
 	    struct ConnectionInfo *cr = static_cast<struct ConnectionInfo *>(reporthdr->this_report);
 	    cr->connect_timestamp.tv_sec = server->accept_time.tv_sec;
 	    cr->connect_timestamp.tv_usec = server->accept_time.tv_usec;
