@@ -128,7 +128,7 @@ enum TestMode {
 
 // interval reporting mode
 enum IntervalMode {
-    kInterval_None = -1,
+    kInterval_None = 0,
     kInterval_Time,
     kInterval_Frames
 };
