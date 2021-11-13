@@ -46,7 +46,7 @@
  * -------------------------------------------------------------------
  */
 #include "headers.h"
-#include "packetring.h"
+#include "gettcpinfo.h"
 #ifdef HAVE_THREAD_DEBUG
 // needed for thread_debug
 #include "Thread.h"
