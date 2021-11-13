@@ -1201,6 +1201,13 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
     if (isCongestionControl(report->common) && report->common->Congestion) {
 	fprintf(stdout, "TCP congestion control set to %s\n", report->common->Congestion);
     }
+    if (isEnhanced(report->common)) {
+        if (isNoDelay(report->common)) {
+	    fprintf(stdout, "TOS set to 0x%x and nodelay (Nagle off)\n", report->common->TOS);
+	} else {
+	    fprintf(stdout, "TOS set to 0x%x (Nagle on)\n", report->common->TOS);
+	}
+    }
     if (isNearCongest(report->common)) {
 	if (report->common->rtt_weight == NEARCONGEST_DEFAULT) {
 	    fprintf(stdout, "TCP near-congestion delay weight set to %2.4f (use --near-congestion=<value> to change)\n", report->common->rtt_weight);
