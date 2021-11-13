@@ -102,7 +102,7 @@ Server::Server (thread_Settings *inSettings) {
     // mAmount integer, units 10 milliseconds
     // divide by two so timeout is 1/2 the interval
     if (mSettings->mInterval && (mSettings->mIntervalMode == kInterval_Time)) {
-	sorcvtimer = static_cast<int>(round(1000000.0 * mSettings->mInterval / 2.0));
+	sorcvtimer = static_cast<int>(round(mSettings->mInterval / 2.0));
     } else if (isServerModeTime(mSettings)) {
 	sorcvtimer = static_cast<int>(round(mSettings->mAmount * 10000) / 2);
     }

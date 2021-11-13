@@ -155,10 +155,10 @@ bool ReportPacket (struct ReporterData* data, struct ReportStruct *packet) {
     struct TransferInfo *stats = &data->info;
     if (stats->isEnableTcpInfo) {
 	if (!TimeZero(stats->ts.nextTCPStampleTime) && (TimeDifference(stats->ts.nextTCPStampleTime, packet->packetTime) < 0)) {
-	    gettcpinfo(data, packet);
+	    gettcpinfo(data->info.common->socket, packet);
 	    TimeAdd(stats->ts.nextTCPStampleTime, stats->ts.intervalTime);
 	} else {
-	    gettcpinfo(data, packet);
+	    gettcpinfo(data->info.common->socket, packet);
 	}
     }
 #endif
@@ -210,7 +210,7 @@ int EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
     // tcpi stats are sampled on a final packet
     struct TransferInfo *stats = &report->info;
     if (stats->isEnableTcpInfo) {
-	gettcpinfo(report, finalpacket);
+	gettcpinfo(report->info.common->socket, finalpacket);
     }
 #endif
     // clear the reporter done predicate
@@ -242,7 +242,7 @@ int EndJob (struct ReportHeader *reporthdr, struct ReportStruct *finalpacket) {
 	    struct Condition *tmp = &report->FullDuplexReport->fullduplex_barrier.await;
 	    Condition_Destroy(tmp);
 #if HAVE_THREAD_DEBUG
-	    thread_debug("Socket fullduplex close sock=%d", stats->common->socket);
+	    thread_debug("Socket fullduplex close sock=%d", report->FullDuplexReport->info.common->socket);
 #endif
 	    FreeSumReport(report->FullDuplexReport);
 	} else {
@@ -628,9 +628,13 @@ inline int reporter_process_report (struct ReportHeader *reporthdr) {
     {
 	struct ConnectionInfo *creport = (struct ConnectionInfo *)reporthdr->this_report;
 	assert(creport!=NULL);
-	if (!isCompat(creport->common) && (creport->common->ThreadMode == kMode_Client)) {
+	if (!isCompat(creport->common) && (creport->common->ThreadMode == kMode_Client) && myConnectionReport) {
 	    // Clients' connect times will be inputs to the overall connect stats
-	    reporter_update_mmm(&myConnectionReport->connect_times, creport->connecttime);
+	    if (creport->init_cond.connecttime > 0.0) {
+		reporter_mmm_update(&myConnectionReport->connect_times, creport->init_cond.connecttime);
+	    } else {
+		myConnectionReport->connect_times.err++;
+	    }
 	}
 	reporter_print_connection_report(creport);
 	fflush(stdout);

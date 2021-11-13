@@ -52,6 +52,14 @@
 #include "Reporter.h"
 #include "packet_ring.h"
 
-void gettcpinfo(struct ReporterData *data, struct ReportStruct *sample);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void gettcpinfo(int sock, struct ReportStruct *sample);
+
+#ifdef __cplusplus
+} /* end extern "C" */
+#endif
 
 #endif

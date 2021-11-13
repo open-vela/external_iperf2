@@ -685,8 +685,11 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
  * to achieve this.  Such code will be easier to maintain
  * and to extend.
  */
-struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, double ct) {
+struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, struct tcp_init_conditions *init_cond) {
     assert(inSettings != NULL);
+    if (init_cond) {
+
+    }
     struct ReportHeader *reporthdr = (struct ReportHeader *) calloc(1, sizeof(struct ReportHeader));
     if (reporthdr == NULL) {
 	FAIL(1, "Out of Memory!!\n", inSettings);
@@ -701,14 +704,23 @@ struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, d
     struct ConnectionInfo * creport = (struct ConnectionInfo *)(reporthdr->this_report);
     common_copy(&creport->common, inSettings);
     if (!isUDP(inSettings) && (inSettings->mSock > 0) && !isDontRoute(inSettings) && \
-	!(ct <= 0.0 && (inSettings->mThreadMode == kMode_Client))) {
+	(inSettings->mThreadMode == kMode_Client) && \
+	(init_cond && (init_cond->connecttime > 0.0))) {
 	creport->MSS = getsock_tcp_mss(inSettings->mSock);
     } else {
 	creport->MSS = -1;
     }
     // Fill out known fields for the connection report
     reporter_peerversion(creport, inSettings->peer_version_u, inSettings->peer_version_l);
-    creport->connecttime = ct;
+    if (init_cond) {
+        creport->init_cond.connecttime = init_cond->connecttime;
+        creport->init_cond.rtt = init_cond->rtt;
+        creport->init_cond.cwnd = init_cond->cwnd;
+    } else {
+        creport->init_cond.connecttime = -1;
+        creport->init_cond.rtt = -1;
+        creport->init_cond.cwnd = -1;
+    }
     if (isEnhanced(inSettings) && isTxStartTime(inSettings)) {
 	creport->epochStartTime.tv_sec = inSettings->txstart_epoch.tv_sec;
 	creport->epochStartTime.tv_usec = inSettings->txstart_epoch.tv_usec;
