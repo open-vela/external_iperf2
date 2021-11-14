@@ -479,6 +479,7 @@ void Client::InitTrafficLoop () {
     // set the total bytes sent to zero
     totLen = 0;
     if (isModeTime(mSettings)) {
+	fprintf(stderr, "****** here\n");
         mEndTime.setnow();
         mEndTime.add(mSettings->mAmount / 100.0);
     }
@@ -531,7 +532,9 @@ void Client::Run () {
 	}
     } else {
 	// Launch the approprate TCP traffic loop
-	if (mSettings->mAppRate > 0) {
+	if (isBounceBack(mSettings)) {
+	    RunBounceBackTCP();
+	} else if (mSettings->mAppRate > 0) {
 	    RunRateLimitedTCP();
 	} else if (isNearCongest(mSettings)) {
 	    RunNearCongestionTCP();
@@ -962,7 +965,42 @@ void Client::RunWriteEventsTCP () {
 }
 #endif
 void Client::RunBounceBackTCP () {
+    int burst_id = 1;
+    int writelen = mSettings->mBufLen;
 
+    now.setnow();
+    reportstruct->packetTime.tv_sec = now.getSecs();
+    reportstruct->packetTime.tv_usec = now.getUsecs();
+    while (InProgress()) {
+	reportstruct->writecnt = 0;
+	now.setnow();
+	reportstruct->packetTime.tv_sec = now.getSecs();
+	reportstruct->packetTime.tv_usec = now.getUsecs();
+	WriteTcpTxBBHdr(reportstruct, writelen, burst_id++);
+	reportstruct->sentTime = reportstruct->packetTime;
+	myReport->info.ts.prevsendTime = reportstruct->packetTime;
+	reportstruct->packetLen = writen(mySocket, mSettings->mBuf, writelen, &reportstruct->writecnt);
+	fprintf(stderr, "******* write len = %ld\n", reportstruct->packetLen);
+	FAIL_errno(reportstruct->packetLen < (intmax_t) sizeof(struct TCP_burst_payload), "burst written", mSettings);
+	if (reportstruct->packetLen == writelen) {
+	    reportstruct->emptyreport = 0;
+	    totLen += reportstruct->packetLen;
+	    reportstruct->errwrite=WriteNoErr;
+	} else if ((reportstruct->packetLen < 0 ) && NONFATALTCPWRITERR(errno)) {
+	    reportstruct->packetLen = 0;
+	    reportstruct->emptyreport = 1;
+	    reportstruct->errwrite=WriteErrNoAccount;
+	} else if (reportstruct->packetLen == 0) {
+	    peerclose = true;
+	} else {
+	    reportstruct->errwrite=WriteErrFatal;
+	    WARN_errno(1, "tcp bouunce-back write");
+	    break;
+	}
+	reportstruct->packetLen = 0;
+	reportstruct->emptyreport = 1;
+    }
+    FinishTrafficActions();
 }
 /*
  * UDP send loop
@@ -1308,6 +1346,8 @@ inline void Client::WriteTcpTxHdr (struct ReportStruct *reportstruct, int burst_
 //    printf("**** Write tcp burst header size= %d id = %d\n", burst_size, burst_id);
 }
 
+inline void Client::WriteTcpTxBBHdr (struct ReportStruct *reportstruct, int burst_size, int burst_id) {
+}
 inline bool Client::InProgress (void) {
     // Read the next data block from
     // the file if it's file input
@@ -1315,6 +1355,7 @@ inline bool Client::InProgress (void) {
 	Extractor_getNextDataBlock(readAt, mSettings);
         return Extractor_canRead(mSettings) != 0;
     }
+    fprintf(stderr, "**** SI=%d PC=%d T=%d A=%d\n", sInterupted, peerclose, (isModeTime(mSettings) && mEndTime.before(reportstruct->packetTime)), (isModeAmount(mSettings) && (mSettings->mAmount <= 0)));
     return !(sInterupted || peerclose || \
 	(isModeTime(mSettings) && mEndTime.before(reportstruct->packetTime))  ||
 	(isModeAmount(mSettings) && (mSettings->mAmount <= 0)));
