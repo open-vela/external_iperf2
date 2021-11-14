@@ -1358,7 +1358,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		bail = true;
 	    }
 	}
-	if (isBounceBack(mExtSettings) && (static_cast<int> (mExtSettings->mBurstSize) < mExtSettings->mBufLen)) {
+	if (isBounceBack(mExtSettings) && (static_cast<int> (mExtSettings->mBurstSize) > 0) && (static_cast<int> (mExtSettings->mBurstSize) < mExtSettings->mBufLen)) {
 	    fprintf(stderr, "WARN: options of --burst-size for bounce-back is being set to -l length of %d\n", mExtSettings->mBufLen);
 	    mExtSettings->mBurstSize = mExtSettings->mBufLen;
 	}
