@@ -1,4 +1,3 @@
-
 /*---------------------------------------------------------------
  * Copyright (c) 2020
  * Broadcom Corporation
@@ -1220,7 +1219,7 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
     }
     if (isBounceBack(report->common)) {
 	char tmpbuf[40];
-	byte_snprintf(tmpbuf, sizeof(tmpbuf), report->common->BurstSize, 'A');
+	byte_snprintf(tmpbuf, sizeof(tmpbuf), report->common->BufLen, 'A');
 	tmpbuf[39]='\0';
 	printf(client_bounceback, tmpbuf);
     }

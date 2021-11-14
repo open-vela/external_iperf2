@@ -479,9 +479,9 @@ void Client::InitTrafficLoop () {
     // set the total bytes sent to zero
     totLen = 0;
     if (isModeTime(mSettings)) {
-	fprintf(stderr, "****** here\n");
         mEndTime.setnow();
         mEndTime.add(mSettings->mAmount / 100.0);
+	// now.setnow(); fprintf(stderr, "DEBUG: end time set to %ld.%ld now is %ld.%ld\n", mEndTime.getSecs(), mEndTime.getUsecs(), now.getSecs(), now.getUsecs());
     }
     readAt = mSettings->mBuf;
     lastPacketTime.set(myReport->info.ts.startTime.tv_sec, myReport->info.ts.startTime.tv_usec);
@@ -980,8 +980,7 @@ void Client::RunBounceBackTCP () {
 	reportstruct->sentTime = reportstruct->packetTime;
 	myReport->info.ts.prevsendTime = reportstruct->packetTime;
 	reportstruct->packetLen = writen(mySocket, mSettings->mBuf, writelen, &reportstruct->writecnt);
-	fprintf(stderr, "******* write len = %ld\n", reportstruct->packetLen);
-	FAIL_errno(reportstruct->packetLen < (intmax_t) sizeof(struct TCP_burst_payload), "burst written", mSettings);
+	reportstruct->emptyreport = 1;
 	if (reportstruct->packetLen == writelen) {
 	    reportstruct->emptyreport = 0;
 	    totLen += reportstruct->packetLen;
@@ -994,11 +993,10 @@ void Client::RunBounceBackTCP () {
 	    peerclose = true;
 	} else {
 	    reportstruct->errwrite=WriteErrFatal;
-	    WARN_errno(1, "tcp bouunce-back write");
-	    break;
+	    reportstruct->packetLen = -1;
+	    peerclose = true;
+	    WARN_errno(1, "tcp bounce-back write");
 	}
-	reportstruct->packetLen = 0;
-	reportstruct->emptyreport = 1;
     }
     FinishTrafficActions();
 }
@@ -1355,7 +1353,7 @@ inline bool Client::InProgress (void) {
 	Extractor_getNextDataBlock(readAt, mSettings);
         return Extractor_canRead(mSettings) != 0;
     }
-    fprintf(stderr, "**** SI=%d PC=%d T=%d A=%d\n", sInterupted, peerclose, (isModeTime(mSettings) && mEndTime.before(reportstruct->packetTime)), (isModeAmount(mSettings) && (mSettings->mAmount <= 0)));
+    // fprintf(stderr, "DEBUG: SI=%d PC=%d T=%d A=%d\n", sInterupted, peerclose, (isModeTime(mSettings) && mEndTime.before(reportstruct->packetTime)), (isModeAmount(mSettings) && (mSettings->mAmount <= 0)));
     return !(sInterupted || peerclose || \
 	(isModeTime(mSettings) && mEndTime.before(reportstruct->packetTime))  ||
 	(isModeAmount(mSettings) && (mSettings->mAmount <= 0)));
