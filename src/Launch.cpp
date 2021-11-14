@@ -158,7 +158,7 @@ void server_spawn(struct thread_Settings *thread) {
         theServer->RunUDP();
     } else {
 	if (isBounceBack(thread)) {
-	    theServer->RunTcpBounceBack();
+	    theServer->RunBounceBackTCP();
 	} else {
 	    theServer->RunTCP();
 	}
