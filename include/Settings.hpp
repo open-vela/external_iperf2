@@ -285,7 +285,8 @@ struct thread_Settings {
     double mListenerTimeout;
     int tuntapdev;
     int firstreadbytes;
-    int mBounceBack;
+    int mBounceBackBytes;
+    uint32_t mBounceBackHold; // units of usecs
 #if HAVE_DECL_TCP_WINDOW_CLAMP
     int mClampSize;
 #endif
