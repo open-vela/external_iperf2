@@ -237,6 +237,8 @@ struct ReportCommon {
     double rtt_weight;
     double ListenerTimeout;
     double FPS;
+    int bbsize;
+    int bbhold;
 #if WIN32
     SOCKET socket;
 #else

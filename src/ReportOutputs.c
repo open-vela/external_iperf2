@@ -1347,7 +1347,7 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 	    b += strlen(b);
 	}
 	if (isBounceBack(report->common)) {
-	    snprintf(b, SNBUFFERSIZE-strlen(b), " (bounce-back)");
+	    snprintf(b, SNBUFFERSIZE-strlen(b), " (bb len/hold=%d/%d)", report->common->bbsize, report->common->bbhold);
 	    b += strlen(b);
 	}
 	if (isL2LengthCheck(report->common)) {
