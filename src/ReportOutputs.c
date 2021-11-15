@@ -1219,9 +1219,9 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
     }
     if (isBounceBack(report->common)) {
 	char tmpbuf[40];
-	byte_snprintf(tmpbuf, sizeof(tmpbuf), report->common->BufLen, 'A');
+	byte_snprintf(tmpbuf, sizeof(tmpbuf), report->common->bbsize, 'A');
 	tmpbuf[39]='\0';
-	printf(client_bounceback, tmpbuf);
+	printf(client_bounceback, tmpbuf, report->common->bbhold);
     }
     if (isFQPacing(report->common)) {
 	byte_snprintf(outbuffer, sizeof(outbuffer), report->common->FQPacingRate, 'a');

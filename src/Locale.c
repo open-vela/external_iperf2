@@ -261,7 +261,7 @@ const char client_burstperiod[] =
 "Bursting: %s every %0.2f seconds\n";
 
 const char client_bounceback[] =
-"Bounce-back size = %s\n";
+"Bounce-back test (size=%s) (hold=%d usecs)\n";
 
 const char server_burstperiod[] =
 "Burst wait timeout set to (2 * %0.2f) seconds (use --burst-period=<n secs> to change)\n";
