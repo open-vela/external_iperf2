@@ -71,7 +71,7 @@ public:
     // accepts connection and receives data
     void RunUDP(void);
     void RunTCP(void);
-    void RunTcpBounceBack(void);
+    void RunBounceBackTCP(void);
     static void Sig_Int(int inSigno);
 
 private:
