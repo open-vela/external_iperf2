@@ -73,6 +73,7 @@ extern "C" {
 #define HEADER_EXTEND        0x40000000
 #define HEADER_UDPTESTS      0x20000000
 #define HEADER_BOUNCEBACK    0x10000000
+#define HEADER_CLOCKSYNCED   0x01000000 // used in the bb header only
 #define HEADER_SEQNO64B      0x08000000
 #define HEADER_VERSION2      0x04000000
 #define HEADER_V2PEERDETECT  0x02000000
@@ -213,20 +214,18 @@ struct bb_ts {
     uint32_t sec;
     uint32_t usec;
 };
-union bb_r2w_info {
-    struct bb_ts bb_r2w_hold;
-    struct bb_ts bb_send;
-};
-struct bounce_back_datagram_hdr {
+struct bounceback_hdr {
     uint32_t flags;
-    uint32_t burst_size;
-    uint32_t burst_id;
-    struct bb_ts send_ts;
-    union bb_r2w_info bb_r2w; // up to here is mandatory
+    uint32_t bbsize;
+    uint32_t bbid;
+    struct bb_ts bbsendtotx_ts;
+    struct bb_ts bbsendtorx_ts;
+    struct bb_ts bbsendfro_ts;
+    uint32_t bbhold; // up to here is mandatory
     uint32_t drain; //units of usecs
-    uint32_t bb_drain;
-    uint32_t bb_rtt;
-    struct bb_ts bb_read;
+    uint32_t bbdrain;
+    uint32_t bbrtt;
+    struct bb_ts bbread_ts;
 };
 
 struct client_hdrext_isoch_settings {

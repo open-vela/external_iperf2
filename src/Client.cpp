@@ -1,4 +1,3 @@
-
 /*---------------------------------------------------------------
  * Copyright (c) 1999,2000,2001,2002,2003
  * The Board of Trustees of the University of Illinois
@@ -976,7 +975,8 @@ void Client::RunBounceBackTCP () {
 	now.setnow();
 	reportstruct->packetTime.tv_sec = now.getSecs();
 	reportstruct->packetTime.tv_usec = now.getUsecs();
-	WriteTcpTxBBHdr(reportstruct, writelen, burst_id++);
+	WriteTcpTxBBHdr(reportstruct, burst_id);
+	burst_id++;
 	reportstruct->sentTime = reportstruct->packetTime;
 	myReport->info.ts.prevsendTime = reportstruct->packetTime;
 	reportstruct->packetLen = writen(mySocket, mSettings->mBuf, writelen, &reportstruct->writecnt);
@@ -1344,8 +1344,20 @@ inline void Client::WriteTcpTxHdr (struct ReportStruct *reportstruct, int burst_
 //    printf("**** Write tcp burst header size= %d id = %d\n", burst_size, burst_id);
 }
 
-inline void Client::WriteTcpTxBBHdr (struct ReportStruct *reportstruct, int burst_size, int burst_id) {
+// See payloads.h
+inline void Client::WriteTcpTxBBHdr (struct ReportStruct *reportstruct, int bbid) {
+    struct bounceback_hdr * mBuf_bb = reinterpret_cast<struct bounceback_hdr *>(mSettings->mBuf);
+    // store packet ID into buffer
+    mBuf_bb->flags = isTripTime(mSettings) ? \
+	htonl(HEADER_BOUNCEBACK | HEADER_CLOCKSYNCED) : htonl(HEADER_BOUNCEBACK);
+    mBuf_bb->flags = htonl(HEADER_BOUNCEBACK);
+    mBuf_bb->bbsize = htonl(mSettings->mBufLen);
+    mBuf_bb->bbid = htonl(bbid);
+    mBuf_bb->bbsendtotx_ts.sec = htonl(reportstruct->packetTime.tv_sec);
+    mBuf_bb->bbsendtotx_ts.usec = htonl(reportstruct->packetTime.tv_usec);
+    mBuf_bb->bbhold = htonl(mSettings->mBounceBackHold);
 }
+
 inline bool Client::InProgress (void) {
     // Read the next data block from
     // the file if it's file input

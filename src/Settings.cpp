@@ -1146,6 +1146,7 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    if (bounceback) {
 		bounceback = 0;
 		setBounceBack(mExtSettings);
+		mExtSettings->mBounceBackHold = atoi(optarg);
 	    }
 	    break;
         default: // ignore unknown
@@ -2218,7 +2219,7 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 #endif
 	if (isBounceBack(client)) {
 	    flags = HEADER_BOUNCEBACK;
-	    len = sizeof(struct bounce_back_datagram_hdr);
+	    len = sizeof(struct bounceback_hdr);
 	} else {
 	    memset(hdr, 0, sizeof(struct client_tcp_testhdr));
 	    flags |= HEADER_EXTEND;
