@@ -1146,7 +1146,11 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    if (bounceback) {
 		bounceback = 0;
 		setBounceBack(mExtSettings);
-		mExtSettings->mBounceBackHold = atoi(optarg);
+		setEnhanced(mExtSettings);
+		if (optarg)
+		    mExtSettings->mBounceBackHold = atoi(optarg);
+		else
+		    mExtSettings->mBounceBackHold = 0;
 	    }
 	    break;
         default: // ignore unknown
@@ -1359,9 +1363,11 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		bail = true;
 	    }
 	}
-	if (isBounceBack(mExtSettings) && (static_cast<int> (mExtSettings->mBurstSize) > 0) && (static_cast<int> (mExtSettings->mBurstSize) < mExtSettings->mBufLen)) {
-	    fprintf(stderr, "WARN: options of --burst-size for bounce-back is being set to -l length of %d\n", mExtSettings->mBufLen);
-	    mExtSettings->mBurstSize = mExtSettings->mBufLen;
+	if (isBounceBack(mExtSettings)) {
+	    if (static_cast<int> (mExtSettings->mBurstSize) > 0) {
+		fprintf(stderr, "WARN: options of --burst-size for bounce-back ignored, use -l sets size\n");
+	    }
+	    mExtSettings->mBounceBackBytes = mExtSettings->mBufLen;
 	}
 	if (isPeriodicBurst(mExtSettings)) {
 	    if (isIsochronous(mExtSettings)) {
