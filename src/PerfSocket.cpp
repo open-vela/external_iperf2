@@ -211,14 +211,29 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
 	    setsock_tcp_mss(inSettings->mSock, inSettings->mMSS);
 	}
 #if HAVE_DECL_TCP_NODELAY
-        // set TCP nodelay option
-        if (isNoDelay(inSettings)) {
+	{
             int nodelay = 1;
             Socklen_t len = sizeof(nodelay);
-            int rc = setsockopt(inSettings->mSock, IPPROTO_TCP, TCP_NODELAY,
-                                 reinterpret_cast<char*>(&nodelay), len);
-            WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_NODELAY");
-        }
+	    int rc = 0;
+	    // set TCP nodelay option
+	    if (isNoDelay(inSettings)) {
+		rc = setsockopt(inSettings->mSock, IPPROTO_TCP, TCP_NODELAY,
+				reinterpret_cast<char*>(&nodelay), len);
+		WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_NODELAY");
+	    }
+	    // Read the socket setting, could be set on by kernel
+	    if (isEnhanced(inSettings) && (rc == 0)) {
+		rc = getsockopt(inSettings->mSock, IPPROTO_TCP, TCP_NODELAY,
+				reinterpret_cast<char*>(&nodelay), &len);
+		WARN_errno(rc == SOCKET_ERROR, "getsockopt TCP_NODELAY");
+		if (rc == 0) {
+		    if (nodelay)
+			setNoDelay(inSettings);
+		    else
+			unsetNoDelay(inSettings);
+		}
+	    }
+	}
 #endif
 #if HAVE_DECL_TCP_WINDOW_CLAMP
         // set TCP clamp option
