@@ -480,7 +480,6 @@ void Client::InitTrafficLoop () {
     if (isModeTime(mSettings)) {
         mEndTime.setnow();
         mEndTime.add(mSettings->mAmount / 100.0);
-	// now.setnow(); fprintf(stderr, "DEBUG: end time set to %ld.%ld now is %ld.%ld\n", mEndTime.getSecs(), mEndTime.getUsecs(), now.getSecs(), now.getUsecs());
     }
     readAt = mSettings->mBuf;
     lastPacketTime.set(myReport->info.ts.startTime.tv_sec, myReport->info.ts.startTime.tv_usec);
@@ -531,9 +530,7 @@ void Client::Run () {
 	}
     } else {
 	// Launch the approprate TCP traffic loop
-	if (isBounceBack(mSettings)) {
-	    RunBounceBackTCP();
-	} else if (mSettings->mAppRate > 0) {
+	if (mSettings->mAppRate > 0) {
 	    RunRateLimitedTCP();
 	} else if (isNearCongest(mSettings)) {
 	    RunNearCongestionTCP();
@@ -583,7 +580,6 @@ void Client::RunTCP () {
 		if (isPeriodicBurst(mSettings)) {
 		    // low duty cycle traffic needs special event handling
 		    now.setnow();
-		    myReport->info.ts.prevsendTime = reportstruct->packetTime;
 		    reportstruct->packetTime.tv_sec = now.getSecs();
 		    reportstruct->packetTime.tv_usec = now.getUsecs();
 		    if (!InProgress()) {
@@ -658,7 +654,6 @@ void Client::RunTCP () {
 		    reportstruct->transit_ready = 0;
 		} else {
 		    reportstruct->transit_ready = 1;
-		    reportstruct->prevSentTime = myReport->info.ts.prevsendTime;
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
 		    if (isTcpDrain(mSettings)) {
 			tcp_drain();
@@ -964,41 +959,7 @@ void Client::RunWriteEventsTCP () {
 }
 #endif
 void Client::RunBounceBackTCP () {
-    int burst_id = 1;
-    int writelen = mSettings->mBufLen;
 
-    now.setnow();
-    reportstruct->packetTime.tv_sec = now.getSecs();
-    reportstruct->packetTime.tv_usec = now.getUsecs();
-    while (InProgress()) {
-	reportstruct->writecnt = 0;
-	now.setnow();
-	reportstruct->packetTime.tv_sec = now.getSecs();
-	reportstruct->packetTime.tv_usec = now.getUsecs();
-	WriteTcpTxBBHdr(reportstruct, burst_id);
-	burst_id++;
-	reportstruct->sentTime = reportstruct->packetTime;
-	myReport->info.ts.prevsendTime = reportstruct->packetTime;
-	reportstruct->packetLen = writen(mySocket, mSettings->mBuf, writelen, &reportstruct->writecnt);
-	reportstruct->emptyreport = 1;
-	if (reportstruct->packetLen == writelen) {
-	    reportstruct->emptyreport = 0;
-	    totLen += reportstruct->packetLen;
-	    reportstruct->errwrite=WriteNoErr;
-	} else if ((reportstruct->packetLen < 0 ) && NONFATALTCPWRITERR(errno)) {
-	    reportstruct->packetLen = 0;
-	    reportstruct->emptyreport = 1;
-	    reportstruct->errwrite=WriteErrNoAccount;
-	} else if (reportstruct->packetLen == 0) {
-	    peerclose = true;
-	} else {
-	    reportstruct->errwrite=WriteErrFatal;
-	    reportstruct->packetLen = -1;
-	    peerclose = true;
-	    WARN_errno(1, "tcp bounce-back write");
-	}
-    }
-    FinishTrafficActions();
 }
 /*
  * UDP send loop
@@ -1344,20 +1305,6 @@ inline void Client::WriteTcpTxHdr (struct ReportStruct *reportstruct, int burst_
 //    printf("**** Write tcp burst header size= %d id = %d\n", burst_size, burst_id);
 }
 
-// See payloads.h
-void Client::WriteTcpTxBBHdr (struct ReportStruct *reportstruct, int bbid) {
-    struct bounceback_hdr * mBuf_bb = reinterpret_cast<struct bounceback_hdr *>(mSettings->mBuf);
-    // store packet ID into buffer
-    mBuf_bb->flags = isTripTime(mSettings) ? \
-	htonl(HEADER_BOUNCEBACK | HEADER_CLOCKSYNCED) : htonl(HEADER_BOUNCEBACK);
-    mBuf_bb->flags = htonl(HEADER_BOUNCEBACK);
-    mBuf_bb->bbsize = htonl(mSettings->mBufLen);
-    mBuf_bb->bbid = htonl(bbid);
-    mBuf_bb->bbsendtotx_ts.sec = htonl(reportstruct->packetTime.tv_sec);
-    mBuf_bb->bbsendtotx_ts.usec = htonl(reportstruct->packetTime.tv_usec);
-    mBuf_bb->bbhold = htonl(mSettings->mBounceBackHold);
-}
-
 inline bool Client::InProgress (void) {
     // Read the next data block from
     // the file if it's file input
@@ -1365,7 +1312,6 @@ inline bool Client::InProgress (void) {
 	Extractor_getNextDataBlock(readAt, mSettings);
         return Extractor_canRead(mSettings) != 0;
     }
-    // fprintf(stderr, "DEBUG: SI=%d PC=%d T=%d A=%d\n", sInterupted, peerclose, (isModeTime(mSettings) && mEndTime.before(reportstruct->packetTime)), (isModeAmount(mSettings) && (mSettings->mAmount <= 0)));
     return !(sInterupted || peerclose || \
 	(isModeTime(mSettings) && mEndTime.before(reportstruct->packetTime))  ||
 	(isModeAmount(mSettings) && (mSettings->mAmount <= 0)));
@@ -1580,60 +1526,55 @@ int Client::SendFirstPayload () {
 	    reportstruct->packetTime.tv_sec = now.getSecs();
 	    reportstruct->packetTime.tv_usec = now.getUsecs();
 	}
-	if (isBounceBack(mSettings)) {
-	    WriteTcpTxBBHdr(reportstruct, 1);
-	    pktlen = mSettings->mBounceBackBytes;
+	if (isTxStartTime(mSettings)) {
+	    pktlen = Settings_GenerateClientHdr(mSettings, (void *) mSettings->mBuf, mSettings->txstart_epoch);
 	} else {
-	    if (isTxStartTime(mSettings)) {
-		pktlen = Settings_GenerateClientHdr(mSettings, (void *) mSettings->mBuf, mSettings->txstart_epoch);
+	    pktlen = Settings_GenerateClientHdr(mSettings, (void *) mSettings->mBuf, reportstruct->packetTime);
+	}
+	if (pktlen > 0) {
+	    if (isUDP(mSettings)) {
+		struct client_udp_testhdr *tmphdr = reinterpret_cast<struct client_udp_testhdr *>(mSettings->mBuf);
+		WritePacketID(reportstruct->packetID);
+		tmphdr->seqno_ts.tv_sec  = htonl(reportstruct->packetTime.tv_sec);
+		tmphdr->seqno_ts.tv_usec = htonl(reportstruct->packetTime.tv_usec);
+		udp_payload_minimum = pktlen;
+#if HAVE_DECL_MSG_DONTWAIT
+		pktlen = send(mySocket, mSettings->mBuf, (pktlen > mSettings->mBufLen) ? pktlen : mSettings->mBufLen, MSG_DONTWAIT);
+#else
+		pktlen = send(mySocket, mSettings->mBuf, (pktlen > mSettings->mBufLen) ? pktlen : mSettings->mBufLen, 0);
+#endif
+		apply_first_udppkt_delay = true;
 	    } else {
-		pktlen = Settings_GenerateClientHdr(mSettings, (void *) mSettings->mBuf, reportstruct->packetTime);
-	    }
-	    if (pktlen > 0) {
-		if (isUDP(mSettings)) {
-		    struct client_udp_testhdr *tmphdr = reinterpret_cast<struct client_udp_testhdr *>(mSettings->mBuf);
-		    WritePacketID(reportstruct->packetID);
-		    tmphdr->seqno_ts.tv_sec  = htonl(reportstruct->packetTime.tv_sec);
-		    tmphdr->seqno_ts.tv_usec = htonl(reportstruct->packetTime.tv_usec);
-		    udp_payload_minimum = pktlen;
-#if HAVE_DECL_MSG_DONTWAIT
-		    pktlen = send(mySocket, mSettings->mBuf, (pktlen > mSettings->mBufLen) ? pktlen : mSettings->mBufLen, MSG_DONTWAIT);
-#else
-		    pktlen = send(mySocket, mSettings->mBuf, (pktlen > mSettings->mBufLen) ? pktlen : mSettings->mBufLen, 0);
-#endif
-		    apply_first_udppkt_delay = true;
-		} else {
 #if HAVE_DECL_TCP_NODELAY
-		    if (!isNoDelay(mSettings) && isPeerVerDetect(mSettings) && isTripTime(mSettings)) {
-			int optflag=1;
-			int rc;
-			// Disable Nagle to reduce latency of this intial message
-			if ((rc = setsockopt(mSettings->mSock, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char *>(&optflag), sizeof(int))) < 0) {
-			    WARN_errno(rc < 0, "tcpnodelay");
-			}
+		if (!isNoDelay(mSettings) && isPeerVerDetect(mSettings) && isTripTime(mSettings)) {
+		    int optflag=1;
+		    int rc;
+		    // Disable Nagle to reduce latency of this intial message
+		    if ((rc = setsockopt(mSettings->mSock, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char *>(&optflag), sizeof(int))) < 0) {
+			WARN_errno(rc < 0, "tcpnodelay");
 		    }
-#endif
-#if HAVE_DECL_MSG_DONTWAIT
-		    pktlen = send(mySocket, mSettings->mBuf, pktlen, MSG_DONTWAIT);
-#else
-		    pktlen = send(mySocket, mSettings->mBuf, pktlen, 0);
-#endif
-		    if (isPeerVerDetect(mSettings) && !isServerReverse(mSettings)) {
-			PeerXchange();
-		    }
-#if HAVE_DECL_TCP_NODELAY
-		    if (!isNoDelay(mSettings) && isPeerVerDetect(mSettings) && isTripTime(mSettings)) {
-			int optflag=0;
-			int rc;
-			// Disable Nagle to reduce latency of this intial message
-			if ((rc = setsockopt(mSettings->mSock, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char *>(&optflag), sizeof(int))) < 0) {
-			    WARN_errno(rc < 0, "tcpnodelay");
-			}
-		    }
-#endif
 		}
-		WARN_errno(pktlen < 0, "send_hdr");
+#endif
+#if HAVE_DECL_MSG_DONTWAIT
+		pktlen = send(mySocket, mSettings->mBuf, pktlen, MSG_DONTWAIT);
+#else
+		pktlen = send(mySocket, mSettings->mBuf, pktlen, 0);
+#endif
+		if (isPeerVerDetect(mSettings) && !isServerReverse(mSettings)) {
+		    PeerXchange();
+		}
+#if HAVE_DECL_TCP_NODELAY
+		if (!isNoDelay(mSettings) && isPeerVerDetect(mSettings) && isTripTime(mSettings)) {
+		    int optflag=0;
+		    int rc;
+		    // Disable Nagle to reduce latency of this intial message
+		    if ((rc = setsockopt(mSettings->mSock, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char *>(&optflag), sizeof(int))) < 0) {
+			WARN_errno(rc < 0, "tcpnodelay");
+		    }
+		}
+#endif
 	    }
+	    WARN_errno(pktlen < 0, "send_hdr");
 	}
     }
     return pktlen;

@@ -279,7 +279,7 @@ void Server::RunTCP () {
     FreeReport(myJob);
 }
 
-void Server::RunBounceBackTCP () {
+void Server::RunTcpBounceBack () {
 }
 
 void Server::InitKernelTimeStamping () {
