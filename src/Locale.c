@@ -261,7 +261,7 @@ const char client_burstperiod[] =
 "Bursting: %s every %0.2f seconds\n";
 
 const char client_bounceback[] =
-"Bounce-back size = %s\n";
+"Bounce-back test (size=%s) (hold=%d usecs)\n";
 
 const char server_burstperiod[] =
 "Burst wait timeout set to (2 * %0.2f) seconds (use --burst-period=<n secs> to change)\n";
@@ -488,6 +488,18 @@ const char report_burst_read_tcp_format[] =
 "%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms (%.2g%%)    %d=%d:%d:%d:%d:%d:%d:%d:%d  %s\n";
 
 const char report_burst_read_tcp_final_format[] =
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %.3f/%.3f/%.3f/%.3f ms  %d=%d:%d:%d:%d:%d:%d:%d:%d\n";
+
+const char report_burst_write_tcp_header[] =
+"[ ID] Burst (start-end)" IPERFFTimeSpace "Transfer     Bandwidth       XferTime  Write/Err  Rtry  Cwnd/RTT   NetPwr\n";
+
+const char report_burst_write_tcp_format[] =
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %d/%d %10d %8dK/%u %s\n";
+
+const char report_burst_write_tcp_nocwnd_format[] =
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %d/%d %10d NA/%u %s\n";
+
+const char report_burst_write_tcp_final_format[] =
 "%s" IPERFTimeFrmt " sec  %ss  %ss/sec               %d=%d:%d:%d:%d:%d:%d:%d:%d\n";
 
 /* -------------------------------------------------------------------
