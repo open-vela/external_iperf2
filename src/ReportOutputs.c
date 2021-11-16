@@ -1377,6 +1377,8 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 	    snprintf(b, SNBUFFERSIZE-strlen(b), " (tos rx/tx=0x%x/0x%x)", report->common->TOS, report->common->TOS);
 	} else if (isReverse(report->common)) {
 	    snprintf(b, SNBUFFERSIZE-strlen(b), " (tos tx=0x%x)", report->common->TOS);
+	} else {
+	    snprintf(b, SNBUFFERSIZE-strlen(b), " (tos rx=0x%x)", report->common->TOS);
 	}
 	b += strlen(b);
     }
