@@ -283,6 +283,14 @@ extern const char report_burst_read_tcp_format[];
 
 extern const char report_burst_read_tcp_final_format[];
 
+extern const char report_burst_write_tcp_header[];
+
+extern const char report_burst_write_tcp_format[];
+
+extern const char report_burst_write_tcp_nocwnd_format[];
+
+extern const char report_burst_write_tcp_final_format[];
+
 extern const char report_udp_fullduplex_header[];
 
 extern const char report_udp_fullduplex_format[];
