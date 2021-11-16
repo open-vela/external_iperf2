@@ -1102,6 +1102,7 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    }
 	    if (burstsize) {
 		burstsize = 0;
+		setPeriodicBurst(mExtSettings);
 		if (optarg) {
 		    mExtSettings->mBurstSize = byte_atoi(optarg);
 		}
@@ -1145,6 +1146,12 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    if (bounceback) {
 		bounceback = 0;
 		setBounceBack(mExtSettings);
+		setNoDelay(mExtSettings);
+		setEnhanced(mExtSettings);
+		if (optarg)
+		    mExtSettings->mBounceBackHold = atoi(optarg);
+		else
+		    mExtSettings->mBounceBackHold = 0;
 	    }
 	    break;
         default: // ignore unknown
@@ -1357,8 +1364,11 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		bail = true;
 	    }
 	}
-	if (isBounceBack(mExtSettings) && (static_cast<int> (mExtSettings->mBurstSize) < mExtSettings->mBufLen)) {
-	    fprintf(stderr, "WARN: options of --burst-size for bounce-back is being set to -l length of %d\n", mExtSettings->mBufLen);
+	if (isBounceBack(mExtSettings)) {
+	    if (static_cast<int> (mExtSettings->mBurstSize) > 0) {
+		fprintf(stderr, "WARN: options of --burst-size for bounce-back ignored, use -l sets size\n");
+	    }
+	    mExtSettings->mBounceBackBytes = mExtSettings->mBufLen;
 	    mExtSettings->mBurstSize = mExtSettings->mBufLen;
 	}
 	if (isPeriodicBurst(mExtSettings)) {
@@ -1370,12 +1380,9 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		bail = true;
 	    } else if (static_cast<int> (mExtSettings->mBurstSize) == 0) {
 	        mExtSettings->mBurstSize = byte_atoi("1M"); //default to 1 Mbyte
-	    } else if (isBounceBack(mExtSettings)) {
-		fprintf(stderr, "ERROR: options of --burst-period and --bounce-back cannot be applied together\n");
-		bail = true;
 	    }
 	    if (static_cast<int> (mExtSettings->mBurstSize) < mExtSettings->mBufLen) {
-		fprintf(stderr, "ERROR: option of --burst-size must be equal or larger to write length (-l)\n");
+		fprintf(stderr, "ERROR: option of --burst-size %d must be equal or larger to write length (-l) %d\n", mExtSettings->mBurstSize, mExtSettings->mBufLen);
 		bail = true;
 	    }
 	} else if (!isBounceBack(mExtSettings) && (static_cast<int> (mExtSettings->mBurstSize) > 0)) {
@@ -2217,7 +2224,7 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 #endif
 	if (isBounceBack(client)) {
 	    flags = HEADER_BOUNCEBACK;
-	    len = sizeof(struct bounce_back_datagram_hdr);
+	    len = sizeof(struct bounceback_hdr);
 	} else {
 	    memset(hdr, 0, sizeof(struct client_tcp_testhdr));
 	    flags |= HEADER_EXTEND;
