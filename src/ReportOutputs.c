@@ -1373,7 +1373,7 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 	}
 	b += strlen(b);
     } else if (report->common->TOS) {
-	if (isFullDuplex(report->common)) {
+	if (isFullDuplex(report->common) || isBounceBack(report->common)) {
 	    snprintf(b, SNBUFFERSIZE-strlen(b), " (tos rx/tx=0x%x/0x%x)", report->common->TOS, report->common->TOS);
 	} else if (isReverse(report->common)) {
 	    snprintf(b, SNBUFFERSIZE-strlen(b), " (tos tx=0x%x)", report->common->TOS);
