@@ -1188,15 +1188,25 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 	    setBounceBack(server);
 	    if (flags & HEADER_CLOCKSYNCED)
 		setTripTime(server);
-	    nread = recvn(server->mSock, server->mBuf + sizeof(uint32_t), \
-			  sizeof(struct bounceback_hdr) + sizeof(uint32_t), 0);
-	    if (nread != sizeof(struct bounceback_hdr) + sizeof(uint32_t)) {
+	    nread = recvn(server->mSock, readptr, sizeof(struct bounceback_hdr), 0);
+	    if (nread != sizeof(struct bounceback_hdr)) {
 		WARN(1, "read bounce back header failed");
 		rc = false;
 		goto DONE;
 	    }
+	    readptr += nread;
 	    server->mBounceBackBytes = ntohl(bbhdr->bbsize);
 	    server->mBounceBackHold = ntohl(bbhdr->bbhold);
+	    int remaining =  server->mBounceBackBytes - (sizeof(struct bounceback_hdr) + sizeof(uint32_t));
+	    nread = recvn(server->mSock, readptr, remaining, 0);
+	    if (nread != remaining) {
+		WARN(1, "read bounce back payload failed");
+		rc = false;
+		goto DONE;
+	    }
+	    Timestamp now;
+	    bbhdr->bbsendtotx_ts.sec = now.getSecs();
+	    bbhdr->bbsendtotx_ts.usec = now.getUsecs();
 	} else {
 	    uint16_t upperflags = 0;
 	    int readlen;

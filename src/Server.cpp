@@ -279,6 +279,26 @@ void Server::RunTCP () {
     FreeReport(myJob);
 }
 
+inline bool Server::ReadBBWithRXTimstamp () {
+    bool rc = false;
+    int n;
+    if ((n = recvn(mySocket, mSettings->mBuf, mSettings->mBounceBackBytes, 0)) == mSettings->mBounceBackBytes) {
+	struct bounceback_hdr *bbhdr = reinterpret_cast<struct bounceback_hdr *>(mSettings->mBuf);
+	now.setnow();
+	reportstruct->packetTime.tv_sec = now.getSecs();
+	reportstruct->packetTime.tv_usec = now.getUsecs();
+	reportstruct->emptyreport=0;
+	bbhdr->bbsendtorx_ts.sec = htonl(reportstruct->packetTime.tv_sec);
+	bbhdr->bbsendtorx_ts.usec = htonl(reportstruct->packetTime.tv_usec);
+	rc = true;
+    } else if (n==0) {
+	peerclose = true;
+    } else {
+	reportstruct->emptyreport=1;
+    }
+    return rc;
+}
+
 void Server::RunBounceBackTCP () {
     if (!InitTrafficLoop())
 	return;
@@ -289,13 +309,8 @@ void Server::RunBounceBackTCP () {
     while (InProgress()) {
 	int n;
 	reportstruct->emptyreport=1;
-	if ((n = recvn(mySocket, mSettings->mBuf, mSettings->mBounceBackBytes, 0)) == mSettings->mBounceBackBytes) {
+	do {
 	    struct bounceback_hdr *bbhdr = reinterpret_cast<struct bounceback_hdr *>(mSettings->mBuf);
-	    now.setnow();
-	    reportstruct->packetTime.tv_sec = now.getSecs();
-	    reportstruct->packetTime.tv_usec = now.getUsecs();
-	    bbhdr->bbsendtorx_ts.sec = htonl(reportstruct->packetTime.tv_sec);
-	    bbhdr->bbsendtorx_ts.usec = htonl(reportstruct->packetTime.tv_usec);
 	    if (mSettings->mBounceBackHold) {
 		delay_loop(mSettings->mBounceBackHold);
 	    }
@@ -308,14 +323,7 @@ void Server::RunBounceBackTCP () {
 	    } else {
 		break;
 	    }
-	} else if (n==0) {
-	    peerclose = true;
-	} else {
-	    reportstruct->emptyreport=1;
-	    now.setnow();
-	    reportstruct->packetTime.tv_sec = now.getSecs();
-	    break;
-	}
+	} while (ReadBBWithRXTimstamp());
     }
 }
 

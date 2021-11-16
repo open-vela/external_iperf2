@@ -282,7 +282,7 @@ int Client::StartSynch () {
     // check for an epoch based start time
     reportstruct->packetLen = 0;
     if (!isServerReverse(mSettings)) {
-	if (!isCompat(mSettings)) {
+	if (!isCompat(mSettings) && !isBounceBack(mSettings)) {
 	    reportstruct->packetLen = SendFirstPayload();
 	    // Reverse UDP tests need to retry "first sends" a few times
 	    // before going to server or read mode
@@ -1591,60 +1591,55 @@ int Client::SendFirstPayload () {
 	    reportstruct->packetTime.tv_sec = now.getSecs();
 	    reportstruct->packetTime.tv_usec = now.getUsecs();
 	}
-	if (isBounceBack(mSettings)) {
-	    WriteTcpTxBBHdr(reportstruct, 1);
-	    pktlen = mSettings->mBounceBackBytes;
+	if (isTxStartTime(mSettings)) {
+	    pktlen = Settings_GenerateClientHdr(mSettings, (void *) mSettings->mBuf, mSettings->txstart_epoch);
 	} else {
-	    if (isTxStartTime(mSettings)) {
-		pktlen = Settings_GenerateClientHdr(mSettings, (void *) mSettings->mBuf, mSettings->txstart_epoch);
+	    pktlen = Settings_GenerateClientHdr(mSettings, (void *) mSettings->mBuf, reportstruct->packetTime);
+	}
+	if (pktlen > 0) {
+	    if (isUDP(mSettings)) {
+		struct client_udp_testhdr *tmphdr = reinterpret_cast<struct client_udp_testhdr *>(mSettings->mBuf);
+		WritePacketID(reportstruct->packetID);
+		tmphdr->seqno_ts.tv_sec  = htonl(reportstruct->packetTime.tv_sec);
+		tmphdr->seqno_ts.tv_usec = htonl(reportstruct->packetTime.tv_usec);
+		udp_payload_minimum = pktlen;
+#if HAVE_DECL_MSG_DONTWAIT
+		pktlen = send(mySocket, mSettings->mBuf, (pktlen > mSettings->mBufLen) ? pktlen : mSettings->mBufLen, MSG_DONTWAIT);
+#else
+		pktlen = send(mySocket, mSettings->mBuf, (pktlen > mSettings->mBufLen) ? pktlen : mSettings->mBufLen, 0);
+#endif
+		apply_first_udppkt_delay = true;
 	    } else {
-		pktlen = Settings_GenerateClientHdr(mSettings, (void *) mSettings->mBuf, reportstruct->packetTime);
-	    }
-	    if (pktlen > 0) {
-		if (isUDP(mSettings)) {
-		    struct client_udp_testhdr *tmphdr = reinterpret_cast<struct client_udp_testhdr *>(mSettings->mBuf);
-		    WritePacketID(reportstruct->packetID);
-		    tmphdr->seqno_ts.tv_sec  = htonl(reportstruct->packetTime.tv_sec);
-		    tmphdr->seqno_ts.tv_usec = htonl(reportstruct->packetTime.tv_usec);
-		    udp_payload_minimum = pktlen;
-#if HAVE_DECL_MSG_DONTWAIT
-		    pktlen = send(mySocket, mSettings->mBuf, (pktlen > mSettings->mBufLen) ? pktlen : mSettings->mBufLen, MSG_DONTWAIT);
-#else
-		    pktlen = send(mySocket, mSettings->mBuf, (pktlen > mSettings->mBufLen) ? pktlen : mSettings->mBufLen, 0);
-#endif
-		    apply_first_udppkt_delay = true;
-		} else {
 #if HAVE_DECL_TCP_NODELAY
-		    if (!isNoDelay(mSettings) && isPeerVerDetect(mSettings) && isTripTime(mSettings)) {
-			int optflag=1;
-			int rc;
-			// Disable Nagle to reduce latency of this intial message
-			if ((rc = setsockopt(mSettings->mSock, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char *>(&optflag), sizeof(int))) < 0) {
-			    WARN_errno(rc < 0, "tcpnodelay");
-			}
+		if (!isNoDelay(mSettings) && isPeerVerDetect(mSettings) && isTripTime(mSettings)) {
+		    int optflag=1;
+		    int rc;
+		    // Disable Nagle to reduce latency of this intial message
+		    if ((rc = setsockopt(mSettings->mSock, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char *>(&optflag), sizeof(int))) < 0) {
+			WARN_errno(rc < 0, "tcpnodelay");
 		    }
-#endif
-#if HAVE_DECL_MSG_DONTWAIT
-		    pktlen = send(mySocket, mSettings->mBuf, pktlen, MSG_DONTWAIT);
-#else
-		    pktlen = send(mySocket, mSettings->mBuf, pktlen, 0);
-#endif
-		    if (isPeerVerDetect(mSettings) && !isServerReverse(mSettings)) {
-			PeerXchange();
-		    }
-#if HAVE_DECL_TCP_NODELAY
-		    if (!isNoDelay(mSettings) && isPeerVerDetect(mSettings) && isTripTime(mSettings)) {
-			int optflag=0;
-			int rc;
-			// Disable Nagle to reduce latency of this intial message
-			if ((rc = setsockopt(mSettings->mSock, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char *>(&optflag), sizeof(int))) < 0) {
-			    WARN_errno(rc < 0, "tcpnodelay");
-			}
-		    }
-#endif
 		}
-		WARN_errno(pktlen < 0, "send_hdr");
+#endif
+#if HAVE_DECL_MSG_DONTWAIT
+		pktlen = send(mySocket, mSettings->mBuf, pktlen, MSG_DONTWAIT);
+#else
+		pktlen = send(mySocket, mSettings->mBuf, pktlen, 0);
+#endif
+		if (isPeerVerDetect(mSettings) && !isServerReverse(mSettings)) {
+		    PeerXchange();
+		}
+#if HAVE_DECL_TCP_NODELAY
+		if (!isNoDelay(mSettings) && isPeerVerDetect(mSettings) && isTripTime(mSettings)) {
+		    int optflag=0;
+		    int rc;
+		    // Disable Nagle to reduce latency of this intial message
+		    if ((rc = setsockopt(mSettings->mSock, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char *>(&optflag), sizeof(int))) < 0) {
+			WARN_errno(rc < 0, "tcpnodelay");
+		    }
+		}
+#endif
 	    }
+	    WARN_errno(pktlen < 0, "send_hdr");
 	}
     }
     return pktlen;
