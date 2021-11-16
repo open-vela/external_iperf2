@@ -966,11 +966,11 @@ void Client::RunWriteEventsTCP () {
 void Client::RunBounceBackTCP () {
     int burst_id = 1;
     int writelen = mSettings->mBufLen;
-
     now.setnow();
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
     while (InProgress()) {
+	int n;
 	reportstruct->writecnt = 0;
 	now.setnow();
 	reportstruct->packetTime.tv_sec = now.getSecs();
@@ -996,6 +996,14 @@ void Client::RunBounceBackTCP () {
 	    reportstruct->packetLen = -1;
 	    peerclose = true;
 	    WARN_errno(1, "tcp bounce-back write");
+	}
+	if ((n = recvn(mySocket, mSettings->mBuf, mSettings->mBounceBackBytes, 0)) == mSettings->mBounceBackBytes) {
+	    struct bounceback_hdr *bbhdr = reinterpret_cast<struct bounceback_hdr *>(mSettings->mBuf);
+	    now.setnow();
+	    reportstruct->packetTime.tv_sec = now.getSecs();
+	    reportstruct->packetTime.tv_usec = now.getUsecs();
+	    bbhdr->bbsendtorx_ts.sec = reportstruct->packetTime.tv_sec;
+	    bbhdr->bbsendtorx_ts.usec = reportstruct->packetTime.tv_usec;
 	}
     }
     FinishTrafficActions();
