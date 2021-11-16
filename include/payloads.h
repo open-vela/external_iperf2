@@ -222,8 +222,6 @@ struct bounceback_hdr {
     struct bb_ts bbsendtorx_ts;
     struct bb_ts bbsendfro_ts;
     uint32_t bbhold; // up to here is mandatory
-    uint32_t drain; //units of usecs
-    uint32_t bbdrain;
     uint32_t bbrtt;
     struct bb_ts bbread_ts;
 };

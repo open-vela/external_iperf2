@@ -280,6 +280,45 @@ void Server::RunTCP () {
 }
 
 void Server::RunBounceBackTCP () {
+    if (!InitTrafficLoop())
+	return;
+    myReport->info.ts.prevsendTime = myReport->info.ts.startTime;
+    now.setnow();
+    reportstruct->packetTime.tv_sec = now.getSecs();
+    reportstruct->packetTime.tv_usec = now.getUsecs();
+    while (InProgress()) {
+	int n;
+	reportstruct->emptyreport=1;
+	if ((n = recvn(mySocket, mSettings->mBuf, mSettings->mBounceBackBytes, 0)) == mSettings->mBounceBackBytes) {
+	    struct bounceback_hdr *bbhdr = reinterpret_cast<struct bounceback_hdr *>(mSettings->mBuf);
+	    now.setnow();
+	    reportstruct->packetTime.tv_sec = now.getSecs();
+	    reportstruct->packetTime.tv_usec = now.getUsecs();
+	    bbhdr->bbsendtorx_ts.sec = reportstruct->packetTime.tv_sec;
+	    bbhdr->bbsendtorx_ts.usec = reportstruct->packetTime.tv_usec;
+	    if (mSettings->mBounceBackHold) {
+		delay_loop(mSettings->mBounceBackHold);
+	    }
+	    now.setnow();
+	    bbhdr->bbsendtotx_ts.sec = reportstruct->packetTime.tv_sec;
+	    bbhdr->bbsendtotx_ts.usec = reportstruct->packetTime.tv_usec;
+	    if ((n = writen(mySocket, mSettings->mBuf, mSettings->mBounceBackBytes, &reportstruct->writecnt)) == mSettings->mBounceBackBytes) {
+		reportstruct->sentTime.tv_sec = now.getSecs();
+		reportstruct->sentTime.tv_usec = now.getUsecs();
+		reportstruct->emptyreport=0;
+		ReportPacket(myReport, reportstruct);
+	    } else {
+		break;
+	    }
+	} else if (n==0) {
+	    peerclose = true;
+	} else {
+	    reportstruct->emptyreport=1;
+	    now.setnow();
+	    reportstruct->packetTime.tv_sec = now.getSecs();
+	    break;
+	}
+    }
 }
 
 void Server::InitKernelTimeStamping () {
