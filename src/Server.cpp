@@ -279,77 +279,7 @@ void Server::RunTCP () {
     FreeReport(myJob);
 }
 
-inline bool Server::ReadBBWithRXTimstamp () {
-    bool rc = false;
-    int n;
-    if ((n = recvn(mySocket, mSettings->mBuf, mSettings->mBounceBackBytes, 0)) == mSettings->mBounceBackBytes) {
-	struct bounceback_hdr *bbhdr = reinterpret_cast<struct bounceback_hdr *>(mSettings->mBuf);
-	now.setnow();
-	reportstruct->packetTime.tv_sec = now.getSecs();
-	reportstruct->packetTime.tv_usec = now.getUsecs();
-	reportstruct->emptyreport=0;
-	bbhdr->bbsendtorx_ts.sec = htonl(reportstruct->packetTime.tv_sec);
-	bbhdr->bbsendtorx_ts.usec = htonl(reportstruct->packetTime.tv_usec);
-	rc = true;
-    } else if (n==0) {
-	peerclose = true;
-    } else {
-	reportstruct->emptyreport=1;
-    }
-    return rc;
-}
-
-void Server::RunBounceBackTCP () {
-    if (!InitTrafficLoop())
-	return;
-#if HAVE_DECL_TCP_NODELAY
-     {
-	 int nodelay = 1;
-	 // set TCP nodelay option
-	 int rc = setsockopt(mySocket, IPPROTO_TCP, TCP_NODELAY,
-			     reinterpret_cast<char*>(&nodelay), sizeof(nodelay));
-	 WARN_errno(rc == SOCKET_ERROR, "setsockopt BB TCP_NODELAY");
-	 setNoDelay(mSettings);
-     }
-#endif
-    myReport->info.ts.prevsendTime = myReport->info.ts.startTime;
-    now.setnow();
-    reportstruct->packetTime.tv_sec = now.getSecs();
-    reportstruct->packetTime.tv_usec = now.getUsecs();
-    while (InProgress()) {
-	int n;
-	reportstruct->emptyreport=1;
-	do {
-	    struct bounceback_hdr *bbhdr = reinterpret_cast<struct bounceback_hdr *>(mSettings->mBuf);
-	    if (mSettings->mBounceBackHold) {
-		delay_loop(mSettings->mBounceBackHold);
-	    }
-	    now.setnow();
-	    bbhdr->bbsendtotx_ts.sec = htonl(now.getSecs());
-	    bbhdr->bbsendtotx_ts.usec = htonl(now.getUsecs());
-	    if ((n = writen(mySocket, mSettings->mBuf, mSettings->mBounceBackBytes, &reportstruct->writecnt)) == mSettings->mBounceBackBytes) {
-		reportstruct->emptyreport=0;
-		ReportPacket(myReport, reportstruct);
-	    } else {
-		break;
-	    }
-	} while (ReadBBWithRXTimstamp());
-    }
-    disarm_itimer();
-    // stop timing
-    now.setnow();
-    reportstruct->packetTime.tv_sec = now.getSecs();
-    reportstruct->packetTime.tv_usec = now.getUsecs();
-    reportstruct->packetLen = 0;
-    if (EndJob(myJob, reportstruct)) {
-#if HAVE_THREAD_DEBUG
-	thread_debug("tcp close sock=%d", mySocket);
-#endif
-	int rc = close(mySocket);
-	WARN_errno(rc == SOCKET_ERROR, "server close");
-    }
-    Iperf_remove_host(mSettings);
-    FreeReport(myJob);
+void Server::RunTcpBounceBack () {
 }
 
 void Server::InitKernelTimeStamping () {

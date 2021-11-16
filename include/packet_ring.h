@@ -60,6 +60,7 @@ struct reportstruct_tcpstats {
     bool isValid;
     int cwnd;
     int rtt;
+    int rttvar;
     intmax_t retry_tot;
 };
 
@@ -86,8 +87,6 @@ struct ReportStruct {
     struct reportstruct_tcpstats tcpstats;
     double select_delay;
     long drain_time;
-    struct timeval sentTimeRX;
-    struct timeval sentTimeTX;
 };
 
 struct PacketRing {
