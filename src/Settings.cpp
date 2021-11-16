@@ -1146,6 +1146,7 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    if (bounceback) {
 		bounceback = 0;
 		setBounceBack(mExtSettings);
+		setNoDelay(mExtSettings);
 		setEnhanced(mExtSettings);
 		if (optarg)
 		    mExtSettings->mBounceBackHold = atoi(optarg);
