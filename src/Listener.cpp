@@ -1186,8 +1186,11 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 	if (flags & HEADER_BOUNCEBACK) {
 	    struct bounceback_hdr *bbhdr = reinterpret_cast<struct bounceback_hdr *>(server->mBuf);
 	    setBounceBack(server);
-	    if (flags & HEADER_CLOCKSYNCED)
+	    if (flags & HEADER_BBCLOCKSYNCED)
 		setTripTime(server);
+	    if (flags & HEADER_BBTOS) {
+		server->mTOS = ntohs(bbhdr->tos);
+	    }
 	    nread = recvn(server->mSock, readptr, sizeof(struct bounceback_hdr), 0);
 	    if (nread != sizeof(struct bounceback_hdr)) {
 		WARN(1, "read bounce back header failed");

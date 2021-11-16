@@ -73,7 +73,8 @@ extern "C" {
 #define HEADER_EXTEND        0x40000000
 #define HEADER_UDPTESTS      0x20000000
 #define HEADER_BOUNCEBACK    0x10000000
-#define HEADER_CLOCKSYNCED   0x01000000 // used in the bb header only
+#define HEADER_BBCLOCKSYNCED 0x01000000 // used in the bb header only
+#define HEADER_BBTOS         0x02000000
 #define HEADER_SEQNO64B      0x08000000
 #define HEADER_VERSION2      0x04000000
 #define HEADER_V2PEERDETECT  0x02000000
@@ -218,6 +219,7 @@ struct bounceback_hdr {
     uint32_t flags;
     uint32_t bbsize;
     uint32_t bbid;
+    uint16_t tos;
     struct bb_ts bbsendtotx_ts;
     struct bb_ts bbsendtorx_ts;
     struct bb_ts bbsendfro_ts;
