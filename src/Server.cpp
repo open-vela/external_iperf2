@@ -294,17 +294,15 @@ void Server::RunBounceBackTCP () {
 	    now.setnow();
 	    reportstruct->packetTime.tv_sec = now.getSecs();
 	    reportstruct->packetTime.tv_usec = now.getUsecs();
-	    bbhdr->bbsendtorx_ts.sec = reportstruct->packetTime.tv_sec;
-	    bbhdr->bbsendtorx_ts.usec = reportstruct->packetTime.tv_usec;
+	    bbhdr->bbsendtorx_ts.sec = htonl(reportstruct->packetTime.tv_sec);
+	    bbhdr->bbsendtorx_ts.usec = htonl(reportstruct->packetTime.tv_usec);
 	    if (mSettings->mBounceBackHold) {
 		delay_loop(mSettings->mBounceBackHold);
 	    }
 	    now.setnow();
-	    bbhdr->bbsendtotx_ts.sec = reportstruct->packetTime.tv_sec;
-	    bbhdr->bbsendtotx_ts.usec = reportstruct->packetTime.tv_usec;
+	    bbhdr->bbsendtotx_ts.sec = htonl(now.getSecs());
+	    bbhdr->bbsendtotx_ts.usec = htonl(now.getUsecs());
 	    if ((n = writen(mySocket, mSettings->mBuf, mSettings->mBounceBackBytes, &reportstruct->writecnt)) == mSettings->mBounceBackBytes) {
-		reportstruct->sentTime.tv_sec = now.getSecs();
-		reportstruct->sentTime.tv_usec = now.getUsecs();
 		reportstruct->emptyreport=0;
 		ReportPacket(myReport, reportstruct);
 	    } else {

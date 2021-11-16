@@ -973,8 +973,8 @@ void Client::RunBounceBackTCP () {
 	int n;
 	reportstruct->writecnt = 0;
 	now.setnow();
-	reportstruct->packetTime.tv_sec = now.getSecs();
-	reportstruct->packetTime.tv_usec = now.getUsecs();
+	reportstruct->sentTime.tv_sec = now.getSecs();
+	reportstruct->sentTime.tv_usec = now.getUsecs();
 	WriteTcpTxBBHdr(reportstruct, burst_id);
 	burst_id++;
 	reportstruct->sentTime = reportstruct->packetTime;
@@ -985,6 +985,18 @@ void Client::RunBounceBackTCP () {
 	    reportstruct->emptyreport = 0;
 	    totLen += reportstruct->packetLen;
 	    reportstruct->errwrite=WriteNoErr;
+	    if ((n = recvn(mySocket, mSettings->mBuf, mSettings->mBounceBackBytes, 0)) == mSettings->mBounceBackBytes) {
+		struct bounceback_hdr *bbhdr = reinterpret_cast<struct bounceback_hdr *>(mSettings->mBuf);
+		now.setnow();
+		reportstruct->sentTimeRX.tv_sec = ntohl(bbhdr->bbsendtorx_ts.sec);
+		reportstruct->sentTimeRX.tv_usec = ntohl(bbhdr->bbsendtorx_ts.usec);
+		reportstruct->sentTimeTX.tv_sec = ntohl(bbhdr->bbsendtotx_ts.sec);
+		reportstruct->sentTimeTX.tv_usec = ntohl(bbhdr->bbsendtotx_ts.usec);
+		reportstruct->packetTime.tv_sec = now.getSecs();
+		reportstruct->packetTime.tv_usec = now.getUsecs();
+		reportstruct->emptyreport = 0;
+		myReportPacket();
+	    }
 	} else if ((reportstruct->packetLen < 0 ) && NONFATALTCPWRITERR(errno)) {
 	    reportstruct->packetLen = 0;
 	    reportstruct->emptyreport = 1;
@@ -996,14 +1008,6 @@ void Client::RunBounceBackTCP () {
 	    reportstruct->packetLen = -1;
 	    peerclose = true;
 	    WARN_errno(1, "tcp bounce-back write");
-	}
-	if ((n = recvn(mySocket, mSettings->mBuf, mSettings->mBounceBackBytes, 0)) == mSettings->mBounceBackBytes) {
-	    struct bounceback_hdr *bbhdr = reinterpret_cast<struct bounceback_hdr *>(mSettings->mBuf);
-	    now.setnow();
-	    reportstruct->packetTime.tv_sec = now.getSecs();
-	    reportstruct->packetTime.tv_usec = now.getUsecs();
-	    bbhdr->bbsendtorx_ts.sec = reportstruct->packetTime.tv_sec;
-	    bbhdr->bbsendtorx_ts.usec = reportstruct->packetTime.tv_usec;
 	}
     }
     FinishTrafficActions();

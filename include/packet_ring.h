@@ -86,6 +86,8 @@ struct ReportStruct {
     struct reportstruct_tcpstats tcpstats;
     double select_delay;
     long drain_time;
+    struct timeval sentTimeRX;
+    struct timeval sentTimeTX;
 };
 
 struct PacketRing {
