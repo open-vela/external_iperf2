@@ -1369,6 +1369,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		fprintf(stderr, "WARN: options of --burst-size for bounce-back ignored, use -l sets size\n");
 	    }
 	    mExtSettings->mBounceBackBytes = mExtSettings->mBufLen;
+	    mExtSettings->mBurstSize = mExtSettings->mBufLen;
 	}
 	if (isPeriodicBurst(mExtSettings)) {
 	    if (isIsochronous(mExtSettings)) {
@@ -1379,9 +1380,6 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		bail = true;
 	    } else if (static_cast<int> (mExtSettings->mBurstSize) == 0) {
 	        mExtSettings->mBurstSize = byte_atoi("1M"); //default to 1 Mbyte
-	    } else if (isBounceBack(mExtSettings)) {
-		fprintf(stderr, "ERROR: options of --burst-period and --bounce-back cannot be applied together\n");
-		bail = true;
 	    }
 	    if (static_cast<int> (mExtSettings->mBurstSize) < mExtSettings->mBufLen) {
 		fprintf(stderr, "ERROR: option of --burst-size %d must be equal or larger to write length (-l) %d\n", mExtSettings->mBurstSize, mExtSettings->mBufLen);

@@ -964,7 +964,7 @@ void Client::RunWriteEventsTCP () {
 }
 #endif
 void Client::RunBounceBackTCP () {
-    int burst_id = 1;
+    int burst_id = 0;
     int writelen = mSettings->mBufLen;
     now.setnow();
     reportstruct->packetTime.tv_sec = now.getSecs();
@@ -972,11 +972,15 @@ void Client::RunBounceBackTCP () {
     while (InProgress()) {
 	int n;
 	reportstruct->writecnt = 0;
+	if (framecounter) {
+	    burst_id = framecounter->wait_tick();
+	} else {
+	    burst_id++;
+	}
 	now.setnow();
 	reportstruct->sentTime.tv_sec = now.getSecs();
 	reportstruct->sentTime.tv_usec = now.getUsecs();
 	WriteTcpTxBBHdr(reportstruct, burst_id);
-	burst_id++;
 	reportstruct->sentTime = reportstruct->packetTime;
 	myReport->info.ts.prevsendTime = reportstruct->packetTime;
 	reportstruct->packetLen = writen(mySocket, mSettings->mBuf, writelen, &reportstruct->writecnt);
