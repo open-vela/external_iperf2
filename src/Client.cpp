@@ -1364,8 +1364,12 @@ inline void Client::WriteTcpTxHdr (struct ReportStruct *reportstruct, int burst_
 void Client::WriteTcpTxBBHdr (struct ReportStruct *reportstruct, int bbid) {
     struct bounceback_hdr * mBuf_bb = reinterpret_cast<struct bounceback_hdr *>(mSettings->mBuf);
     // store packet ID into buffer
-    mBuf_bb->flags = isTripTime(mSettings) ? \
-	htonl(HEADER_BOUNCEBACK | HEADER_BBCLOCKSYNCED) : htonl(HEADER_BOUNCEBACK);
+    uint32_t flags = isTripTime(mSettings) ? (HEADER_BOUNCEBACK | HEADER_BBCLOCKSYNCED) : HEADER_BOUNCEBACK;
+    if (mSettings->mTOS) {
+	flags |= HEADER_BBTOS;
+	mBuf_bb->tos = htons((mSettings->mTOS & 0xFF));
+    }
+    mBuf_bb->flags = htonl(flags);
     mBuf_bb->bbsize = htonl(mSettings->mBufLen);
     mBuf_bb->bbid = htonl(bbid);
     mBuf_bb->bbsendtotx_ts.sec = htonl(reportstruct->packetTime.tv_sec);
