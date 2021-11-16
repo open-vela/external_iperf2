@@ -687,9 +687,6 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
  */
 struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, struct tcp_init_conditions *init_cond) {
     assert(inSettings != NULL);
-    if (init_cond) {
-
-    }
     struct ReportHeader *reporthdr = (struct ReportHeader *) calloc(1, sizeof(struct ReportHeader));
     if (reporthdr == NULL) {
 	FAIL(1, "Out of Memory!!\n", inSettings);
