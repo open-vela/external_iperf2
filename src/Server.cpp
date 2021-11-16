@@ -325,6 +325,21 @@ void Server::RunBounceBackTCP () {
 	    }
 	} while (ReadBBWithRXTimstamp());
     }
+    disarm_itimer();
+    // stop timing
+    now.setnow();
+    reportstruct->packetTime.tv_sec = now.getSecs();
+    reportstruct->packetTime.tv_usec = now.getUsecs();
+    reportstruct->packetLen = 0;
+    if (EndJob(myJob, reportstruct)) {
+#if HAVE_THREAD_DEBUG
+	thread_debug("tcp close sock=%d", mySocket);
+#endif
+	int rc = close(mySocket);
+	WARN_errno(rc == SOCKET_ERROR, "server close");
+    }
+    Iperf_remove_host(mSettings);
+    FreeReport(myJob);
 }
 
 void Server::InitKernelTimeStamping () {
