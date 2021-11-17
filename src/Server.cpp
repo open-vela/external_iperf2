@@ -279,7 +279,7 @@ void Server::RunTCP () {
     FreeReport(myJob);
 }
 
-inline bool Server::ReadBBWithRXTimstamp () {
+inline bool Server::ReadBBWithRXTimestamp () {
     bool rc = false;
     int n;
     if ((n = recvn(mySocket, mSettings->mBuf, mSettings->mBounceBackBytes, 0)) == mSettings->mBounceBackBytes) {
@@ -333,7 +333,7 @@ void Server::RunBounceBackTCP () {
 	    } else {
 		break;
 	    }
-	} while (ReadBBWithRXTimstamp());
+	} while (ReadBBWithRXTimestamp());
     }
     disarm_itimer();
     // stop timing

@@ -85,7 +85,7 @@ private:
     bool InitTrafficLoop(void);
     inline void SetFullDuplexReportStartTime(void);
     inline void SetReportStartTime();
-    bool ReadBBWithRXTimstamp ();
+    bool ReadBBWithRXTimestamp ();
     int ReadWithRxTimestamp(void);
     bool ReadPacketID(void);
     void L2_processing(void);
