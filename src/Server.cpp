@@ -303,14 +303,14 @@ void Server::RunBounceBackTCP () {
     if (!InitTrafficLoop())
 	return;
 #if HAVE_DECL_TCP_NODELAY
-     {
-	 int nodelay = 1;
-	 // set TCP nodelay option
-	 int rc = setsockopt(mySocket, IPPROTO_TCP, TCP_NODELAY,
-			     reinterpret_cast<char*>(&nodelay), sizeof(nodelay));
-	 WARN_errno(rc == SOCKET_ERROR, "setsockopt BB TCP_NODELAY");
-	 setNoDelay(mSettings);
-     }
+    {
+	int nodelay = 1;
+	// set TCP nodelay option
+	int rc = setsockopt(mySocket, IPPROTO_TCP, TCP_NODELAY,
+			    reinterpret_cast<char*>(&nodelay), sizeof(nodelay));
+	WARN_errno(rc == SOCKET_ERROR, "setsockopt BB TCP_NODELAY");
+	setNoDelay(mSettings);
+    }
 #endif
     myReport->info.ts.prevsendTime = myReport->info.ts.startTime;
     now.setnow();
