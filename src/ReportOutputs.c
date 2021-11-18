@@ -400,6 +400,7 @@ void tcp_output_write_enhanced (struct TransferInfo *stats) {
 	       stats->sock_callstats.write.TCPretry,
 	       stats->sock_callstats.write.cwnd,
 	       stats->sock_callstats.write.rtt,
+	       stats->sock_callstats.write.rttvar,
 	       netpower_buf);
     } else {
 	printf(report_bw_write_enhanced_nocwnd_format,

@@ -807,16 +807,6 @@ static inline void reporter_handle_txmsg_oneway_transit (struct TransferInfo *st
     }
 }
 // This is done in reporter thread context
-#if HAVE_TCP_STATS
-static inline void reporter_handle_packet_tcpistats (struct ReporterData *data, struct ReportStruct *packet) {
-    assert(data!=NULL);
-    struct TransferInfo *stats = &data->info;
-    stats->sock_callstats.write.TCPretry += (packet->tcpstats.retry_tot - stats->sock_callstats.write.totTCPretry);
-    stats->sock_callstats.write.totTCPretry = packet->tcpstats.retry_tot;
-    stats->sock_callstats.write.cwnd = packet->tcpstats.cwnd;
-    stats->sock_callstats.write.rtt = packet->tcpstats.rtt;
-}
-#endif
 
 void reporter_handle_packet_client (struct ReporterData *data, struct ReportStruct *packet) {
     struct TransferInfo *stats = &data->info;
@@ -923,6 +913,20 @@ inline void reporter_handle_packet_server_udp (struct ReporterData *data, struct
 	}
     }
 }
+
+// This is done in reporter thread context
+#if HAVE_TCP_STATS
+static inline void reporter_handle_packet_tcpistats (struct ReporterData *data, struct ReportStruct *packet) {
+    assert(data!=NULL);
+    struct TransferInfo *stats = &data->info;
+    stats->sock_callstats.write.TCPretry += (packet->tcpstats.retry_tot - stats->sock_callstats.write.totTCPretry);
+    stats->sock_callstats.write.totTCPretry = packet->tcpstats.retry_tot;
+    stats->sock_callstats.write.cwnd = packet->tcpstats.cwnd;
+    stats->sock_callstats.write.rtt = packet->tcpstats.rtt;
+    stats->sock_callstats.write.rttvar = packet->tcpstats.rttvar;
+}
+#endif
+
 
 /*
  * Report printing routines below
