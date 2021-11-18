@@ -60,6 +60,7 @@ struct reportstruct_tcpstats {
     bool isValid;
     int cwnd;
     int rtt;
+    int rttvar;
     intmax_t retry_tot;
 };
 
