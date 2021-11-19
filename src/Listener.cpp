@@ -1200,6 +1200,8 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 	    if (flags & HEADER_BBTOS) {
 		server->mTOS = ntohs(bbhdr->tos);
 	    }
+	    if (flags & HEADER_BBQUICKACK)
+		setTcpQuickAck(server);
 	    int remaining =  server->mBounceBackBytes - (sizeof(struct bounceback_hdr) + sizeof(uint32_t));
 	    nread = recvn(server->mSock, readptr, remaining, 0);
 	    if (nread != remaining) {

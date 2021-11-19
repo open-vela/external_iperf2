@@ -80,7 +80,6 @@ Client/Server:\n\
   -p, --port      #        client/server port to listen/send on and to connect\n\
       --permit-key         permit key to be used to verify client and server (TCP only)\n\
       --sum-only           output sum only reports\n\
-      --tcp-quickack       set the TCP_QUICKACK socket option\n\
   -u, --udp                use UDP rather than TCP\n\
   -w, --window    #[KM]    TCP window size (socket buffer size)\n"
 #ifdef HAVE_SCHED_SETSCHEDULER
@@ -134,6 +133,7 @@ Client specific:\n\
       --no-udp-fin         No final server to client stats at end of UDP test\n\
   -n, --num       #[kmgKMG]    number of bytes to transmit (instead of -t)\n\
   -r, --tradeoff           Do a fullduplexectional test individually\n\
+      --tcp-quickack       request the server during a bounce-back test to set the TCP_QUICKACK socket option prior to a bb delay\n		\
       --tcp-write-prefetch set the socket's TCP_NOTSENT_LOWAT value in bytes and use event based writes\n\
   -t, --time      #        time in seconds to transmit for (default 10 secs)\n\
       --trip-times         enable end to end measurements (requires client and server clock sync)\n\

@@ -77,9 +77,6 @@ set the output to sum reports only. Useful for -P at large values
 .BR -t ", " --time " \fIn\fR"
 time in seconds to listen for new traffic connections, receive traffic or send traffic
 .TP
-.BR "    --tcp-quickack "
-set the TCP_QUICKACK socket option
-.TP
 .BR -u ", " --udp " "
 use UDP rather than TCP
 .TP
@@ -173,6 +170,12 @@ set target bandwidth to \fIn\fR bits/sec (default 1 Mbit/sec) or
 .TP
 .BR -c ", " --client " \fI\fIhost\fR | \fIhost\fR%\fIdevice\fR"
 run in client mode, connecting to \fIhost\fR  where the optional %dev will SO_BINDTODEVICE that output interface (requires root and see NOTES)
+.TP
+.BR "    --bounce-back "
+run a bounce-back test
+.TP
+.BR "    --tcp-quickack "
+request the server to set the TCP_QUICKACK socket option during a bounceback-test
 .TP
 .BR "    --burst-period " \fIn\fR
 Set the burst period in seconds. Defaults to one second. (Note: assumed use case is low duty cycle traffic bursts)
