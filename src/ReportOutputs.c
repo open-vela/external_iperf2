@@ -397,6 +397,9 @@ void tcp_output_write_bb (struct TransferInfo *stats) {
 		   (stats->bbasym.total.cnt < 2) ? 0 : (stats->bbasym.total.max * 1e3),
 		   (stats->bbasym.total.cnt < 2) ? 0 : 1e3 * (sqrt(stats->bbasym.total.m2 / (stats->bbasym.total.cnt - 1))));
 	}
+	if (stats->bbrtt_histogram) {
+	  histogram_print(stats->bbrtt_histogram, stats->ts.iStart, stats->ts.iEnd);
+	}
     } else {
 	printf(report_client_bb_bw_format, stats->common->transferIDStr,
 	       stats->ts.iStart, stats->ts.iEnd,

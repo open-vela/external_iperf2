@@ -379,6 +379,9 @@ static void Free_iReport (struct ReporterData *ireport) {
     if (ireport->info.framelatency_histogram) {
 	histogram_delete(ireport->info.framelatency_histogram);
     }
+    if (ireport->info.bbrtt_histogram) {
+	histogram_delete(ireport->info.bbrtt_histogram);
+    }
     free_common_copy(ireport->info.common);
     free(ireport);
 }
@@ -665,13 +668,22 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	inSettings->mHistUnits = 6;  // usecs 10 pow(x)
 	inSettings->mHistci_lower = 5;
 	inSettings->mHistci_upper = 95;
-#if HAVE_DECL_TCP_NOTSENT_LOWAT
 	ireport->info.drain_histogram =  histogram_init(inSettings->mHistBins,inSettings->mHistBinsize,0,	\
 							pow(10,inSettings->mHistUnits), \
 							inSettings->mHistci_lower, inSettings->mHistci_upper, ireport->info.common->transferID, name);
-#endif
     }
 #endif
+    if ((inSettings->mThreadMode == kMode_Client) && isBounceBack(inSettings)) {
+	char name[] = "BB8";
+	inSettings->mHistBins = 100000; // 10 seconds wide
+	inSettings->mHistBinsize = 100; // 100 usec bins
+	inSettings->mHistUnits = 6;  // usecs 10 pow(x)
+	inSettings->mHistci_lower = 5;
+	inSettings->mHistci_upper = 95;
+	ireport->info.bbrtt_histogram =  histogram_init(inSettings->mHistBins,inSettings->mHistBinsize,0,	\
+							pow(10,inSettings->mHistUnits), \
+							inSettings->mHistci_lower, inSettings->mHistci_upper, ireport->info.common->transferID, name);
+    }
     return reporthdr;
 }
 
