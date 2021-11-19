@@ -135,7 +135,7 @@ static void common_copy (struct ReportCommon **common, struct thread_Settings *i
     (*common)->TOS = inSettings->mTOS;
     (*common)->RTOS = inSettings->mRTOS;
     (*common)->bbsize = inSettings->mBounceBackBytes;
-    (*common)->bbhold = inSettings->mBounceBackHold;    
+    (*common)->bbhold = inSettings->mBounceBackHold;
 #if HAVE_DECL_TCP_WINDOW_CLAMP
     (*common)->ClampSize = inSettings->mClampSize;
 #endif
@@ -569,6 +569,10 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 		ireport->packet_handler_post_report = NULL;
 	    } else if (inSettings->mReportMode == kReport_CSV) {
 		ireport->info.output_handler = tcp_output_basic_csv;
+	    } else if (isBounceBack(inSettings)) {
+		ireport->packet_handler_post_report = reporter_handle_packet_bb_server;
+		ireport->transfer_protocol_handler = reporter_transfer_protocol_server_bb_tcp;
+		ireport->info.output_handler = tcp_output_write;
 	    } else if (isSumOnly(inSettings)) {
 		ireport->info.output_handler = NULL;
 	    } else if (isTripTime(inSettings)) {

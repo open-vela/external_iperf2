@@ -107,6 +107,8 @@ static int tapif = 0;
 static int tunif = 0;
 static int hideips = 0;
 static int bounceback = 0;
+static int bouncebackhold = 0;
+static int bouncebackperiod = 0;
 static int tcpdrain;
 static int overridetos;
 static int tcpquickack;
@@ -153,7 +155,10 @@ const struct option long_options[] =
 // more esoteric options
 {"awdl",             no_argument, NULL, 'A'},
 {"bind",       required_argument, NULL, 'B'},
-{"bounce-back", optional_argument, &bounceback, 1},
+{"bounceback", no_argument, &bounceback, 1},
+{"bounceback-hold", required_argument, &bouncebackhold, 1},
+{"bounceback-quickack", no_argument, &tcpquickack, 1},
+{"bounceback-period", required_argument, &bouncebackperiod, 1},
 {"compatibility",    no_argument, NULL, 'C'},
 {"daemon",           no_argument, NULL, 'D'},
 {"file_input", required_argument, NULL, 'F'},
@@ -205,7 +210,7 @@ const struct option long_options[] =
 {"tcp-drain", no_argument, &tcpdrain, 1},
 {"tos-override", required_argument, &overridetos, 1},
 {"tcp-rx-window-clamp", required_argument, &rxwinclamp, 1},
-{"tcp-quickack", no_argument, &tcpquickack, 1},
+
 {"tcp-write-prefetch", required_argument, &txnotsentlowwater, 1}, // see doc/DESIGN_NOTES
 {"tap-dev", optional_argument, &tapif, 1},
 {"tun-dev", optional_argument, &tunif, 1},
@@ -277,6 +282,8 @@ const int  kDefault_UDPBufLen = 1470;      // -u  if set, read/write 1470 bytes
 const int  kDefault_UDPBufLenV6 = 1450;      // -u  if set, read/write 1470 bytes
 // v6: 1450 bytes UDP payload will fill one and only one ethernet datagram (IPv6 overhead is 40 bytes)
 const int kDefault_TCPBufLen = 128 * 1024; // TCP default read/write size
+const int kDefault_BBTCPBufLen = 100; // default bounce-back size in bytes
+
 
 /* -------------------------------------------------------------------
  * Initialize all settings to defaults.
@@ -1158,10 +1165,21 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		setBounceBack(mExtSettings);
 		setNoDelay(mExtSettings);
 		setEnhanced(mExtSettings);
+	    }
+	    if (bouncebackhold) {
+		bouncebackhold = 0;
 		if (optarg)
-		    mExtSettings->mBounceBackHold = atoi(optarg);
+		    //cli units is ms, working units is us
+		    mExtSettings->mBounceBackHold = int(atof(optarg) * 1e3);
 		else
 		    mExtSettings->mBounceBackHold = 0;
+	    }
+	    if (bouncebackperiod) {
+		bouncebackperiod = 0;
+		setPeriodicBurst(mExtSettings);
+		if (optarg) {
+		    mExtSettings->mFPS = 1.0/atof(optarg);
+		}
 	    }
 	    break;
         default: // ignore unknown
@@ -1244,7 +1262,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		mExtSettings->mBufLen = kDefault_UDPBufLen;
 	    }
 	} else {
-	    mExtSettings->mBufLen = kDefault_TCPBufLen;
+	    if (isBounceBack(mExtSettings))
+	        mExtSettings->mBufLen = kDefault_BBTCPBufLen;
+	    else
+	        mExtSettings->mBufLen = kDefault_TCPBufLen;
 	}
     }
     if (!mExtSettings->mPortLast)

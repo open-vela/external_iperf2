@@ -451,6 +451,7 @@ void reporter_handle_packet_server_udp(struct ReporterData *data, struct ReportS
 void reporter_handle_packet_server_tcp(struct ReporterData *data, struct ReportStruct *packet);
 void reporter_handle_packet_client(struct ReporterData *data, struct ReportStruct *packet);
 void reporter_handle_packet_bb_client(struct ReporterData *data, struct ReportStruct *packet);
+void reporter_handle_packet_bb_server(struct ReporterData *data, struct ReportStruct *packet);
 
 // Reporter's conditional prints, right now have time and frame based sampling, possibly add packet based
 int reporter_condprint_time_interval_report(struct ReporterData *data, struct ReportStruct *packet);
@@ -472,6 +473,7 @@ void reporter_transfer_protocol_client_tcp(struct ReporterData *data, int final)
 void reporter_transfer_protocol_client_bb_tcp(struct ReporterData *data, int final);
 void reporter_transfer_protocol_client_udp(struct ReporterData *data, int final);
 void reporter_transfer_protocol_server_tcp(struct ReporterData *data, int final);
+void reporter_transfer_protocol_server_bb_tcp(struct ReporterData *data, int final);
 void reporter_transfer_protocol_server_udp(struct ReporterData *data, int final);
 
 // Reporter's sum output routines (per -P > 1)

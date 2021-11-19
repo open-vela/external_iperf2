@@ -854,6 +854,15 @@ void reporter_handle_packet_bb_client (struct ReporterData *data, struct ReportS
 	reporter_update_mmm(&stats->bbasym.total, asym);
     }
 }
+
+void reporter_handle_packet_bb_server (struct ReporterData *data, struct ReportStruct *packet) {
+    struct TransferInfo *stats = &data->info;
+    stats->ts.packetTime = packet->packetTime;
+    if (!packet->emptyreport && (packet->packetLen > 0)) {
+	stats->total.Bytes.current += 2 * packet->packetLen;
+    }
+}
+
 inline void reporter_handle_packet_server_tcp (struct ReporterData *data, struct ReportStruct *packet) {
     struct TransferInfo *stats = &data->info;
     if (packet->packetLen > 0) {
@@ -1499,7 +1508,6 @@ void reporter_transfer_protocol_sum_client_tcp (struct TransferInfo *stats, int 
 
 void reporter_transfer_protocol_client_bb_tcp (struct ReporterData *data, int final) {
     struct TransferInfo *stats = &data->info;
-    struct TransferInfo *sumstats = (data->GroupSumReport != NULL) ? &data->GroupSumReport->info : NULL;
     if (final) {
 	if ((stats->cntBytes > 0) && stats->output_handler && !TimeZero(stats->ts.intervalTime)) {
 	    // print a partial interval report if enable and this a final
@@ -1508,6 +1516,34 @@ void reporter_transfer_protocol_client_bb_tcp (struct ReporterData *data, int fi
 		if ((stats->ts.iEnd - stats->ts.iStart) > stats->ts.significant_partial)
 		    (*stats->output_handler)(stats);
 		reporter_reset_transfer_stats_client_tcp(stats);
+	    }
+        }
+#if HAVE_TCP_STATS
+	stats->sock_callstats.write.TCPretry = stats->sock_callstats.write.totTCPretry;
+#endif
+	stats->cntBytes = stats->total.Bytes.current;
+	reporter_set_timestamps_time(&stats->ts, TOTAL);
+	stats->final=1;
+    } else {
+	stats->final=0;
+	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
+    }
+    if ((stats->output_handler) && !(stats->isMaskOutput))
+	(*stats->output_handler)(stats);
+    if (!final)
+	reporter_reset_transfer_stats_client_tcp(stats);
+}
+
+void reporter_transfer_protocol_server_bb_tcp (struct ReporterData *data, int final) {
+    struct TransferInfo *stats = &data->info;
+    if (final) {
+	if ((stats->cntBytes > 0) && stats->output_handler && !TimeZero(stats->ts.intervalTime)) {
+	    // print a partial interval report if enable and this a final
+	    if ((stats->output_handler) && !(stats->isMaskOutput)) {
+		reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
+		if ((stats->ts.iEnd - stats->ts.iStart) > stats->ts.significant_partial)
+		    (*stats->output_handler)(stats);
+		reporter_reset_transfer_stats_server_tcp(stats);
 	    }
         }
 #if HAVE_TCP_STATS
