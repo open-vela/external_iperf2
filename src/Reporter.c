@@ -154,9 +154,9 @@ bool ReportPacket (struct ReporterData* data, struct ReportStruct *packet) {
 #if HAVE_TCP_STATS
     struct TransferInfo *stats = &data->info;
     if (stats->isEnableTcpInfo) {
-	if (!TimeZero(stats->ts.nextTCPStampleTime) && (TimeDifference(stats->ts.nextTCPStampleTime, packet->packetTime) < 0)) {
+	if (!TimeZero(stats->ts.nextTCPSampleTime) && (TimeDifference(stats->ts.nextTCPSampleTime, packet->packetTime) < 0)) {
 	    gettcpinfo(data->info.common->socket, packet);
-	    TimeAdd(stats->ts.nextTCPStampleTime, stats->ts.intervalTime);
+	    TimeAdd(stats->ts.nextTCPSampleTime, stats->ts.intervalTime);
 	} else {
 	    gettcpinfo(data->info.common->socket, packet);
 	}
@@ -838,6 +838,25 @@ void reporter_handle_packet_client (struct ReporterData *data, struct ReportStru
     }
 }
 
+void reporter_handle_packet_bb_client (struct ReporterData *data, struct ReportStruct *packet) {
+    struct TransferInfo *stats = &data->info;
+    stats->ts.packetTime = packet->packetTime;
+    if (!packet->emptyreport && (packet->packetLen > 0)) {
+	stats->total.Bytes.current += 2 * packet->packetLen;
+	double bbrtt = TimeDifference(packet->packetTime, packet->sentTime);
+	double bbowdto = TimeDifference(packet->sentTime, packet->sentTimeRX);
+	double bbowdfro = TimeDifference(packet->packetTime, packet->sentTimeTX);
+	double asym = abs(bbowdfro - bbowdto);
+	reporter_update_mmm(&stats->bbrtt.current, bbrtt);
+	reporter_update_mmm(&stats->bbrtt.total, bbrtt);
+	reporter_update_mmm(&stats->bbowdto.current, bbowdto);
+	reporter_update_mmm(&stats->bbowdfro.current, bbowdfro);
+	reporter_update_mmm(&stats->bbasym.current, asym);
+	reporter_update_mmm(&stats->bbowdto.total, bbowdto);
+	reporter_update_mmm(&stats->bbowdfro.total, bbowdfro);
+	reporter_update_mmm(&stats->bbasym.total, asym);
+    }
+}
 inline void reporter_handle_packet_server_tcp (struct ReporterData *data, struct ReportStruct *packet) {
     struct TransferInfo *stats = &data->info;
     if (packet->packetLen > 0) {
@@ -991,6 +1010,12 @@ static inline void reporter_reset_transfer_stats_client_tcp (struct TransferInfo
 #if HAVE_TCP_STATS
     stats->sock_callstats.write.TCPretry = 0;
 #endif
+    if (isBounceBack(stats->common)) {
+	reporter_reset_mmm(&stats->bbrtt.current);
+	reporter_reset_mmm(&stats->bbowdto.current);
+	reporter_reset_mmm(&stats->bbowdfro.current);
+	reporter_reset_mmm(&stats->bbasym.current);
+    }
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
     if (isTcpDrain(stats->common)) {
 	stats->drain_mmm.current.cnt = 0;
@@ -1473,6 +1498,35 @@ void reporter_transfer_protocol_sum_client_tcp (struct TransferInfo *stats, int 
 	if ((stats->output_handler) && !(stats->isMaskOutput))
 	    (*stats->output_handler)(stats);
     }
+}
+
+void reporter_transfer_protocol_client_bb_tcp (struct ReporterData *data, int final) {
+    struct TransferInfo *stats = &data->info;
+    struct TransferInfo *sumstats = (data->GroupSumReport != NULL) ? &data->GroupSumReport->info : NULL;
+    if (final) {
+	if ((stats->cntBytes > 0) && stats->output_handler && !TimeZero(stats->ts.intervalTime)) {
+	    // print a partial interval report if enable and this a final
+	    if ((stats->output_handler) && !(stats->isMaskOutput)) {
+		reporter_set_timestamps_time(&stats->ts, FINALPARTIAL);
+		if ((stats->ts.iEnd - stats->ts.iStart) > stats->ts.significant_partial)
+		    (*stats->output_handler)(stats);
+		reporter_reset_transfer_stats_client_tcp(stats);
+	    }
+        }
+#if HAVE_TCP_STATS
+	stats->sock_callstats.write.TCPretry = stats->sock_callstats.write.totTCPretry;
+#endif
+	stats->cntBytes = stats->total.Bytes.current;
+	reporter_set_timestamps_time(&stats->ts, TOTAL);
+	stats->final=1;
+    } else {
+	stats->final=0;
+	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
+    }
+    if ((stats->output_handler) && !(stats->isMaskOutput))
+	(*stats->output_handler)(stats);
+    if (!final)
+	reporter_reset_transfer_stats_client_tcp(stats);
 }
 
 void reporter_transfer_protocol_sum_server_tcp (struct TransferInfo *stats, int final) {

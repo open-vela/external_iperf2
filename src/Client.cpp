@@ -331,11 +331,11 @@ int Client::StartSynch () {
 	// Near congestion and peridiodic need sampling on every report packet
 	if (isNearCongest(mSettings) || isPeriodicBurst(mSettings)) {
 	    myReport->info.isEnableTcpInfo = true;
-	    myReport->info.ts.nextTCPStampleTime.tv_sec = 0;
-	    myReport->info.ts.nextTCPStampleTime.tv_usec = 0;
-	} else if (isEnhanced(mSettings)) {
+	    myReport->info.ts.nextTCPSampleTime.tv_sec = 0;
+	    myReport->info.ts.nextTCPSampleTime.tv_usec = 0;
+	} else if (isEnhanced(mSettings) || isBounceBack(mSettings)) {
 	    myReport->info.isEnableTcpInfo = true;
-	    myReport->info.ts.nextTCPStampleTime = myReport->info.ts.nextTime;
+	    myReport->info.ts.nextTCPSampleTime = myReport->info.ts.nextTime;
 	}
     }
 #endif
@@ -981,8 +981,7 @@ void Client::RunBounceBackTCP () {
 	reportstruct->sentTime.tv_sec = now.getSecs();
 	reportstruct->sentTime.tv_usec = now.getUsecs();
 	WriteTcpTxBBHdr(reportstruct, burst_id);
-	reportstruct->sentTime = reportstruct->packetTime;
-	myReport->info.ts.prevsendTime = reportstruct->packetTime;
+	myReport->info.ts.prevsendTime = reportstruct->sentTime;
 	reportstruct->packetLen = writen(mySocket, mSettings->mBuf, writelen, &reportstruct->writecnt);
 	if (reportstruct->packetLen == writelen) {
 	    reportstruct->emptyreport = 0;
