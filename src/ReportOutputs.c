@@ -369,7 +369,7 @@ void tcp_output_write_bb (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_client_bb_bw);
     _print_stats_common(stats);
     if (stats->final) {
-	printf(report_client_bb_bw_final_format, stats->common->transferIDStr,
+	printf(report_client_bb_bw_format, stats->common->transferIDStr,
 	       stats->ts.iStart, stats->ts.iEnd,
 	       outbuffer, outbufferext,
 	       stats->bbrtt.total.cnt,
@@ -379,19 +379,24 @@ void tcp_output_write_bb (struct TransferInfo *stats) {
 	       (stats->bbrtt.total.cnt < 2) ? 0 : 1e3 * (sqrt(stats->bbrtt.total.m2 / (stats->bbrtt.total.cnt - 1))),
 	       stats->sock_callstats.write.TCPretry,
 	       stats->sock_callstats.write.cwnd,
-	       stats->sock_callstats.write.rtt,
-	       (stats->bbowdto.total.mean * 1e3),
-	       (stats->bbowdto.total.cnt < 2) ? 0 : (stats->bbowdto.total.min * 1e3),
-	       (stats->bbowdto.total.cnt < 2) ? 0 : (stats->bbowdto.total.max * 1e3),
-	       (stats->bbowdto.total.cnt < 2) ? 0 : 1e3 * (sqrt(stats->bbowdto.total.m2 / (stats->bbowdto.total.cnt - 1))),
-	       (stats->bbowdfro.total.mean * 1e3),
-	       (stats->bbowdfro.total.cnt < 2) ? 0 : (stats->bbowdfro.total.min * 1e3),
-	       (stats->bbowdfro.total.cnt < 2) ? 0 : (stats->bbowdfro.total.max * 1e3),
-	       (stats->bbowdfro.total.cnt < 2) ? 0 : 1e3 * (sqrt(stats->bbowdfro.total.m2 / (stats->bbowdfro.total.cnt - 1))),
-	       (stats->bbasym.total.mean * 1e3),
-	       (stats->bbasym.total.cnt < 2) ? 0 : (stats->bbasym.total.min * 1e3),
-	       (stats->bbasym.total.cnt < 2) ? 0 : (stats->bbasym.total.max * 1e3),
-	       (stats->bbasym.total.cnt < 2) ? 0 : 1e3 * (sqrt(stats->bbasym.total.m2 / (stats->bbasym.total.cnt - 1))));
+	       stats->sock_callstats.write.rtt);
+	if (isTripTime(stats->common)) {
+	    printf(report_client_bb_bw_triptime_format, stats->common->transferIDStr,
+		   stats->ts.iStart, stats->ts.iEnd,
+		   stats->bbowdto.total.cnt,
+		   (stats->bbowdto.total.mean * 1e3),
+		   (stats->bbowdto.total.cnt < 2) ? 0 : (stats->bbowdto.total.min * 1e3),
+		   (stats->bbowdto.total.cnt < 2) ? 0 : (stats->bbowdto.total.max * 1e3),
+		   (stats->bbowdto.total.cnt < 2) ? 0 : 1e3 * (sqrt(stats->bbowdto.total.m2 / (stats->bbowdto.total.cnt - 1))),
+		   (stats->bbowdfro.total.mean * 1e3),
+		   (stats->bbowdfro.total.cnt < 2) ? 0 : (stats->bbowdfro.total.min * 1e3),
+		   (stats->bbowdfro.total.cnt < 2) ? 0 : (stats->bbowdfro.total.max * 1e3),
+		   (stats->bbowdfro.total.cnt < 2) ? 0 : 1e3 * (sqrt(stats->bbowdfro.total.m2 / (stats->bbowdfro.total.cnt - 1))),
+		   (stats->bbasym.total.mean * 1e3),
+		   (stats->bbasym.total.cnt < 2) ? 0 : (stats->bbasym.total.min * 1e3),
+		   (stats->bbasym.total.cnt < 2) ? 0 : (stats->bbasym.total.max * 1e3),
+		   (stats->bbasym.total.cnt < 2) ? 0 : 1e3 * (sqrt(stats->bbasym.total.m2 / (stats->bbasym.total.cnt - 1))));
+	}
     } else {
 	printf(report_client_bb_bw_format, stats->common->transferIDStr,
 	       stats->ts.iStart, stats->ts.iEnd,
