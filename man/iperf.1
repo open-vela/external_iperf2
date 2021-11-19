@@ -168,20 +168,26 @@ Enable IPv6 reception by setting the domain and socket to AF_INET6 (Can receive 
 set target bandwidth to \fIn\fR bits/sec (default 1 Mbit/sec) or
 \fIn\fR packets per sec. This may be used with TCP or UDP. Optionally, for variable loads, use format of  mean,standard deviation
 .TP
-.BR -c ", " --client " \fI\fIhost\fR | \fIhost\fR%\fIdevice\fR"
-run in client mode, connecting to \fIhost\fR  where the optional %dev will SO_BINDTODEVICE that output interface (requires root and see NOTES)
+.BR "    --bounceback "
+run a tcp bounceback test (set size with -l or --len, defaults to 100 bytes)
 .TP
-.BR "    --bounce-back "
-run a bounce-back test
+.BR "    --bounceback-hold " \fIn\fR
+request the server insert a delay of n milliseconds between its read and write
 .TP
-.BR "    --tcp-quickack "
-request the server to set the TCP_QUICKACK socket option during a bounceback-test
+.BR "    --bounceback-period " \fIn\fR
+request the client schedule a send every n milliseconds
+.TP
+.BR "    --bounceback-quickack "
+request the server set the TCP_QUICKACK socket option disabling ACK delays during a bounceback test
 .TP
 .BR "    --burst-period " \fIn\fR
 Set the burst period in seconds. Defaults to one second. (Note: assumed use case is low duty cycle traffic bursts)
 .TP
 .BR "    --burst-size " \fIn\fR
 Set the burst size in bytes. Defaults to 1M if no value is given.
+.BR -c ", " --client " \fI\fIhost\fR | \fIhost\fR%\fIdevice\fR"
+run in client mode, connecting to \fIhost\fR  where the optional %dev will SO_BINDTODEVICE that output interface (requires root and see NOTES)
+.TP
 .TP
 .BR "    --connect-only[=" \fIn\fR "]"
 only perform a TCP connect (or 3WHS) without any data transfer, useful to measure TCP connect() times. Optional value of n is the total number of connects to do (zero is run forever.) Note that -i will rate limit the connects where -P will create bursts and -t will end the client and hence end its connect attempts.
