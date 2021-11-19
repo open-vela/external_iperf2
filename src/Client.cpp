@@ -1367,6 +1367,8 @@ void Client::WriteTcpTxBBHdr (struct ReportStruct *reportstruct, int bbid) {
 	flags |= HEADER_BBTOS;
 	mBuf_bb->tos = htons((mSettings->mTOS & 0xFF));
     }
+    if (isTcpQuickAck(mSettings))
+	flags |= HEADER_BBQUICKACK;
     mBuf_bb->flags = htonl(flags);
     mBuf_bb->bbsize = htonl(mSettings->mBufLen);
     mBuf_bb->bbid = htonl(bbid);
