@@ -307,7 +307,7 @@ extern const char report_client_bb_bw_header[];
 
 extern const char report_client_bb_bw_format[];
 
-extern const char report_client_bb_bw_final_format[];
+extern const char report_client_bb_bw_triptime_format[];
 
 /* -------------------------------------------------------------------
  * Misc reports
