@@ -290,6 +290,7 @@ inline bool Server::ReadBBWithRXTimestamp () {
 	reportstruct->emptyreport=0;
 	bbhdr->bbsendtorx_ts.sec = htonl(reportstruct->packetTime.tv_sec);
 	bbhdr->bbsendtorx_ts.usec = htonl(reportstruct->packetTime.tv_usec);
+	reportstruct->packetLen = mSettings->mBounceBackBytes;
 	rc = true;
     } else if (n==0) {
 	peerclose = true;
@@ -316,6 +317,7 @@ void Server::RunBounceBackTCP () {
     now.setnow();
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
+    reportstruct->packetLen = mSettings->mBounceBackBytes;
     while (InProgress()) {
 	int n;
 	reportstruct->emptyreport=1;
@@ -336,6 +338,7 @@ void Server::RunBounceBackTCP () {
 	    bbhdr->bbsendtotx_ts.usec = htonl(now.getUsecs());
 	    if ((n = writen(mySocket, mSettings->mBuf, mSettings->mBounceBackBytes, &reportstruct->writecnt)) == mSettings->mBounceBackBytes) {
 		reportstruct->emptyreport=0;
+		reportstruct->packetLen += n;
 		ReportPacket(myReport, reportstruct);
 	    } else {
 		break;

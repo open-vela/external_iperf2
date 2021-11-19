@@ -996,6 +996,7 @@ void Client::RunBounceBackTCP () {
 		reportstruct->sentTimeTX.tv_usec = ntohl(bbhdr->bbsendtotx_ts.usec);
 		reportstruct->packetTime.tv_sec = now.getSecs();
 		reportstruct->packetTime.tv_usec = now.getUsecs();
+		reportstruct->packetLen += n;
 		reportstruct->emptyreport = 0;
 		myReportPacket();
 	    } else if (n == 0) {
