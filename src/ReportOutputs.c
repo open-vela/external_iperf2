@@ -1422,6 +1422,12 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 	    b += strlen(b);
 	}
     }
+#if HAVE_DECL_TCP_QUICKACK
+    if (isTcpQuickAck(report->common)) {
+	snprintf(b, SNBUFFERSIZE-strlen(b), " (qack)");
+	b += strlen(b);
+    }
+#endif
     if (!isServerReverse(report->common) && (isEnhanced(report->common) || isConnectOnly(report->common))) {
 	if (report->connect_timestamp.tv_sec > 0) {
 	    struct tm ts;

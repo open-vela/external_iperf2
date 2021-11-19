@@ -312,16 +312,6 @@ void Server::RunBounceBackTCP () {
 	setNoDelay(mSettings);
     }
 #endif
-#if HAVE_DECL_TCP_QUICKACK
-        // set the TCP_QUICKACK option to influence ack delays
-        if (isTcpQuickAck(mSettings)) {
-	    int opt = 1;
-            Socklen_t len = sizeof(opt);
-            int rc = setsockopt(mySocket, IPPROTO_TCP, TCP_QUICKACK,
-                                 reinterpret_cast<char*>(&opt), len);
-            WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_QUICKACK");
-        }
-#endif
     myReport->info.ts.prevsendTime = myReport->info.ts.startTime;
     now.setnow();
     reportstruct->packetTime.tv_sec = now.getSecs();
@@ -527,6 +517,16 @@ bool Server::InitTrafficLoop (void) {
     reportstruct->l2len = 0;
     reportstruct->l2errors = 0x0;
 
+#if HAVE_DECL_TCP_QUICKACK
+        // set the TCP_QUICKACK option to influence ack delays
+        if (isTcpQuickAck(mSettings)) {
+	    int opt = 1;
+            Socklen_t len = sizeof(opt);
+            int rc = setsockopt(mySocket, IPPROTO_TCP, TCP_QUICKACK,
+                                 reinterpret_cast<char*>(&opt), len);
+            WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_QUICKACK");
+        }
+#endif
     int setfullduplexflag = 0;
     if (isFullDuplex(mSettings) && !isServerReverse(mSettings)) {
 	assert(mSettings->mFullDuplexReport != NULL);
