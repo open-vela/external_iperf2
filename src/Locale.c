@@ -116,7 +116,7 @@ const char usage_long2[] = "\
 \n\
 Client specific:\n\
       --bounceback         request a bounceback test (use -l for size, defaults to 100 bytes)\n\
-      --bounceback-hold    request the server insert a delay of n milliseconds between its read and write\n\
+      --bounceback-hold    request the server to insert a delay of n milliseconds between its read and write\n\
       --bounceback-period  request the client schedule a send every n milliseconds\n\
       --bounceback-quickack request the server set the TCP_QUICKACK socket option disabling ACK delays during a bounceback test\n\
   -c, --client    <host>   run in client mode, connecting to <host>\n\
