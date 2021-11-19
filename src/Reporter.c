@@ -842,7 +842,7 @@ void reporter_handle_packet_bb_client (struct ReporterData *data, struct ReportS
     struct TransferInfo *stats = &data->info;
     stats->ts.packetTime = packet->packetTime;
     if (!packet->emptyreport && (packet->packetLen > 0)) {
-	stats->total.Bytes.current += 2 * packet->packetLen;
+	stats->total.Bytes.current += packet->packetLen;
 	double bbrtt = TimeDifference(packet->packetTime, packet->sentTime);
 	double bbowdto = TimeDifference(packet->sentTime, packet->sentTimeRX);
 	double bbowdfro = TimeDifference(packet->packetTime, packet->sentTimeTX);
@@ -859,7 +859,7 @@ void reporter_handle_packet_bb_server (struct ReporterData *data, struct ReportS
     struct TransferInfo *stats = &data->info;
     stats->ts.packetTime = packet->packetTime;
     if (!packet->emptyreport && (packet->packetLen > 0)) {
-	stats->total.Bytes.current += 2 * packet->packetLen;
+	stats->total.Bytes.current += packet->packetLen;
     }
 }
 
