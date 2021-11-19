@@ -1186,8 +1186,6 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 	if (flags & HEADER_BOUNCEBACK) {
 	    struct bounceback_hdr *bbhdr = reinterpret_cast<struct bounceback_hdr *>(server->mBuf);
 	    setBounceBack(server);
-	    if (flags & HEADER_BBCLOCKSYNCED)
-		setTripTime(server);
 	    nread = recvn(server->mSock, readptr, sizeof(struct bounceback_hdr), 0);
 	    if (nread != sizeof(struct bounceback_hdr)) {
 		WARN(1, "read bounce back header failed");
@@ -1197,6 +1195,11 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 	    readptr += nread;
 	    server->mBounceBackBytes = ntohl(bbhdr->bbsize);
 	    server->mBounceBackHold = ntohl(bbhdr->bbhold);
+	    if (flags & HEADER_BBCLOCKSYNCED) {
+		setTripTime(server);
+		server->sent_time.tv_sec = ntohl(bbhdr->bbsendtotx_ts.sec);
+		server->sent_time.tv_usec = ntohl(bbhdr->bbsendtotx_ts.usec);
+	    }
 	    if (flags & HEADER_BBTOS) {
 		server->mTOS = ntohs(bbhdr->tos);
 	    }
@@ -1210,8 +1213,8 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 		goto DONE;
 	    }
 	    Timestamp now;
-	    bbhdr->bbsendtotx_ts.sec = now.getSecs();
-	    bbhdr->bbsendtotx_ts.usec = now.getUsecs();
+	    bbhdr->bbsendtorx_ts.sec = htonl(now.getSecs());
+	    bbhdr->bbsendtorx_ts.usec = htonl(now.getUsecs());
 	} else {
 	    uint16_t upperflags = 0;
 	    int readlen;
