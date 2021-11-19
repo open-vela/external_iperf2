@@ -844,9 +844,9 @@ void reporter_handle_packet_bb_client (struct ReporterData *data, struct ReportS
     if (!packet->emptyreport && (packet->packetLen > 0)) {
 	stats->total.Bytes.current += packet->packetLen;
 	double bbrtt = TimeDifference(packet->packetTime, packet->sentTime);
-	double bbowdto = TimeDifference(packet->sentTime, packet->sentTimeRX);
+	double bbowdto = TimeDifference(packet->sentTimeRX, packet->sentTime);
 	double bbowdfro = TimeDifference(packet->packetTime, packet->sentTimeTX);
-	double asym = abs(bbowdfro - bbowdto);
+	double asym = bbowdfro - bbowdto;
 	reporter_update_mmm(&stats->bbrtt.current, bbrtt);
 	reporter_update_mmm(&stats->bbrtt.total, bbrtt);
 	reporter_update_mmm(&stats->bbowdto.total, bbowdto);
