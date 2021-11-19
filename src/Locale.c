@@ -115,6 +115,10 @@ Server specific:\n\
 const char usage_long2[] = "\
 \n\
 Client specific:\n\
+      --bounceback         request a bounceback test (use -l for size, defaults to 100 bytes)\n\
+      --bounceback-hold    request the server insert a delay of n milliseconds between its read and write\n\
+      --bounceback-period  request the client schedule a send every n milliseconds\n\
+      --bounceback-quickack request the server set the TCP_QUICKACK socket option disabling ACK delays during a bounceback test\n\
   -c, --client    <host>   run in client mode, connecting to <host>\n\
       --connect-only       run a connect only test\n\
       --connect-retries #  number of times to retry tcp connect\n\
@@ -133,7 +137,6 @@ Client specific:\n\
       --no-udp-fin         No final server to client stats at end of UDP test\n\
   -n, --num       #[kmgKMG]    number of bytes to transmit (instead of -t)\n\
   -r, --tradeoff           Do a fullduplexectional test individually\n\
-      --tcp-quickack       request the server during a bounce-back test to set the TCP_QUICKACK socket option prior to a bb delay\n		\
       --tcp-write-prefetch set the socket's TCP_NOTSENT_LOWAT value in bytes and use event based writes\n\
   -t, --time      #        time in seconds to transmit for (default 10 secs)\n\
       --trip-times         enable end to end measurements (requires client and server clock sync)\n\
@@ -353,7 +356,7 @@ const char report_client_bb_bw_format[] =
 "%s" IPERFTimeFrmt " sec  %ss  %ss/sec    %d=%.3f/%.3f/%.3f/%.3f ms %4d %4dK/%u us\n";
 
 const char report_client_bb_bw_triptime_format[] =
-"%s" IPERFTimeFrmt " sec   OWD Delays (ms) Cnt=%d  To=%.3f/%.3f/%.3f/%.3f From=%.3f/%.3f/%.3f/%.3f Asymmetry=%.3f/%.3f/%.3f/%.3f\n";
+"%s" IPERFTimeFrmt " sec  OWD Delays (ms) Cnt=%d  To=%.3f/%.3f/%.3f/%.3f From=%.3f/%.3f/%.3f/%.3f Asymmetry=%.3f/%.3f/%.3f/%.3f\n";
 
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
 const char report_write_enhanced_drain_header[] =
