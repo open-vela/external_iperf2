@@ -62,6 +62,7 @@ static char llaw_buf[100];
 static char netpower_buf[100];
 
 static int HEADING_FLAG(report_bw) = 0;
+static int HEADING_FLAG(report_client_bb_bw) = 0;
 static int HEADING_FLAG(report_bw_jitter_loss) = 0;
 static int HEADING_FLAG(report_bw_read_enhanced) = 0;
 static int HEADING_FLAG(report_bw_read_enhanced_netpwr) = 0;
@@ -91,6 +92,7 @@ static int HEADING_FLAG(report_burst_write_tcp) = 0;
 
 void reporter_default_heading_flags (int flag) {
     HEADING_FLAG(report_bw) = flag;
+    HEADING_FLAG(report_client_bb_bw) = flag;
     HEADING_FLAG(report_sumcnt_bw) = flag;
     HEADING_FLAG(report_sumcnt_udp_fullduplex) = flag;
     HEADING_FLAG(report_bw_jitter_loss) = flag;
@@ -360,6 +362,37 @@ void tcp_output_write (struct TransferInfo *stats) {
     printf(report_bw_format, stats->common->transferIDStr,
 	   stats->ts.iStart, stats->ts.iEnd,
 	   outbuffer, outbufferext);
+    fflush(stdout);
+}
+
+void tcp_output_write_bb (struct TransferInfo *stats) {
+    HEADING_PRINT_COND(report_client_bb_bw);
+    _print_stats_common(stats);
+    if (stats->final) {
+	printf(report_client_bb_bw_format, stats->common->transferIDStr,
+	       stats->ts.iStart, stats->ts.iEnd,
+	       outbuffer, outbufferext,
+	       stats->bbrtt.total.cnt,
+	       (stats->bbrtt.total.mean * 1e3),
+	       (stats->bbrtt.total.cnt < 2) ? 0 : (stats->bbrtt.total.min * 1e3),
+	       (stats->bbrtt.total.cnt < 2) ? 0 : (stats->bbrtt.total.max * 1e3),
+	       (stats->bbrtt.total.cnt < 2) ? 0 : 1e3 * (sqrt(stats->bbrtt.total.m2 / (stats->bbrtt.total.cnt - 1))),
+	       stats->sock_callstats.write.TCPretry,
+	       stats->sock_callstats.write.cwnd,
+	       stats->sock_callstats.write.rtt);
+    } else {
+	printf(report_client_bb_bw_format, stats->common->transferIDStr,
+	       stats->ts.iStart, stats->ts.iEnd,
+	       outbuffer, outbufferext,
+	       stats->bbrtt.current.cnt,
+	       (stats->bbrtt.current.mean * 1e3),
+	       (stats->bbrtt.current.cnt < 2) ? 0 : (stats->bbrtt.current.min * 1e3),
+	       (stats->bbrtt.current.cnt < 2) ? 0 : (stats->bbrtt.current.max * 1e3),
+	       (stats->bbrtt.current.cnt < 2) ? 0 : 1e3 * (sqrt(stats->bbrtt.current.m2 / (stats->bbrtt.current.cnt - 1))),
+	       stats->sock_callstats.write.TCPretry,
+	       stats->sock_callstats.write.cwnd,
+	       stats->sock_callstats.write.rtt);
+    }
     fflush(stdout);
 }
 

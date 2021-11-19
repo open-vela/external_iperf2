@@ -245,6 +245,16 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
             WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_WINDOW_CLAMP");
         }
 #endif
+#if HAVE_DECL_TCP_QUICKACK
+        // set the TCP_QUICKACK option to influence ack delays
+        if (isTcpQuickAck(inSettings)) {
+	    int opt = 1;
+            Socklen_t len = sizeof(opt);
+            int rc = setsockopt(inSettings->mSock, IPPROTO_TCP, TCP_QUICKACK,
+                                 reinterpret_cast<char*>(&opt), len);
+            WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_QUICKACK");
+        }
+#endif
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
         // set TCP not sent low watermark
         if (isWritePrefetch(inSettings)) {

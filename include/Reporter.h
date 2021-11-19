@@ -327,7 +327,7 @@ struct ReportTimeStamps {
     struct timeval nextTime;
     struct timeval intervalTime;
     struct timeval IPGstart;
-    struct timeval nextTCPStampleTime;
+    struct timeval nextTCPSampleTime;
 };
 
 struct TransferInfo {
@@ -352,6 +352,11 @@ struct TransferInfo {
     struct RunningMMMStats transit;
     struct histogram *framelatency_histogram;
     struct RunningMMMStats frame; // isochronous frame or msg burst
+    struct histogram *bbrtt_histogram;
+    struct RunningMMMStats bbrtt;
+    struct RunningMMMStats bbowdto;
+    struct RunningMMMStats bbowdfro;
+    struct RunningMMMStats bbasym;
     struct L2Stats l2counts;
     // Packet and frame state info
     uint32_t matchframeID;
@@ -445,6 +450,7 @@ void reporter_handle_packet_null(struct ReporterData *report, struct ReportStruc
 void reporter_handle_packet_server_udp(struct ReporterData *data, struct ReportStruct *packet);
 void reporter_handle_packet_server_tcp(struct ReporterData *data, struct ReportStruct *packet);
 void reporter_handle_packet_client(struct ReporterData *data, struct ReportStruct *packet);
+void reporter_handle_packet_bb_client(struct ReporterData *data, struct ReportStruct *packet);
 
 // Reporter's conditional prints, right now have time and frame based sampling, possibly add packet based
 int reporter_condprint_time_interval_report(struct ReporterData *data, struct ReportStruct *packet);
@@ -463,6 +469,7 @@ void reporter_transfer_protocol_null(struct ReporterData *stats, int final);
 //void reporter_transfer_protocol_reports(struct ReporterData *stats, struct ReportStruct *packet);
 //void reporter_transfer_protocol_multireports(struct ReporterData *stats, struct ReportStruct *packet);
 void reporter_transfer_protocol_client_tcp(struct ReporterData *data, int final);
+void reporter_transfer_protocol_client_bb_tcp(struct ReporterData *data, int final);
 void reporter_transfer_protocol_client_udp(struct ReporterData *data, int final);
 void reporter_transfer_protocol_server_tcp(struct ReporterData *data, int final);
 void reporter_transfer_protocol_server_udp(struct ReporterData *data, int final);
@@ -501,6 +508,7 @@ void tcp_output_sumcnt_write_enhanced (struct TransferInfo *stats);
 #if (HAVE_DECL_TCP_NOTSENT_LOWAT)
 void tcp_output_write_enhanced_drain (struct TransferInfo *stats);
 #endif
+void tcp_output_write_bb(struct TransferInfo *stats);
 // TCP fullduplex
 void tcp_output_fullduplex(struct TransferInfo *stats);
 void tcp_output_fullduplex_enhanced(struct TransferInfo *stats);
