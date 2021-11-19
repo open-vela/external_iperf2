@@ -609,6 +609,10 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	    } else if (isTcpDrain(inSettings)) {
 		ireport->info.output_handler = tcp_output_write_enhanced_drain;
 #endif
+	    } else if (isBounceBack(inSettings)) {
+		ireport->packet_handler_post_report = reporter_handle_packet_bb_client;
+		ireport->transfer_protocol_handler = reporter_transfer_protocol_client_bb_tcp;
+		ireport->info.output_handler = tcp_output_write_bb;
 	    } else if (isIsochronous(inSettings)) {
 		ireport->info.output_handler = tcp_output_write_enhanced_isoch;
 	    } else if (isEnhanced(inSettings)) {

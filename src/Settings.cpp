@@ -109,6 +109,7 @@ static int hideips = 0;
 static int bounceback = 0;
 static int tcpdrain;
 static int overridetos;
+static int tcpquickack;
 
 void Settings_Interpret(char option, const char *optarg, struct thread_Settings *mExtSettings);
 // apply compound settings after the command line has been fully parsed
@@ -204,6 +205,7 @@ const struct option long_options[] =
 {"tcp-drain", no_argument, &tcpdrain, 1},
 {"tos-override", required_argument, &overridetos, 1},
 {"tcp-rx-window-clamp", required_argument, &rxwinclamp, 1},
+{"tcp-quickack", no_argument, &tcpquickack, 1},
 {"tcp-write-prefetch", required_argument, &txnotsentlowwater, 1}, // see doc/DESIGN_NOTES
 {"tap-dev", optional_argument, &tapif, 1},
 {"tun-dev", optional_argument, &tunif, 1},
@@ -1076,6 +1078,14 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		setEnhanced(mExtSettings);
 #else
 		fprintf(stderr, "--tcp-drain not supported on this platform\n");
+#endif
+	    }
+	    if (tcpquickack) {
+		tcpquickack= 0;
+#if HAVE_DECL_TCP_QUICKACK
+		setTcpQuickAck(mExtSettings);
+#else
+		fprintf(stderr, "--tcp-quickack not supported on this platform\n");
 #endif
 	    }
 	    if (txnotsentlowwater) {

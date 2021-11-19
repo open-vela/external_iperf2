@@ -80,6 +80,7 @@ Client/Server:\n\
   -p, --port      #        client/server port to listen/send on and to connect\n\
       --permit-key         permit key to be used to verify client and server (TCP only)\n\
       --sum-only           output sum only reports\n\
+      --tcp-quickack       set the TCP_QUICKACK socket option\n\
   -u, --udp                use UDP rather than TCP\n\
   -w, --window    #[KM]    TCP window size (socket buffer size)\n"
 #ifdef HAVE_SCHED_SETSCHEDULER
@@ -344,6 +345,12 @@ const char report_sum_bw_read_enhanced_format[] =
 
 const char report_triptime_enhanced_format[] =
 "%s" IPERFTimeFrmt " trip-time (3WHS done->fin+finack) = %.4f sec\n";
+
+const char report_client_bb_bw_header[] =
+"[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth         BB cnt=avg/min/max/stdev         Rtry  Cwnd/RTT\n";
+
+const char report_client_bb_bw_format[] =
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec    %d=%.3f/%.3f/%.3f/%.3f ms %4d %4dK/%u us\n";
 
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
 const char report_write_enhanced_drain_header[] =
