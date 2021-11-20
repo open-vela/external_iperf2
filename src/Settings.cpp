@@ -112,6 +112,7 @@ static int bouncebackperiod = 0;
 static int tcpdrain;
 static int overridetos;
 static int tcpquickack;
+static int congest;
 
 void Settings_Interpret(char option, const char *optarg, struct thread_Settings *mExtSettings);
 // apply compound settings after the command line has been fully parsed
@@ -156,6 +157,7 @@ const struct option long_options[] =
 {"awdl",             no_argument, NULL, 'A'},
 {"bind",       required_argument, NULL, 'B'},
 {"bounceback", no_argument, &bounceback, 1},
+{"bounceback-congest", no_argument, &congest, 1},
 {"bounceback-hold", required_argument, &bouncebackhold, 1},
 {"bounceback-quickack", no_argument, &tcpquickack, 1},
 {"bounceback-period", required_argument, &bouncebackperiod, 1},
@@ -1094,6 +1096,10 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 #else
 		fprintf(stderr, "--tcp-quickack not supported on this platform\n");
 #endif
+	    }
+	    if (congest) {
+		congest= 0;
+		setCongest(mExtSettings);
 	    }
 	    if (txnotsentlowwater) {
 		txnotsentlowwater = 0;
