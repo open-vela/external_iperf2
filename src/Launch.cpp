@@ -394,6 +394,17 @@ void client_init(struct thread_Settings *clients) {
 	itr->runNow = next;
 	itr = next;
     }
+    if (isBounceBack(clients) && isCongest(clients)) {
+	Settings_Copy(clients, &next, 0);
+	if (next != NULL) {
+	    setFullDuplex(next);
+	    unsetBounceBack(next);
+	    unsetEnhanced(next);
+	    next->mTOS = 0;
+	    itr->runNow = next;
+	    itr = next;
+	}
+    }
 #else
     if (next != NULL) {
         // We don't have threads and we need to start a listener so
