@@ -175,10 +175,10 @@ run a tcp bounceback test (set size with -l or --len, defaults to 100 bytes)
 request a concurrent full-duplex TCP stream
 .TP
 .BR "    --bounceback-hold " \fIn\fR
-request the server to insert a delay of n milliseconds between its read and write
+request the server to insert a delay of n milliseconds between its read and write (default is no delay)
 .TP
 .BR "    --bounceback-period " \fIn\fR
-request the client schedule a send every n milliseconds
+request the client schedule a send every n milliseconds (w/o option bouncebacks are immediately scheduled. With option default vale is one second.)
 .TP
 .BR "    --bounceback-quickack "
 request the server set the TCP_QUICKACK socket option disabling ACK delays during a bounceback test
