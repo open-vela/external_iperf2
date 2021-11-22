@@ -1119,8 +1119,12 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    if (burstperiodic) {
 		burstperiodic = 0;
 		setPeriodicBurst(mExtSettings);
-		if (optarg) {
+		if (optarg && (atof(optarg) > 1e-5)) { // limit to 10 usecs
 		    mExtSettings->mFPS = 1.0/atof(optarg);
+		} else {
+		    if (atof(optarg) != 0)
+			fprintf(stderr, "WARN: burst-period too small, must be greater than 10 usecs\n");
+		    unsetPeriodicBurst(mExtSettings);
 		}
 	    }
 	    if (burstsize) {
@@ -1183,10 +1187,11 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    if (bouncebackperiod) {
 		bouncebackperiod = 0;
 		setPeriodicBurst(mExtSettings);
-
-		if (optarg && (atof(optarg) > 0.0)) {
+		if (optarg && (atof(optarg) > 1e-2)) { // limit to 10 usecs
 		    mExtSettings->mFPS = 1e3/atof(optarg); // cli units is ms
 		} else {
+		    if (atof(optarg) != 0)
+			fprintf(stderr, "WARN: bouncback-period too small, must be greater than 10 usecs\n");
 		    unsetPeriodicBurst(mExtSettings);
 		}
 	    }
