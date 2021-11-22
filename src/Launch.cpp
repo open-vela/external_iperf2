@@ -395,7 +395,7 @@ void client_init(struct thread_Settings *clients) {
 	itr = next;
     }
     if (isBounceBack(clients) && isCongest(clients)) {
-	Settings_Copy(clients, &next, 0);
+	Settings_Copy(clients, &next, 1);
 	if (next != NULL) {
 	    setFullDuplex(next);
 	    unsetBounceBack(next);

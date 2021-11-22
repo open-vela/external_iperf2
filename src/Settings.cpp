@@ -1183,8 +1183,13 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    if (bouncebackperiod) {
 		bouncebackperiod = 0;
 		setPeriodicBurst(mExtSettings);
+
 		if (optarg) {
 		    mExtSettings->mFPS = 1e3/atof(optarg); // cli units is ms
+		}
+		if (atof(optarg) <= 0.0) {
+		    mExtSettings->mFPS=0.0;
+		    unsetPeriodicBurst(mExtSettings);
 		}
 	    }
 	    break;
