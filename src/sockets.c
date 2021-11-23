@@ -251,6 +251,7 @@ int writen (int inSock, const void *inBuf, int inLen, int *count) {
     assert(inSock >= 0);
     assert(inBuf != NULL);
     assert(inLen > 0);
+    assert(count != NULL);
 
     ptr   = (char*) inBuf;
     nleft = inLen;
