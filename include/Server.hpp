@@ -71,7 +71,7 @@ public:
     // accepts connection and receives data
     void RunUDP(void);
     void RunTCP(void);
-    void RunBounceBackTCP(void);
+    void RunTcpBounceBack(void);
     static void Sig_Int(int inSigno);
 
 private:
@@ -85,7 +85,6 @@ private:
     bool InitTrafficLoop(void);
     inline void SetFullDuplexReportStartTime(void);
     inline void SetReportStartTime();
-    bool ReadBBWithRXTimestamp ();
     int ReadWithRxTimestamp(void);
     bool ReadPacketID(void);
     void L2_processing(void);
