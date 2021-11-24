@@ -284,27 +284,6 @@ int writen (int inSock, const void *inBuf, int inLen, int *count) {
 } /* end writen */
 
 
-/*
- * Set a socket to blocking or non-blocking
-*
- * Returns true on success, or false if there was an error
-*/
-#define FALSE 0
-#define TRUE 1
-bool setsock_blocking (int fd, bool blocking) {
-   if (fd < 0) return FALSE;
-
-#ifdef WIN32
-   unsigned long mode = blocking ? 0 : 1;
-   return (ioctlsocket(fd, FIONBIO, &mode) == 0) ? TRUE : FALSE;
-#else
-   int flags = fcntl(fd, F_GETFL, 0);
-   if (flags < 0) return FALSE;
-   flags = blocking ? (flags&~O_NONBLOCK) : (flags|O_NONBLOCK);
-   return (fcntl(fd, F_SETFL, flags) == 0) ? TRUE : FALSE;
-#endif
-}
-
 
 #ifdef __cplusplus
 } /* end extern "C" */
