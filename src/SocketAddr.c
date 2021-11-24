@@ -211,8 +211,9 @@ void SockAddr_setHostname (const char* inHostname, iperf_sockaddr *inSockAddr, i
 		}
 	    }
 	}
-    } else {
+    }
 #if HAVE_IPV6
+    if (!found) {
 	hints.ai_family = AF_INET6;
 	ret_ga = getaddrinfo(inHostname, NULL, &hints, &res);
 	if (ret_ga == 0) {
@@ -231,8 +232,8 @@ void SockAddr_setHostname (const char* inHostname, iperf_sockaddr *inSockAddr, i
 		}
 	    }
 	}
-#endif // IPV6
     }
+#endif // IPV6
     // getaddrinfo didn't find an address, fallback to gethostbyname for v4
     if (!found && !isIPv6) {
 	// first try just converting dotted decimal
