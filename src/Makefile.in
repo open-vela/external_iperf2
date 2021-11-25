@@ -136,8 +136,8 @@ am__iperf_SOURCES_DIST = Client.cpp Extractor.c isochronous.cpp \
 	Launch.cpp active_hosts.cpp Listener.cpp Locale.c \
 	PerfSocket.cpp Reporter.c Reports.c ReportOutputs.c Server.cpp \
 	Settings.cpp SocketAddr.c gnu_getopt.c gnu_getopt_long.c \
-	histogram.c main.cpp service.c sockets.c stdio.c packet_ring.c \
-	tcp_window_size.c pdfs.c checksums.c
+	histogram.c main.cpp service.c socket_io.c stdio.c \
+	packet_ring.c tcp_window_size.c pdfs.c checksums.c
 @AF_PACKET_TRUE@am__objects_1 = checksums.$(OBJEXT)
 am_iperf_OBJECTS = Client.$(OBJEXT) Extractor.$(OBJEXT) \
 	isochronous.$(OBJEXT) Launch.$(OBJEXT) active_hosts.$(OBJEXT) \
@@ -146,7 +146,7 @@ am_iperf_OBJECTS = Client.$(OBJEXT) Extractor.$(OBJEXT) \
 	Server.$(OBJEXT) Settings.$(OBJEXT) SocketAddr.$(OBJEXT) \
 	gnu_getopt.$(OBJEXT) gnu_getopt_long.$(OBJEXT) \
 	histogram.$(OBJEXT) main.$(OBJEXT) service.$(OBJEXT) \
-	sockets.$(OBJEXT) stdio.$(OBJEXT) packet_ring.$(OBJEXT) \
+	socket_io.$(OBJEXT) stdio.$(OBJEXT) packet_ring.$(OBJEXT) \
 	tcp_window_size.$(OBJEXT) pdfs.$(OBJEXT) $(am__objects_1)
 iperf_OBJECTS = $(am_iperf_OBJECTS)
 iperf_DEPENDENCIES = $(am__DEPENDENCIES_1)
@@ -180,7 +180,7 @@ am__depfiles_remade = ./$(DEPDIR)/Client.Po ./$(DEPDIR)/Extractor.Po \
 	./$(DEPDIR)/igmp_querier.Po ./$(DEPDIR)/isochronous.Po \
 	./$(DEPDIR)/main.Po ./$(DEPDIR)/packet_ring.Po \
 	./$(DEPDIR)/pdfs.Po ./$(DEPDIR)/service.Po \
-	./$(DEPDIR)/sockets.Po ./$(DEPDIR)/stdio.Po \
+	./$(DEPDIR)/socket_io.Po ./$(DEPDIR)/stdio.Po \
 	./$(DEPDIR)/tcp_window_size.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
@@ -367,7 +367,7 @@ iperf_SOURCES = Client.cpp Extractor.c isochronous.cpp Launch.cpp \
 	active_hosts.cpp Listener.cpp Locale.c PerfSocket.cpp \
 	Reporter.c Reports.c ReportOutputs.c Server.cpp Settings.cpp \
 	SocketAddr.c gnu_getopt.c gnu_getopt_long.c histogram.c \
-	main.cpp service.c sockets.c stdio.c packet_ring.c \
+	main.cpp service.c socket_io.c stdio.c packet_ring.c \
 	tcp_window_size.c pdfs.c $(am__append_5)
 iperf_LDADD = $(LIBCOMPAT_LDADDS)
 @CHECKPROGRAMS_TRUE@checkdelay_SOURCES = checkdelay.c
@@ -508,7 +508,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/packet_ring.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pdfs.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/service.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sockets.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/socket_io.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stdio.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tcp_window_size.Po@am__quote@ # am--include-marker
 
@@ -700,7 +700,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/packet_ring.Po
 	-rm -f ./$(DEPDIR)/pdfs.Po
 	-rm -f ./$(DEPDIR)/service.Po
-	-rm -f ./$(DEPDIR)/sockets.Po
+	-rm -f ./$(DEPDIR)/socket_io.Po
 	-rm -f ./$(DEPDIR)/stdio.Po
 	-rm -f ./$(DEPDIR)/tcp_window_size.Po
 	-rm -f Makefile
@@ -774,7 +774,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/packet_ring.Po
 	-rm -f ./$(DEPDIR)/pdfs.Po
 	-rm -f ./$(DEPDIR)/service.Po
-	-rm -f ./$(DEPDIR)/sockets.Po
+	-rm -f ./$(DEPDIR)/socket_io.Po
 	-rm -f ./$(DEPDIR)/stdio.Po
 	-rm -f ./$(DEPDIR)/tcp_window_size.Po
 	-rm -f Makefile
