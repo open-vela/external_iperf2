@@ -350,12 +350,19 @@ const char report_sum_bw_read_enhanced_format[] =
 const char report_triptime_enhanced_format[] =
 "%s" IPERFTimeFrmt " trip-time (3WHS done->fin+finack) = %.4f sec\n";
 
+#if HAVE_TCP_STATS
 const char report_client_bb_bw_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth         BB cnt=avg/min/max/stdev         Rtry  Cwnd/RTT\n";
 
 const char report_client_bb_bw_format[] =
 "%s" IPERFTimeFrmt " sec  %ss  %ss/sec    %d=%.3f/%.3f/%.3f/%.3f ms %4d %4dK/%u us\n";
+#else
+const char report_client_bb_bw_header[] =
+"[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth         BB cnt=avg/min/max/stdev\n";
 
+const char report_client_bb_bw_format[] =
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec    %d=%.3f/%.3f/%.3f/%.3f ms\n";
+#endif
 const char report_client_bb_bw_triptime_format[] =
 "%s" IPERFTimeFrmt " sec  OWD Delays (ms) Cnt=%d  To=%.3f/%.3f/%.3f/%.3f From=%.3f/%.3f/%.3f/%.3f Asymmetry=%.3f/%.3f/%.3f/%.3f\n";
 
@@ -503,12 +510,20 @@ const char report_burst_read_tcp_format[] =
 
 const char report_burst_read_tcp_final_format[] =
 "%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %.3f/%.3f/%.3f/%.3f ms  %d=%d:%d:%d:%d:%d:%d:%d:%d\n";
-
+#if HAVE_TCP_STATS
 const char report_burst_write_tcp_header[] =
 "[ ID] Burst (start-end)" IPERFFTimeSpace "Transfer     Bandwidth       XferTime  Write/Err  Rtry  Cwnd/RTT   NetPwr\n";
 
 const char report_burst_write_tcp_format[] =
 "%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %d/%d %10d %8dK/%u %s\n";
+
+#else
+const char report_burst_write_tcp_header[] =
+"[ ID] Burst (start-end)" IPERFFTimeSpace "Transfer     Bandwidth       XferTime  Write/Err\n";
+
+const char report_burst_write_tcp_format[] =
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %d/%d\n";
+#endif
 
 const char report_burst_write_tcp_nocwnd_format[] =
 "%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %6.3f ms %d/%d %10d NA/%u %s\n";

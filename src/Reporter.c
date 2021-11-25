@@ -798,6 +798,7 @@ static inline void reporter_handle_txmsg_oneway_transit (struct TransferInfo *st
 	    stats->isochstats.frameID = packet->frameID;
 	}
     }
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
     if (isTcpDrain(stats->common) && packet->transit_ready && (packet->drain_time)) {
 	reporter_update_mmm(&stats->drain_mmm.current, (double) packet->drain_time);
 	reporter_update_mmm(&stats->drain_mmm.total, (double) packet->drain_time);
@@ -805,6 +806,7 @@ static inline void reporter_handle_txmsg_oneway_transit (struct TransferInfo *st
 	    histogram_insert(stats->drain_histogram, packet->drain_time, &packet->packetTime);
 	}
     }
+#endif
 }
 // This is done in reporter thread context
 
