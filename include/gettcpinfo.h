@@ -56,7 +56,11 @@
 extern "C" {
 #endif
 
-void gettcpinfo(int sock, struct ReportStruct *sample);
+#if WIN32
+void gettcpinfo(SOCKET sock, struct ReporterData *data, struct ReportStruct *sample);
+#else
+void gettcpinfo(int sock, struct ReporterData *data, struct ReportStruct *sample);
+#endif
 
 #ifdef __cplusplus
 } /* end extern "C" */
