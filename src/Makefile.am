@@ -43,7 +43,7 @@ iperf_SOURCES = \
 	        histogram.c \
 		main.cpp \
 		service.c \
-		sockets.c \
+		socket_io.c \
 		stdio.c \
 		packet_ring.c \
 		tcp_window_size.c \
