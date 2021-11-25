@@ -93,10 +93,10 @@ inline void gettcpinfo (int sock, struct ReportStruct *sample) {
     }
 }
 #elif WIN32
-inline void gettcpinfo (SOCKET sock, struct ReporterData *data, struct ReportStruct *sample) {
+inline void gettcpinfo (SOCKET sock, struct ReportStruct *sample) {
     sample->tcpstats.rtt = 1;
     sample->tcpstats.isValid  = false;
 };
 #else
-inline void gettcpinfo (int sock, struct ReporterData *data, struct ReportStruct *sample) {
+inline void gettcpinfo (int sock, struct ReportStruct *sample) {
 #endif
