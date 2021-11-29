@@ -107,12 +107,8 @@ static int tapif = 0;
 static int tunif = 0;
 static int hideips = 0;
 static int bounceback = 0;
-static int bouncebackhold = 0;
-static int bouncebackperiod = 0;
 static int tcpdrain;
 static int overridetos;
-static int tcpquickack;
-static int congest;
 
 void Settings_Interpret(char option, const char *optarg, struct thread_Settings *mExtSettings);
 // apply compound settings after the command line has been fully parsed
@@ -131,6 +127,8 @@ static void generate_permit_key(struct thread_Settings *mExtSettings);
 const struct option long_options[] =
 {
 {"singleclient",     no_argument, NULL, '1'},
+{"v4",               no_argument, NULL, '4'},
+{"v6",               no_argument, NULL, '6'},
 {"bandwidth",  required_argument, NULL, 'b'},
 {"client",     required_argument, NULL, 'c'},
 {"dualtest",         no_argument, NULL, 'd'},
@@ -156,11 +154,7 @@ const struct option long_options[] =
 // more esoteric options
 {"awdl",             no_argument, NULL, 'A'},
 {"bind",       required_argument, NULL, 'B'},
-{"bounceback", no_argument, &bounceback, 1},
-{"bounceback-congest", no_argument, &congest, 1},
-{"bounceback-hold", required_argument, &bouncebackhold, 1},
-{"bounceback-quickack", no_argument, &tcpquickack, 1},
-{"bounceback-period", required_argument, &bouncebackperiod, 1},
+{"bounce-back", optional_argument, &bounceback, 1},
 {"compatibility",    no_argument, NULL, 'C'},
 {"daemon",           no_argument, NULL, 'D'},
 {"file_input", required_argument, NULL, 'F'},
@@ -212,7 +206,6 @@ const struct option long_options[] =
 {"tcp-drain", no_argument, &tcpdrain, 1},
 {"tos-override", required_argument, &overridetos, 1},
 {"tcp-rx-window-clamp", required_argument, &rxwinclamp, 1},
-
 {"tcp-write-prefetch", required_argument, &txnotsentlowwater, 1}, // see doc/DESIGN_NOTES
 {"tap-dev", optional_argument, &tapif, 1},
 {"tun-dev", optional_argument, &tunif, 1},
@@ -270,7 +263,7 @@ const struct option env_options[] =
 
 #define SHORT_OPTIONS()
 
-const char short_options[] = "1b:c:def:hi:l:mn:o:p:rst:uvw:x:y:zAB:CDF:H:IL:M:NP:RS:T:UVWXZ:";
+const char short_options[] = "146b:c:def:hi:l:mn:o:p:rst:uvw:x:y:zAB:CDF:H:IL:M:NP:RS:T:UVWXZ:";
 
 /* -------------------------------------------------------------------
  * defaults
@@ -284,8 +277,6 @@ const int  kDefault_UDPBufLen = 1470;      // -u  if set, read/write 1470 bytes
 const int  kDefault_UDPBufLenV6 = 1450;      // -u  if set, read/write 1470 bytes
 // v6: 1450 bytes UDP payload will fill one and only one ethernet datagram (IPv6 overhead is 40 bytes)
 const int kDefault_TCPBufLen = 128 * 1024; // TCP default read/write size
-const int kDefault_BBTCPBufLen = 100; // default bounce-back size in bytes
-
 
 /* -------------------------------------------------------------------
  * Initialize all settings to defaults.
@@ -516,6 +507,14 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
     switch (option) {
         case '1': // Single Client
             setSingleClient(mExtSettings);
+            break;
+
+        case '4': // v4 only
+            setIPV4(mExtSettings);
+            break;
+
+        case '6': // v4 only
+            setIPV6(mExtSettings);
             break;
 
         case 'b': // UDP bandwidth
@@ -859,7 +858,7 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
             break;
 
         case 'V': // IPv6 Domain
-#ifdef HAVE_IPV6
+#if HAVE_IPV6
             setIPV6(mExtSettings);
 #else
 	    fprintf(stderr, "The --ipv6_domain (-V) option is not enabled in this build.\n");
@@ -1089,18 +1088,6 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		fprintf(stderr, "--tcp-drain not supported on this platform\n");
 #endif
 	    }
-	    if (tcpquickack) {
-		tcpquickack= 0;
-#if HAVE_DECL_TCP_QUICKACK
-		setTcpQuickAck(mExtSettings);
-#else
-		fprintf(stderr, "--tcp-quickack not supported on this platform\n");
-#endif
-	    }
-	    if (congest) {
-		congest= 0;
-		setCongest(mExtSettings);
-	    }
 	    if (txnotsentlowwater) {
 		txnotsentlowwater = 0;
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
@@ -1119,17 +1106,12 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    if (burstperiodic) {
 		burstperiodic = 0;
 		setPeriodicBurst(mExtSettings);
-		if (optarg && (atof(optarg) > 1e-5)) { // limit to 10 usecs
+		if (optarg) {
 		    mExtSettings->mFPS = 1.0/atof(optarg);
-		} else {
-		    if (atof(optarg) != 0)
-			fprintf(stderr, "WARN: burst-period too small, must be greater than 10 usecs\n");
-		    unsetPeriodicBurst(mExtSettings);
 		}
 	    }
 	    if (burstsize) {
 		burstsize = 0;
-		setPeriodicBurst(mExtSettings);
 		if (optarg) {
 		    mExtSettings->mBurstSize = byte_atoi(optarg);
 		}
@@ -1173,27 +1155,6 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    if (bounceback) {
 		bounceback = 0;
 		setBounceBack(mExtSettings);
-		setNoDelay(mExtSettings);
-		setEnhanced(mExtSettings);
-	    }
-	    if (bouncebackhold) {
-		bouncebackhold = 0;
-		if (optarg)
-		    //cli units is ms, working units is us
-		    mExtSettings->mBounceBackHold = int(atof(optarg) * 1e3);
-		else
-		    mExtSettings->mBounceBackHold = 0;
-	    }
-	    if (bouncebackperiod) {
-		bouncebackperiod = 0;
-		setPeriodicBurst(mExtSettings);
-		if (optarg && (atof(optarg) > 1e-2)) { // limit to 10 usecs
-		    mExtSettings->mFPS = 1e3/atof(optarg); // cli units is ms
-		} else {
-		    if (atof(optarg) != 0)
-			fprintf(stderr, "WARN: bouncback-period too small, must be greater than 10 usecs\n");
-		    unsetPeriodicBurst(mExtSettings);
-		}
 	    }
 	    break;
         default: // ignore unknown
@@ -1276,10 +1237,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		mExtSettings->mBufLen = kDefault_UDPBufLen;
 	    }
 	} else {
-	    if (isBounceBack(mExtSettings))
-	        mExtSettings->mBufLen = kDefault_BBTCPBufLen;
-	    else
-	        mExtSettings->mBufLen = kDefault_TCPBufLen;
+	    mExtSettings->mBufLen = kDefault_TCPBufLen;
 	}
     }
     if (!mExtSettings->mPortLast)
@@ -1342,6 +1300,17 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		bail = true;
 	    }
 	}
+    }
+#if !HAVE_IPV6
+    if (isIPV6(mExtSettings)) {
+	fprintf(stderr, "ERROR: ipv6 not supported\n");
+	bail = true;
+    }
+#endif
+    if (isIPV4(mExtSettings) && isIPV6(mExtSettings)) {
+	fprintf(stderr, "WARN: both ipv4 and ipv6 set\n");
+	unsetIPV6(mExtSettings);
+	unsetIPV4(mExtSettings);
     }
     if (mExtSettings->mThreadMode == kMode_Client) {
 	if (isRemoveService(mExtSettings)) {
@@ -1409,11 +1378,8 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		bail = true;
 	    }
 	}
-	if (isBounceBack(mExtSettings)) {
-	    if (static_cast<int> (mExtSettings->mBurstSize) > 0) {
-		fprintf(stderr, "WARN: options of --burst-size for bounce-back ignored, use -l sets size\n");
-	    }
-	    mExtSettings->mBounceBackBytes = mExtSettings->mBufLen;
+	if (isBounceBack(mExtSettings) && (static_cast<int> (mExtSettings->mBurstSize) < mExtSettings->mBufLen)) {
+	    fprintf(stderr, "WARN: options of --burst-size for bounce-back is being set to -l length of %d\n", mExtSettings->mBufLen);
 	    mExtSettings->mBurstSize = mExtSettings->mBufLen;
 	}
 	if (isPeriodicBurst(mExtSettings)) {
@@ -1425,9 +1391,12 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		bail = true;
 	    } else if (static_cast<int> (mExtSettings->mBurstSize) == 0) {
 	        mExtSettings->mBurstSize = byte_atoi("1M"); //default to 1 Mbyte
+	    } else if (isBounceBack(mExtSettings)) {
+		fprintf(stderr, "ERROR: options of --burst-period and --bounce-back cannot be applied together\n");
+		bail = true;
 	    }
 	    if (static_cast<int> (mExtSettings->mBurstSize) < mExtSettings->mBufLen) {
-		fprintf(stderr, "ERROR: option of --burst-size %d must be equal or larger to write length (-l) %d\n", mExtSettings->mBurstSize, mExtSettings->mBufLen);
+		fprintf(stderr, "ERROR: option of --burst-size must be equal or larger to write length (-l)\n");
 		bail = true;
 	    }
 	} else if (!isBounceBack(mExtSettings) && (static_cast<int> (mExtSettings->mBurstSize) > 0)) {
@@ -2079,7 +2048,7 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
 	    inet_ntop(AF_INET, &(reinterpret_cast<sockaddr_in*>(&server->peer))->sin_addr,
 		      reversed_thread->mHost, REPORT_ADDRLEN);
 	}
-#ifdef HAVE_IPV6
+#if HAVE_IPV6
 	else {
 	    inet_ntop(AF_INET6, &(reinterpret_cast<sockaddr_in6*>(&server->peer))->sin6_addr,
 		      reversed_thread->mHost, REPORT_ADDRLEN);
@@ -2269,7 +2238,7 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 #endif
 	if (isBounceBack(client)) {
 	    flags = HEADER_BOUNCEBACK;
-	    len = sizeof(struct bounceback_hdr);
+	    len = sizeof(struct bounce_back_datagram_hdr);
 	} else {
 	    memset(hdr, 0, sizeof(struct client_tcp_testhdr));
 	    flags |= HEADER_EXTEND;
