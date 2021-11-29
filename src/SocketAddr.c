@@ -74,7 +74,7 @@ void SockAddr_remoteAddr (struct thread_Settings *inSettings) {
 	    if (inSettings->incrdstip)
 		SockAddr_incrAddress(&inSettings->peer, inSettings->incrdstip);
 	} else {
-#ifdef HAVE_IPV6
+#if HAVE_IPV6
 	    if (isIPV6(inSettings)) {
 		((struct sockaddr*)&inSettings->peer)->sa_family = AF_INET6;
 	    } else {
@@ -106,7 +106,7 @@ void SockAddr_localAddr (struct thread_Settings *inSettings) {
 	    SockAddr_incrAddress(&inSettings->local, inSettings->incrsrcip);
 
     } else {
-#ifdef HAVE_IPV6
+#if HAVE_IPV6
         if (isIPV6(inSettings)) {
             ((struct sockaddr*)&inSettings->local)->sa_family = AF_INET6;
         } else {
@@ -184,7 +184,6 @@ void SockAddr_localAddr (struct thread_Settings *inSettings) {
 /* -------------------------------------------------------------------
  * Resolve the hostname address and fill it in.
  * ------------------------------------------------------------------- */
-
 void SockAddr_setHostname (const char* inHostname, iperf_sockaddr *inSockAddr, int isIPv6) {
     // ..I think this works for both ipv6 & ipv4... we'll see
     bool found = false;
@@ -287,7 +286,7 @@ void SockAddr_getHostAddress (iperf_sockaddr *inSockAddr, char* outAddress,
         inet_ntop(AF_INET, &(((struct sockaddr_in*) inSockAddr)->sin_addr),
                    outAddress, len);
     }
-#ifdef HAVE_IPV6
+#if HAVE_IPV6
     else {
         inet_ntop(AF_INET6, &(((struct sockaddr_in6*) inSockAddr)->sin6_addr),
                    outAddress, len);
@@ -304,7 +303,7 @@ void SockAddr_setAddressAny (iperf_sockaddr *inSockAddr) {
     if (((struct sockaddr*)inSockAddr)->sa_family == AF_INET)
         memset(&(((struct sockaddr_in*) inSockAddr)->sin_addr), 0,
                 sizeof(struct in_addr));
-#if defined(HAVE_IPV6)
+#if HAVE_IPV6
     else
         memset(&(((struct sockaddr_in6*) inSockAddr)->sin6_addr), 0,
                 sizeof(struct in6_addr));
@@ -319,7 +318,7 @@ void SockAddr_setAddressAny (iperf_sockaddr *inSockAddr) {
 void SockAddr_incrAddress (iperf_sockaddr *inSockAddr, int value) {
     if (((struct sockaddr*)inSockAddr)->sa_family == AF_INET)
 	((struct sockaddr_in *)inSockAddr)->sin_addr.s_addr += htonl(value);
-#if defined(HAVE_IPV6)
+#if HAVE_IPV6
     else {
 	uint32_t *lower = (uint32_t *)&((struct sockaddr_in6 *)inSockAddr)->sin6_addr.s6_addr[12];
 	*lower += htonl(value);
@@ -336,7 +335,7 @@ void SockAddr_incrAddress (iperf_sockaddr *inSockAddr, int value) {
 void SockAddr_setPort (iperf_sockaddr *inSockAddr, unsigned short inPort) {
     if (((struct sockaddr*)inSockAddr)->sa_family == AF_INET)
         ((struct sockaddr_in*) inSockAddr)->sin_port = htons(inPort);
-#if defined(HAVE_IPV6)
+#if HAVE_IPV6
     else
         ((struct sockaddr_in6*) inSockAddr)->sin6_port = htons(inPort);
 #endif
@@ -360,7 +359,7 @@ void SockAddr_setPortAny (iperf_sockaddr *inSockAddr) {
 unsigned short SockAddr_getPort (iperf_sockaddr *inSockAddr) {
     if (((struct sockaddr*)inSockAddr)->sa_family == AF_INET)
         return ntohs(((struct sockaddr_in*) inSockAddr)->sin_port);
-#if defined(HAVE_IPV6)
+#if HAVE_IPV6
     else
         return ntohs(((struct sockaddr_in6*) inSockAddr)->sin6_port);
 #endif
@@ -384,7 +383,7 @@ struct in_addr* SockAddr_get_in_addr (iperf_sockaddr *inSockAddr) {
 /* -------------------------------------------------------------------
  * Return the IPv6 Internet Address from the sockaddr_in6 structure
  * ------------------------------------------------------------------- */
-#ifdef HAVE_IPV6
+#if HAVE_IPV6
 struct in6_addr* SockAddr_get_in6_addr (iperf_sockaddr *inSockAddr) {
     if (((struct sockaddr*)inSockAddr)->sa_family == AF_INET6)
         return &(((struct sockaddr_in6*) inSockAddr)->sin6_addr);
@@ -400,7 +399,7 @@ struct in6_addr* SockAddr_get_in6_addr (iperf_sockaddr *inSockAddr) {
  * ------------------------------------------------------------------- */
 
 Socklen_t SockAddr_get_sizeof_sockaddr (iperf_sockaddr *inSockAddr) {
-#if defined(HAVE_IPV6)
+#if HAVE_IPV6
     if (((struct sockaddr*)inSockAddr)->sa_family == AF_INET6) {
         return(sizeof(struct sockaddr_in6));
     }
@@ -415,7 +414,7 @@ Socklen_t SockAddr_get_sizeof_sockaddr (iperf_sockaddr *inSockAddr) {
  * ------------------------------------------------------------------- */
 
 int SockAddr_isIPv6 (iperf_sockaddr *inSockAddr) {
-#if defined(HAVE_IPV6)
+#if HAVE_IPV6
     if (((struct sockaddr*)inSockAddr)->sa_family == AF_INET6) {
         return 1;
     }
@@ -429,7 +428,7 @@ int SockAddr_isIPv6 (iperf_sockaddr *inSockAddr) {
  * ------------------------------------------------------------------- */
 
 int SockAddr_isMulticast (iperf_sockaddr *inSockAddr) {
-#if defined(HAVE_IPV6)
+#if HAVE_IPV6
     if (((struct sockaddr*)inSockAddr)->sa_family == AF_INET6) {
         return(IN6_IS_ADDR_MULTICAST(&(((struct sockaddr_in6*) inSockAddr)->sin6_addr)));
     } else
@@ -449,7 +448,7 @@ int SockAddr_isMulticast (iperf_sockaddr *inSockAddr) {
  * ------------------------------------------------------------------- */
 
 int SockAddr_isLinklocal (iperf_sockaddr *inSockAddr) {
-#if defined(HAVE_IPV6)
+#if HAVE_IPV6
   if (((struct sockaddr*)inSockAddr)->sa_family == AF_INET6) {
       return(IN6_IS_ADDR_LINKLOCAL(&(((struct sockaddr_in6*) inSockAddr)->sin6_addr)));
     } else
@@ -481,7 +480,7 @@ int SockAddr_are_Equal (iperf_sockaddr *first, iperf_sockaddr *second) {
         return(((long) ((struct sockaddr_in*)first)->sin_addr.s_addr == (long) ((struct sockaddr_in*)second)->sin_addr.s_addr)
                 && (((struct sockaddr_in*)first)->sin_port == ((struct sockaddr_in*)second)->sin_port));
     }
-#if defined(HAVE_IPV6)
+#if HAVE_IPV6
     if (((struct sockaddr*)first)->sa_family == AF_INET6 && ((struct sockaddr*)second)->sa_family == AF_INET6) {
         // compare IPv6 addresses
         return(!memcmp(((struct sockaddr_in6*)first)->sin6_addr.s6_addr, ((struct sockaddr_in6*)second)->sin6_addr.s6_addr, sizeof(struct in6_addr))
@@ -501,7 +500,7 @@ int SockAddr_Hostare_Equal (iperf_sockaddr* first, iperf_sockaddr *second) {
         return((long) ((struct sockaddr_in*)first)->sin_addr.s_addr ==
                 (long) ((struct sockaddr_in*)second)->sin_addr.s_addr);
     }
-#if defined(HAVE_IPV6)
+#if HAVE_IPV6
     if (((struct sockaddr*)first)->sa_family == AF_INET6 && ((struct sockaddr*)second)->sa_family == AF_INET6) {
         // compare IPv6 addresses
         return(!memcmp(((struct sockaddr_in6*)first)->sin6_addr.s6_addr,
@@ -845,7 +844,7 @@ int SockAddr_v4_Connect_BPF_Drop (int sock, uint32_t dstip, uint32_t srcip, uint
     };
     return(setsockopt(sock, SOL_SOCKET, SO_ATTACH_FILTER, &bpf, sizeof(bpf)));
 }
-#  ifdef HAVE_IPV6
+#if HAVE_IPV6
 //
 // v6 Connected BPF, use 32 bit values
 //
