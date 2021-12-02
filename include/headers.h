@@ -248,7 +248,7 @@ SPECIAL_OSF1_EXTERN_C_STOP
 #endif
 
 //#ifdef __cplusplus
-    #if HAVE_IPV6
+    #ifdef HAVE_IPV6
         #define REPORT_ADDRLEN (INET6_ADDRSTRLEN + 1)
 typedef struct sockaddr_storage iperf_sockaddr;
     #else

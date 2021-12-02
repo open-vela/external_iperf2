@@ -61,10 +61,6 @@
    don't. */
 #undef HAVE_DECL_IPV6_TCLASS
 
-/* Define to 1 if you have the declaration of `IPV6_V6ONLY', and to 0 if you
-   don't. */
-#undef HAVE_DECL_IPV6_V6ONLY
-
 /* Define to 1 if you have the declaration of `IP_ADD_MEMBERSHIP', and to 0 if
    you don't. */
 #undef HAVE_DECL_IP_ADD_MEMBERSHIP
@@ -148,6 +144,10 @@
 /* Define to 1 if you have the declaration of `TCP_NOTSENT_LOWAT', and to 0 if
    you don't. */
 #undef HAVE_DECL_TCP_NOTSENT_LOWAT
+
+/* Define to 1 if you have the declaration of `TCP_QUICKACK', and to 0 if you
+   don't. */
+#undef HAVE_DECL_TCP_QUICKACK
 
 /* Define to 1 if you have the declaration of `TCP_WINDOW_CLAMP', and to 0 if
    you don't. */
