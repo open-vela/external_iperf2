@@ -285,7 +285,8 @@ struct thread_Settings {
     double mListenerTimeout;
     int tuntapdev;
     int firstreadbytes;
-    int mBounceBack;
+    int mBounceBackBytes;
+    uint32_t mBounceBackHold; // units of usecs
 #if HAVE_DECL_TCP_WINDOW_CLAMP
     int mClampSize;
 #endif
@@ -310,7 +311,7 @@ struct thread_Settings {
 #define FLAG_BUFLENSET      0x00000001
 #define FLAG_COMPAT         0x00000002
 #define FLAG_DAEMON         0x00000004
-#define FLAG_DOMAINV6       0x00000008
+#define FLAG_DOMAIN         0x00000008
 #define FLAG_FILEINPUT      0x00000010
 #define FLAG_NODELAY        0x00000020
 #define FLAG_PRINTMSS       0x00000040
@@ -384,13 +385,13 @@ struct thread_Settings {
 #define FLAG_TCPDRAIN       0x00000200
 #define FLAG_INCRSRCPORT    0x00000400
 #define FLAG_OVERRIDETOS    0x00000800
-#define FLAG_DOMAINV4       0x00001000
+#define FLAG_TCPQUICKACK    0x00001000
+#define FLAG_CONGEST        0x00002000
 
 #define isBuflenSet(settings)      ((settings->flags & FLAG_BUFLENSET) != 0)
 #define isCompat(settings)         ((settings->flags & FLAG_COMPAT) != 0)
 #define isDaemon(settings)         ((settings->flags & FLAG_DAEMON) != 0)
-#define isIPV6(settings)           ((settings->flags & FLAG_DOMAINV6) != 0)
-#define isIPV4(settings)           ((settings->flags_extend2 & FLAG_DOMAINV4) != 0)
+#define isIPV6(settings)           ((settings->flags & FLAG_DOMAIN) != 0)
 #define isFileInput(settings)      ((settings->flags & FLAG_FILEINPUT) != 0)
 #define isNoDelay(settings)        ((settings->flags & FLAG_NODELAY) != 0)
 #define isPrintMSS(settings)       ((settings->flags & FLAG_PRINTMSS) != 0)
@@ -458,12 +459,13 @@ struct thread_Settings {
 #define isBounceBack(settings)     ((settings->flags_extend2 & FLAG_BOUNCEBACK) != 0)
 #define isTcpDrain(settings)       ((settings->flags_extend2 & FLAG_TCPDRAIN) != 0)
 #define isOverrideTOS(settings)    ((settings->flags_extend2 & FLAG_OVERRIDETOS) != 0)
+#define isTcpQuickAck(settings)    ((settings->flags_extend2 & FLAG_TCPQUICKACK) != 0)
+#define isCongest(settings)        ((settings->flags_extend2 & FLAG_CONGEST) != 0)
 
 #define setBuflenSet(settings)     settings->flags |= FLAG_BUFLENSET
 #define setCompat(settings)        settings->flags |= FLAG_COMPAT
 #define setDaemon(settings)        settings->flags |= FLAG_DAEMON
-#define setIPV6(settings)          settings->flags |= FLAG_DOMAINV6
-#define setIPV4(settings)          settings->flags_extend2 |= FLAG_DOMAINV4
+#define setIPV6(settings)          settings->flags |= FLAG_DOMAIN
 #define setFileInput(settings)     settings->flags |= FLAG_FILEINPUT
 #define setNoDelay(settings)       settings->flags |= FLAG_NODELAY
 #define setPrintMSS(settings)      settings->flags |= FLAG_PRINTMSS
@@ -528,12 +530,13 @@ struct thread_Settings {
 #define setBounceBack(settings)    settings->flags_extend2 |= FLAG_BOUNCEBACK
 #define setTcpDrain(settings)      settings->flags_extend2 |= FLAG_TCPDRAIN
 #define setOverrideTOS(settings)   settings->flags_extend2 |= FLAG_OVERRIDETOS
+#define setTcpQuickAck(settings)   settings->flags_extend2 |= FLAG_TCPQUICKACK
+#define setCongest(settings)       settings->flags_extend2 |= FLAG_CONGEST
 
 #define unsetBuflenSet(settings)   settings->flags &= ~FLAG_BUFLENSET
 #define unsetCompat(settings)      settings->flags &= ~FLAG_COMPAT
 #define unsetDaemon(settings)      settings->flags &= ~FLAG_DAEMON
-#define unsetIPV6(settings)        settings->flags &= ~FLAG_DOMAINV6
-#define unsetIPV4(settings)        settings->flags_extend2 &= ~FLAG_DOMAINV4
+#define unsetIPV6(settings)        settings->flags &= ~FLAG_DOMAIN
 #define unsetFileInput(settings)   settings->flags &= ~FLAG_FILEINPUT
 #define unsetNoDelay(settings)     settings->flags &= ~FLAG_NODELAY
 #define unsetPrintMSS(settings)    settings->flags &= ~FLAG_PRINTMSS
@@ -597,6 +600,8 @@ struct thread_Settings {
 #define unsetBounceBack(settings)    settings->flags_extend2 &= ~FLAG_BOUNCEBACK
 #define unsetTcpDrain(settings)      settings->flags_extend2 &= ~FLAG_TCPDRAIN
 #define unsetOverrideTOS(settings)   settings->flags_extend2 &= ~FLAG_OVERRIDETOS
+#define unsetTcpQuickAck(settings)   settings->flags_extend2 &= ~FLAG_TCPQUICKACK
+#define unsetCongest(settings)       settings->flags_extend2 &= ~FLAG_CONGEST
 
 // set to defaults
 void Settings_Initialize(struct thread_Settings* main);
