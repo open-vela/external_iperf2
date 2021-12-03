@@ -751,9 +751,12 @@ Histograms are supported so this information is made available.
 .P
 .B
 Binding
-is done at the logical level (ip address or layer 3) using the -B option
-and at the device (or layer 2) level using the percent (%) separator for both the client
-and the server. On the client, the -B option affects the \fBbind\fR(2)
+is done at the logical level of port and ip address (or layer 3) using the -B option
+and a colon as the separator between port and the ip addr. Binding at the
+device (or layer 2) level requires the percent (%) as the delimeter (for both the client and the server.)
+An example for src port and ip address is -B 192.168.1.1:6001. To \fBbind the src port only\fR and
+let the operating system choose the source ip address use 0.0.0.0, e.g.
+\fB-B 0.0.0.0:6001\fR. On the client, the -B option affects the \fBbind\fR(2)
 system call, and will set the source ip address and the source port, e.g. iperf -c <host>
 -B 192.168.100.2:6002. This controls the packet's source values but not routing.
 These can be confusing in that a route or device lookup may not
