@@ -69,7 +69,7 @@ inet_ntop(int af, const void *src, char *dst, socklen_t size) {
     switch ( af ) {
         case AF_INET:
             return(inet_ntop4(src, dst, size));
-#ifdef HAVE_IPV6
+#if HAVE_IPV6
         case AF_INET6:
             return(inet_ntop6(src, dst, size));
 #endif
@@ -110,7 +110,7 @@ inet_ntop4(const unsigned char *src, char *dst, socklen_t size) {
  * author:
  *      Paul Vixie, 1996.
  */
-#ifdef HAVE_IPV6
+#if HAVE_IPV6
 const char*
 inet_ntop6(const unsigned char *src, char *dst, socklen_t size) {
     /*
