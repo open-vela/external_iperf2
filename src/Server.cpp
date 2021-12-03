@@ -279,89 +279,7 @@ void Server::RunTCP () {
     FreeReport(myJob);
 }
 
-inline bool Server::ReadBBWithRXTimestamp () {
-    bool rc = false;
-    int n;
-    if ((n = recvn(mySocket, mSettings->mBuf, mSettings->mBounceBackBytes, 0)) == mSettings->mBounceBackBytes) {
-	struct bounceback_hdr *bbhdr = reinterpret_cast<struct bounceback_hdr *>(mSettings->mBuf);
-	now.setnow();
-	reportstruct->packetTime.tv_sec = now.getSecs();
-	reportstruct->packetTime.tv_usec = now.getUsecs();
-	reportstruct->emptyreport=0;
-	bbhdr->bbsendtorx_ts.sec = htonl(reportstruct->packetTime.tv_sec);
-	bbhdr->bbsendtorx_ts.usec = htonl(reportstruct->packetTime.tv_usec);
-	reportstruct->packetLen = mSettings->mBounceBackBytes;
-	rc = true;
-    } else if (n==0) {
-	peerclose = true;
-    } else {
-	reportstruct->emptyreport=1;
-    }
-    return rc;
-}
-
-void Server::RunBounceBackTCP () {
-    if (!InitTrafficLoop())
-	return;
-#if HAVE_DECL_TCP_NODELAY
-    {
-	int nodelay = 1;
-	// set TCP nodelay option
-	int rc = setsockopt(mySocket, IPPROTO_TCP, TCP_NODELAY,
-			    reinterpret_cast<char*>(&nodelay), sizeof(nodelay));
-	WARN_errno(rc == SOCKET_ERROR, "setsockopt BB TCP_NODELAY");
-	setNoDelay(mSettings);
-    }
-#endif
-    myReport->info.ts.prevsendTime = myReport->info.ts.startTime;
-    now.setnow();
-    reportstruct->packetTime.tv_sec = now.getSecs();
-    reportstruct->packetTime.tv_usec = now.getUsecs();
-    reportstruct->packetLen = mSettings->mBounceBackBytes;
-    while (InProgress()) {
-	int n;
-	reportstruct->emptyreport=1;
-	do {
-	    struct bounceback_hdr *bbhdr = reinterpret_cast<struct bounceback_hdr *>(mSettings->mBuf);
-	    if (mSettings->mBounceBackHold) {
-#if HAVE_DECL_TCP_QUICKACK
-		if (isTcpQuickAck(mSettings)) {
-		    int opt = 1;
-		    Socklen_t len = sizeof(opt);
-		    int rc = setsockopt(mySocket, IPPROTO_TCP, TCP_QUICKACK,
-					reinterpret_cast<char*>(&opt), len);
-		    WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_QUICKACK");
-		}
-#endif
-		delay_loop(mSettings->mBounceBackHold);
-	    }
-	    now.setnow();
-	    bbhdr->bbsendtotx_ts.sec = htonl(now.getSecs());
-	    bbhdr->bbsendtotx_ts.usec = htonl(now.getUsecs());
-	    if ((n = writen(mySocket, mSettings->mBuf, mSettings->mBounceBackBytes, &reportstruct->writecnt)) == mSettings->mBounceBackBytes) {
-		reportstruct->emptyreport=0;
-		reportstruct->packetLen += n;
-		ReportPacket(myReport, reportstruct);
-	    } else {
-		break;
-	    }
-	} while (ReadBBWithRXTimestamp());
-    }
-    disarm_itimer();
-    // stop timing
-    now.setnow();
-    reportstruct->packetTime.tv_sec = now.getSecs();
-    reportstruct->packetTime.tv_usec = now.getUsecs();
-    reportstruct->packetLen = 0;
-    if (EndJob(myJob, reportstruct)) {
-#if HAVE_THREAD_DEBUG
-	thread_debug("tcp close sock=%d", mySocket);
-#endif
-	int rc = close(mySocket);
-	WARN_errno(rc == SOCKET_ERROR, "server close");
-    }
-    Iperf_remove_host(mSettings);
-    FreeReport(myJob);
+void Server::RunTcpBounceBack () {
 }
 
 void Server::InitKernelTimeStamping () {
@@ -747,7 +665,7 @@ int Server::L2_quintuple_filter () {
 	    return -1;
     } else {
 	// Using the v6 addr structures
-#  ifdef HAVE_IPV6
+#  if HAVE_IPV6
 	struct in6_addr *v6peer = SockAddr_get_in6_addr(&mSettings->peer);
 	struct in6_addr *v6local = SockAddr_get_in6_addr(&mSettings->local);
 	if (isIPV6(mSettings)) {
