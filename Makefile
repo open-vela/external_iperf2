@@ -53,6 +53,8 @@ IPERF2_FLAGS += ${shell $(INCDIR) $(INCDIROPT) "$(CC)" .}
 IPERF2_FLAGS += ${shell $(INCDIR) $(INCDIROPT) "$(CC)" include}
 IPERF2_FLAGS += ${shell $(TOPDIR)/tools/define.sh "$(CC)" HAVE_CONFIG_H}
 IPERF2_FLAGS += -Wno-undef -Wno-shadow
+IPERF2_FLAGS += -Dwarn=iperf2_warn
+IPERF2_FLAGS += -Dwarn_errno=iperf2_warn_errno
 
 CFLAGS += $(IPERF2_FLAGS) -Wno-strict-prototypes
 CXXFLAGS += $(IPERF2_FLAGS)
