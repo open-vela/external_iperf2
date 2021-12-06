@@ -77,14 +77,14 @@ extern "C" {
      * @arg fileName   Name of the file
      * @arg size       Block size for reading
      */
-    void Extractor_Initialize( char *fileName, int size, thread_Settings *mSettings );
+    void Extractor_Initialize( char *fileName, int size, struct thread_Settings *mSettings );
 
     /**
      * Constructor
      * @arg fp         File Pointer
      * @arg size       Block size for reading
      */
-    void Extractor_InitializeFile( FILE *fp, int size, thread_Settings *mSettings );
+    void Extractor_InitializeFile( FILE *fp, int size, struct thread_Settings *mSettings );
 
 
     /*
@@ -93,7 +93,7 @@ extern "C" {
      * @arg block     Pointer to the data read
      * @return        Number of bytes read
      */
-    int Extractor_getNextDataBlock( char *block, thread_Settings *mSettings );
+    int Extractor_getNextDataBlock( char *data, struct thread_Settings *mSettings );
 
 
     /**
@@ -101,7 +101,7 @@ extern "C" {
      * the file stream is still readable
      * @return true, if readable; false, if not
      */
-    int Extractor_canRead( thread_Settings *mSettings );
+    int Extractor_canRead( struct thread_Settings *mSettings );
 
     /**
      * This is used to reduce the read size
@@ -109,12 +109,12 @@ extern "C" {
      * the header (timestamp)
      * @arg delta         Size to reduce
      */
-    void Extractor_reduceReadSize( int delta, thread_Settings *mSettings );
+    void Extractor_reduceReadSize( int delta, struct thread_Settings *mSettings );
 
     /**
      * Destructor
      */
-    void Extractor_Destroy( thread_Settings *mSettings );
+    void Extractor_Destroy( struct thread_Settings *mSettings );
 #ifdef __cplusplus
 } /* end extern "C" */
 #endif
