@@ -149,6 +149,10 @@
    you don't. */
 #undef HAVE_DECL_TCP_NOTSENT_LOWAT
 
+/* Define to 1 if you have the declaration of `TCP_QUICKACK', and to 0 if you
+   don't. */
+#undef HAVE_DECL_TCP_QUICKACK
+
 /* Define to 1 if you have the declaration of `TCP_WINDOW_CLAMP', and to 0 if
    you don't. */
 #undef HAVE_DECL_TCP_WINDOW_CLAMP

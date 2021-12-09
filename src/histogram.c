@@ -58,6 +58,8 @@ struct histogram *histogram_init(unsigned int bincount, unsigned int binwidth, f
         fprintf(stderr,"Malloc failure in histogram init\n");
         return(NULL);
     }
+    if (!bincount)
+	bincount = 1000;
     this->mybins = (unsigned int *) malloc(sizeof(unsigned int) * bincount);
     if (!this->mybins) {
         fprintf(stderr,"Malloc failure in histogram init b\n");
