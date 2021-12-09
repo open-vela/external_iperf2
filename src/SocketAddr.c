@@ -212,7 +212,7 @@ void SockAddr_setHostname (const char* inHostname, iperf_sockaddr *inSockAddr, i
 	}
     }
 #if HAVE_IPV6
-    if (!found) {
+    if (!found && !isIPv6) {
 	hints.ai_family = AF_INET6;
 	ret_ga = getaddrinfo(inHostname, NULL, &hints, &res);
 	if (ret_ga == 0) {
