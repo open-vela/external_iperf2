@@ -158,7 +158,7 @@ void server_spawn(struct thread_Settings *thread) {
         theServer->RunUDP();
     } else {
 	if (isBounceBack(thread)) {
-	    theServer->RunTcpBounceBack();
+	    theServer->RunBounceBackTCP();
 	} else {
 	    theServer->RunTCP();
 	}
@@ -184,11 +184,7 @@ static void clientside_client_basic (struct thread_Settings *thread, Client *the
         if ((thread->mThreads > 1) || isSumOnly(thread))
 	    Iperf_push_host(thread);
 	theClient->StartSynch();
-	if (isBounceBack(thread)) {
-	    theClient->RunBounceBackTCP();
-	} else {
-	    theClient->Run();
-	}
+	theClient->Run();
     }
 }
 
@@ -397,6 +393,17 @@ void client_init(struct thread_Settings *clients) {
 	}
 	itr->runNow = next;
 	itr = next;
+    }
+    if (isBounceBack(clients) && isCongest(clients)) {
+	Settings_Copy(clients, &next, 1);
+	if (next != NULL) {
+	    setFullDuplex(next);
+	    unsetBounceBack(next);
+	    unsetEnhanced(next);
+	    next->mTOS = 0;
+	    itr->runNow = next;
+	    itr = next;
+	}
     }
 #else
     if (next != NULL) {
