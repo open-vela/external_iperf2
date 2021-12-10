@@ -288,9 +288,10 @@ inline bool Server::ReadBBWithRXTimestamp () {
 	reportstruct->packetTime.tv_sec = now.getSecs();
 	reportstruct->packetTime.tv_usec = now.getUsecs();
 	reportstruct->emptyreport=0;
+	reportstruct->packetLen = mSettings->mBounceBackBytes;
+	// write the rx timestamp back into the payload
 	bbhdr->bbsendtorx_ts.sec = htonl(reportstruct->packetTime.tv_sec);
 	bbhdr->bbsendtorx_ts.usec = htonl(reportstruct->packetTime.tv_usec);
-	reportstruct->packetLen = mSettings->mBounceBackBytes;
 	rc = true;
     } else if (n==0) {
 	peerclose = true;
