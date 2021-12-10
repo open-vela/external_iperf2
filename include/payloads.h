@@ -223,7 +223,7 @@ struct bounceback_hdr {
     uint16_t tos;
     struct bb_ts bbsendtotx_ts;
     struct bb_ts bbsendtorx_ts;
-    struct bb_ts bbsendfro_ts;
+    struct bb_ts bbsendfrotx_ts;
     uint32_t bbhold; // up to here is mandatory
     uint32_t bbrtt;
     struct bb_ts bbread_ts;
