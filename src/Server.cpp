@@ -336,8 +336,11 @@ void Server::RunBounceBackTCP () {
 		delay_loop(mSettings->mBounceBackHold);
 	    }
 	    now.setnow();
-	    bbhdr->bbsendtotx_ts.sec = htonl(now.getSecs());
-	    bbhdr->bbsendtotx_ts.usec = htonl(now.getUsecs());
+	    bbhdr->bbsendfrotx_ts.sec = htonl(now.getSecs());
+	    bbhdr->bbsendfrotx_ts.usec = htonl(now.getUsecs());
+	    if (mSettings->mTOS) {
+	        bbhdr->tos = htons((uint16_t)(mSettings->mTOS & 0xFF));
+	    }
 	    if ((n = writen(mySocket, mSettings->mBuf, mSettings->mBounceBackBytes, &reportstruct->writecnt)) == mSettings->mBounceBackBytes) {
 		reportstruct->emptyreport=0;
 		reportstruct->packetLen += n;
