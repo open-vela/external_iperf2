@@ -849,6 +849,8 @@ void reporter_handle_packet_bb_client (struct ReporterData *data, struct ReportS
 	double bbowdto = TimeDifference(packet->sentTimeRX, packet->sentTime);
 	double bbowdfro = TimeDifference(packet->packetTime, packet->sentTimeTX);
 	double asym = bbowdfro - bbowdto;
+	fprintf(stderr, "BB Debug: ctx=%lx.%lx srx=%lx.%lx stx=%lx.%lx crx=%lx.%lx\n", packet->sentTime.tv_sec, packet->sentTime.tv_usec, packet->sentTimeRX.tv_sec, packet->sentTimeRX.tv_usec, packet->sentTimeTX.tv_sec, packet->sentTimeTX.tv_usec, packet->packetTime.tv_sec, packet->packetTime.tv_usec);
+	fprintf(stderr, "BB Debug: ctx=%ld.%ld srx=%ld.%ld stx=%ld.%ld crx=%ld.%ld\n", packet->sentTime.tv_sec, packet->sentTime.tv_usec, packet->sentTimeRX.tv_sec, packet->sentTimeRX.tv_usec, packet->sentTimeTX.tv_sec, packet->sentTimeTX.tv_usec, packet->packetTime.tv_sec, packet->packetTime.tv_usec);
 	reporter_update_mmm(&stats->bbrtt.current, bbrtt);
 	reporter_update_mmm(&stats->bbrtt.total, bbrtt);
 	reporter_update_mmm(&stats->bbowdto.total, bbowdto);
