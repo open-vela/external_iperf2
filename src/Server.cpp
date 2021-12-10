@@ -290,8 +290,9 @@ inline bool Server::ReadBBWithRXTimestamp () {
 	reportstruct->emptyreport=0;
 	reportstruct->packetLen = mSettings->mBounceBackBytes;
 	// write the rx timestamp back into the payload
-	bbhdr->bbsendtorx_ts.sec = htonl(reportstruct->packetTime.tv_sec);
-	bbhdr->bbsendtorx_ts.usec = htonl(reportstruct->packetTime.tv_usec);
+	bbhdr->bbserverRx_ts.sec = htonl(reportstruct->packetTime.tv_sec);
+	bbhdr->bbserverRx_ts.usec = htonl(reportstruct->packetTime.tv_usec);
+	reportstruct->packetLen = mSettings->mBounceBackBytes;
 	rc = true;
     } else if (n==0) {
 	peerclose = true;
@@ -337,8 +338,8 @@ void Server::RunBounceBackTCP () {
 		delay_loop(mSettings->mBounceBackHold);
 	    }
 	    now.setnow();
-	    bbhdr->bbsendfrotx_ts.sec = htonl(now.getSecs());
-	    bbhdr->bbsendfrotx_ts.usec = htonl(now.getUsecs());
+	    bbhdr->bbserverTx_ts.sec = htonl(now.getSecs());
+	    bbhdr->bbserverTx_ts.usec = htonl(now.getUsecs());
 	    if (mSettings->mTOS) {
 	        bbhdr->tos = htons((uint16_t)(mSettings->mTOS & 0xFF));
 	    }

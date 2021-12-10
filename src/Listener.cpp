@@ -1197,8 +1197,8 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 	    server->mBounceBackHold = ntohl(bbhdr->bbhold);
 	    if (flags & HEADER_BBCLOCKSYNCED) {
 		setTripTime(server);
-		server->sent_time.tv_sec = ntohl(bbhdr->bbsendtotx_ts.sec);
-		server->sent_time.tv_usec = ntohl(bbhdr->bbsendtotx_ts.usec);
+		server->sent_time.tv_sec = ntohl(bbhdr->bbclientTx_ts.sec);
+		server->sent_time.tv_usec = ntohl(bbhdr->bbclientTx_ts.usec);
 	    }
 	    if (flags & HEADER_BBTOS) {
 		server->mTOS = ntohs(bbhdr->tos);
@@ -1215,8 +1215,8 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 		goto DONE;
 	    }
 	    Timestamp now;
-	    bbhdr->bbsendtorx_ts.sec = htonl(now.getSecs());
-	    bbhdr->bbsendtorx_ts.usec = htonl(now.getUsecs());
+	    bbhdr->bbserverRx_ts.sec = htonl(now.getSecs());
+	    bbhdr->bbserverRx_ts.usec = htonl(now.getUsecs());
 	} else {
 	    uint16_t upperflags = 0;
 	    int readlen;

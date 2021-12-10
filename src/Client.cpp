@@ -966,6 +966,7 @@ void Client::RunWriteEventsTCP () {
 void Client::RunBounceBackTCP () {
     int burst_id = 0;
     int writelen = mSettings->mBufLen;
+    memset(mSettings->mBuf, 0x5A, sizeof(struct bounceback_hdr));
     now.setnow();
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
@@ -990,14 +991,15 @@ void Client::RunBounceBackTCP () {
 	    if ((n = recvn(mySocket, mSettings->mBuf, mSettings->mBounceBackBytes, 0)) == mSettings->mBounceBackBytes) {
 		struct bounceback_hdr *bbhdr = reinterpret_cast<struct bounceback_hdr *>(mSettings->mBuf);
 		now.setnow();
-		reportstruct->sentTimeRX.tv_sec = ntohl(bbhdr->bbsendtorx_ts.sec);
-		reportstruct->sentTimeRX.tv_usec = ntohl(bbhdr->bbsendtorx_ts.usec);
-		reportstruct->sentTimeTX.tv_sec = ntohl(bbhdr->bbsendtotx_ts.sec);
-		reportstruct->sentTimeTX.tv_usec = ntohl(bbhdr->bbsendtotx_ts.usec);
+		reportstruct->sentTimeRX.tv_sec = ntohl(bbhdr->bbserverRx_ts.sec);
+		reportstruct->sentTimeRX.tv_usec = ntohl(bbhdr->bbserverRx_ts.usec);
+		reportstruct->sentTimeTX.tv_sec = ntohl(bbhdr->bbserverTx_ts.sec);
+		reportstruct->sentTimeTX.tv_usec = ntohl(bbhdr->bbserverTx_ts.usec);
 		reportstruct->packetTime.tv_sec = now.getSecs();
 		reportstruct->packetTime.tv_usec = now.getUsecs();
 		reportstruct->packetLen += n;
 		reportstruct->emptyreport = 0;
+		fprintf(stderr, "BB CDebug:bytes=%d pt=%lx.%lx st=%lx.%lx strx=%lx.%lx sttx=%lx.%lx\n", n, reportstruct->packetTime.tv_sec, reportstruct->packetTime.tv_usec, reportstruct->sentTime.tv_sec, reportstruct->sentTime.tv_usec, reportstruct->sentTimeRX.tv_sec, reportstruct->sentTimeRX.tv_usec, reportstruct->sentTimeTX.tv_sec, reportstruct->sentTimeTX.tv_usec);
 		myReportPacket();
 	    } else if (n == 0) {
 		peerclose = true;
@@ -1373,8 +1375,12 @@ void Client::WriteTcpTxBBHdr (struct ReportStruct *reportstruct, int bbid) {
     mBuf_bb->flags = htonl(flags);
     mBuf_bb->bbsize = htonl(mSettings->mBufLen);
     mBuf_bb->bbid = htonl(bbid);
-    mBuf_bb->bbsendtotx_ts.sec = htonl(reportstruct->packetTime.tv_sec);
-    mBuf_bb->bbsendtotx_ts.usec = htonl(reportstruct->packetTime.tv_usec);
+    mBuf_bb->bbclientTx_ts.sec = htonl(reportstruct->packetTime.tv_sec);
+    mBuf_bb->bbclientTx_ts.usec = htonl(reportstruct->packetTime.tv_usec);
+    mBuf_bb->bbserverRx_ts.sec = -1;
+    mBuf_bb->bbserverRx_ts.usec = -1;
+    mBuf_bb->bbserverTx_ts.sec = -1;
+    mBuf_bb->bbserverTx_ts.usec = -1;
     mBuf_bb->bbhold = htonl(mSettings->mBounceBackHold);
 }
 
