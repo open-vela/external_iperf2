@@ -563,16 +563,9 @@ bool Server::InitTrafficLoop (void) {
     if (isServerModeTime(mSettings) || (isModeTime(mSettings) && (isServerReverse(mSettings) || isFullDuplex(mSettings) || isReverse(mSettings)))) {
 	if (isServerReverse(mSettings) || isFullDuplex(mSettings) || isReverse(mSettings))
 	   mSettings->mAmount += (SLOPSECS * 100);  // add 2 sec for slop on reverse, units are 10 ms
-#ifdef HAVE_SETITIMER
-        int err;
-        struct itimerval it;
-	memset (&it, 0, sizeof (it));
-	it.it_value.tv_sec = static_cast<int>(mSettings->mAmount / 100.0);
-	it.it_value.tv_usec = static_cast<int>(10000 * (mSettings->mAmount -
-					      it.it_value.tv_sec * 100.0));
-	err = setitimer(ITIMER_REAL, &it, NULL);
-	FAIL_errno(err != 0, "setitimer", mSettings);
-#endif
+	int end_usecs = static_cast<int>(mSettings->mAmount / 10000.0); //amount units is 10 ms
+	if (int err = set_itimer(end_usecs))
+	    FAIL_errno(err != 0, "setitimer", mSettings);
         mEndTime.setnow();
         mEndTime.add(mSettings->mAmount / 100.0);
     }
