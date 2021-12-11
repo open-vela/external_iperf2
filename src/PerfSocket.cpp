@@ -337,11 +337,15 @@ void SetSocketOptionsIPTos (struct thread_Settings *mSettings, int tos) {
 #endif
 	// set IP TOS (type-of-service) field
 	if (isOverrideTOS(mSettings) || (tos > 0)) {
-	    int  tos = tos;
-	    Socklen_t len = sizeof(tos);
+	    int reqtos = tos;
+	    Socklen_t len = sizeof(reqtos);
 	    int rc = setsockopt(mSettings->mSock, IPPROTO_IP, IP_TOS,
-				reinterpret_cast<char*>(&tos), len);
+				reinterpret_cast<char*>(&reqtos), len);
 	    WARN_errno(rc == SOCKET_ERROR, "setsockopt IP_TOS");
+	    rc = getsockopt(mSettings->mSock, IPPROTO_IP, IP_TOS,
+				reinterpret_cast<char*>(&reqtos), &len);
+	    WARN_errno(rc == SOCKET_ERROR, "getsockopt IP_TOS");
+	    WARN((reqtos != tos), "IP_TOS setting failed");
 	}
 #endif
 }
