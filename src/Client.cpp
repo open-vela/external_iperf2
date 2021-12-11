@@ -967,6 +967,17 @@ void Client::RunBounceBackTCP () {
     int burst_id = 0;
     int writelen = mSettings->mBufLen;
     memset(mSettings->mBuf, 0x5A, sizeof(struct bounceback_hdr));
+    if (mSettings->mInterval && (mSettings->mIntervalMode == kInterval_Time)) {
+	int sotimer = static_cast<int>(round(mSettings->mInterval / 2.0));
+	SetSocketOptionsReceiveTimeout(mSettings, sotimer);
+	SetSocketOptionsSendTimeout(mSettings, sotimer);
+    }
+    if (isModeTime(mSettings)) {
+	int end_usecs  (mSettings->mAmount * 10000); //amount units is 10 ms
+	if (int err = set_itimer(end_usecs)) {
+	    FAIL_errno(err != 0, "setitimer", mSettings);
+	}
+    }
     now.setnow();
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
@@ -1015,6 +1026,7 @@ void Client::RunBounceBackTCP () {
 	    FAIL_errno(1, "tcp bounce-back write", mSettings);
 	}
     }
+    disarm_itimer();
     FinishTrafficActions();
 }
 /*
