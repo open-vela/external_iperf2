@@ -1010,7 +1010,6 @@ void Client::RunBounceBackTCP () {
 		reportstruct->packetTime.tv_usec = now.getUsecs();
 		reportstruct->packetLen += n;
 		reportstruct->emptyreport = 0;
-		fprintf(stderr, "BB CDebug:bytes=%d pt=%lx.%lx st=%lx.%lx strx=%lx.%lx sttx=%lx.%lx\n", n, reportstruct->packetTime.tv_sec, reportstruct->packetTime.tv_usec, reportstruct->sentTime.tv_sec, reportstruct->sentTime.tv_usec, reportstruct->sentTimeRX.tv_sec, reportstruct->sentTimeRX.tv_usec, reportstruct->sentTimeTX.tv_sec, reportstruct->sentTimeTX.tv_usec);
 		myReportPacket();
 	    } else if (n == 0) {
 		peerclose = true;
@@ -1377,7 +1376,12 @@ inline void Client::WriteTcpTxHdr (struct ReportStruct *reportstruct, int burst_
 void Client::WriteTcpTxBBHdr (struct ReportStruct *reportstruct, int bbid) {
     struct bounceback_hdr * mBuf_bb = reinterpret_cast<struct bounceback_hdr *>(mSettings->mBuf);
     // store packet ID into buffer
-    uint32_t bbflags = isTripTime(mSettings) ? (HEADER_BOUNCEBACK | HEADER_BBCLOCKSYNCED) : HEADER_BOUNCEBACK;
+    uint32_t flags = HEADER_BOUNCEBACK;
+    uint32_t bbflags = 0x0;
+    mBuf_bb->flags = htonl(flags);
+    if (isTripTime(mSettings)) {
+	bbflags |= HEADER_BBCLOCKSYNCED;
+    }
     if (mSettings->mTOS) {
 	bbflags |= HEADER_BBTOS;
 	mBuf_bb->tos = htons((mSettings->mTOS & 0xFF));
