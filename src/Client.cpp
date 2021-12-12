@@ -971,6 +971,10 @@ void Client::RunBounceBackTCP () {
 	int sotimer = static_cast<int>(round(mSettings->mInterval / 2.0));
 	SetSocketOptionsReceiveTimeout(mSettings, sotimer);
 	SetSocketOptionsSendTimeout(mSettings, sotimer);
+    } else if (isModeTime(mSettings)) {
+	int sotimer = static_cast<int>(round(mSettings->mAmount * 10000) / 2);
+	SetSocketOptionsReceiveTimeout(mSettings, sotimer);
+	SetSocketOptionsSendTimeout(mSettings, sotimer);
     }
     if (isModeTime(mSettings)) {
 	int end_usecs  (mSettings->mAmount * 10000); //amount units is 10 ms
