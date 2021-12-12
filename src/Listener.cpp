@@ -1184,96 +1184,131 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 	struct client_tcp_testhdr *hdr = reinterpret_cast<struct client_tcp_testhdr *>(server->mBuf);
 	uint32_t flags = ntohl(hdr->base.flags);
 	if (flags & HEADER_BOUNCEBACK) {
+	    struct bounceback_hdr *bbhdr = reinterpret_cast<struct bounceback_hdr *>(server->mBuf);
 	    setBounceBack(server);
-	}
-	uint16_t upperflags = 0;
-	int readlen;
-	// figure out the length of the test header
-	if ((readlen = Settings_ClientTestHdrLen(flags, server)) > 0) {
-	    // read the test settings passed to the server by the client
-	    nread += recvn(server->mSock, readptr, (readlen - (int) sizeof(uint32_t)), 0);
-	    FAIL_errno((nread < readlen), "read tcp test info", server);
-	    if (isPermitKey(mSettings)) {
-		if (!test_permit_key(flags, server, readlen)) {
-		    rc = false;
-		    goto DONE;
-		}
-	    } else if (flags & HEADER_KEYCHECK) {
+	    nread = recvn(server->mSock, readptr, sizeof(struct bounceback_hdr), 0);
+	    if (nread != sizeof(struct bounceback_hdr)) {
+		WARN(1, "read bounce back header failed");
 		rc = false;
-		server->mKeyCheck = false;
 		goto DONE;
 	    }
-	    server->firstreadbytes = nread;
-	    struct client_tcp_testhdr *hdr = reinterpret_cast<struct client_tcp_testhdr*>(server->mBuf);
-	    if ((flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2)) {
-		if (flags & RUN_NOW)
-		    server->mMode = kTest_DualTest;
-		else
-		    server->mMode = kTest_TradeOff;
+	    readptr += nread;
+	    server->mBounceBackBytes = ntohl(bbhdr->bbsize);
+	    server->mBounceBackHold = ntohl(bbhdr->bbhold);
+	    uint16_t bbflags = ntohs(bbhdr->bbflags);
+	    if (bbflags & HEADER_BBCLOCKSYNCED) {
+		setTripTime(server);
+		server->sent_time.tv_sec = ntohl(bbhdr->bbclientTx_ts.sec);
+		server->sent_time.tv_usec = ntohl(bbhdr->bbclientTx_ts.usec);
 	    }
-	    if (flags & HEADER_EXTEND) {
-		upperflags = htons(hdr->extend.upperflags);
-		server->mTOS = ntohs(hdr->extend.tos);
-		server->peer_version_u = ntohl(hdr->extend.version_u);
-		server->peer_version_l = ntohl(hdr->extend.version_l);
-		if (upperflags & HEADER_ISOCH) {
-		    setIsochronous(server);
-		}
-		if (upperflags & HEADER_EPOCH_START) {
-		    server->txstart_epoch.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
-		    server->txstart_epoch.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
-		    Timestamp now;
-		    if ((abs(now.getSecs() - server->txstart_epoch.tv_sec)) > (MAXDIFFTXSTART + 1)) {
-			fprintf(stdout,"WARN: ignore --txstart-time because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTXSTART);
-			unsetTxStartTime(server);
-		    } else {
-			setTxStartTime(server);
-		    }
-		}
-		if (upperflags & HEADER_TRIPTIME) {
-		    Timestamp now;
-		    server->sent_time.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
-		    server->sent_time.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
-		    if (!isTxStartTime(server) && ((abs(now.getSecs() - server->sent_time.tv_sec)) > (MAXDIFFTIMESTAMPSECS + 1))) {
-			fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
-		    } else {
-			setTripTime(server);
-			setEnhanced(server);
-		    }
-		}
-		if (upperflags & HEADER_PERIODICBURST) {
-		    setEnhanced(server);
-		    setFrameInterval(server);
-		    setPeriodicBurst(server);
-		    {
-			struct client_tcp_testhdr *hdr = reinterpret_cast<struct client_tcp_testhdr *>(server->mBuf);
-			server->mFPS = ntohl(hdr->isoch_settings.FPSl);
-			server->mFPS += ntohl(hdr->isoch_settings.FPSu) / static_cast<double>(rMillion);
-		    }
-		    if (!server->mFPS) {
-			server->mFPS = 1.0;
-		    }
-		}
-		if (flags & HEADER_VERSION2) {
-		    if (upperflags & HEADER_FULLDUPLEX) {
-			setFullDuplex(server);
-			setServerReverse(server);
-		    }
-		    if (upperflags & HEADER_REVERSE) {
-			server->mThreadMode=kMode_Client;
-			setServerReverse(server);
-		    }
-		}
-#if HAVE_DECL_TCP_NOTSENT_LOWAT
-		if ((isServerReverse(server) || isFullDuplex(server)) && (upperflags & HEADER_WRITEPREFETCH)) {
-		    server->mWritePrefetch = ntohl(hdr->extend.TCPWritePrefetch);
-		    if (server->mWritePrefetch > 0) {
-			setWritePrefetch(server);
-		    }
-		}
+	    if (bbflags & HEADER_BBTOS) {
+		server->mTOS = ntohs(bbhdr->tos);
+	    }
+#if HAVE_DECL_TCP_QUICKACK
+	    if (bbflags & HEADER_BBQUICKACK) {
+		setTcpQuickAck(server);
+	    }
 #endif
-		if (upperflags & HEADER_BOUNCEBACK) {
-		    setBounceBack(server);
+	    int remaining =  server->mBounceBackBytes - (sizeof(struct bounceback_hdr) + sizeof(uint32_t));
+	    nread = recvn(server->mSock, readptr, remaining, 0);
+	    if (nread != remaining) {
+		WARN(1, "read bounce back payload failed");
+		rc = false;
+		goto DONE;
+	    }
+	    Timestamp now;
+	    bbhdr->bbserverRx_ts.sec = htonl(now.getSecs());
+	    bbhdr->bbserverRx_ts.usec = htonl(now.getUsecs());
+	} else {
+	    uint16_t upperflags = 0;
+	    int readlen;
+	    // figure out the length of the test header
+	    if ((readlen = Settings_ClientTestHdrLen(flags, server)) > 0) {
+		// read the test settings passed to the server by the client
+		nread += recvn(server->mSock, readptr, (readlen - (int) sizeof(uint32_t)), 0);
+		FAIL_errno((nread < readlen), "read tcp test info", server);
+		if (isPermitKey(mSettings)) {
+		    if (!test_permit_key(flags, server, readlen)) {
+			rc = false;
+			goto DONE;
+		    }
+		} else if (flags & HEADER_KEYCHECK) {
+		    rc = false;
+		    server->mKeyCheck = false;
+		    goto DONE;
+		}
+		server->firstreadbytes = nread;
+		struct client_tcp_testhdr *hdr = reinterpret_cast<struct client_tcp_testhdr*>(server->mBuf);
+		if ((flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2)) {
+		    if (flags & RUN_NOW)
+			server->mMode = kTest_DualTest;
+		    else
+			server->mMode = kTest_TradeOff;
+		}
+		if (flags & HEADER_EXTEND) {
+		    upperflags = htons(hdr->extend.upperflags);
+		    server->mTOS = ntohs(hdr->extend.tos);
+		    server->peer_version_u = ntohl(hdr->extend.version_u);
+		    server->peer_version_l = ntohl(hdr->extend.version_l);
+		    if (upperflags & HEADER_ISOCH) {
+			setIsochronous(server);
+		    }
+		    if (upperflags & HEADER_EPOCH_START) {
+			server->txstart_epoch.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
+			server->txstart_epoch.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
+			Timestamp now;
+			if ((abs(now.getSecs() - server->txstart_epoch.tv_sec)) > (MAXDIFFTXSTART + 1)) {
+			    fprintf(stdout,"WARN: ignore --txstart-time because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTXSTART);
+			    unsetTxStartTime(server);
+			} else {
+			    setTxStartTime(server);
+			}
+		    }
+		    if (upperflags & HEADER_TRIPTIME) {
+			Timestamp now;
+			server->sent_time.tv_sec = ntohl(hdr->start_fq.start_tv_sec);
+			server->sent_time.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
+			if (!isTxStartTime(server) && ((abs(now.getSecs() - server->sent_time.tv_sec)) > (MAXDIFFTIMESTAMPSECS + 1))) {
+			    fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
+			} else {
+			    setTripTime(server);
+			    setEnhanced(server);
+			}
+		    }
+		    if (upperflags & HEADER_PERIODICBURST) {
+			setEnhanced(server);
+			setFrameInterval(server);
+			setPeriodicBurst(server);
+			{
+			    struct client_tcp_testhdr *hdr = reinterpret_cast<struct client_tcp_testhdr *>(server->mBuf);
+			    server->mFPS = ntohl(hdr->isoch_settings.FPSl);
+			    server->mFPS += ntohl(hdr->isoch_settings.FPSu) / static_cast<double>(rMillion);
+			}
+			if (!server->mFPS) {
+			    server->mFPS = 1.0;
+			}
+		    }
+		    if (flags & HEADER_VERSION2) {
+			if (upperflags & HEADER_FULLDUPLEX) {
+			    setFullDuplex(server);
+			    setServerReverse(server);
+			}
+			if (upperflags & HEADER_REVERSE) {
+			    server->mThreadMode=kMode_Client;
+			    setServerReverse(server);
+			}
+		    }
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+		    if ((isServerReverse(server) || isFullDuplex(server)) && (upperflags & HEADER_WRITEPREFETCH)) {
+			server->mWritePrefetch = ntohl(hdr->extend.TCPWritePrefetch);
+			if (server->mWritePrefetch > 0) {
+			    setWritePrefetch(server);
+			}
+		    }
+#endif
+		    if (upperflags & HEADER_BOUNCEBACK) {
+			setBounceBack(server);
+		    }
 		}
 	    }
 	}
