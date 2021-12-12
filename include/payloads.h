@@ -73,9 +73,6 @@ extern "C" {
 #define HEADER_EXTEND        0x40000000
 #define HEADER_UDPTESTS      0x20000000
 #define HEADER_BOUNCEBACK    0x10000000
-#define HEADER_BBCLOCKSYNCED 0x01000000 // used in the bb header only
-#define HEADER_BBTOS         0x02000000
-#define HEADER_BBQUICKACK    0x04000000
 #define HEADER_SEQNO64B      0x08000000
 #define HEADER_VERSION2      0x04000000
 #define HEADER_V2PEERDETECT  0x02000000
@@ -89,6 +86,11 @@ extern "C" {
 #define SERVER_HEADER_EXTEND 0x40000000
 #define RUN_NOW              0x00000001
 #define HEADER16_SMALL_TRIPTIMES 0x0002 // use is 16 bits and not 32 bits
+
+// Bounceback flag
+#define HEADER_BBQUICKACK    0x8000
+#define HEADER_BBCLOCKSYNCED 0x4000 // used in the bb header only
+#define HEADER_BBTOS         0x2000
 
 // newer flags available per HEADER_EXTEND
 // Below flags are used to pass test settings in *every* UDP packet
@@ -111,8 +113,7 @@ extern "C" {
 
 // later features
 #define HDRXACKMAX 2500000 // default 2.5 seconds, units microseconds
-#define HDRXACKMIN   10000 // default 10 ms, units microseconds
-
+#define HDRXACKMIN   10000 // default 10 ms, units microsecond
 /*
  * Structures used for test messages which
  * are exchanged between the client and the Server/Listener
@@ -220,6 +221,7 @@ struct bounceback_hdr {
     uint32_t flags;
     uint32_t bbsize;
     uint32_t bbid;
+    uint16_t bbflags;
     uint16_t tos;
     struct bb_ts bbclientTx_ts;
     struct bb_ts bbserverRx_ts;
