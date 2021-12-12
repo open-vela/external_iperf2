@@ -168,14 +168,29 @@ Enable IPv6 reception by setting the domain and socket to AF_INET6 (Can receive 
 set target bandwidth to \fIn\fR bits/sec (default 1 Mbit/sec) or
 \fIn\fR packets per sec. This may be used with TCP or UDP. Optionally, for variable loads, use format of  mean,standard deviation
 .TP
-.BR -c ", " --client " \fI\fIhost\fR | \fIhost\fR%\fIdevice\fR"
-run in client mode, connecting to \fIhost\fR  where the optional %dev will SO_BINDTODEVICE that output interface (requires root and see NOTES)
+.BR "    --bounceback "
+run a tcp bounceback test (set size with -l or --len, defaults to 100 bytes)
+.TP
+.BR "    --bounceback-congest "
+request a concurrent full-duplex TCP stream
+.TP
+.BR "    --bounceback-hold " \fIn\fR
+request the server to insert a delay of n milliseconds between its read and write (default is no delay)
+.TP
+.BR "    --bounceback-period " \fIn\fR
+request the client schedule a send every n milliseconds (w/o option bouncebacks are immediately scheduled. With option default vale is one second.)
+.TP
+.BR "    --bounceback-no-quickack "
+request the server not set the TCP_QUICKACK socket option (disabling TCP ACK delays) during a bounceback test (see NOTES)
 .TP
 .BR "    --burst-period " \fIn\fR
 Set the burst period in seconds. Defaults to one second. (Note: assumed use case is low duty cycle traffic bursts)
 .TP
 .BR "    --burst-size " \fIn\fR
 Set the burst size in bytes. Defaults to 1M if no value is given.
+.BR -c ", " --client " \fI\fIhost\fR | \fIhost\fR%\fIdevice\fR"
+run in client mode, connecting to \fIhost\fR  where the optional %dev will SO_BINDTODEVICE that output interface (requires root and see NOTES)
+.TP
 .TP
 .BR "    --connect-only[=" \fIn\fR "]"
 only perform a TCP connect (or 3WHS) without any data transfer, useful to measure TCP connect() times. Optional value of n is the total number of connects to do (zero is run forever.) Note that -i will rate limit the connects where -P will create bursts and -t will end the client and hence end its connect attempts.
@@ -818,6 +833,9 @@ rate. The metric is scaled to assist with human readability.
 .P
 .B Multicast:
 Iperf 2 supports multicast with a couple of caveats. First, multicast streams cannot take advantage of the -P option. The server will serialize multicast streams. Also, it's highly encouraged to use a -t on a server that will be used for multicast clients. That is because the single end of traffic packet sent from client to server may get lost and there are no redundant end of traffic packets.  Setting -t on the server will kill the server thread in the event this packet is indeed lost.
+.P
+.B TCP_QUICACK:
+The TCP_QUICKACK socket option will be enabled during bounceback tests when the bounceback-hold is also set to a non-zero value. The socket option is applied after every read() on the server and before the hold delay call. It's not applied on the client. It's not supported (yet) for other TCP traffic tests. Use --bounceback-no-quickack to disable TCP ack delays per the socket.
 .P
 .B Fast Sampling:
 Use

@@ -171,7 +171,7 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
     nleft = inLen;
 #if (HAVE_DECL_MSG_PEEK)
     if (flags & MSG_PEEK) {
-	while (nleft != nread) {
+	while ((nleft != nread) && !sInterupted) {
 	    nread = recv(inSock, ptr, nleft, flags);
 	    switch (nread) {
 	    case SOCKET_ERROR :
@@ -198,7 +198,7 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
     } else
 #endif
     {
-	while (nleft >  0) {
+	while ((nleft > 0) && !sInterupted) {
 #if (HAVE_DECL_MSG_WAITALL)
 	    nread = recv(inSock, ptr, nleft, MSG_WAITALL);
 #else
@@ -258,7 +258,7 @@ int writen (int inSock, const void *inBuf, int inLen, int *count) {
     nwritten = 0;
     *count = 0;
 
-    while (nleft > 0) {
+    while ((nleft > 0) && !sInterupted) {
         nwritten = write(inSock, ptr, nleft);
 	(*count)++;
 	switch (nwritten) {

@@ -279,7 +279,101 @@ void Server::RunTCP () {
     FreeReport(myJob);
 }
 
-void Server::RunTcpBounceBack () {
+inline bool Server::ReadBBWithRXTimestamp () {
+    bool rc = false;
+    int n;
+    if ((n = recvn(mySocket, mSettings->mBuf, mSettings->mBounceBackBytes, 0)) == mSettings->mBounceBackBytes) {
+	struct bounceback_hdr *bbhdr = reinterpret_cast<struct bounceback_hdr *>(mSettings->mBuf);
+	now.setnow();
+	reportstruct->packetTime.tv_sec = now.getSecs();
+	reportstruct->packetTime.tv_usec = now.getUsecs();
+	reportstruct->emptyreport=0;
+	reportstruct->packetLen = mSettings->mBounceBackBytes;
+	// write the rx timestamp back into the payload
+	bbhdr->bbserverRx_ts.sec = htonl(reportstruct->packetTime.tv_sec);
+	bbhdr->bbserverRx_ts.usec = htonl(reportstruct->packetTime.tv_usec);
+	reportstruct->packetLen = mSettings->mBounceBackBytes;
+	rc = true;
+    } else if (n==0) {
+	peerclose = true;
+    } else {
+	reportstruct->emptyreport=1;
+    }
+    return rc;
+}
+
+void Server::RunBounceBackTCP () {
+    if (!InitTrafficLoop())
+	return;
+#if HAVE_DECL_TCP_NODELAY
+    {
+	int nodelay = 1;
+	// set TCP nodelay option
+	int rc = setsockopt(mySocket, IPPROTO_TCP, TCP_NODELAY,
+			    reinterpret_cast<char*>(&nodelay), sizeof(nodelay));
+	WARN_errno(rc == SOCKET_ERROR, "setsockopt BB TCP_NODELAY");
+	setNoDelay(mSettings);
+    }
+#endif
+    if (mSettings->mInterval && (mSettings->mIntervalMode == kInterval_Time)) {
+	int sotimer = static_cast<int>(round(mSettings->mInterval / 2.0));
+	SetSocketOptionsSendTimeout(mSettings, sotimer);
+    } else if (isModeTime(mSettings)) {
+	int sotimer = static_cast<int>(round(mSettings->mAmount * 10000) / 2);
+	SetSocketOptionsSendTimeout(mSettings, sotimer);
+    }
+    myReport->info.ts.prevsendTime = myReport->info.ts.startTime;
+    now.setnow();
+    reportstruct->packetTime.tv_sec = now.getSecs();
+    reportstruct->packetTime.tv_usec = now.getUsecs();
+    reportstruct->packetLen = mSettings->mBounceBackBytes;
+    while (InProgress()) {
+	int n;
+	reportstruct->emptyreport=1;
+	do {
+	    struct bounceback_hdr *bbhdr = reinterpret_cast<struct bounceback_hdr *>(mSettings->mBuf);
+	    if (mSettings->mBounceBackHold) {
+#if HAVE_DECL_TCP_QUICKACK
+		if (isTcpQuickAck(mSettings)) {
+		    int opt = 1;
+		    Socklen_t len = sizeof(opt);
+		    int rc = setsockopt(mySocket, IPPROTO_TCP, TCP_QUICKACK,
+					reinterpret_cast<char*>(&opt), len);
+		    WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_QUICKACK");
+		}
+#endif
+		delay_loop(mSettings->mBounceBackHold);
+	    }
+	    now.setnow();
+	    bbhdr->bbserverTx_ts.sec = htonl(now.getSecs());
+	    bbhdr->bbserverTx_ts.usec = htonl(now.getUsecs());
+	    if (mSettings->mTOS) {
+	        bbhdr->tos = htons((uint16_t)(mSettings->mTOS & 0xFF));
+	    }
+	    if ((n = writen(mySocket, mSettings->mBuf, mSettings->mBounceBackBytes, &reportstruct->writecnt)) == mSettings->mBounceBackBytes) {
+		reportstruct->emptyreport=0;
+		reportstruct->packetLen += n;
+		ReportPacket(myReport, reportstruct);
+	    } else {
+		break;
+	    }
+	} while (ReadBBWithRXTimestamp());
+    }
+    disarm_itimer();
+    // stop timing
+    now.setnow();
+    reportstruct->packetTime.tv_sec = now.getSecs();
+    reportstruct->packetTime.tv_usec = now.getUsecs();
+    reportstruct->packetLen = 0;
+    if (EndJob(myJob, reportstruct)) {
+#if HAVE_THREAD_DEBUG
+	thread_debug("tcp close sock=%d", mySocket);
+#endif
+	int rc = close(mySocket);
+	WARN_errno(rc == SOCKET_ERROR, "server close");
+    }
+    Iperf_remove_host(mSettings);
+    FreeReport(myJob);
 }
 
 void Server::InitKernelTimeStamping () {
@@ -473,19 +567,14 @@ bool Server::InitTrafficLoop (void) {
     if (setfullduplexflag)
 	SetFullDuplexReportStartTime();
 
-    if (isServerModeTime(mSettings) || (isModeTime(mSettings) && (isServerReverse(mSettings) || isFullDuplex(mSettings) || isReverse(mSettings)))) {
+    if (isServerModeTime(mSettings) || (isModeTime(mSettings) && (isBounceBack(mSettings) || isServerReverse(mSettings) || isFullDuplex(mSettings) || isReverse(mSettings)))) {
+
 	if (isServerReverse(mSettings) || isFullDuplex(mSettings) || isReverse(mSettings))
 	   mSettings->mAmount += (SLOPSECS * 100);  // add 2 sec for slop on reverse, units are 10 ms
-#ifdef HAVE_SETITIMER
-        int err;
-        struct itimerval it;
-	memset (&it, 0, sizeof (it));
-	it.it_value.tv_sec = static_cast<int>(mSettings->mAmount / 100.0);
-	it.it_value.tv_usec = static_cast<int>(10000 * (mSettings->mAmount -
-					      it.it_value.tv_sec * 100.0));
-	err = setitimer(ITIMER_REAL, &it, NULL);
-	FAIL_errno(err != 0, "setitimer", mSettings);
-#endif
+
+	int end_usecs  (mSettings->mAmount * 10000); //amount units is 10 ms
+	if (int err = set_itimer(end_usecs))
+	    FAIL_errno(err != 0, "setitimer", mSettings);
         mEndTime.setnow();
         mEndTime.add(mSettings->mAmount / 100.0);
     }

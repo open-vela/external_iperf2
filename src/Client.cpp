@@ -282,7 +282,7 @@ int Client::StartSynch () {
     // check for an epoch based start time
     reportstruct->packetLen = 0;
     if (!isServerReverse(mSettings)) {
-	if (!isCompat(mSettings)) {
+	if (!isCompat(mSettings) && !isBounceBack(mSettings)) {
 	    reportstruct->packetLen = SendFirstPayload();
 	    // Reverse UDP tests need to retry "first sends" a few times
 	    // before going to server or read mode
@@ -331,11 +331,11 @@ int Client::StartSynch () {
 	// Near congestion and peridiodic need sampling on every report packet
 	if (isNearCongest(mSettings) || isPeriodicBurst(mSettings)) {
 	    myReport->info.isEnableTcpInfo = true;
-	    myReport->info.ts.nextTCPStampleTime.tv_sec = 0;
-	    myReport->info.ts.nextTCPStampleTime.tv_usec = 0;
-	} else if (isEnhanced(mSettings)) {
+	    myReport->info.ts.nextTCPSampleTime.tv_sec = 0;
+	    myReport->info.ts.nextTCPSampleTime.tv_usec = 0;
+	} else if (isEnhanced(mSettings) || isBounceBack(mSettings)) {
 	    myReport->info.isEnableTcpInfo = true;
-	    myReport->info.ts.nextTCPStampleTime = myReport->info.ts.nextTime;
+	    myReport->info.ts.nextTCPSampleTime = myReport->info.ts.nextTime;
 	}
     }
 #endif
@@ -480,6 +480,7 @@ void Client::InitTrafficLoop () {
     if (isModeTime(mSettings)) {
         mEndTime.setnow();
         mEndTime.add(mSettings->mAmount / 100.0);
+	// now.setnow(); fprintf(stderr, "DEBUG: end time set to %ld.%ld now is %ld.%ld\n", mEndTime.getSecs(), mEndTime.getUsecs(), now.getSecs(), now.getUsecs());
     }
     readAt = mSettings->mBuf;
     lastPacketTime.set(myReport->info.ts.startTime.tv_sec, myReport->info.ts.startTime.tv_usec);
@@ -530,7 +531,9 @@ void Client::Run () {
 	}
     } else {
 	// Launch the approprate TCP traffic loop
-	if (mSettings->mAppRate > 0) {
+	if (isBounceBack(mSettings)) {
+	    RunBounceBackTCP();
+	} else if (mSettings->mAppRate > 0) {
 	    RunRateLimitedTCP();
 	} else if (isNearCongest(mSettings)) {
 	    RunNearCongestionTCP();
@@ -580,6 +583,7 @@ void Client::RunTCP () {
 		if (isPeriodicBurst(mSettings)) {
 		    // low duty cycle traffic needs special event handling
 		    now.setnow();
+		    myReport->info.ts.prevsendTime = reportstruct->packetTime;
 		    reportstruct->packetTime.tv_sec = now.getSecs();
 		    reportstruct->packetTime.tv_usec = now.getUsecs();
 		    if (!InProgress()) {
@@ -654,6 +658,7 @@ void Client::RunTCP () {
 		    reportstruct->transit_ready = 0;
 		} else {
 		    reportstruct->transit_ready = 1;
+		    reportstruct->prevSentTime = myReport->info.ts.prevsendTime;
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
 		    if (isTcpDrain(mSettings)) {
 			tcp_drain();
@@ -959,7 +964,73 @@ void Client::RunWriteEventsTCP () {
 }
 #endif
 void Client::RunBounceBackTCP () {
-
+    int burst_id = 0;
+    int writelen = mSettings->mBufLen;
+    memset(mSettings->mBuf, 0x5A, sizeof(struct bounceback_hdr));
+    if (mSettings->mInterval && (mSettings->mIntervalMode == kInterval_Time)) {
+	int sotimer = static_cast<int>(round(mSettings->mInterval / 2.0));
+	SetSocketOptionsReceiveTimeout(mSettings, sotimer);
+	SetSocketOptionsSendTimeout(mSettings, sotimer);
+    } else if (isModeTime(mSettings)) {
+	int sotimer = static_cast<int>(round(mSettings->mAmount * 10000) / 2);
+	SetSocketOptionsReceiveTimeout(mSettings, sotimer);
+	SetSocketOptionsSendTimeout(mSettings, sotimer);
+    }
+    if (isModeTime(mSettings)) {
+	int end_usecs  (mSettings->mAmount * 10000); //amount units is 10 ms
+	if (int err = set_itimer(end_usecs)) {
+	    FAIL_errno(err != 0, "setitimer", mSettings);
+	}
+    }
+    now.setnow();
+    reportstruct->packetTime.tv_sec = now.getSecs();
+    reportstruct->packetTime.tv_usec = now.getUsecs();
+    while (InProgress()) {
+	int n;
+	reportstruct->writecnt = 0;
+	if (framecounter) {
+	    burst_id = framecounter->wait_tick();
+	} else {
+	    burst_id++;
+	}
+	now.setnow();
+	reportstruct->sentTime.tv_sec = now.getSecs();
+	reportstruct->sentTime.tv_usec = now.getUsecs();
+	WriteTcpTxBBHdr(reportstruct, burst_id);
+	myReport->info.ts.prevsendTime = reportstruct->sentTime;
+	reportstruct->packetLen = writen(mySocket, mSettings->mBuf, writelen, &reportstruct->writecnt);
+	if (reportstruct->packetLen == writelen) {
+	    reportstruct->emptyreport = 0;
+	    totLen += reportstruct->packetLen;
+	    reportstruct->errwrite=WriteNoErr;
+	    if ((n = recvn(mySocket, mSettings->mBuf, mSettings->mBounceBackBytes, 0)) == mSettings->mBounceBackBytes) {
+		struct bounceback_hdr *bbhdr = reinterpret_cast<struct bounceback_hdr *>(mSettings->mBuf);
+		now.setnow();
+		reportstruct->sentTimeRX.tv_sec = ntohl(bbhdr->bbserverRx_ts.sec);
+		reportstruct->sentTimeRX.tv_usec = ntohl(bbhdr->bbserverRx_ts.usec);
+		reportstruct->sentTimeTX.tv_sec = ntohl(bbhdr->bbserverTx_ts.sec);
+		reportstruct->sentTimeTX.tv_usec = ntohl(bbhdr->bbserverTx_ts.usec);
+		reportstruct->packetTime.tv_sec = now.getSecs();
+		reportstruct->packetTime.tv_usec = now.getUsecs();
+		reportstruct->packetLen += n;
+		reportstruct->emptyreport = 0;
+		myReportPacket();
+	    } else if (n == 0) {
+		peerclose = true;
+	    }
+	} else if ((reportstruct->packetLen < 0 ) && NONFATALTCPWRITERR(errno)) {
+	    reportstruct->packetLen = 0;
+	    reportstruct->emptyreport = 1;
+	    reportstruct->errwrite=WriteErrNoAccount;
+	    myReportPacket();
+	} else {
+	    reportstruct->errwrite=WriteErrFatal;
+	    reportstruct->packetLen = -1;
+	    FAIL_errno(1, "tcp bounce-back write", mSettings);
+	}
+    }
+    disarm_itimer();
+    FinishTrafficActions();
 }
 /*
  * UDP send loop
@@ -1305,6 +1376,35 @@ inline void Client::WriteTcpTxHdr (struct ReportStruct *reportstruct, int burst_
 //    printf("**** Write tcp burst header size= %d id = %d\n", burst_size, burst_id);
 }
 
+// See payloads.h
+void Client::WriteTcpTxBBHdr (struct ReportStruct *reportstruct, int bbid) {
+    struct bounceback_hdr * mBuf_bb = reinterpret_cast<struct bounceback_hdr *>(mSettings->mBuf);
+    // store packet ID into buffer
+    uint32_t flags = HEADER_BOUNCEBACK;
+    uint32_t bbflags = 0x0;
+    mBuf_bb->flags = htonl(flags);
+    if (isTripTime(mSettings)) {
+	bbflags |= HEADER_BBCLOCKSYNCED;
+    }
+    if (mSettings->mTOS) {
+	bbflags |= HEADER_BBTOS;
+	mBuf_bb->tos = htons((mSettings->mTOS & 0xFF));
+    }
+    if (isTcpQuickAck(mSettings)) {
+	bbflags |= HEADER_BBQUICKACK;
+    }
+    mBuf_bb->bbflags = htons(bbflags);
+    mBuf_bb->bbsize = htonl(mSettings->mBufLen);
+    mBuf_bb->bbid = htonl(bbid);
+    mBuf_bb->bbclientTx_ts.sec = htonl(reportstruct->packetTime.tv_sec);
+    mBuf_bb->bbclientTx_ts.usec = htonl(reportstruct->packetTime.tv_usec);
+    mBuf_bb->bbserverRx_ts.sec = -1;
+    mBuf_bb->bbserverRx_ts.usec = -1;
+    mBuf_bb->bbserverTx_ts.sec = -1;
+    mBuf_bb->bbserverTx_ts.usec = -1;
+    mBuf_bb->bbhold = htonl(mSettings->mBounceBackHold);
+}
+
 inline bool Client::InProgress (void) {
     // Read the next data block from
     // the file if it's file input
@@ -1312,6 +1412,7 @@ inline bool Client::InProgress (void) {
 	Extractor_getNextDataBlock(readAt, mSettings);
         return Extractor_canRead(mSettings) != 0;
     }
+    // fprintf(stderr, "DEBUG: SI=%d PC=%d T=%d A=%d\n", sInterupted, peerclose, (isModeTime(mSettings) && mEndTime.before(reportstruct->packetTime)), (isModeAmount(mSettings) && (mSettings->mAmount <= 0)));
     return !(sInterupted || peerclose || \
 	(isModeTime(mSettings) && mEndTime.before(reportstruct->packetTime))  ||
 	(isModeAmount(mSettings) && (mSettings->mAmount <= 0)));
