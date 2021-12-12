@@ -1195,17 +1195,19 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 	    readptr += nread;
 	    server->mBounceBackBytes = ntohl(bbhdr->bbsize);
 	    server->mBounceBackHold = ntohl(bbhdr->bbhold);
-	    if (flags & HEADER_BBCLOCKSYNCED) {
+	    uint16_t bbflags = ntohs(bbhdr->bbflags);
+	    if (bbflags & HEADER_BBCLOCKSYNCED) {
 		setTripTime(server);
 		server->sent_time.tv_sec = ntohl(bbhdr->bbclientTx_ts.sec);
 		server->sent_time.tv_usec = ntohl(bbhdr->bbclientTx_ts.usec);
 	    }
-	    if (flags & HEADER_BBTOS) {
+	    if (bbflags & HEADER_BBTOS) {
 		server->mTOS = ntohs(bbhdr->tos);
 	    }
 #if HAVE_DECL_TCP_QUICKACK
-	    if (flags & HEADER_BBQUICKACK)
+	    if (bbflags & HEADER_BBQUICKACK) {
 		setTcpQuickAck(server);
+	    }
 #endif
 	    int remaining =  server->mBounceBackBytes - (sizeof(struct bounceback_hdr) + sizeof(uint32_t));
 	    nread = recvn(server->mSock, readptr, remaining, 0);
