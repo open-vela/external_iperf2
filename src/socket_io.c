@@ -179,6 +179,7 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
 		if (FATALTCPREADERR(errno)) {
 		    WARN_errno(1, "recvn peek");
 		    nread = -1;
+		    sInterupted = 1;
 		    goto DONE;
 		}
 #ifdef HAVE_THREAD_DEBUG
@@ -210,6 +211,7 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
 		if (FATALTCPREADERR(errno)) {
 		    WARN_errno(1, "recvn");
 		    nread = -1;
+		    sInterupted = 1;
 		    goto DONE;
 		}
 #ifdef HAVE_THREAD_DEBUG
@@ -266,6 +268,7 @@ int writen (int inSock, const void *inBuf, int inLen, int *count) {
 	    if (!(errno == EINTR) || (errno == EAGAIN) || (errno == EWOULDBLOCK)) {
 		nwritten = inLen - nleft;
 		WARN_errno(1, "writen fatal");
+		sInterupted = 1;
 		goto DONE;
 	    }
 	    break;
