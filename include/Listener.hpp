@@ -64,42 +64,38 @@ class Listener;
 class Listener {
 public:
     // stores server port and TCP/UDP mode
-    Listener( thread_Settings *inSettings );
-
+    Listener(thread_Settings *inSettings);
     // destroy the server object
     ~Listener();
-
     // accepts connections and starts Servers
-    void Run( void );
+    void Run(void);
 
-    // Starts the Servers as a daemon
-    void runAsDaemon( const char *, int );
-
-    void Listen( );
-#ifdef HAVE_MULTICAST
-    void McastJoin( );
-#endif
-    void McastSetTTL( int val );
-
-    void Accept( thread_Settings *server );
-
-    void UDPSingleServer ();
-
-protected:
+private:
     int mClients;
-    char* mBuf;
     struct ether_header *eth_hdr;
     struct iphdr *ip_hdr;
     struct udphdr *udp_hdr;
-
     thread_Settings *mSettings;
     thread_Settings *server;
     Timestamp mEndTime;
-
-private:
-    int ReadClientHeader(client_hdr *hdr);
-    int ClientHeaderAck(void);
-    int L2_setup(void);
+    bool apply_client_settings_udp(thread_Settings *server);
+    bool apply_client_settings_tcp(thread_Settings *server);
+    bool apply_client_settings(thread_Settings *server);
+    int client_test_ack(thread_Settings *server);
+    void my_multicast_join(void);
+    void my_listen(void);
+    int my_accept(thread_Settings *server);
+    int udp_accept(thread_Settings *server);
+    int tuntap_accept(thread_Settings *server);
+    bool L2_setup(thread_Settings *server, int sockfd);
+    bool tap_setup(thread_Settings *server, int sockfd);
+    void UDPSingleServer(thread_Settings *server);
+    bool test_permit_key(uint32_t flags, thread_Settings *server, int keyoffset);
+#if WIN32
+    SOCKET ListenSocket;
+#else
+    int ListenSocket;
+#endif
 }; // end class Listener
 
 #endif // LISTENER_H

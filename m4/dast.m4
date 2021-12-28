@@ -1,37 +1,7 @@
 
-dnl DAST_CHECK_BOOL
-dnl Check for bool support. Defines bool, true, and false.
-
 AH_TEMPLATE([HAVE_POSIX_THREAD], [])
 AH_TEMPLATE([_REENTRANT], [])
 AH_TEMPLATE([ssize_t], [Define to "int" if <sys/types.h> does not define.])
-AH_TEMPLATE([bool])
-AH_TEMPLATE([true])
-AH_TEMPLATE([false])
-
-AC_DEFUN(DAST_CHECK_BOOL, [
-
-AC_CHECK_SIZEOF(bool)
-if test "$ac_cv_sizeof_bool" = 0 ; then
-  AC_DEFINE(bool, int)
-fi
-
-AC_CACHE_CHECK(if true is defined, ac_cv_have_true,
- [AC_LANG_SAVE
-  AC_LANG_CPLUSPLUS
-  AC_TRY_COMPILE([],
-    [unsigned int i = true],
-  ac_cv_have_true=yes,
-  ac_cv_have_true=no)
-  AC_LANG_RESTORE
- ])
-
-if test "$ac_cv_have_true" != yes ; then
-  AC_DEFINE(true,  1)
-  AC_DEFINE(false, 0)
-fi
-
-])
 
 dnl ===================================================================
 dnl DAST_REPLACE_TYPE( type, sizeof )
