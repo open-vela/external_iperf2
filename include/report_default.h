@@ -1,3 +1,4 @@
+
 /*---------------------------------------------------------------
  * Copyright (c) 1999,2000,2001,2002,2003
  * The Board of Trustees of the University of Illinois
@@ -44,52 +45,20 @@
  * http://www.ncsa.uiuc.edu
  * ________________________________________________________________
  *
- * List.h
- * by Kevin Gibbs <kgibbs@ncsa.uiuc.edu>
+ * report_default.h
+ * by Kevin Gibbs <kgibbs@nlanr.net>
  *
- * renamed to active_hosts.h
- * -------------------------------------------------------------------
- */
+ * ________________________________________________________________ */
 
-#ifndef Iperf_LIST_H
-#define Iperf_LIST_H
 
-#include "headers.h"
-#include "Settings.hpp"
-#include "Mutex.h"
+#ifndef REPORT_DEFAULT_H
+#define REPORT_DEFAULT_H
 
-/*
- * A List entry that consists of a sockaddr
- * a pointer to the Audience that sockaddr is
- * associated with and a pointer to the next
- * entry
- */
-struct Iperf_ListEntry {
-    iperf_sockaddr host;
-    struct SumReport *sum_report;
-    int thread_count;
-#if WIN32
-    SOCKET socket;
-#else
-    int socket;
-#endif
-    struct Iperf_ListEntry *next;
-};
+void reporter_printstats( Transfer_Info *stats );
+void reporter_multistats( Transfer_Info *stats );
+void reporter_serverstats( Connection_Info *conn, Transfer_Info *stats );
+void reporter_reportsettings( ReporterData *stats );
+void *reporter_reportpeer( Connection_Info *stats, int ID);
 
-struct Iperf_Table {
-    Mutex my_mutex;
-    struct Iperf_ListEntry *root;
-    int count;
-    int total_count;
-    int groupid;
-};
 
-/*
- * Functions to modify or search the list
- */
-void Iperf_initialize_active_table (void);
-void Iperf_destroy_active_table (void);
-int Iperf_push_host (struct thread_Settings *agent);
-int Iperf_push_host_port_conditional (struct thread_Settings *agent);
-void Iperf_remove_host (struct thread_Settings *agent);
-#endif
+#endif // REPORT_DEFAULT_H
