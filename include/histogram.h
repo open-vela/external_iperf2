@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------
- * Copyrighta (c) 2017
+ * Copyright (c) 2017
  * Broadcom Corporation
  * All Rights Reserved.
  *---------------------------------------------------------------
@@ -48,35 +48,28 @@
 #ifndef HISTOGRAMC_H
 #define HISTOGRAMC_H
 
-struct histogram {
+typedef struct histogram_t {
     unsigned int id;
     unsigned int *mybins;
     unsigned int bincount;
     unsigned int binwidth;
     unsigned int populationcnt;
-    int final;
-    int maxbin;
-    int fmaxbin;
-    double maxval;
-    double fmaxval;
-    struct timeval maxts;
-    struct timeval fmaxts;
     float offset;
     unsigned int cntloweroutofbounds;
     unsigned int cntupperoutofbounds;
     char *myname;
     char *outbuf;
     float units;
-    double ci_lower;
-    double ci_upper;
-    struct histogram *prev;
-};
+    unsigned short ci_lower;
+    unsigned short ci_upper;
+    struct histogram_t *prev;
+} histogram_t;
 
-extern struct histogram *histogram_init(unsigned int bincount, unsigned int binwidth, float offset,\
-				   float units, double ci_lower, double ci_upper, unsigned int id, char *name);
-extern void histogram_delete(struct histogram *h);
-extern int histogram_insert(struct histogram *h, float value, struct timeval *ts);
-extern void histogram_clear(struct histogram *h);
-extern void histogram_add(struct histogram *to, struct histogram *from);
-extern void histogram_print(struct histogram *h, double, double);
+extern histogram_t *histogram_init(unsigned int bincount, unsigned int binwidth, float offset,\
+				   float units, unsigned short ci_lower, unsigned short ci_upper, unsigned int id, char *name);
+extern void histogram_delete(histogram_t *h);
+extern int histogram_insert(histogram_t *h, float value);
+extern void histogram_clear(histogram_t *h);
+extern void histogram_add(histogram_t *to, histogram_t *from);
+extern void histogram_print(histogram_t *h, double, double, int);
 #endif // HISTOGRAMC_H

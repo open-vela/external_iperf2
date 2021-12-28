@@ -164,6 +164,16 @@ static enum {
 static char *posixly_correct;
 
 
+void
+gnu_reset(void)
+{
+    __gnu_getopt_initialized = 0;
+    gnu_optarg = NULL;
+    gnu_optind = 1;
+    gnu_opterr= 1;
+}
+
+
 /* Avoid depending on library functions or files
    whose names are inconsistent.  */
 
@@ -329,7 +339,7 @@ _gnu_getopt_initialize( int argc,
    But we pretend they're const in the prototype to be compatible
    with other systems.
 
-   LONGOPTS is a vector of `struct option' terminated by an
+   LONGOPTS is a vector of `struct gnu_option' terminated by an
    element containing a name which is zero.
 
    LONGIND returns the index in LONGOPT of the long-named option found.
@@ -343,7 +353,7 @@ int
 _gnu_getopt_internal( int argc,
                       char *const *argv,
                       const char *optstring,
-                      const struct option *longopts,
+                      const struct gnu_option *longopts,
                       int *longind,
                       int long_only ) {
     gnu_optarg = NULL;
@@ -452,8 +462,8 @@ _gnu_getopt_internal( int argc,
          && (argv[gnu_optind][1] == '-'
              || (long_only && (argv[gnu_optind][2] || !my_index (optstring, argv[gnu_optind][1])))) ) {
         char *nameend;
-        const struct option *p;
-        const struct option *pfound = NULL;
+        const struct gnu_option *p;
+        const struct gnu_option *pfound = NULL;
         int exact = 0;
         int ambig = 0;
         int indfound = -1;
@@ -592,8 +602,8 @@ _gnu_getopt_internal( int argc,
         /* Convenience. Treat POSIX -W foo same as long option --foo */
         if ( temp[0] == 'W' && temp[1] == ';' ) {
             char *nameend;
-            const struct option *p;
-            const struct option *pfound = NULL;
+            const struct gnu_option *p;
+            const struct gnu_option *pfound = NULL;
             int exact = 0;
             int ambig = 0;
             int indfound = 0;
@@ -738,7 +748,7 @@ gnu_getopt ( int argc,
              char *const *argv,
              const char *optstring ) {
     return _gnu_getopt_internal (argc, argv, optstring,
-                                 (const struct option *) 0,
+                                 (const struct gnu_option *) 0,
                                  (int *) 0,
                                  0);
 }
