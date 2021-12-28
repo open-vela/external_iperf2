@@ -5,7 +5,7 @@ dnl ===================================================================
 
 
 AC_PREREQ(2.59)
-AC_INIT(Iperf,2.0.13a)
+AC_INIT(Iperf,2.1.n)
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE()
 
@@ -14,21 +14,25 @@ AM_MAINTAINER_MODE([disable])
 
 m4_include([m4/ax_create_stdint_h.m4])
 m4_include([m4/dast.m4])
-m4_include([m4/acx_pthread.m4])
+m4_include([m4/ax_pthread.m4])
 
 AC_ARG_ENABLE(ipv6, AC_HELP_STRING([--disable-ipv6],
 	    [disable ipv6 support (default is autodetect)]),
-	ac_cv_have_ipv6=$enable_ipv6,)
+	ac_cv_have_ipv6=$enable_ipv6)
 
 AC_ARG_ENABLE(multicast, AC_HELP_STRING([--disable-multicast],
 	    [disable multicast support (default is autodetect)]),
-	ac_cv_multicast=$enable_multicast,)
+	ac_cv_multicast=$enable_multicast)
+
+AC_ARG_ENABLE(tcpstats, AC_HELP_STRING([--disable-tcpstats],
+	    [disable tcpstats support (default is autodetect)]),
+	ac_cv_tcpstats=$enable_tcpstats)
 
 AC_ARG_ENABLE(threads, AC_HELP_STRING([--disable-threads],
 	    [disable thread support (default is autodetect)]))
 
 AC_ARG_ENABLE(debuginfo, AC_HELP_STRING([--enable-debuginfo],
-	    [enable debugging info for sockets (default is no)]),
+	    [enable asserts and debugging info for sockets (default is no)]),
 	enable_debuginfo=$enableval,
 	enable_debuginfo=no)
 
@@ -38,20 +42,52 @@ AC_ARG_ENABLE(web100, AC_HELP_STRING([--disable-web100],
 AC_ARG_ENABLE(kalman, AC_HELP_STRING([--disable-kalman],
 	    [disable kalman delay tuning (default is enable)]))
 
+AC_ARG_ENABLE(role_reversal_id, AC_HELP_STRING([--disable-role-reversal-id],
+	    [disable role reversal special characters (default is enable)]))
+
+AC_ARG_ENABLE(default_localonly, AC_HELP_STRING([--enable-default-localonly],
+	    [enforce limiting test traffic to local-only network (via socket SO_DONTROUTE) as the default mode]))
+
 AC_ARG_ENABLE(seqno64b, AC_HELP_STRING([--disable-seqno64b],
 	    [disable 64 bit sequence numer support (default is enable)]))
-
-AC_ARG_ENABLE(isochronous, AC_HELP_STRING([--disable-isochronous],
-	    [disable isochronous support (default is enable)]))
-AM_CONDITIONAL([ISOCHRONOUS], [test "x${enable_isochronous}" = "xyes"])
 
 AC_ARG_ENABLE(fastsampling, AC_HELP_STRING([--enable-fastsampling],
 	    [enable support for 100 microsecond report intervals (default is disable)]))
 AM_CONDITIONAL([FASTSAMPLING], [test "x$enable_fastsampling" = "xyes"])
 
+AC_ARG_ENABLE(thread_debug, AC_HELP_STRING([--enable-thread-debug],
+	    [enable support for thread debugging (default is disable)]))
+AM_CONDITIONAL([THREAD_DEBUG], [test "x$enable_thread_debug" = "xyes"])
+
+AC_ARG_ENABLE(packet_debug, AC_HELP_STRING([--enable-packet-debug],
+	    [enable support for packet level debugging (default is disable)]))
+AM_CONDITIONAL([PACKET_DEBUG], [test "x$enable_packet_debug" = "xyes"])
+
 AC_ARG_ENABLE(checkprograms, AC_HELP_STRING([--enable-checkprograms],
 	    [enable support for building support programs such as checkdelay, checkpdfs, etc. (default is disable)]))
 AM_CONDITIONAL([CHECKPROGRAMS], [test "x$enable_checkprograms" = "xyes"])
+
+AC_ARG_ENABLE([static-bin],
+    AS_HELP_STRING([--enable-static-bin], [link iperf binary statically]),
+    [enable_static_bin=yes],
+    [:])
+AM_CONDITIONAL([ENABLE_STATIC_BIN], [test x$enable_static_bin = xno])
+
+AS_IF([test "x$enable_static_bin" = xyes],
+ [CFLAGS="$CFLAGS --static"; CXXFLAGS="$CXXFLAGS --static"; LDFLAGS="$LDFLAGS --static"]
+ [])
+
+AC_ARG_ENABLE(debug_symbols,
+AS_HELP_STRING([--enable-debug-symbols],
+               [enable debugging with symbols, default: no]),
+[case "${enableval}" in
+             yes) debug_symbols=true ;;
+             no)  debug_symbols=false ;;
+             *)   AC_MSG_ERROR([bad value ${enableval} for --enable-debug-symbols]) ;;
+esac],
+[debug_symbols=false])
+
+AM_CONDITIONAL(DEBUG_SYMBOLS, test x"$debug_symbols" = x"true")
 
 dnl AF_PACKET support
 AC_ARG_ENABLE(af-packet,
@@ -66,7 +102,29 @@ AS_IF([test "x$enable_af_packet" = "xyes"], [
    AM_CONDITIONAL([AF_PACKET], [test "x${enable_af_packet}" = "xyes"])
 ])
 
+dnl TUNTAP_TUN support
+AC_ARG_ENABLE(tuntap-tun,
+    AS_HELP_STRING([--enable-tuntap-tun], [Enable TUNTAP_TUN support [default=yes]]),,[enable_tuntap_tun=yes])
 
+AS_IF([test "x$enable_tuntap_tun" = "xyes"], [
+   AC_CHECK_DECLS([IFF_TUN],
+      AC_DEFINE([HAVE_TUNTAP_TUN],[1],[TUNTAP_TUN support is available]),
+      [enable_tuntap_tun="no"],
+      [[#include <linux/if_tun.h>]])
+   AM_CONDITIONAL([TUNTAP_TUN], [test "x${enable_tuntap_tun}" = "xyes"])
+])
+
+dnl TUNTAP_TAP support
+AC_ARG_ENABLE(tuntap-tap,
+    AS_HELP_STRING([--enable-tuntap-tap], [Enable TUNTAP_TAP support [default=yes]]),,[enable_tuntap_tap=yes])
+
+AS_IF([test "x$enable_tuntap_tap" = "xyes"], [
+   AC_CHECK_DECLS([IFF_TAP],
+      AC_DEFINE([HAVE_TUNTAP_TAP],[1],[TUNTAP_TAP support is available]),
+      [enable_tuntap_tap="no"],
+      [[#include <linux/if_tun.h>]])
+   AM_CONDITIONAL([TUNTAP_TAP], [test "x${enable_tuntap_tap}" = "xyes"])
+])
 
 dnl ===================================================================
 dnl Checks for programs
@@ -91,8 +149,8 @@ AC_CHECK_LIB([rt], [clock_gettime])
 dnl check for -lpthread
 
 if test "$enable_threads" != no; then
-  ACX_PTHREAD()
-    if test "$acx_pthread_ok" = yes; then
+  AX_PTHREAD()
+    if test "$ax_pthread_ok" = yes; then
       AC_DEFINE([HAVE_POSIX_THREAD], 1,)
       AC_DEFINE([_REENTRANT], 1,)
     fi
@@ -101,10 +159,11 @@ fi
 dnl check for -lnsl, -lsocket
 AC_SEARCH_LIBS([gethostbyname], [nsl])
 AC_SEARCH_LIBS([socket], [socket], [],
-  [AC_CHECK_HEADER([winsock2.h],
-  [AC_DEFINE([HAVE_LIBWS2_32], [1], [Define if libws2_32 exists.])
-  if test "$acx_pthread_ok" != yes; then
-  AC_DEFINE([HAVE_WIN32_THREAD], [1], [Define if using WIN32 threads])
+  [AC_CHECK_HEADER([winsock2.h],[
+
+  AC_DEFINE([HAVE_WINSOCK2_H], 1, [Define if winsock2.h exists.])
+  if test "$ax_pthread_ok" != yes; then
+  AC_DEFINE([HAVE_WIN32_THREAD], 1, [Define if using WIN32 threads])
   fi
   LIBS="-lws2_32 $LIBS"],
   [],
@@ -112,7 +171,7 @@ AC_SEARCH_LIBS([socket], [socket], [],
 
 dnl Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([arpa/inet.h libintl.h net/ethernet.h linux/ip.h linux/udp.h linux/if_packet.h linux/filter.h netdb.h netinet/in.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h signal.h ifaddrs.h])
+AC_CHECK_HEADERS([arpa/inet.h libintl.h net/ethernet.h net/if.h linux/ip.h linux/udp.h linux/if_packet.h linux/filter.h linux/if_tun.h netdb.h netinet/in.h netinet/tcp.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h signal.h ifaddrs.h])
 
 dnl ===================================================================
 dnl Checks for typedefs, structures
@@ -124,8 +183,7 @@ AC_CHECK_TYPES(ssize_t,,AC_DEFINE_UNQUOTED(ssize_t, int))
 AC_HEADER_TIME
 AC_STRUCT_TM
 
-dnl these intXX_t and u_intXX_t need to be defined to be the right size.
-AX_CREATE_STDINT_H(include/iperf-int.h)
+AC_CHECK_TYPES(int64_t)
 
 AC_CACHE_CHECK(3rd argument of accept, ac_cv_accept_arg, [
   dnl Try socklen_t (POSIX)
@@ -151,87 +209,80 @@ fi
 AC_DEFINE_UNQUOTED([Socklen_t], $ac_cv_accept_arg, [Define 3rd arg of accept])
 
 dnl Checks for library functions.
-AC_FUNC_FORK
 AC_FUNC_MEMCMP
 AC_FUNC_SELECT_ARGTYPES
 AC_TYPE_SIGNAL
 AC_FUNC_STRFTIME
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([atexit memset pthread_cleanup_push pthread_cancel select strchr strerror strtol strtoll usleep clock_gettime sched_setscheduler mlockall setitimer nanosleep clock_nanosleep])
+AC_CHECK_FUNCS([atexit memset select strchr strerror strtol strtoll usleep clock_gettime sched_setscheduler sched_yield mlockall setitimer nanosleep clock_nanosleep freopen])
 AC_REPLACE_FUNCS(snprintf inet_pton inet_ntop gettimeofday)
 AC_CHECK_DECLS([ENOBUFS, EWOULDBLOCK],[],[],[#include <errno.h>])
-AC_CHECK_DECLS([SO_TIMESTAMP, SO_SNDTIMEO, SO_MAX_PACING_RATE, SO_REUSEADDR],[],[],[#include <sys/socket.h>])
-AC_CHECK_DECLS([IPV6_TCLASS],[],[],[#include <netinet/in.h>])
+AC_CHECK_DECLS([pthread_cancel],[],[],[#include <pthread.h>])
 AC_CHECK_DECLS([CPU_SET],[],[],[
 	#define _GNU_SOURCE
 	#include <sched.h>
 	])
 AC_CHECK_DECLS([SIGALRM],[],[],[#include <signal.h>])
-AC_CHECK_MEMBERS([struct tcp_info.tcpi_total_retrans],[],[],
-			 [#include <netinet/tcp.h>])
-AC_CHECK_MEMBERS([struct sockaddr_in6.sin6_len], [],[],
-			 [#include <netinet/in.h>])
 
-dnl             Gotten from some NetBSD configure.in
-dnl		We assume that if sprintf() supports %lld or %qd,
-dnl		then all of *printf() does. If not, disable long long
-dnl		support because we don't know how to display it.
 
-AH_TEMPLATE(HAVE_QUAD_SUPPORT)
-AH_TEMPLATE(HAVE_PRINTF_QD)
+in_h='
+#ifdef HAVE_WINSOCK2_H
+#define _WIN32_WINNT 0x0501 /* use (at least) WinXP API */
+#define WIN32_LEAN_AND_MEAN /* exclude unnecesary headers */
+#include <windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#endif
+'
 
-AC_MSG_CHECKING(*printf() support for %lld)
-can_printf_longlong=no
-AC_TRY_RUN([
-        #include <stdio.h>
-        int main() {
-                char buf[100];
-                sprintf(buf, "%lld", 21726587590LL);
-                return (strcmp(buf, "21726587590"));
-        }
-        ], [
-        AC_MSG_RESULT(yes)
-        can_printf_longlong=yes
-        ], [
-        AC_MSG_RESULT(no)
-        ], [ : ])
+AC_CHECK_DECLS([AF_INET6, SO_TIMESTAMP, SO_SNDTIMEO, SO_REUSEPORT, SO_BINDTODEVICE, MSG_DONTWAIT,
+			  SO_MAX_PACING_RATE, SO_DONTROUTE, IPV6_TCLASS, IP_MULTICAST_ALL, IP_TOS,
+			  MCAST_JOIN_GROUP, MCAST_JOIN_SOURCE_GROUP, IPV6_JOIN_GROUP, IPV6_V6ONLY,
+			  IPV6_ADD_MEMBERSHIP, IPV6_MULTICAST_HOPS, MSG_PEEK, MSG_WAITALL,
+			  TCP_NODELAY, TCP_INFO, TCP_CONNECTION_INFO, TCP_WINDOW_CLAMP, TCP_QUICKACK,
+			  TCP_NOTSENT_LOWAT, IP_ADD_MEMBERSHIP, IP_ADD_SOURCE_MEMBERSHIP],[],[],[$in_h])
 
-if test $can_printf_longlong != yes; then
-        AC_MSG_CHECKING(*printf() support for %qd)
-        AC_TRY_RUN([
-                #include <stdio.h>
-                int main() {
-                        char buf[100];
-                        sprintf(buf, "%qd", 21726587590LL);
-                        return (strcmp(buf, "21726587590"));
-                }
-                ], [
-                AC_MSG_RESULT(yes)
-                can_printf_longlong=yes
-                AC_DEFINE(HAVE_PRINTF_QD, 1)
-                ], [
-                AC_MSG_RESULT(no)
-                ], [ : ])
-fi
+AC_CHECK_TYPES([struct sockaddr_storage, struct sockaddr_in6,
+		       struct group_source_req, struct ip_mreq,
+		       struct ipv6_mreq, struct ip_mreq_source],,,[$in_h])
 
-if test $can_printf_longlong = yes; then
-        AC_DEFINE(HAVE_QUAD_SUPPORT, 1)
-fi
+AC_CHECK_MEMBERS([struct sockaddr_in6.sin6_len,
+			 struct ip_mreq_source.imr_multiaddr.s_addr], [], [],[$in_h])
+
+AC_CHECK_MEMBER([struct tcp_info.tcpi_total_retrans], [], [],[
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+])
+
+AC_CHECK_MEMBERS([struct tcp_info.tcpi_total_retrans], [], [],[
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+])
 
 dnl ===================================================================
 dnl Check for compiler characteristics
 
-DAST_CHECK_BOOL
+AC_HEADER_STDBOOL
 
 AC_C_BIGENDIAN
 
 dnl ===================================================================
 dnl Check for system services
+AC_MSG_CHECKING([for gettid syscall])
+AC_TRY_LINK([#include <unistd.h>
+#include <sys/syscall.h>
+], [syscall(SYS_gettid);], [ok=yes], [ok=no])
+if test "$ok" = "yes"; then
+	AC_DEFINE(HAVE_GETTID_SYSCALL,1,[Define if syscall(SYS_gettid) available.])
+fi
+AC_MSG_RESULT(${ok})
 
 dnl check for multicast
 if test "$ac_cv_multicast" != no; then
-  AC_CHECK_TYPES(struct ip_mreq,,,[#include "$srcdir/compat/headers_slim.h"])
-  AC_CHECK_DECLS(IP_ADD_MEMBERSHIP,,,[#include "$srcdir/compat/headers_slim.h"])
   AC_MSG_CHECKING(for multicast support)
   ac_cv_multicast=no
   if test "$ac_cv_have_decl_IP_ADD_MEMBERSHIP" = yes; then
@@ -243,11 +294,9 @@ if test "$ac_cv_multicast" != no; then
   if test "$ac_cv_multicast" = yes; then
     AC_DEFINE([HAVE_MULTICAST], 1, [Define to enable multicast support])
   fi
-  AC_CHECK_TYPES(struct group_source_req,,,[#include "$srcdir/compat/headers_slim.h"])
-  AC_CHECK_DECLS(MCAST_JOIN_SOURCE_GROUP,,,[#include "$srcdir/compat/headers_slim.h"])
   AC_MSG_CHECKING(for multicast ssm support)
   ac_cv_ssm_multicast=no
-  if test "$ac_cv_have_decl_MCAST_JOIN_SOURCE_GROUP" = yes; then
+  if test "$ac_cv_have_decl_MCAST_JOIN_SOURCE_GROUP" = yes || test "$ac_cv_have_decl_IP_ADD_SOURCE_MEMBERSHIP" = yes; then
     if test "$ac_cv_type_struct_group_source_req" = yes; then
       ac_cv_ssm_multicast=yes
     fi
@@ -258,11 +307,27 @@ if test "$ac_cv_multicast" != no; then
   fi
 fi
 
+dnl check for tcpstats
+if test "$ac_cv_tcpstats" != no; then
+  AC_MSG_CHECKING(for tcpstats support)
+  ac_cv_tcpstats=no
+  if test "$ac_cv_have_decl_TCP_INFO" = yes; then
+    AC_MSG_CHECKING(for TCP_INFO_TCPI_TOTAL_RETRANS support)
+     if test "$ac_cv_member_struct_tcp_info_tcpi_total_retrans" = yes; then
+       ac_cv_tcpstats=yes
+     fi
+  fi
+  if test "$ac_cv_have_decl_TCP_CONNECTION_INFO" = yes; then
+    ac_cv_tcpstats=yes
+  fi
+  AC_MSG_RESULT($ac_cv_tcpstats)
+  if test "$ac_cv_tcpstats" = yes; then
+    AC_DEFINE([HAVE_TCP_STATS], 1, [Define to enable tcp stats support])
+  fi
+fi
+
 dnl check for IPv6
 if test "$ac_cv_have_ipv6" != no; then
-  AC_CHECK_TYPES(struct sockaddr_storage,,,[#include "$srcdir/compat/headers_slim.h"])
-  AC_CHECK_TYPES(struct sockaddr_in6,,,[#include "$srcdir/compat/headers_slim.h"])
-  AC_CHECK_DECLS(AF_INET6,,,[#include "$srcdir/compat/headers_slim.h"])
   AC_MSG_CHECKING(for IPv6 headers and structures)
   ac_cv_have_ipv6=no
   if test "$ac_cv_type_struct_sockaddr_storage" = yes; then
@@ -278,9 +343,6 @@ fi
 
 if test "$ac_cv_have_ipv6" = yes; then
   if test "$ac_cv_multicast" = yes; then
-    AC_CHECK_TYPES(struct ipv6_mreq,,,[#include "$srcdir/compat/headers_slim.h"])
-    AC_CHECK_DECLS(IPV6_ADD_MEMBERSHIP,,,[#include "$srcdir/compat/headers_slim.h"])
-    AC_CHECK_DECLS(IPV6_MULTICAST_HOPS,,,[#include "$srcdir/compat/headers_slim.h"])
     AC_MSG_CHECKING(for IPv6 multicast support)
     ac_cv_have_ipv6_multicast=no
     if test "$ac_cv_type_struct_ipv6_mreq" = yes; then
@@ -295,8 +357,15 @@ if test "$ac_cv_have_ipv6" = yes; then
   fi
 fi
 
-if test "$enable_debuginfo" = yes; then
-AC_DEFINE([DBG_MJZ], 1, [Define if debugging info is desired])
+
+if test "$enable_thread_debug" = yes; then
+   AC_DEFINE([HAVE_THREAD_DEBUG], 1, [Define for thread level debugging of the code])
+else
+   if test "$enable_debuginfo" = yes; then
+   AC_DEFINE([DBG_MJZ], 1, [Define if debugging info is desired])
+   else
+   AC_DEFINE([NDEBUG], [1], [Define to disable asserts])
+   fi
 fi
 
 if test "$enable_web100" != no; then
@@ -315,6 +384,14 @@ if test "$enable_kalman" != no; then
 AC_DEFINE([HAVE_KALMAN], 1, [Define if Kalman tuning is desired and available])
 fi
 
+if test "$enable_role_reversal_id" != no; then
+AC_DEFINE([HAVE_ROLE_REVERSAL_ID], 1, [Define if role reversal ids are desired ])
+fi
+
+if test "$enable_default_localonly" = yes; then
+AC_DEFINE([HAVE_DEFAULT_DONTROUTE_ON], 1, [Define if limiting test traffic to the local-only network (via socket SO_DONTROUTE) should be the default])
+fi
+
 if test "$enable_seqno64b" != no; then
 AC_DEFINE([HAVE_SEQNO64b], 1, [Define if 64 bit sequence numbers are desired and available])
 fi
@@ -323,12 +400,12 @@ if test "$enable_isochronous" != no; then
 AC_DEFINE([HAVE_ISOCHRONOUS], 1, [Define if isochronous traffic option is desired and available])
 fi
 
-if test "$enable_udptriggers" = yes; then
-AC_DEFINE([HAVE_UDPTRIGGERS], 1, [Define if udp triggers option is desired and available])
-fi
-
 if test "$enable_fastsampling" = yes; then
 AC_DEFINE([HAVE_FASTSAMPLING], 1, [Define if fast sampling for report intervals is desired])
+fi
+
+if test "$enable_packet_debug" = yes; then
+AC_DEFINE([HAVE_PACKET_DEBUG], 1, [Define if packet level debugging is desired])
 fi
 
 case "$ac_cv_host" in
