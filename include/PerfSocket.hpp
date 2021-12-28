@@ -59,10 +59,22 @@
 #include "Mutex.h"
 #include "Settings.hpp"
 
-// int timer units is micorseconds
-void SetSocketOptions(struct thread_Settings *inSettings);
-void SetSocketOptionsSendTimeout(struct thread_Settings *mSettings, int timer);
-void SetSocketOptionsReceiveTimeout(struct thread_Settings *mSettings, int timer);
-void SetSocketOptionsIPTos (struct thread_Settings *mSettings, int tos);
+    void SetSocketOptions( thread_Settings *inSettings );
+
+    void SetSocketOptionsSendTimeout( thread_Settings *inSettings, int timer);
+
+    // handle interupts
+    void Sig_Interupt( int inSigno );
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+    extern int sInterupted;
+    extern int groupID;
+    extern Mutex groupCond;
+
+#ifdef __cplusplus
+} /* end extern "C" */
+#endif
 
 #endif // PERFSOCKET_H
