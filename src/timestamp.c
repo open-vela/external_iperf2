@@ -1,52 +1,52 @@
-/*                                                                                                                                                                      
- * A simple timestamp using realtime clock                                                                                                                              
- *                                                                                                                                                                      
- * usage: timestamp -c <count> -d <delay seconds>                                                                                                                       
- *                                                                                                                                                                      
- * compile with 'gcc -O2 -lrt  timestamp.c -o timestamp'                                                                                                                
- *                                                                                                                                                                      
- * Author Robert J. McMahon (rmcmahon)                                                                                                                                  
- * Last modified: 09/02/2016                                                                                                                                            
- *                                                                                                                                                                      
- * $Copyright Open Broadcom Corporation$                                                                                                                                
- *                                                                                                                                                                      
- */                                                                                                                                                                     
-#include <stdio.h>                                                                                                                                                      
-#include <stdlib.h>                                                                                                                                                     
-#include <time.h>                                                                                                                                                       
-#include <errno.h>                                                                                                                                                      
-#include <ctype.h>                                                                                                                                                      
-#include <unistd.h>                                                                                                                                                     
-#include <signal.h>                                                                                                                                                     
-#include <sys/time.h>                                                                                                                                                   
-#include <string.h>                                                                                                                                                     
-#include <sched.h>                                                                                                                                                      
+/*
+ * A simple timestamp using realtime clock
+ *
+ * usage: timestamp -c <count> -d <delay seconds>
+ *
+ * compile with 'gcc -O2 -lrt  timestamp.c -o timestamp'
+ *
+ * Author Robert J. McMahon (rmcmahon)
+ * Last modified: 09/02/2016
+ *
+ * $Copyright Open Broadcom Corporation$
+ *
+ */
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <errno.h>
+#include <ctype.h>
+#include <unistd.h>
+#include <signal.h>
+#include <sys/time.h>
+#include <string.h>
+#include <sched.h>
 
 static void sigalrm();
 static void posttimestamp(void);
-static int postcount = 0;       
+static int postcount = 0;
 
 int main (int argc, char **argv) {
-    char *delayvalue = NULL;      
-    int c, count=10;              
-    double delay=1.0;             
-    int err;                      
-    struct itimerval it;          
+    char *delayvalue = NULL;
+    int c, count=10;
+    double delay=1.0;
+    int err;
+    struct itimerval it;
 
     while ((c = getopt(argc, argv, "c:d:")) != -1) {
-        switch (c) {                                
-        case 'c':                                   
-            count = atoi(optarg);                   
-            break;                                  
-        case 'd':                                   
-            delayvalue = optarg;                    
-            break;                                  
-        case '?':                                   
+        switch (c) {
+        case 'c':
+            count = atoi(optarg);
+            break;
+        case 'd':
+            delayvalue = optarg;
+            break;
+        case '?':
             fprintf (stderr, "usage: -c <count> -d <delay seconds> \n", optopt);
-            return 1;                                                           
-        default:                                                                
-            abort ();                                                           
-        }                                                                       
+            return 1;
+        default:
+            abort ();
+        }
     }
     if (delayvalue != NULL) {
         delay = atof(delayvalue);
@@ -90,7 +90,3 @@ void sigalrm (void) {
     posttimestamp();
     postcount--;
 }
-
-
-
-

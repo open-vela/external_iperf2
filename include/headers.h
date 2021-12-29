@@ -71,9 +71,6 @@
     #endif
 #endif /* HAVE_CONFIG_H */
 
-/* turn off assert debugging */
-#define NDEBUG
-
 /* standard C headers */
 #include <stdlib.h>
 #include <stdio.h>
@@ -86,7 +83,34 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <inttypes.h>
-#include <getopt.h>
+#include <limits.h>
+
+#ifdef HAVE_STDBOOL_H
+# include <stdbool.h>
+#else
+# ifndef HAVE__BOOL
+#  ifdef __cplusplus
+typedef bool _Bool;
+#  else
+#   define _Bool signed char
+#  endif
+# endif
+# define bool _Bool
+# define false 0
+# define true 1
+# define __bool_true_false_are_defined 1
+#endif
+
+
+#if ((defined HAVE_SSM_MULTICAST) || (defined HAVE_DECL_SO_BINDTODEVICE))  && (defined HAVE_NET_IF_H)
+#include <net/if.h>
+#endif
+
+#if ((HAVE_TUNTAP_TAP) || (HAVE_TUNTAP_TUN))
+#include <linux/if_tun.h>
+#include <sys/ioctl.h>
+#endif
+
 
 // AF_PACKET HEADERS
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
@@ -202,15 +226,15 @@ SPECIAL_OSF1_EXTERN_C_START
     #include <netdb.h>
 SPECIAL_OSF1_EXTERN_C_STOP
 #endif
-#ifdef HAVE_NETINET_IN_H
+#if HAVE_NETINET_IN_H
 #include <netinet/in.h>
-#include <netinet/tcp.h>
 SPECIAL_OSF1_EXTERN_C_START
     #include <arpa/inet.h>   /* netinet/in.h must be before this on SunOS */
 SPECIAL_OSF1_EXTERN_C_STOP
 #endif
-
-
+#if HAVE_NETINET_TCP_H
+#include <netinet/tcp.h>
+#endif
 
 #ifdef HAVE_POSIX_THREAD
 #include <pthread.h>
@@ -224,7 +248,7 @@ SPECIAL_OSF1_EXTERN_C_STOP
 #endif
 
 //#ifdef __cplusplus
-    #ifdef HAVE_IPV6
+    #if HAVE_IPV6
         #define REPORT_ADDRLEN (INET6_ADDRSTRLEN + 1)
 typedef struct sockaddr_storage iperf_sockaddr;
     #else
@@ -233,40 +257,7 @@ typedef struct sockaddr_in iperf_sockaddr;
     #endif
 //#endif
 
-// Rationalize stdint definitions and sizeof, thanks to ac_create_stdint_h.m4
-// from the gnu archive
-
-#include <iperf-int.h>
-// Override <stdint.h> PRIdMAX (hack for now, fix this to use <stdint.h> properly)
-#ifdef HAVE_QUAD_SUPPORT
-  #ifdef WIN32
-    #define IPERFdMAX "I64d"
-  #elif defined HAVE_PRINTF_QD
-    #define IPERFdMAX "qd"
-  #else
-    #define IPERFdMAX "lld"
-  #endif
-#else
-  #define IPERFdMAX "d"
-#endif
-
-#ifdef HAVE_QUAD_SUPPORT
-#  ifdef HAVE_INT64_T
-typedef int64_t max_size_t;
-typedef u_int64_t umax_size_t;
-#  else
-typedef long long max_size_t;
-typedef unsigned long long umax_size_t;
-#  endif // INT64
-#else
-#  ifdef HAVE_INT32_T
-typedef int32_t max_size_t;
-typedef u_int32_t umax_size_t;
-#  else
-typedef long max_size_t;
-typedef unsigned long umax_size_t;
-#  endif // INT32
-#endif
+// inttypes.h is already included
 
 #ifdef HAVE_FASTSAMPLING
 #define IPERFTimeFrmt "%4.4f-%4.4f"
@@ -286,5 +277,10 @@ typedef unsigned long umax_size_t;
     #define SHUT_WR   1
     #define SHUT_RDWR 2
 #endif // SHUT_RD
+
+
+/* Internal debug */
+//#define INITIAL_PACKETID 0x7FFFFF00LL
+//#define SHOW_PACKETID
 
 #endif /* HEADERS_H */
