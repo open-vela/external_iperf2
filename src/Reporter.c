@@ -319,6 +319,7 @@ static inline struct ReportHeader *reporter_jobq_set_root (struct thread_Setting
     Condition_Lock(ReportCond);
     // check the jobq for empty
     if (ReportRoot == NULL) {
+	sInterupted = 0; // reset flags in reporter thread emtpy context
 	// The reporter is starting from an empty state
 	// so set the load detect to trigger an initial delay
         if (!isSingleUDP(inSettings)) {
