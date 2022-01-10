@@ -110,6 +110,7 @@ extern "C" {
 #define HEADER_EPOCH_START    0x1000
 #define HEADER_PERIODICBURST  0x2000
 #define HEADER_WRITEPREFETCH  0x4000
+#define HEADER_TCPQUICKACK    0x8000
 
 // later features
 #define HDRXACKMAX 2500000 // default 2.5 seconds, units microseconds

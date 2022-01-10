@@ -139,7 +139,7 @@ Set the socket option of TCP_WINDOW_CLAMP, units is bytes.
 time in seconds to listen for new traffic connections and/or receive traffic (defaults to infinite)
 .TP
 .BR "    --tos-override "  \fIn\fR
-set the socket's IP_TOS (byte) field for reverse or full duplex traffic. Supported in versions 2.1.5 or greater. Previous versions won't set IP_TOSq on reverse traffic.
+set the socket's IP_TOS (byte) field for reverse or full duplex traffic. Supported in versions 2.1.5 or greater. Previous versions won't set IP_TOS on reverse traffic.
 .TP
 .BR -B ", " --bind " \fIip\fR | \fIip\fR%\fIdevice\fR"
 bind src ip addr and optional src device for receiving
@@ -256,6 +256,9 @@ a reversed test, server-to-client
 .TP
 .BR "    --tcp-drain "
 This is an experimental feature to measure the sending (client) host's sojourn times. Measure delay after completion of writing a burst (set via -l or --burst-size) and when TCP_NOTSENT_LOWAT set to a small value triggers the select() indicating all bytes per the burst are inflight. Output is a D8 histogram on the client side.
+.TP
+.BR "    --tcp-quickack "
+Set TCP_QUICKACK on the socket
 .TP
 .BR "    --tcp-write-prefetch " \fIn\fR[kmKM]
 Set TCP_NOTSENT_LOWAT on the socket and use event based writes per select() on the socket.

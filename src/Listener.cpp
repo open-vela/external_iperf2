@@ -1306,6 +1306,11 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 			}
 		    }
 #endif
+#if HAVE_DECL_TCP_QUICKACK
+		    if (upperflags & HEADER_TCPQUICKACK) {
+			setTcpQuickAck(server);
+		    }
+#endif
 		    if (upperflags & HEADER_BOUNCEBACK) {
 			setBounceBack(server);
 		    }
