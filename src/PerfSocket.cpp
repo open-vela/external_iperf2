@@ -369,5 +369,64 @@ bool setsock_blocking (int fd, bool blocking) {
 #endif
 }
 
+/* -------------------------------------------------------------------
+ * If inMSS > 0, set the TCP maximum segment size  for inSock.
+ * Otherwise leave it as the system default.
+ * ------------------------------------------------------------------- */
+
+const char warn_mss_fail[] = "\
+WARNING: attempt to set TCP maxmimum segment size to %d failed.\n\
+Setting the MSS may not be implemented on this OS.\n";
+
+const char warn_mss_notset[] =
+"WARNING: attempt to set TCP maximum segment size to %d, but got %d\n";
+
+void setsock_tcp_mss (int inSock, int inMSS) {
+#ifdef TCP_MAXSEG
+    int rc;
+    int newMSS;
+    Socklen_t len;
+
+    assert(inSock != INVALID_SOCKET);
+
+    if (inMSS > 0) {
+        /* set */
+        newMSS = inMSS;
+        len = sizeof(newMSS);
+        rc = setsockopt(inSock, IPPROTO_TCP, TCP_MAXSEG, (char*) &newMSS,  len);
+        if (rc == SOCKET_ERROR) {
+            fprintf(stderr, warn_mss_fail, newMSS);
+            return;
+        }
+
+        /* verify results */
+        rc = getsockopt(inSock, IPPROTO_TCP, TCP_MAXSEG, (char*) &newMSS, &len);
+        WARN_errno(rc == SOCKET_ERROR, "getsockopt TCP_MAXSEG");
+        if (newMSS != inMSS) {
+            fprintf(stderr, warn_mss_notset, inMSS, newMSS);
+        }
+    }
+#endif
+} /* end setsock_tcp_mss */
+
+/* -------------------------------------------------------------------
+ * returns the TCP maximum segment size
+ * ------------------------------------------------------------------- */
+
+int getsock_tcp_mss  (int inSock) {
+    int theMSS = -1;
+#ifdef TCP_MAXSEG
+    int rc;
+    Socklen_t len;
+    assert(inSock >= 0);
+
+    /* query for MSS */
+    len = sizeof(theMSS);
+    rc = getsockopt(inSock, IPPROTO_TCP, TCP_MAXSEG, (char*)&theMSS, &len);
+    WARN_errno(rc == SOCKET_ERROR, "getsockopt TCP_MAXSEG");
+#endif
+    return theMSS;
+} /* end getsock_tcp_mss */
+
 
 // end SetSocketOptions
