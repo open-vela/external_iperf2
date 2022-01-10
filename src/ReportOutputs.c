@@ -1477,7 +1477,7 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 		 report->tcpinitstats.maxmss, report->tcpinitstats.cwnd, report->tcpinitstats.rtt);
 #else
 	snprintf(b, SNBUFFERSIZE-strlen(b), " (mss rcv/snd=%u/%u icwnd/irtt=%u/%u)", \
-		 report->tcpinitstats.rcvmss, report->tcpinitstats.sendmss, report->tcpinitstats.cwnd, report->tcpinitstats.rtt);
+		 report->tcpinitstats.rcvmss, report->tcpinitstats.sndmss, report->tcpinitstats.cwnd, report->tcpinitstats.rtt);
 #endif
 	b += strlen(b);
     }
