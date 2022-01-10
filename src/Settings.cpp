@@ -111,8 +111,9 @@ static int bouncebackhold = 0;
 static int bouncebackperiod = 0;
 static int tcpdrain = 0;
 static int overridetos = 0;
-static int notcpquickack = 0;
-static int notcpquickack_cliset = 0;
+static int notcpbbquickack = 0;
+static int tcpquickack = 0;
+static int notcpbbquickack_cliset = 0;
 static int congest = 0;
 
 void Settings_Interpret(char option, const char *optarg, struct thread_Settings *mExtSettings);
@@ -164,7 +165,7 @@ const struct option long_options[] =
 {"bounceback", no_argument, &bounceback, 1},
 {"bounceback-congest", no_argument, &congest, 1},
 {"bounceback-hold", required_argument, &bouncebackhold, 1},
-{"bounceback-no-quickack", no_argument, &notcpquickack, 1},
+{"bounceback-no-quickack", no_argument, &notcpbbquickack, 1},
 {"bounceback-period", required_argument, &bouncebackperiod, 1},
 {"compatibility",    no_argument, NULL, 'C'},
 {"daemon",           no_argument, NULL, 'D'},
@@ -1102,9 +1103,13 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		fprintf(stderr, "--tcp-drain not supported on this platform\n");
 #endif
 	    }
-	    if (notcpquickack) {
-		notcpquickack = 0;
-		notcpquickack_cliset = 1;
+	    if (notcpbbquickack) {
+		notcpbbquickack = 0;
+		notcpbbquickack_cliset = 1;
+	    }
+	    if (tcpquickack) {
+		tcpquickack = 0;
+		setTcpQuickAck(mExtSettings);
 	    }
 	    if (congest) {
 		congest= 0;
@@ -1437,11 +1442,12 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    mExtSettings->mBurstSize = mExtSettings->mBufLen;
 #if HAVE_DECL_TCP_QUICKACK
 	    // be wary of double negatives here
-	    if (!notcpquickack_cliset && (mExtSettings->mBounceBackHold > 0))
+	    if (!notcpbbquickack_cliset && (mExtSettings->mBounceBackHold > 0))
 		setTcpQuickAck(mExtSettings);
 #endif
 
 	}
+
 	if (isPeriodicBurst(mExtSettings)) {
 	    if (isIsochronous(mExtSettings)) {
 		fprintf(stderr, "ERROR: options of --burst-period and --isochronous cannot be applied together\n");
@@ -1488,6 +1494,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    }
 	    if (isWritePrefetch(mExtSettings)) {
 		fprintf(stderr, "WARN: setting of option --tcp-write-prefetch is not supported with -u UDP\n");
+		unsetWritePrefetch(mExtSettings);
+	    }
+	    if (isTcpQuickAck(mExtSettings)) {
+		fprintf(stderr, "WARN: setting of option --tcp-quickack is not supported with -u UDP\n");
 		unsetWritePrefetch(mExtSettings);
 	    }
 	    if (isTcpDrain(mExtSettings)) {
@@ -2338,6 +2348,11 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	    if (isWritePrefetch(client) && (isReverse(client) || isFullDuplex(client))) {
 		upperflags  |= HEADER_WRITEPREFETCH;
 		hdr->extend.TCPWritePrefetch = htonl((long)client->mWritePrefetch);
+	    }
+#endif
+#if HAVE_DECL_TCP_QUICKACK
+	    if (isTcpQuickAck(client) && (!isReverse(client) || isFullDuplex(client))) {
+		upperflags  |= HEADER_WRITEPREFETCH;
 	    }
 #endif
 	    if (isIsochronous(client) || isPeriodicBurst(client)) {
