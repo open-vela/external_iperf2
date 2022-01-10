@@ -161,7 +161,7 @@ bool Client::my_connect (bool close_on_fail) {
 
     // connect socket
     connected = false;
-    my_init_cond.connecttime = -1;
+    mSettings->tcpinitstats.connecttime = -1;
     if (!isUDP(mSettings)) {
 	int trycnt = mSettings->mConnectRetries + 1;
 	while (trycnt > 0) {
@@ -180,8 +180,7 @@ bool Client::my_connect (bool close_on_fail) {
 		}
 	    } else {
 		connect_done.setnow();
-		my_init_cond.connecttime = 1e3 * connect_done.subSec(connect_start);
-		mSettings->connecttime = my_init_cond.connecttime;
+		mSettings->tcpinitstats.connecttime = 1e3 * connect_done.subSec(connect_start);
 		connected = true;
 		break;
 	    }
@@ -189,20 +188,16 @@ bool Client::my_connect (bool close_on_fail) {
     } else {
 	rc = connect(mySocket, reinterpret_cast<sockaddr*>(&mSettings->peer),
 		     SockAddr_get_sizeof_sockaddr(&mSettings->peer));
-	my_init_cond.connecttime = 0.0; // UDP doesn't have a 3WHS
+	mSettings->tcpinitstats.connecttime = 0.0; // UDP doesn't have a 3WHS
         WARN_errno((rc == SOCKET_ERROR), "udp connect");
 	if (rc != SOCKET_ERROR)
 	    connected = true;
     }
-    my_init_cond.rtt = -1;
-    my_init_cond.cwnd = -1;
     if (connected) {
 #if HAVE_TCP_STATS
         assert(reportstruct);
-	if (!isUDP(mSettings) && connected) {
-	    gettcpinfo(mySocket, reportstruct);
-	    my_init_cond.rtt = reportstruct->tcpstats.rtt;
-	    my_init_cond.cwnd = reportstruct->tcpstats.cwnd;
+	if (!isUDP(mSettings)) {
+	    gettcpinfo(mySocket, &mSettings->tcpinitstats);
 	}
 #endif
 	// Set the send timeout for the very first write which has the test exchange
@@ -230,14 +225,14 @@ bool Client::my_connect (bool close_on_fail) {
     // Post the connect report unless peer version exchange is set
     if (isConnectionReport(mSettings) && !isSumOnly(mSettings)) {
 	if (connected) {
-	    struct ReportHeader *reporthdr = InitConnectionReport(mSettings, &my_init_cond);
+	    struct ReportHeader *reporthdr = InitConnectionReport(mSettings);
 	    struct ConnectionInfo *cr = static_cast<struct ConnectionInfo *>(reporthdr->this_report);
 	    cr->connect_timestamp.tv_sec = connect_start.getSecs();
 	    cr->connect_timestamp.tv_usec = connect_start.getUsecs();
 	    assert(reporthdr);
 	    PostReport(reporthdr);
 	} else {
-	    PostReport(InitConnectionReport(mSettings, &my_init_cond));
+	    PostReport(InitConnectionReport(mSettings));
 	}
     }
     return connected;

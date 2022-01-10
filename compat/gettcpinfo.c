@@ -53,48 +53,63 @@
 #endif
 
 #if (HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS) && (HAVE_DECL_TCP_INFO)
-inline void gettcpinfo (int sock, struct ReportStruct *sample) {
-    assert(sample);
+inline void gettcpinfo (int sock, struct iperf_tcpstats *stats) {
+    assert(stats);
     struct tcp_info tcp_info_buf;
     socklen_t tcp_info_length = sizeof(struct tcp_info);
-    sample->tcpstats.isValid  = false;
+    stats->tcpstats.isValid  = false;
     if ((sock > 0) &&							\
 	!(getsockopt(sock, IPPROTO_TCP, TCP_INFO, &tcp_info_buf, &tcp_info_length) < 0)) {
-        sample->tcpstats.cwnd = tcp_info_buf.tcpi_snd_cwnd * tcp_info_buf.tcpi_snd_mss / 1024;
-	sample->tcpstats.rtt = tcp_info_buf.tcpi_rtt;
-	sample->tcpstats.rttvar = tcp_info_buf.tcpi_rttvar;
-	sample->tcpstats.retry_tot = tcp_info_buf.tcpi_total_retrans;
-	sample->tcpstats.isValid  = true;
+        stats->cwnd = tcp_info_buf.tcpi_snd_cwnd * tcp_info_buf.tcpi_snd_mss / 1024;
+	stats->rtt = tcp_info_buf.tcpi_rtt;
+	stats->rttvar = tcp_info_buf.tcpi_rttvar;
+	stats->retry_tot = tcp_info_buf.tcpi_total_retrans;
+	stats->isValid  = true;
     } else {
-        sample->tcpstats.cwnd = -1;
-	sample->tcpstats.rtt = 0;
-	sample->tcpstats.retry_tot = 0;
+        stats->cwnd = -1;
+	stats->rtt = 0;
+	stats->retry_tot = 0;
     }
 }
+
 #elif HAVE_DECL_TCP_CONNECTION_INFO
-inline void gettcpinfo (int sock, struct ReportStruct *sample) {
-    assert(sample);
+inline void gettcpinfo (int sock, struct iperf_tcpstats *stats) {
+    assert(stats);
     struct tcp_connection_info tcp_info_buf;
     socklen_t tcp_connection_info_length = sizeof(struct tcp_connection_info);
 
-    sample->tcpstats.isValid  = false;
+    stats->isValid  = false;
     if ((sock > 0) &&				\
 	!(getsockopt(sock, IPPROTO_TCP, TCP_CONNECTION_INFO, &tcp_info_buf, &tcp_connection_info_length) < 0)) {
-        sample->tcpstats.cwnd = tcp_info_buf.tcpi_snd_cwnd / 1024;
-//	sample->tcpstats.rtt = tcp_info_buf.tcpi_rttcur * 1000; /current rtt units ms
-	sample->tcpstats.rtt = tcp_info_buf.tcpi_srtt * 1000; //average rtt units ms
-	sample->tcpstats.rttvar = tcp_info_buf.tcpi_rttvar;
-	sample->tcpstats.retry_tot = tcp_info_buf.tcpi_txretransmitpackets;
-	sample->tcpstats.isValid = true;
+        stats->cwnd = tcp_info_buf.tcpi_snd_cwnd / 1024;
+//	stats->rtt = tcp_info_buf.tcpi_rttcur * 1000; /current rtt units ms
+	stats->rtt = tcp_info_buf.tcpi_srtt * 1000; //average rtt units ms
+	stats->rttvar = tcp_info_buf.tcpi_rttvar;
+	stats->retry_tot = tcp_info_buf.tcpi_txretransmitpackets;
+	stats->maxmss = tcp_info_buf.tcpi_maxseg;
+	stats->isValid = true;
     } else {
-        sample->tcpstats.cwnd = -1;
-	sample->tcpstats.rtt = 0;
-	sample->tcpstats.retry_tot = 0;
+	stats->isValid = false;
     }
 }
+inline void tcpstats_copy (struct iperf_tcpstats *stats_dst, struct iperf_tcpstats *stats_src) {
+    stats_dst->cwnd = stats_src->cwnd;
+    stats_dst->rtt = stats_src->rtt;
+    stats_dst->rttvar = stats_src->rttvar;
+    stats_dst->maxmss = stats_src->maxmss;
+    stats_dst->retry_tot = stats_src->retry_tot;
+    stats_dst->connecttime = stats_src->connecttime;
+    stats_dst->getsockmss = stats_src->getsockmss;
+    stats_dst->isValid = stats_src->isValid;
+}
+#elif WIN32
+inline void gettcpinfo (SOCKET sock, struct iperf_tcpstatst *stats) {
+    stats->rtt = 1;
+    stats->isValid  = false;
+};
 #else
-inline void gettcpinfo (SOCKET sock, struct ReportStruct *sample) {
-    sample->tcpstats.rtt = 1;
-    sample->tcpstats.isValid  = false;
+inline void gettcpinfo (int sock, struct iperf_tcpstatst *stats) {
+    stats->rtt = 1;
+    stats->isValid  = false;
 };
 #endif
