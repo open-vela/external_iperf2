@@ -1230,7 +1230,7 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
 	fprintf(stdout, "Reflected TOS will be set to 0x%x\n", report->common->RTOS);
     }
     if (isPrintMSS(report->common)) {
-	printf(report_mss, report->sockmaxmss);
+	printf(report_mss, report->sockmaxseg);
     }
     if (report->common->TOS) {
 	fprintf(stdout, "TOS will be set to 0x%x\n", report->common->TOS);
