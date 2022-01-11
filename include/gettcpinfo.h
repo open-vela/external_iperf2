@@ -59,17 +59,12 @@ struct iperf_tcpstats {
     int rtt;
     double connecttime;
     int getsockmss;
-#if (HAVE_DECL_TCP_INFO) || (HAVE_DECL_TCP_CONNECTION_INFO)
+#if (HAVE_DECL_TCP_INFO)
     int cwnd;
     int rttvar;
     intmax_t retry;
     intmax_t retry_tot;
-#if (HAVE_DECL_TCP_INFO)
-    int sndmss;
-    int rcvmss;
-#elif HAVE_DECL_TCP_CONNECTION_INFO
-    int maxmss;
-#endif
+    int mss_negotiated;
 #endif
 };
 
