@@ -54,6 +54,7 @@
 #include "headers.h"
 #include <math.h>
 #include "Settings.hpp"
+#include "PerfSocket.hpp"
 #include "Reporter.h"
 #include "Locale.h"
 #include "active_hosts.h"
