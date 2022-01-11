@@ -723,11 +723,6 @@ struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings) {
 
     struct ConnectionInfo * creport = (struct ConnectionInfo *)(reporthdr->this_report);
     common_copy(&creport->common, inSettings);
-    if (!isUDP(inSettings)) {
-	inSettings->tcpinitstats.getsockmss = getsock_tcp_mss(inSettings->mSock);
-    } else {
-	inSettings->tcpinitstats.isValid = false;
-    }
     tcpstats_copy(&creport->tcpinitstats, &inSettings->tcpinitstats);
     // Fill out known fields for the connection report
     reporter_peerversion(creport, inSettings->peer_version_u, inSettings->peer_version_l);
@@ -795,6 +790,12 @@ struct ReportHeader *InitSettingsReport (struct thread_Settings *inSettings) {
     sreport->isochstats.mVariance = inSettings->mVariance/8;
     sreport->isochstats.mBurstIPG = (unsigned int) (inSettings->mBurstIPG*1000.0);
     sreport->isochstats.mBurstInterval = (unsigned int) (1 / inSettings->mFPS * 1000000);
+    if (isPrintMSS(inSettings) && !isUDP(inSettings)) {
+	inSettings->tcpinitstats.getsockmss = getsock_tcp_mss(inSettings->mSock);
+	sreport->sockmaxmss = inSettings->tcpinitstats.getsockmss;
+    } else {
+        sreport->sockmaxmss = -1;
+    }
 #ifdef HAVE_THREAD_DEBUG
     char rs[REPORTTXTMAX];
     reporttype_text(reporthdr, &rs[0]);

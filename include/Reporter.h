@@ -292,6 +292,7 @@ struct ReportSettings {
     iperf_sockaddr local;
     Socklen_t size_local;
     int pid;
+    int sockmaxmss;
     struct IsochStats isochstats;
     void (*output_handler) (struct ReportSettings *settings);
 };
