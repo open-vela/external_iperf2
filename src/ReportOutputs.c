@@ -1332,6 +1332,9 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
 	    fprintf(stdout, "TCP near-congestion delay weight set to %2.4f\n", report->common->rtt_weight);
 	}
     }
+    if (isPrintMSS(report->common)) {
+	printf(report_mss, report->sockmaxmss);
+    }
     if (isSingleClient(report->common)) {
 	fprintf(stdout, "WARN: Client set to bypass reporter thread per -U (suggest use lower case -u instead)\n");
     }
