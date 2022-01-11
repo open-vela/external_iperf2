@@ -382,7 +382,7 @@ const char warn_mss_notset[] =
 "WARNING: attempt to set TCP maximum segment size to %d, but got %d\n";
 
 void setsock_tcp_mss (int inSock, int inMSS) {
-#ifdef TCP_MAXSEG
+#if HAVE_DECL_TCP_MAXSEG
     int rc;
     int newMSS;
     Socklen_t len;
@@ -408,7 +408,7 @@ void setsock_tcp_mss (int inSock, int inMSS) {
 
 int getsock_tcp_mss  (int inSock) {
     int theMSS = -1;
-#ifdef TCP_MAXSEG
+#if HAVE_DECL_TCP_MAXSEG
     int rc;
     Socklen_t len;
     assert(inSock >= 0);

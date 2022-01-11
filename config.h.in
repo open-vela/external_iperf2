@@ -141,6 +141,10 @@
    don't. */
 #undef HAVE_DECL_TCP_INFO
 
+/* Define to 1 if you have the declaration of `TCP_MAXSEG', and to 0 if you
+   don't. */
+#undef HAVE_DECL_TCP_MAXSEG
+
 /* Define to 1 if you have the declaration of `TCP_NODELAY', and to 0 if you
    don't. */
 #undef HAVE_DECL_TCP_NODELAY
