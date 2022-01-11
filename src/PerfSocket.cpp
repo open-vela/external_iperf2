@@ -398,13 +398,6 @@ void setsock_tcp_mss (int inSock, int inMSS) {
             fprintf(stderr, warn_mss_fail, newMSS);
             return;
         }
-
-        /* verify results */
-        rc = getsockopt(inSock, IPPROTO_TCP, TCP_MAXSEG, (char*) &newMSS, &len);
-        WARN_errno(rc == SOCKET_ERROR, "getsockopt TCP_MAXSEG");
-        if (newMSS != inMSS) {
-            fprintf(stderr, warn_mss_notset, inMSS, newMSS);
-        }
     }
 #endif
 } /* end setsock_tcp_mss */

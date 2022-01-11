@@ -587,7 +587,7 @@ const char report_mss_unsupported[] =
 "%sMSS and MTU size unknown (TCP_MAXSEG not supported)\n";
 
 const char report_mss[] =
-"%sMSS size %d bytes\n";
+"MSS size %d bytes\n";
 
 const char report_datagrams[] =
 "[%3d] Sent %d datagrams\n";
