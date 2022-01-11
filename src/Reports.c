@@ -792,7 +792,7 @@ struct ReportHeader *InitSettingsReport (struct thread_Settings *inSettings) {
     sreport->isochstats.mBurstInterval = (unsigned int) (1 / inSettings->mFPS * 1000000);
     if (isPrintMSS(inSettings) && !isUDP(inSettings)) {
 	inSettings->tcpinitstats.getsockmss = getsock_tcp_mss(inSettings->mSock);
-	sreport->sockmaxseg = inSettings->mMSS;
+	sreport->sockmaxseg = (inSettings->mMSS > 0) ? inSettings->mMSS : inSettings->tcpinitstats.getsockmss;
     } else {
         sreport->sockmaxseg = -1;
     }
