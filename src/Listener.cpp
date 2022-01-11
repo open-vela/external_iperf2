@@ -1168,6 +1168,11 @@ bool Listener::apply_client_settings_udp (thread_Settings *server) {
 }
 bool Listener::apply_client_settings_tcp (thread_Settings *server) {
     bool rc = false;
+#if HAVE_TCP_STATS
+    if (!isUDP(mSettings)) {
+        gettcpinfo(server->mSock, &server->tcpinitstats);
+    }
+#endif
     int nread = recvn(server->mSock, server->mBuf, sizeof(uint32_t), 0);
     char *readptr = server->mBuf;
     if (nread == 0) {
