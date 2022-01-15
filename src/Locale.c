@@ -75,7 +75,7 @@ Client/Server:\n\
       --hide-ips           hide ip addresses and host names within outputs\n\
   -i, --interval  #        seconds between periodic bandwidth reports\n\
   -l, --len       #[kmKM]    length of buffer in bytes to read or write (Defaults: TCP=128K, v4 UDP=1470, v6 UDP=1450)\n\
-  -m, --print_mss          print TCP maximum segment size (MTU - TCP/IP header)\n\
+  -m, --print_mss          print TCP maximum segment size\n\
   -o, --output    <filename> output the report or error message to this specified file\n\
   -p, --port      #        client/server port to listen/send on and to connect\n\
       --permit-key         permit key to be used to verify client and server (TCP only)\n\
@@ -87,7 +87,7 @@ Client/Server:\n\
 #endif
 "  -B, --bind <host>[:<port>][%<dev>] bind to <host>, ip addr (including multicast address) and optional port and device\n\
   -C, --compatibility      for use with older versions does not sent extra msgs\n\
-  -M, --mss       #        set TCP maximum segment size (MTU - 40 bytes)\n\
+  -M, --mss       #        set TCP maximum segment size using TCP_MAXSEG\n\
   -N, --nodelay            set TCP no delay, disabling Nagle's Algorithm\n\
   -S, --tos       #        set the socket's IP_TOS (byte) field\n\
   -Z, --tcp-congestion <algo>  set TCP congestion control algorithm (Linux only)\n\
