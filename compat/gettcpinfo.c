@@ -81,7 +81,6 @@ inline void tcpstats_copy (struct iperf_tcpstats *stats_dst, struct iperf_tcpsta
     stats_dst->mss_negotiated = stats_src->mss_negotiated;
     stats_dst->retry_tot = stats_src->retry_tot;
     stats_dst->connecttime = stats_src->connecttime;
-    stats_dst->getsockmss = stats_src->getsockmss;
     stats_dst->isValid = stats_src->isValid;
 }
 #else
