@@ -52,9 +52,10 @@
 #include "Thread.h"
 #endif
 
-#if (HAVE_STRUCT_TCP_INFO_TCPI_TOTAL_RETRANS) && (HAVE_DECL_TCP_INFO)
+#if HAVE_TCP_STATS
 inline void gettcpinfo (int sock, struct iperf_tcpstats *stats) {
     assert(stats);
+#if HAVE_DECL_TCP_INFO
     struct tcp_info tcp_info_buf;
     socklen_t tcp_info_length = sizeof(struct tcp_info);
     if ((sock > 0) &&							\
@@ -63,12 +64,20 @@ inline void gettcpinfo (int sock, struct iperf_tcpstats *stats) {
 	stats->rtt = tcp_info_buf.tcpi_rtt;
 	stats->rttvar = tcp_info_buf.tcpi_rttvar;
 	stats->retry_tot = tcp_info_buf.tcpi_total_retrans;
-#if HAVE_DECL_TCP_INFO
 	stats->mss_negotiated = tcp_info_buf.tcpi_snd_mss;
-#elif HAVE_DECL_TCP_CONNECTION_INFO
-	stats->mss_negotiated = tcp_info_buf.tcpi_maxseg;
-#endif
 	stats->isValid  = true;
+#elif HAVE_DECL_TCP_CONNECTION_INFO
+	struct tcp_connection_info tcp_info_buf;
+	socklen_t tcp_info_length = sizeof(struct tcp_connection_info);
+	if ((sock > 0) &&						\
+	    !(getsockopt(sock, IPPROTO_TCP, TCP_CONNECTION_INFO, &tcp_info_buf, &tcp_info_length) < 0)) {
+        stats->cwnd = tcp_info_buf.tcpi_snd_cwnd * tcp_info_buf.tcpi_maxseg / 1024;
+	stats->rtt = tcp_info_buf.tcpi_rttcur * 1000; // OS X units is ms
+	stats->rttvar = tcp_info_buf.tcpi_rttvar;
+	stats->retry_tot = tcp_info_buf.tcpi_txretransmitpackets;
+	stats->mss_negotiated = tcp_info_buf.tcpi_maxseg;
+	stats->isValid  = true;
+#endif
     } else {
 	stats->rtt = 1;
 	stats->isValid = false;
@@ -84,7 +93,11 @@ inline void tcpstats_copy (struct iperf_tcpstats *stats_dst, struct iperf_tcpsta
     stats_dst->isValid = stats_src->isValid;
 }
 #else
+#if WIN32
 inline void gettcpinfo (SOCKET sock, struct iperf_tcpstatst *stats) {
+#else
+inline void gettcpinfo (int sock, struct iperf_tcpstatst *stats) {
+#endif
     stats->rtt = 1;
     stats->isValid  = false;
 };
