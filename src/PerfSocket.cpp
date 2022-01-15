@@ -378,9 +378,6 @@ const char warn_mss_fail[] = "\
 WARNING: attempt to set TCP maxmimum segment size to %d failed.\n\
 Setting the MSS may not be implemented on this OS.\n";
 
-const char warn_mss_notset[] =
-"WARNING: attempt to set TCP maximum segment size to %d, but got %d\n";
-
 void setsock_tcp_mss (int inSock, int inMSS) {
 #if HAVE_DECL_TCP_MAXSEG
     int rc;
