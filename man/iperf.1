@@ -54,7 +54,7 @@ set read/write buffer size (TCP) or length (UDP) to \fIn\fR (TCP default 128K, U
 perform layer 2 length checks on received UDP packets (requires systems that support packet sockets, e.g. Linux)
 .TP
 .BR -m ", " --print_mss " "
-print TCP maximum segment size (MTU - TCP/IP header)
+print TCP maximum segment size
 .TP
 .BR "    --NUM_REPORT_STRUCTS " \fI<count>\fR
 Override the default shared memory size between the traffic thread(s) and reporter thread in order to mitigate mutex lock contentions. The default value of 5000 should be sufficient for 1Gb/s networks. Increase this upon seeing the Warning message of reporter thread too slow. If the Warning message isn't seen, then increasing this won't have any significant effect (other than to use some additional memory.)
@@ -93,7 +93,7 @@ bind to \fIhost\fR, ip address or multicast address, optional port or device (se
 for use with older versions does not sent extra msgs
 .TP
 .BR -M ", " --mss " \fIn\fR"
-set TCP maximum segment size (MTU - 40 bytes)
+set TCP maximum segment size using TCP_MAXSEG
 .TP
 .BR -N ", " --nodelay " "
 set TCP no delay, disabling Nagle's Algorithm
