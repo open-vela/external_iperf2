@@ -634,7 +634,9 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
             break;
 
         case 'm': // print TCP MSS
+#if HAVE_DECL_TCP_MAXSEG
             setPrintMSS(mExtSettings);
+#endif
             break;
 
         case 'n': // bytes of data
@@ -826,9 +828,11 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
             break;
 
         case 'M': // specify TCP MSS (maximum segment size)
-            mExtSettings->mMSS = byte_atoi(optarg);
-            setPrintMSS(mExtSettings);
+#if HAVE_DECL_TCP_MAXSEG
+	    mExtSettings->mMSS = byte_atoi(optarg);
             setTCPMSS(mExtSettings);
+            setPrintMSS(mExtSettings);	    
+#endif
             break;
 
         case 'N': // specify TCP nodelay option (disable Jacobson's Algorithm)

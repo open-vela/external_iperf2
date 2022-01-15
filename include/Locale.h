@@ -331,6 +331,8 @@ extern const char report_mss_unsupported[];
 
 extern const char report_mss[];
 
+extern const char report_default_mss[];
+
 extern const char report_datagrams[];
 
 extern const char report_sumcnt_datagrams[];
