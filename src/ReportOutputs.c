@@ -1321,9 +1321,9 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
     }
     if (isPrintMSS(report->common)) {
         if (isTCPMSS(report->common)) {
-	    printf(report_default_mss, report->sockmaxseg);
-	} else {
 	    printf(report_mss, report->sockmaxseg);
+	} else {
+	    printf(report_default_mss, report->sockmaxseg);
 	}
     }
 
