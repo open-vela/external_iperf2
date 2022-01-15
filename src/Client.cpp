@@ -159,6 +159,13 @@ bool Client::my_connect (bool close_on_fail) {
         WARN_errno(rc == SOCKET_ERROR, "bind");
     }
 
+    if (isReport(mSettings) && isSettingsReport(mSettings)) {
+	struct ReportHeader *tmp = InitSettingsReport(mSettings);
+	assert(tmp!=NULL);
+	PostReport(tmp);
+	setNoSettReport(mSettings);
+    }
+
     // connect socket
     connected = false;
     mSettings->tcpinitstats.connecttime = -1;
@@ -215,12 +222,6 @@ bool Client::my_connect (bool close_on_fail) {
 	    WARN_errno(rc == SOCKET_ERROR, "client connect close");
 	    mySocket = INVALID_SOCKET;
 	}
-    }
-    if (isReport(mSettings) && isSettingsReport(mSettings)) {
-	struct ReportHeader *tmp = InitSettingsReport(mSettings);
-	assert(tmp!=NULL);
-	PostReport(tmp);
-	setNoSettReport(mSettings);
     }
     // Post the connect report unless peer version exchange is set
     if (isConnectionReport(mSettings) && !isSumOnly(mSettings)) {
