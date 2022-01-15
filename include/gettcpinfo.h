@@ -58,7 +58,6 @@ struct iperf_tcpstats {
     bool isValid;
     int rtt;
     double connecttime;
-    int getsockmss;
 #if (HAVE_DECL_TCP_INFO)
     int cwnd;
     int rttvar;
