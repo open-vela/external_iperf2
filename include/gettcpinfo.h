@@ -58,7 +58,7 @@ struct iperf_tcpstats {
     bool isValid;
     int rtt;
     double connecttime;
-#if (HAVE_DECL_TCP_INFO)
+#if HAVE_TCP_STATS
     int cwnd;
     int rttvar;
     intmax_t retry;
