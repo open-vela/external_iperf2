@@ -586,8 +586,11 @@ const char report_peer_fail [] =
 const char report_mss_unsupported[] =
 "%sMSS and MTU size unknown (TCP_MAXSEG not supported)\n";
 
+const char report_default_mss[] =
+"MSS size %d bytes\n";
+
 const char report_mss[] =
-"MSS req size (per TCP_MAXSEG) %d bytes\n";
+"MSS req size %d bytes (per TCP_MAXSEG)\n";
 
 const char report_datagrams[] =
 "[%3d] Sent %d datagrams\n";

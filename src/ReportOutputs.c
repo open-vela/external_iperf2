@@ -1230,7 +1230,11 @@ static void reporter_output_listener_settings (struct ReportSettings *report) {
 	fprintf(stdout, "Reflected TOS will be set to 0x%x\n", report->common->RTOS);
     }
     if (isPrintMSS(report->common)) {
-	printf(report_mss, report->sockmaxseg);
+        if (isTCPMSS(report->common)) {
+	    printf(report_mss, report->sockmaxseg);
+	} else {
+	    printf(report_default_mss, report->sockmaxseg);
+	}
     }
     if (report->common->TOS) {
 	fprintf(stdout, "TOS will be set to 0x%x\n", report->common->TOS);
@@ -1315,6 +1319,14 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
 	outbuffer[(sizeof(outbuffer)-1)] = '\0';
         printf(client_fq_pacing,outbuffer);
     }
+    if (isPrintMSS(report->common)) {
+        if (isTCPMSS(report->common)) {
+	    printf(report_default_mss, report->sockmaxseg);
+	} else {
+	    printf(report_mss, report->sockmaxseg);
+	}
+    }
+
     if (isCongestionControl(report->common) && report->common->Congestion) {
 	fprintf(stdout, "TCP congestion control set to %s\n", report->common->Congestion);
     }
@@ -1331,9 +1343,6 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
 	} else {
 	    fprintf(stdout, "TCP near-congestion delay weight set to %2.4f\n", report->common->rtt_weight);
 	}
-    }
-    if (isPrintMSS(report->common)) {
-	printf(report_mss, report->sockmaxseg);
     }
     if (isSingleClient(report->common)) {
 	fprintf(stdout, "WARN: Client set to bypass reporter thread per -U (suggest use lower case -u instead)\n");
@@ -1388,6 +1397,7 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
     outbuffer[0]='\0';
     outbufferext[0]='\0';
     char *b = &outbuffer[0];
+
 #if HAVE_DECL_TCP_WINDOW_CLAMP
     if (!isUDP(report->common) && isRxClamp(report->common)) {
 	snprintf(b, SNBUFFERSIZE-strlen(b), " (%s%d)", "clamp=", report->common->ClampSize);
