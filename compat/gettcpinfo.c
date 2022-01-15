@@ -94,9 +94,9 @@ inline void tcpstats_copy (struct iperf_tcpstats *stats_dst, struct iperf_tcpsta
 }
 #else
 #if WIN32
-inline void gettcpinfo (SOCKET sock, struct iperf_tcpstatst *stats) {
+inline void gettcpinfo (SOCKET sock, struct iperf_tcpstats *stats) {
 #else
-inline void gettcpinfo (int sock, struct iperf_tcpstatst *stats) {
+inline void gettcpinfo (int sock, struct iperf_tcpstats *stats) {
 #endif
     stats->rtt = 1;
     stats->isValid  = false;
