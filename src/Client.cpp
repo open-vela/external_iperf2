@@ -159,7 +159,7 @@ bool Client::my_connect (bool close_on_fail) {
         WARN_errno(rc == SOCKET_ERROR, "bind");
     }
 
-    if (isReport(mSettings) && isSettingsReport(mSettings)) {
+    if (!isUDP(mSettings) && isReport(mSettings) && isSettingsReport(mSettings)) {
 	struct ReportHeader *tmp = InitSettingsReport(mSettings);
 	assert(tmp!=NULL);
 	PostReport(tmp);
@@ -213,6 +213,13 @@ bool Client::my_connect (bool close_on_fail) {
 	getsockname(mySocket, reinterpret_cast<sockaddr*>(&mSettings->local), &mSettings->size_local);
 	getpeername(mySocket, reinterpret_cast<sockaddr*>(&mSettings->peer), &mSettings->size_peer);
 	SockAddr_Ifrname(mSettings);
+	checksock_max_udp_payload(mSettings);
+	if (isReport(mSettings) && isSettingsReport(mSettings)) {
+	    struct ReportHeader *tmp = InitSettingsReport(mSettings);
+	    assert(tmp!=NULL);
+	    PostReport(tmp);
+	    setNoSettReport(mSettings);
+	}
 	if (isUDP(mSettings) && !isIsochronous(mSettings) && !isIPG(mSettings)) {
 	    mSettings->mBurstIPG = get_delay_target() / 1e3; // this is being set for the settings report only
 	}
