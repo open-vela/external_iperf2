@@ -102,6 +102,12 @@ typedef bool _Bool;
 #endif
 
 
+// v4: 1470 bytes UDP payload will fill one and only one ethernet datagram (IPv4 overhead is 20 bytes)
+#define  kDefault_UDPBufLen 1470
+// v6: 1450 bytes UDP payload will fill one and only one ethernet datagram (IPv6 overhead is 40 bytes)
+#define  kDefault_UDPBufLenV6 1450
+#define  IPV6HDRLEN 40
+
 #if ((defined HAVE_SSM_MULTICAST) || (defined HAVE_DECL_SO_BINDTODEVICE))  && (defined HAVE_NET_IF_H)
 #include <net/if.h>
 #endif
@@ -143,7 +149,7 @@ typedef bool _Bool;
 // #include <netinet/in.h>
 //
 // force the ipv6hdr length to 40 vs use of sizeof(struct ipv6hdr)
-#define  IPV6HDRLEN 40
+
 #endif // HAVE_AF_PACKET
 
 #ifdef WIN32

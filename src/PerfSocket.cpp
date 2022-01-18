@@ -74,6 +74,7 @@
 #include "PerfSocket.hpp"
 #include "SocketAddr.h"
 #include "util.h"
+#include <linux/sockios.h>
 
 /* -------------------------------------------------------------------
  * Set socket options before the listen() or connect() calls.
@@ -416,6 +417,38 @@ int getsock_tcp_mss  (int inSock) {
 #endif
     return theMSS;
 } /* end getsock_tcp_mss */
+
+int checksock_max_udp_payload (struct thread_Settings *inSettings) {
+    int max = -1;
+#if HAVE_DECL_SIOCGIFMTU
+    struct ifreq ifr;
+    if (!isBuflenSet(inSettings) && inSettings->mIfrname) {
+	strncpy(ifr.ifr_name, inSettings->mIfrname, (size_t) (IFNAMSIZ - 1));
+	if (!ioctl(inSettings->mSock, SIOCGIFMTU, &ifr)) {
+	    if (!isIPV6(inSettings)) {
+		max = ifr.ifr_mtu - sizeof(struct iphdr) - sizeof(struct udphdr);
+	    } else {
+		max = ifr.ifr_mtu - IPV6HDRLEN;
+	    }
+	    if (max > 0) {
+		// adjust the payload size based upon the inerface MTU
+		if (!isIPV6(inSettings) && (max > kDefault_UDPBufLen)) {
+		    max = kDefault_UDPBufLen;
+		} else if (isIPV6(inSettings) && (max > kDefault_UDPBufLenV6)) {
+		    max = kDefault_UDPBufLenV6;
+		}
+		if (max > inSettings->mBufLen) {
+		    pattern(inSettings->mBuf, max);
+		}
+		inSettings->mBufLen = max;
+	    } else {
+		max = -1;
+	    }
+	}
+    }
+#endif
+    return max;
+}
 
 
 // end SetSocketOptions

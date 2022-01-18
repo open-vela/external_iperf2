@@ -109,6 +109,10 @@
    don't. */
 #undef HAVE_DECL_SIGALRM
 
+/* Define to 1 if you have the declaration of `SIOCGIFMTU', and to 0 if you
+   don't. */
+#undef HAVE_DECL_SIOCGIFMTU
+
 /* Define to 1 if you have the declaration of `SO_BINDTODEVICE', and to 0 if
    you don't. */
 #undef HAVE_DECL_SO_BINDTODEVICE
@@ -224,6 +228,9 @@
 
 /* Define to 1 if you have the <linux/ip.h> header file. */
 #undef HAVE_LINUX_IP_H
+
+/* Define to 1 if you have the <linux/sockios.h> header file. */
+#undef HAVE_LINUX_SOCKIOS_H
 
 /* Define to 1 if you have the <linux/udp.h> header file. */
 #undef HAVE_LINUX_UDP_H
