@@ -74,7 +74,6 @@
 #include "PerfSocket.hpp"
 #include "SocketAddr.h"
 #include "util.h"
-#include <linux/sockios.h>
 
 /* -------------------------------------------------------------------
  * Set socket options before the listen() or connect() calls.
