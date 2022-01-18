@@ -171,7 +171,7 @@ AC_SEARCH_LIBS([socket], [socket], [],
 
 dnl Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([arpa/inet.h libintl.h net/ethernet.h net/if.h linux/sockios.h linux/ip.h linux/udp.h linux/if_packet.h linux/filter.h linux/if_tun.h netdb.h netinet/in.h netinet/tcp.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h signal.h ifaddrs.h])
+AC_CHECK_HEADERS([arpa/inet.h libintl.h net/ethernet.h net/if.h sys/sockio.h linux/sockios.h linux/ip.h linux/udp.h linux/if_packet.h linux/filter.h linux/if_tun.h netdb.h netinet/in.h netinet/tcp.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h signal.h ifaddrs.h])
 
 dnl ===================================================================
 dnl Checks for typedefs, structures
@@ -217,7 +217,14 @@ AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([atexit memset select strchr strerror strtol strtoll usleep clock_gettime sched_setscheduler sched_yield mlockall setitimer nanosleep clock_nanosleep freopen])
 AC_REPLACE_FUNCS(snprintf inet_pton inet_ntop gettimeofday)
 AC_CHECK_DECLS([ENOBUFS, EWOULDBLOCK],[],[],[#include <errno.h>])
-AC_CHECK_DECLS([SIOCGIFMTU],[],[],[#include <linux/sockios.h>])
+AC_CHECK_DECLS([SIOCGIFMTU],[],[],[
+#ifdef HAVE_LINUX_SOCKIOS_H
+#include <linux/sockios.h>
+#endif
+#ifdef HAVE_SYS_SOCKIO_H
+#include <sys/sockio.h>
+#endif
+])
 AC_CHECK_DECLS([pthread_cancel],[],[],[#include <pthread.h>])
 AC_CHECK_DECLS([CPU_SET],[],[],[
 	#define _GNU_SOURCE
