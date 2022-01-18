@@ -117,6 +117,9 @@ typedef bool _Bool;
 #include <sys/ioctl.h>
 #endif
 
+#if HAVE_LINUX_SOCKIOS_H
+#include <linux/sockios.h>
+#endif
 
 // AF_PACKET HEADERS
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
