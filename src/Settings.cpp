@@ -71,6 +71,7 @@
 #include "isochronous.hpp"
 #include "pdfs.h"
 #include "payloads.h"
+#include "PerfSocket.hpp"
 #include <math.h>
 
 static int reversetest = 0;
@@ -284,11 +285,6 @@ const char short_options[] = "146b:c:def:hi:l:mn:o:p:rst:uvw:x:y:zAB:CDF:H:IL:M:
 #define DEFAULTS()
 
 const long kDefault_UDPRate = 1024 * 1024; // -u  if set, 1 Mbit/sec
-const int  kDefault_UDPBufLen = 1470;      // -u  if set, read/write 1470 bytes
-
-// v4: 1470 bytes UDP payload will fill one and only one ethernet datagram (IPv4 overhead is 20 bytes)
-const int  kDefault_UDPBufLenV6 = 1450;      // -u  if set, read/write 1470 bytes
-// v6: 1450 bytes UDP payload will fill one and only one ethernet datagram (IPv6 overhead is 40 bytes)
 const int kDefault_TCPBufLen = 128 * 1024; // TCP default read/write size
 const int kDefault_BBTCPBufLen = 100; // default bounce-back size in bytes
 
@@ -2072,6 +2068,7 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
 #endif
 	    }
 	}
+	checksock_max_udp_payload(server);
     } else { //tcp first payload
 	struct client_tcp_testhdr *hdr = static_cast<struct client_tcp_testhdr *>(mBuf);
 	Settings_ReadClientSettingsV1(&reversed_thread, &hdr->base);
