@@ -7188,7 +7188,7 @@ fi
 done
 
 
-for ac_header in arpa/inet.h libintl.h net/ethernet.h net/if.h linux/sockios.h linux/ip.h linux/udp.h linux/if_packet.h linux/filter.h linux/if_tun.h netdb.h netinet/in.h netinet/tcp.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h signal.h ifaddrs.h
+for ac_header in arpa/inet.h libintl.h net/ethernet.h net/if.h sys/sockio.h linux/sockios.h linux/ip.h linux/udp.h linux/if_packet.h linux/filter.h linux/if_tun.h netdb.h netinet/in.h netinet/tcp.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h signal.h ifaddrs.h
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
 ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
@@ -7930,7 +7930,14 @@ cat >>confdefs.h <<_ACEOF
 #define HAVE_DECL_EWOULDBLOCK $ac_have_decl
 _ACEOF
 
-ac_fn_c_check_decl "$LINENO" "SIOCGIFMTU" "ac_cv_have_decl_SIOCGIFMTU" "#include <linux/sockios.h>
+ac_fn_c_check_decl "$LINENO" "SIOCGIFMTU" "ac_cv_have_decl_SIOCGIFMTU" "
+#ifdef HAVE_LINUX_SOCKIOS_H
+#include <linux/sockios.h>
+#endif
+#ifdef HAVE_SYS_SOCKIO_H
+#include <sys/sockio.h>
+#endif
+
 "
 if test "x$ac_cv_have_decl_SIOCGIFMTU" = xyes; then :
   ac_have_decl=1
