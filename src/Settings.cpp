@@ -2356,7 +2356,7 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 #endif
 #if HAVE_DECL_TCP_QUICKACK
 	    if (isTcpQuickAck(client) && (!isReverse(client) || isFullDuplex(client))) {
-		upperflags  |= HEADER_WRITEPREFETCH;
+		upperflags  |= HEADER_TCPQUICKACK;
 	    }
 #endif
 	    if (isIsochronous(client) || isPeriodicBurst(client)) {

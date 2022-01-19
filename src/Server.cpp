@@ -177,6 +177,15 @@ void Server::RunTCP () {
 	    if (burst_nleft > 0)
 		readLen = (mSettings->mBufLen < burst_nleft) ? mSettings->mBufLen : burst_nleft;
 	    reportstruct->emptyreport=1;
+#if HAVE_DECL_TCP_QUICKACK
+		if (isTcpQuickAck(mSettings)) {
+		    int opt = 1;
+		    Socklen_t len = sizeof(opt);
+		    int rc = setsockopt(mySocket, IPPROTO_TCP, TCP_QUICKACK,
+					reinterpret_cast<char*>(&opt), len);
+		    WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_QUICKACK");
+		}
+#endif
 	    if (isburst && (burst_nleft == 0)) {
 		if ((n = recvn(mSettings->mSock, reinterpret_cast<char *>(&burst_info), sizeof(struct TCP_burst_payload), 0)) == sizeof(struct TCP_burst_payload)) {
 		    // burst_info.typelen.type = ntohl(burst_info.typelen.type);
