@@ -219,7 +219,7 @@ const struct option long_options[] =
 {"tcp-drain", no_argument, &tcpdrain, 1},
 {"tos-override", required_argument, &overridetos, 1},
 {"tcp-rx-window-clamp", required_argument, &rxwinclamp, 1},
-
+{"tcp-quickack", no_argument, &tcpquickack, 1},
 {"tcp-write-prefetch", required_argument, &txnotsentlowwater, 1}, // see doc/DESIGN_NOTES
 {"tap-dev", optional_argument, &tapif, 1},
 {"tun-dev", optional_argument, &tunif, 1},
@@ -827,7 +827,7 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 #if HAVE_DECL_TCP_MAXSEG
 	    mExtSettings->mMSS = byte_atoi(optarg);
             setTCPMSS(mExtSettings);
-            setPrintMSS(mExtSettings);	    
+            setPrintMSS(mExtSettings);
 #endif
             break;
 
@@ -1109,7 +1109,9 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    }
 	    if (tcpquickack) {
 		tcpquickack = 0;
+#if HAVE_DECL_TCP_QUICKACK
 		setTcpQuickAck(mExtSettings);
+#endif
 	    }
 	    if (congest) {
 		congest= 0;
