@@ -425,9 +425,9 @@ int checksock_max_udp_payload (struct thread_Settings *inSettings) {
 	strncpy(ifr.ifr_name, inSettings->mIfrname, (size_t) (IFNAMSIZ - 1));
 	if (!ioctl(inSettings->mSock, SIOCGIFMTU, &ifr)) {
 	    if (!isIPV6(inSettings)) {
-		max = ifr.ifr_mtu - sizeof(struct iphdr) - sizeof(struct udphdr);
+		max = ifr.ifr_mtu - IPV4HDRLEN - UDPHDRLEN;
 	    } else {
-		max = ifr.ifr_mtu - IPV6HDRLEN;
+		max = ifr.ifr_mtu - IPV6HDRLEN - UDPHDRLEN;
 	    }
 	    if (max > 0) {
 		// adjust the payload size based upon the inerface MTU
