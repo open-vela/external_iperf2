@@ -214,7 +214,10 @@ bool Client::my_connect (bool close_on_fail) {
 	getpeername(mySocket, reinterpret_cast<sockaddr*>(&mSettings->peer), &mSettings->size_peer);
 	SockAddr_Ifrname(mSettings);
 	if (isUDP(mSettings)) {
-	    mSettings->mBufLen = checksock_max_udp_payload(mSettings);
+	    int max = checksock_max_udp_payload(mSettings);
+	    if (max > 0) {
+		mSettings->mBufLen = max;
+	    }
 	}
 	if (isReport(mSettings) && isSettingsReport(mSettings)) {
 	    struct ReportHeader *tmp = InitSettingsReport(mSettings);
