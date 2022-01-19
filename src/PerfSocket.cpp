@@ -418,7 +418,7 @@ int getsock_tcp_mss  (int inSock) {
 } /* end getsock_tcp_mss */
 
 int checksock_max_udp_payload (struct thread_Settings *inSettings) {
-    int max = -1;
+    int max = inSettings->mBufLen;
 #if HAVE_DECL_SIOCGIFMTU
     struct ifreq ifr;
     if (!isBuflenSet(inSettings) && inSettings->mIfrname) {
@@ -436,7 +436,6 @@ int checksock_max_udp_payload (struct thread_Settings *inSettings) {
 		} else if (isIPV6(inSettings) && (max > kDefault_UDPBufLenV6)) {
 		    max = kDefault_UDPBufLenV6;
 		}
-		inSettings->mBufLen = max;
 	    } else {
 		max = -1;
 	    }
