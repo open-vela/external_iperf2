@@ -171,7 +171,7 @@ AC_SEARCH_LIBS([socket], [socket], [],
 
 dnl Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([arpa/inet.h libintl.h net/ethernet.h net/if.h sys/sockio.h linux/sockios.h linux/ip.h linux/udp.h linux/if_packet.h linux/filter.h linux/if_tun.h netdb.h netinet/in.h netinet/tcp.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h signal.h ifaddrs.h])
+AC_CHECK_HEADERS([arpa/inet.h libintl.h net/ethernet.h net/if.h sys/ioctl.h sys/sockio.h linux/sockios.h linux/ip.h linux/udp.h linux/if_packet.h linux/filter.h linux/if_tun.h netdb.h netinet/in.h netinet/tcp.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h signal.h ifaddrs.h])
 
 dnl ===================================================================
 dnl Checks for typedefs, structures

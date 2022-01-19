@@ -111,14 +111,17 @@ typedef bool _Bool;
 #if ((defined HAVE_SSM_MULTICAST) || (defined HAVE_DECL_SO_BINDTODEVICE))  && (defined HAVE_NET_IF_H)
 #include <net/if.h>
 #endif
-
-#if ((HAVE_TUNTAP_TAP) || (HAVE_TUNTAP_TUN))
-#include <linux/if_tun.h>
+#ifdef HAVE_SYS_IOCTL_H
 #include <sys/ioctl.h>
 #endif
-
-#if HAVE_LINUX_SOCKIOS_H
+#ifdef HAVE_SYS_SOCKIO_H
+#include <sys/sockio.h>
+#endif
+#ifdef HAVE_LINUX_SOCKIOS_H
 #include <linux/sockios.h>
+#endif
+#if ((HAVE_TUNTAP_TAP) || (HAVE_TUNTAP_TUN))
+#include <linux/if_tun.h>
 #endif
 
 // AF_PACKET HEADERS
