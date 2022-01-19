@@ -1443,6 +1443,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    mExtSettings->mBounceBackBytes = mExtSettings->mBufLen;
 	    mExtSettings->mBurstSize = mExtSettings->mBufLen;
 #if HAVE_DECL_TCP_QUICKACK
+	    if (notcpbbquickack_cliset && isTcpQuickAck(mExtSettings)) {
+		fprintf(stderr, "ERROR: --tcp-quickack and --bounceback-no-quickack are mutually exclusive\n");
+		bail = true;
+	    }
 	    // be wary of double negatives here
 	    if (!notcpbbquickack_cliset && (mExtSettings->mBounceBackHold > 0))
 		setTcpQuickAck(mExtSettings);
