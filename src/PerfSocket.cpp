@@ -436,9 +436,6 @@ int checksock_max_udp_payload (struct thread_Settings *inSettings) {
 		} else if (isIPV6(inSettings) && (max > kDefault_UDPBufLenV6)) {
 		    max = kDefault_UDPBufLenV6;
 		}
-		if (max > inSettings->mBufLen) {
-		    pattern(inSettings->mBuf, max);
-		}
 		inSettings->mBufLen = max;
 	    } else {
 		max = -1;

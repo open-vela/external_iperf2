@@ -2068,7 +2068,7 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
 #endif
 	    }
 	}
-	checksock_max_udp_payload(server);
+	server->mBufLen = checksock_max_udp_payload(server);
     } else { //tcp first payload
 	struct client_tcp_testhdr *hdr = static_cast<struct client_tcp_testhdr *>(mBuf);
 	Settings_ReadClientSettingsV1(&reversed_thread, &hdr->base);
