@@ -106,7 +106,9 @@ typedef bool _Bool;
 #define  kDefault_UDPBufLen 1470
 // v6: 1450 bytes UDP payload will fill one and only one ethernet datagram (IPv6 overhead is 40 bytes)
 #define  kDefault_UDPBufLenV6 1450
+#define  IPV4HDRLEN 20
 #define  IPV6HDRLEN 40
+#define  UDPHDRLEN  8
 
 #if ((defined HAVE_SSM_MULTICAST) || (defined HAVE_DECL_SO_BINDTODEVICE))  && (defined HAVE_NET_IF_H)
 #include <net/if.h>
