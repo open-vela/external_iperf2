@@ -105,7 +105,7 @@ class iperf_flow(object):
             hosts = [flow.server for flow in flows]
             hosts.extend([flow.client for flow in flows])
             hosts=list(set(hosts))
-            tasks = [asyncio.ensure_future(iperf_flow.cleanup(user='root', host=host)) for host in hosts]
+            tasks = [asyncio.ensure_future(iperf_flow.cleanup(user='root', host=host), loop=iperf_flow.loop) for host in hosts]
             try :
                 iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=10))
             except asyncio.TimeoutError:
@@ -177,7 +177,7 @@ class iperf_flow(object):
             hosts = [flow.server for flow in flows]
             hosts.extend([flow.client for flow in flows])
             hosts=list(set(hosts))
-            tasks = [asyncio.ensure_future(iperf_flow.cleanup(user='root', host=host)) for host in hosts]
+            tasks = [asyncio.ensure_future(iperf_flow.cleanup(user='root', host=host), loop=iperf_flow.loop) for host in hosts]
             try :
                 iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=10))
             except asyncio.TimeoutError:
@@ -593,10 +593,10 @@ class iperf_server(object):
         self.host = host
         self.flow = flow
         self.debug = debug
-        self.opened = asyncio.Event(loop=self.loop)
-        self.closed = asyncio.Event(loop=self.loop)
+        self.opened = asyncio.Event()
+        self.closed = asyncio.Event()
         self.closed.set()
-        self.traffic_event = asyncio.Event(loop=self.loop)
+        self.traffic_event = asyncio.Event()
         self._transport = None
         self._protocol = None
         self.time = time
@@ -814,12 +814,12 @@ class iperf_client(object):
     def __init__(self, name='Client', loop=None, host='localhost', flow = None, debug=False):
         self.__dict__['flow'] = flow
         self.loop = loop
-        self.opened = asyncio.Event(loop=self.loop)
-        self.closed = asyncio.Event(loop=self.loop)
-        self.txcompleted = asyncio.Event(loop=self.loop)
+        self.opened = asyncio.Event()
+        self.closed = asyncio.Event()
+        self.txcompleted = asyncio.Event()
         self.closed.set()
         self.txcompleted.clear()
-        self.traffic_event = asyncio.Event(loop=self.loop)
+        self.traffic_event = asyncio.Event()
         self.name = name
         self.iperf = '/usr/local/bin/iperf'
         self.ssh = '/usr/bin/ssh'
@@ -1005,9 +1005,13 @@ class flow_histogram(object):
                     fid.write('set xrange [{}:75]\n'.format(default_minx))
                     fid.write('set xtics add 5\n')
                     fid.write('set format x \"%.0f"\n')
+                elif :
+                    fid.write('set xrange [{}:100]\n'.format(default_minx))
+                    fid.write('set xtics add 10\n')
+                    fid.write('set format x \"%.0f"\n')
                 else :
                     fid.write('set xrange [{}:*]\n'.format(default_minx))
-                    fid.write('set xtics add 10\n')
+                    fid.write('set xtics auto\n')
                     fid.write('set format x \"%.0f"\n')
                 fid.write('plot \"{0}\" using 1:2 index 0 axes x1y2 with impulses linetype 3 notitle,  \"{1}\" using 1:2 index 0 axes x1y2 with impulses linetype 2 notitle, \"{1}\" using 1:3 index 0 axes x1y1 with lines linetype 1 linewidth 2 notitle, \"{0}\" using 1:3 index 0 axes x1y1 with lines linetype -1 linewidth 2 notitle\n'.format(h1.datafilename, h2.datafilename))
 
@@ -1151,7 +1155,7 @@ class flow_histogram(object):
                     fid.write('set xrange [0:75]\n')
                     fid.write('set xtics add 5\n')
                 else :
-                    fid.write('set xrange [0:*]\n')
+                    fid.write('set xrange [0:100]\n')
                     fid.write('set xtics add 10\n')
                 fid.write('plot \"{0}\" using 1:2 index 0 axes x1y2 with impulses linetype 3 notitle, \"{0}\" using 1:3 index 0 axes x1y1 with lines linetype -1 linewidth 2 notitle\n'.format(datafilename))
 
