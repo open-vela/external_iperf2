@@ -1338,17 +1338,17 @@ class netlink_pktts(object):
             self.pktts_cmd = '{} > /dev/null 2>&1'.format(self.pktts_cmd)
         self.stdout_linecount = 0
         self.stderr_linecount = 0
-        self.opened = asyncio.Event(loop=self.loop)
-        self.closed = asyncio.Event(loop=self.loop)
-        self.sampling = asyncio.Event(loop=self.loop)
-        self.servo_opened = asyncio.Event(loop=self.loop)
-        self.servo_closed = asyncio.Event(loop=self.loop)
-        self.servo_ready = asyncio.Event(loop=self.loop)
+        self.opened = asyncio.Event()
+        self.closed = asyncio.Event()
+        self.sampling = asyncio.Event()
+        self.servo_opened = asyncio.Event()
+        self.servo_closed = asyncio.Event()
+        self.servo_ready = asyncio.Event()
         self.name = sshnode.name
         self.debug  = debug
         self.silent = silent
         self.servo_match = False
-        self.io_inactive = asyncio.Event(loop=self.loop)
+        self.io_inactive = asyncio.Event()
 
     def reset(self) :
         self.stdout_linecount = 0
