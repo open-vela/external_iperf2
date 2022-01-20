@@ -81,7 +81,7 @@ class ssh_node:
         tasks = []
         for node in nodes:
             if node.sshtype.lower() == 'ssh' :
-                tasks.append(asyncio.ensure_future(node.clean()))
+                tasks.append(asyncio.ensure_future(node.clean(), loop=ssh_node.loop))
         if tasks :
             logging.info('Run consoles clean')
             try :
@@ -122,7 +122,7 @@ class ssh_node:
         node_names = []
         for node in nodes :
             if node.ssh_console_session :
-                node.console_task = asyncio.ensure_future(node.ssh_console_session.close())
+                node.console_task = asyncio.ensure_future(node.ssh_console_session.close(), loop=ssh_node.loop)
                 tasks.append(node.console_task)
                 node_names.append(node.name)
 
@@ -168,7 +168,7 @@ class ssh_node:
         cmd_timer = CMD_TIMEOUT
         connect_timer = CONNECT_TIMEOUT
         this_session = ssh_session(name=self.name, hostname=self.ipaddr, CONNECT_TIMEOUT=connect_timer, node=self, ssh_speedups=True)
-        this_task = asyncio.ensure_future(this_session.post_cmd(cmd=cmd, IO_TIMEOUT=io_timer, CMD_TIMEOUT=cmd_timer))
+        this_task = asyncio.ensure_future(this_session.post_cmd(cmd=cmd, IO_TIMEOUT=io_timer, CMD_TIMEOUT=cmd_timer), loop=ssh_node.loop)
         if run_now:
             ssh_node.loop.run_until_complete(asyncio.wait([this_task], timeout=CMD_TIMEOUT))
         else:
@@ -213,7 +213,7 @@ class ssh_session:
             if self._session.CONNECT_TIMEOUT is not None :
                 self.watchdog = ssh_node.loop.call_later(self._session.CONNECT_TIMEOUT, self.wd_timer)
             self._session.closed.clear()
-            self.timeout_occurred = asyncio.Event(loop=ssh_node.loop)
+            self.timeout_occurred = asyncio.Event()
             self.timeout_occurred.clear()
 
         @property
@@ -303,9 +303,9 @@ class ssh_session:
         self.hostname = hostname
         self.name = name
         self.user = user
-        self.opened = asyncio.Event(loop=ssh_node.loop)
-        self.closed = asyncio.Event(loop=ssh_node.loop)
-        self.connected = asyncio.Event(loop=ssh_node.loop)
+        self.opened = asyncio.Event()
+        self.closed = asyncio.Event()
+        self.connected = asyncio.Event()
         self.closed.set()
         self.opened.clear()
         self.connected.clear()
