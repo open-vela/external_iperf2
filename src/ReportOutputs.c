@@ -1319,7 +1319,11 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
 	char tmpbuf[40];
 	byte_snprintf(tmpbuf, sizeof(tmpbuf), report->common->bbsize, 'A');
 	tmpbuf[39]='\0';
-	printf(client_bounceback, tmpbuf, report->common->bbhold);
+	if (isTcpQuickAck(report->common)) {
+	    printf(client_bounceback, tmpbuf, report->common->bbhold);
+	} else {
+	    printf(client_bounceback_noqack, tmpbuf, report->common->bbhold);
+	}
     }
     if (isFQPacing(report->common)) {
 	byte_snprintf(outbuffer, sizeof(outbuffer), report->common->FQPacingRate, 'a');
