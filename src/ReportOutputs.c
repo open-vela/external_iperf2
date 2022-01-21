@@ -368,11 +368,13 @@ void tcp_output_write_bb (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_client_bb_bw);
     _print_stats_common(stats);
     if (stats->final) {
+	int cnt_sec = (stats->bbrtt.total.cnt > 0) ? ((int) ((double) stats->bbrtt.total.cnt / (stats->ts.iEnd - stats->ts.iStart))) : 0;
 #if HAVE_TCP_STATS
 	printf(report_client_bb_bw_format, stats->common->transferIDStr,
 	       stats->ts.iStart, stats->ts.iEnd,
 	       outbuffer, outbufferext,
 	       stats->bbrtt.total.cnt,
+	       cnt_sec,
 	       (stats->bbrtt.total.mean * 1e3),
 	       (stats->bbrtt.total.cnt < 2) ? 0 : (stats->bbrtt.total.min * 1e3),
 	       (stats->bbrtt.total.cnt < 2) ? 0 : (stats->bbrtt.total.max * 1e3),
@@ -385,6 +387,7 @@ void tcp_output_write_bb (struct TransferInfo *stats) {
 	       stats->ts.iStart, stats->ts.iEnd,
 	       outbuffer, outbufferext,
 	       stats->bbrtt.total.cnt,
+	       cnt_sec,
 	       (stats->bbrtt.total.mean * 1e3),
 	       (stats->bbrtt.total.cnt < 2) ? 0 : (stats->bbrtt.total.min * 1e3),
 	       (stats->bbrtt.total.cnt < 2) ? 0 : (stats->bbrtt.total.max * 1e3),
@@ -394,6 +397,7 @@ void tcp_output_write_bb (struct TransferInfo *stats) {
 	    printf(report_client_bb_bw_triptime_format, stats->common->transferIDStr,
 		   stats->ts.iStart, stats->ts.iEnd,
 		   stats->bbowdto.total.cnt,
+		   cnt_sec,
 		   (stats->bbowdto.total.mean * 1e3),
 		   (stats->bbowdto.total.cnt < 2) ? 0 : (stats->bbowdto.total.min * 1e3),
 		   (stats->bbowdto.total.cnt < 2) ? 0 : (stats->bbowdto.total.max * 1e3),
@@ -411,11 +415,13 @@ void tcp_output_write_bb (struct TransferInfo *stats) {
 	  histogram_print(stats->bbrtt_histogram, stats->ts.iStart, stats->ts.iEnd);
 	}
     } else {
+	int cnt_sec = (stats->bbrtt.total.cnt > 0) ? ((int) ((double) stats->bbrtt.current.cnt / (stats->ts.iEnd - stats->ts.iStart))) : 0;
 #if HAVE_TCP_STATS
 	printf(report_client_bb_bw_format, stats->common->transferIDStr,
 	       stats->ts.iStart, stats->ts.iEnd,
 	       outbuffer, outbufferext,
 	       stats->bbrtt.current.cnt,
+	       cnt_sec,
 	       (stats->bbrtt.current.mean * 1e3),
 	       (stats->bbrtt.current.cnt < 2) ? 0 : (stats->bbrtt.current.min * 1e3),
 	       (stats->bbrtt.current.cnt < 2) ? 0 : (stats->bbrtt.current.max * 1e3),
@@ -428,6 +434,7 @@ void tcp_output_write_bb (struct TransferInfo *stats) {
 	       stats->ts.iStart, stats->ts.iEnd,
 	       outbuffer, outbufferext,
 	       stats->bbrtt.current.cnt,
+	       cnt_sec,
 	       (stats->bbrtt.current.mean * 1e3),
 	       (stats->bbrtt.current.cnt < 2) ? 0 : (stats->bbrtt.current.min * 1e3),
 	       (stats->bbrtt.current.cnt < 2) ? 0 : (stats->bbrtt.current.max * 1e3),
