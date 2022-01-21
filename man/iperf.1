@@ -801,6 +801,20 @@ transmit (i.e. the server role reversed to act as a client) for UDP
 since there is no flow control with UDP. There is no option to
 directly rate limit the writes with TCP testing when using --reverse.
 .P
+.B Bounceback
+The bounceback test allows one to measure network responsiveness (which, in this test, is an inverse of latency.)
+Latency is merely delay in units of time. Latency metrics require one to know the delay of what's being measured.
+For bounceback it's a client write to a server read followed by a server write and then the client read. The original
+write is bounce backed. Iperf 2 sets up the socket with TCP_NODELAY and possibly TCP_QUICKACK (unless disabled).
+The client sends a small write (which defaults to 100 bytes unless -l is set) and issues a read waiting for the "bounceback"
+from the server. The server waits for a read and then optionally delays before sending the payload back.
+This repeats until the traffic ends.
+.P
+The TCP_QUICKACK socket option will be enabled during bounceback tests when the bounceback-hold
+is set to a non-zero value. The socket option is applied after every read() on the server
+and before the hold delay call. It's also applied on the client. Use --bounceback-no-quickack
+to disable TCP ack delays per the socket.
+.P
 .B TCP Connect times:
 The TCP connect time (or three way handshake) can be seen on the iperf
 client when the -e (--enhanced) option is set. Look for the
@@ -838,7 +852,7 @@ rate. The metric is scaled to assist with human readability.
 Iperf 2 supports multicast with a couple of caveats. First, multicast streams cannot take advantage of the -P option. The server will serialize multicast streams. Also, it's highly encouraged to use a -t on a server that will be used for multicast clients. That is because the single end of traffic packet sent from client to server may get lost and there are no redundant end of traffic packets.  Setting -t on the server will kill the server thread in the event this packet is indeed lost.
 .P
 .B TCP_QUICACK:
-The TCP_QUICKACK socket option will be enabled during bounceback tests when the bounceback-hold is also set to a non-zero value. The socket option is applied after every read() on the server and before the hold delay call. It's not applied on the client. It's not supported (yet) for other TCP traffic tests. Use --bounceback-no-quickack to disable TCP ack delays per the socket.
+The TCP_QUICKACK socket applied after every read() on the server
 .P
 .B Fast Sampling:
 Use
