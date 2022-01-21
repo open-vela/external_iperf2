@@ -1011,6 +1011,15 @@ void Client::RunBounceBackTCP () {
 	    reportstruct->emptyreport = 0;
 	    totLen += reportstruct->packetLen;
 	    reportstruct->errwrite=WriteNoErr;
+#if HAVE_DECL_TCP_QUICKACK
+	    if (isTcpQuickAck(mSettings)) {
+		int opt = 1;
+		Socklen_t len = sizeof(opt);
+		int rc = setsockopt(mySocket, IPPROTO_TCP, TCP_QUICKACK,
+				    reinterpret_cast<char*>(&opt), len);
+		WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_QUICKACK");
+	    }
+#endif
 	    if ((n = recvn(mySocket, mSettings->mBuf, mSettings->mBounceBackBytes, 0)) == mSettings->mBounceBackBytes) {
 		struct bounceback_hdr *bbhdr = reinterpret_cast<struct bounceback_hdr *>(mSettings->mBuf);
 		now.setnow();

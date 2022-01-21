@@ -1448,8 +1448,9 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		bail = true;
 	    }
 	    // be wary of double negatives here
-	    if (!notcpbbquickack_cliset && (mExtSettings->mBounceBackHold > 0))
+	    if (!notcpbbquickack_cliset && (mExtSettings->mBounceBackHold > 0)) {
 		setTcpQuickAck(mExtSettings);
+	    }
 #endif
 
 	}
