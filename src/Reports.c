@@ -942,6 +942,7 @@ void write_UDP_AckFIN (struct TransferInfo *stats, int len) {
 	hdr->extend.sumTransit2  = htonl((long) ((stats->transit.total.sum - (long)stats->transit.total.sum) * rMillion));
 	hdr->extend.meanTransit1  = htonl((long) stats->transit.total.mean);
 	hdr->extend.meanTransit2  = htonl((long) ((stats->transit.total.mean - (long)stats->transit.total.mean) * rMillion));
+	stats->transit.total.m2 *= 1e12;
 	hdr->extend.m2Transit1  = htonl((long) stats->transit.total.m2);
 	hdr->extend.m2Transit2  = htonl((long) ((stats->transit.total.m2 - (long)stats->transit.total.m2) * rMillion));
 	hdr->extend.vdTransit1  = htonl((long) stats->transit.total.vd);
