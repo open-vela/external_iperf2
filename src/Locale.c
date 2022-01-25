@@ -372,7 +372,7 @@ const char report_client_bb_bw_triptime_format[] =
 
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
 const char report_write_enhanced_drain_header[] =
-"[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth       Write/Err  Rtry     Cwnd/RTT        NetPwr  Drain avg/min/max/stdev (cnt)\n";
+"[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth       Write/Err  Rtry     Cwnd/RTT        NetPwr  Sojourn avg/min/max/stdev (cnt)\n";
 
 const char report_write_enhanced_drain_format[] =
 "%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %10d %8dK/%u us  %s  %.3f/%.3f/%.3f/%.3f ms (%d)\n";
