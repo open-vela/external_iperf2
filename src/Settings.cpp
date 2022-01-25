@@ -110,7 +110,6 @@ static int hideips = 0;
 static int bounceback = 0;
 static int bouncebackhold = 0;
 static int bouncebackperiod = 0;
-static int tcpdrain = 0;
 static int overridetos = 0;
 static int notcpbbquickack = 0;
 static int tcpquickack = 0;
@@ -216,7 +215,6 @@ const struct option long_options[] =
 {"permit-key-timeout", required_argument, &permitkeytimeout, 1},
 {"burst-size", required_argument, &burstsize, 1},
 {"burst-period", required_argument, &burstperiodic, 1},
-{"tcp-drain", no_argument, &tcpdrain, 1},
 {"tos-override", required_argument, &overridetos, 1},
 {"tcp-rx-window-clamp", required_argument, &rxwinclamp, 1},
 {"tcp-quickack", no_argument, &tcpquickack, 1},
@@ -1094,15 +1092,6 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		fprintf(stderr, "--tcp-rx-window-clamp not supported on this platform\n");
 #endif
 	    }
-	    if (tcpdrain) {
-		tcpdrain = 0;
-#if HAVE_DECL_TCP_NOTSENT_LOWAT
-		setTcpDrain(mExtSettings);
-		setEnhanced(mExtSettings);
-#else
-		fprintf(stderr, "--tcp-drain not supported on this platform\n");
-#endif
-	    }
 	    if (notcpbbquickack) {
 		notcpbbquickack = 0;
 		notcpbbquickack_cliset = 1;
@@ -1123,11 +1112,6 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		mExtSettings->mWritePrefetch = byte_atoi(optarg);
 		setWritePrefetch(mExtSettings);
 		setEnhanced(mExtSettings);
-		mExtSettings->mHistBins = 100000; // 10 seconds wide
-		mExtSettings->mHistBinsize = 100; // 100 usec bins
-		mExtSettings->mHistUnits = 6;  // usecs 10 pow(x)
-		mExtSettings->mHistci_lower = 5;
-		mExtSettings->mHistci_upper = 95;
 #else
 		fprintf(stderr, "--tcp-write-prefetch not supported on this platform\n");
 #endif
@@ -1507,10 +1491,6 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		fprintf(stderr, "WARN: setting of option --tcp-quickack is not supported with -u UDP\n");
 		unsetWritePrefetch(mExtSettings);
 	    }
-	    if (isTcpDrain(mExtSettings)) {
-		fprintf(stderr, "WARN: setting of option --tcp-drain is not supported with -u UDP\n");
-		unsetTcpDrain(mExtSettings);
-	    }
 
 	    {
 		double delay_target;
@@ -1569,8 +1549,18 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		bail = true;
 	    }
 	}
-	if (!isReverse(mExtSettings) && !isFullDuplex(mExtSettings) && isHistogram(mExtSettings) && !isWritePrefetch(mExtSettings)) {
-	    fprintf(stderr, "WARN: option of --histograms on the client requires --tcp-write-prefetch\n");
+	if (!isReverse(mExtSettings) && !isFullDuplex(mExtSettings) && isHistogram(mExtSettings)) {
+	    if (isWritePrefetch(mExtSettings)) {
+		setTcpDrain(mExtSettings);
+		mExtSettings->mHistBins = 100000; // 10 seconds wide
+		mExtSettings->mHistBinsize = 100; // 100 usec bins
+		mExtSettings->mHistUnits = 6;  // usecs 10 pow(x)
+		mExtSettings->mHistci_lower = 5;
+		mExtSettings->mHistci_upper = 95;
+	    } else {
+		unsetHistogram(mExtSettings);
+		fprintf(stderr, "WARN: option of --histograms on the client requires --tcp-write-prefetch\n");
+	    }
 	}
 	if (isCongestionControl(mExtSettings) && isReverse(mExtSettings)) {
 	    fprintf(stderr, "ERROR: tcp congestion control -Z and --reverse cannot be applied together\n");
@@ -1616,10 +1606,6 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
         if (isWritePrefetch(mExtSettings)) {
             fprintf(stderr, "WARN: setting of option --tcp-write-prefetch is not supported on the server\n");
 	    unsetWritePrefetch(mExtSettings);
-	}
-        if (isTcpDrain(mExtSettings)) {
-            fprintf(stderr, "WARN: setting of option --tcp-drain is not supported on the server\n");
-	    unsetTcpDrain(mExtSettings);
 	}
         if (isIncrSrcIP(mExtSettings)) {
             fprintf(stderr, "WARN: setting of option --incr-srcip is not supported on the server\n");
