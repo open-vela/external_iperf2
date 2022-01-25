@@ -869,6 +869,7 @@ struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings
 	stats->transit.current.mean += ntohl(server->extend.meanTransit2) / (double)rMillion;
 	stats->transit.current.m2 = ntohl(server->extend.m2Transit1);
 	stats->transit.current.m2 += ntohl(server->extend.m2Transit2) / (double)rMillion;
+	stats->transit.current.m2 *= 1e-12;
 	stats->transit.current.vd = ntohl(server->extend.vdTransit1);
 	stats->transit.current.vd += ntohl(server->extend.vdTransit2) / (double)rMillion;
 	stats->transit.current.cnt = ntohl(server->extend.cntTransit);
