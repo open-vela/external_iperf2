@@ -667,11 +667,6 @@ void Client::RunTCP () {
 		} else {
 		    reportstruct->transit_ready = 1;
 		    reportstruct->prevSentTime = myReport->info.ts.prevsendTime;
-#if HAVE_DECL_TCP_NOTSENT_LOWAT
-		    if (isTcpDrain(mSettings)) {
-			tcp_drain();
-		    }
-#endif
 		}
 	    }
 	}
@@ -910,9 +905,7 @@ inline bool Client::AwaitWriteSelectEventTCP (void) {
 	timeout.tv_usec = 0;
     }
 
-    Timestamp t1;
     if ((rc = select(mySocket + 1, NULL, &writeset, NULL, &timeout)) <= 0) {
-        reportstruct->select_delay = -1;
 	WARN_errno((rc < 0), "select");
 #ifdef HAVE_THREAD_DEBUG
 	if (rc == 0)
@@ -920,9 +913,13 @@ inline bool Client::AwaitWriteSelectEventTCP (void) {
 #endif
 	return false;
     }
-    Timestamp t2;
-    reportstruct->select_delay = t2.subSec(t1);
-    //    printf("*****t1 = %f\n", t2.subSec(t1));
+    if (isTcpDrain(mSettings)) {
+	drain_end.setnow();
+	reportstruct->drain_time = drain_end.subUsec(drain_start);
+#ifdef HAVE_THREAD_DEBUG
+	thread_debug("Drain time  = %f", reportstruct->drain_time);
+#endif
+    }
     return true;
 }
 
@@ -1434,17 +1431,6 @@ inline bool Client::InProgress (void) {
     return !(sInterupted || peerclose || \
 	(isModeTime(mSettings) && mEndTime.before(reportstruct->packetTime))  ||
 	(isModeAmount(mSettings) && (mSettings->mAmount <= 0)));
-}
-
-inline void Client::tcp_drain (void) {
-#if HAVE_DECL_TCP_NOTSENT_LOWAT
-    AwaitWriteSelectEventTCP();
-    drain_end.setnow();
-    reportstruct->drain_time = drain_end.subUsec(drain_start);
-#ifdef HAVE_THREAD_DEBUG
-    thread_debug("Drain time  = %f", reportstruct->drain_time);
-#endif
-#endif
 }
 
 inline void Client::tcp_shutdown (void) {

@@ -77,7 +77,6 @@ struct ReportStruct {
     intmax_t remaining;
     int transit_ready;
     int writecnt;
-    double select_delay;
     long drain_time;
     struct timeval sentTimeRX;
     struct timeval sentTimeTX;
