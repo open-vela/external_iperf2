@@ -744,8 +744,8 @@ static void reporter_handle_frame_isoch_oneway_transit (struct TransferInfo *sta
 	    }
 	}
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
-	if (stats->latency_histogram && (packet->select_delay > 0.0)) {
-	   histogram_insert(stats->latency_histogram, packet->select_delay, &packet->packetTime);
+	if (stats->latency_histogram && (packet->drain_time > 0.0)) {
+	   histogram_insert(stats->latency_histogram, packet->drain_time, &packet->packetTime);
        }
 #endif
 	stats->isochstats.frameID = packet->frameID;
