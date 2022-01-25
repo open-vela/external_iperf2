@@ -1095,6 +1095,7 @@ void Client::RunUDP () {
         //  default: break;
         //}
 	now.setnow();
+	reportstruct->writecnt = 1;
 	reportstruct->packetTime.tv_sec = now.getSecs();
 	reportstruct->packetTime.tv_usec = now.getUsecs();
 	reportstruct->sentTime = reportstruct->packetTime;
