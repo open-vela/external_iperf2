@@ -653,48 +653,6 @@ void udp_output_read (struct TransferInfo *stats) {
     fflush(stdout);
 }
 
-void udp_output_read_enhanced (struct TransferInfo *stats) {
-    HEADING_PRINT_COND(report_bw_jitter_loss_enhanced);
-    _print_stats_common(stats);
-    if (!stats->cntIPG) {
-	printf(report_bw_jitter_loss_suppress_enhanced_format, stats->common->transferIDStr,
-	       stats->ts.iStart, stats->ts.iEnd,
-	       outbuffer, outbufferext,
-	       0.0, stats->cntError,
-	       stats->cntDatagrams,
-	       0.0,0.0,0.0,0.0,0.0,0.0);
-    } else {
-	if ((stats->transit.current.min > UNREALISTIC_LATENCYMINMAX) ||
-	    (stats->transit.current.min < UNREALISTIC_LATENCYMINMIN)) {
-	    printf(report_bw_jitter_loss_suppress_enhanced_format, stats->common->transferIDStr,
-		   stats->ts.iStart, stats->ts.iEnd,
-		   outbuffer, outbufferext,
-		   (stats->jitter * 1e3), stats->cntError, stats->cntDatagrams,
-		   (100.0 * stats->cntError) / stats->cntDatagrams,
-		   (stats->cntIPG / stats->IPGsum));
-	} else {
-	    double meantransit = (stats->transit.current.cnt > 0) ? (stats->transit.current.sum / stats->transit.current.cnt) : 0;
-	    set_netpowerbuf(meantransit, stats);
-	    printf(report_bw_jitter_loss_enhanced_format, stats->common->transferIDStr,
-		   stats->ts.iStart, stats->ts.iEnd,
-		   outbuffer, outbufferext,
-		   (stats->jitter * 1e3), stats->cntError, stats->cntDatagrams,
-		   (100.0 * stats->cntError) / stats->cntDatagrams,
-		   (meantransit * 1e3),
-		   stats->transit.current.min * 1e3,
-		   stats->transit.current.max * 1e3,
-		   (stats->transit.current.cnt < 2) ? 0 : 1e-3 * (sqrt(stats->transit.current.m2 / (stats->transit.current.cnt - 1))),
-		   (stats->cntIPG / stats->IPGsum),
-		   netpower_buf);
-	}
-    }
-    if (stats->latency_histogram) {
-	histogram_print(stats->latency_histogram, stats->ts.iStart, stats->ts.iEnd);
-    }
-    _output_outoforder(stats);
-    fflush(stdout);
-}
-
 void udp_output_read_enhanced_triptime (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw_jitter_loss_enhanced_triptime);
     _print_stats_common(stats);
@@ -1680,7 +1638,7 @@ void reporter_print_server_relay_report (struct ServerRelay *report) {
     if (!isEnhanced(report->info.common)) {
 	udp_output_read(&report->info);
     } else {
-	udp_output_read_enhanced(&report->info);
+	udp_output_read_enhanced_triptime(&report->info);
     }
     fflush(stdout);
 }
