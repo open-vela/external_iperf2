@@ -219,14 +219,14 @@ bool Client::my_connect (bool close_on_fail) {
 		mSettings->mBufLen = max;
 	    }
 	}
+	if (isUDP(mSettings) && !isIsochronous(mSettings) && !isIPG(mSettings)) {
+	    mSettings->mBurstIPG = get_delay_target() / 1e3; // this is being set for the settings report only
+	}
 	if (isReport(mSettings) && isSettingsReport(mSettings)) {
 	    struct ReportHeader *tmp = InitSettingsReport(mSettings);
 	    assert(tmp!=NULL);
 	    PostReport(tmp);
 	    setNoSettReport(mSettings);
-	}
-	if (isUDP(mSettings) && !isIsochronous(mSettings) && !isIPG(mSettings)) {
-	    mSettings->mBurstIPG = get_delay_target() / 1e3; // this is being set for the settings report only
 	}
     } else {
 	if (mySocket != INVALID_SOCKET) {
