@@ -1549,18 +1549,13 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		bail = true;
 	    }
 	}
-	if (!isReverse(mExtSettings) && !isFullDuplex(mExtSettings) && isHistogram(mExtSettings)) {
-	    if (isWritePrefetch(mExtSettings)) {
-		setTcpDrain(mExtSettings);
-		mExtSettings->mHistBins = 100000; // 10 seconds wide
-		mExtSettings->mHistBinsize = 100; // 100 usec bins
-		mExtSettings->mHistUnits = 6;  // usecs 10 pow(x)
-		mExtSettings->mHistci_lower = 5;
-		mExtSettings->mHistci_upper = 95;
-	    } else {
-		unsetHistogram(mExtSettings);
-		fprintf(stderr, "WARN: option of --histograms on the client requires --tcp-write-prefetch\n");
-	    }
+	if (!isReverse(mExtSettings) && !isFullDuplex(mExtSettings) && isHistogram(mExtSettings)){
+	    setTcpDrain(mExtSettings);
+	    mExtSettings->mHistBins = 100000; // 10 seconds wide
+	    mExtSettings->mHistBinsize = 100; // 100 usec bins
+	    mExtSettings->mHistUnits = 6;  // usecs 10 pow(x)
+	    mExtSettings->mHistci_lower = 5;
+	    mExtSettings->mHistci_upper = 95;
 	}
 	if (isCongestionControl(mExtSettings) && isReverse(mExtSettings)) {
 	    fprintf(stderr, "ERROR: tcp congestion control -Z and --reverse cannot be applied together\n");
