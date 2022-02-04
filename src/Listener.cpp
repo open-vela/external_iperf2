@@ -1215,11 +1215,17 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 	    }
 #endif
 	    int remaining =  server->mBounceBackBytes - (sizeof(struct bounceback_hdr) + sizeof(uint32_t));
-	    nread = recvn(server->mSock, readptr, remaining, 0);
-	    if (nread != remaining) {
-		WARN(1, "read bounce back payload failed");
+	    if (remaining < 0) {
+		WARN(1, "bounce back bytes too small");
 		rc = false;
 		goto DONE;
+	    } else if (remaining > 0) {
+		nread = recvn(server->mSock, readptr, remaining, 0);
+		if (nread != remaining) {
+		    WARN(1, "read bounce back payload failed");
+		    rc = false;
+		    goto DONE;
+		}
 	    }
 	    Timestamp now;
 	    bbhdr->bbserverRx_ts.sec = htonl(now.getSecs());
