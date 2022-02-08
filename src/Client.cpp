@@ -97,7 +97,6 @@ Client::Client (thread_Settings *inSettings) {
 	unsetPeerVerDetect(mSettings);
     }
 
-    pattern(mSettings->mBuf, mSettings->mBufLen);
     if (isFileInput(mSettings)) {
         if (!isSTDIN(mSettings))
             Extractor_Initialize(mSettings->mFileName, mSettings->mBufLen, mSettings);
