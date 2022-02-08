@@ -434,6 +434,8 @@ void Settings_Copy (struct thread_Settings *from, struct thread_Settings **into,
     mbuflen += TAPBYTESSLOP;
 #endif
     (*into)->mBuf = new char[mbuflen];
+    pattern((*into)->mBuf, mbuflen);
+
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Copy Settings: MBUF malloc %d bytes (%p)", mbuflen, (void *) (*into)->mBuf);
 #endif
