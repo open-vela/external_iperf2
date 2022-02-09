@@ -1707,7 +1707,6 @@ int reporter_condprint_frame_interval_report_server_udp (struct ReporterData *da
     struct TransferInfo *stats = &data->info;
     int advance_jobq = 0;
     // first packet of a burst and not a duplicate
-    assert(packet->burstsize != 0);
     if ((packet->burstsize == (packet->remaining + packet->packetLen)) && (stats->matchframeID != packet->frameID)) {
 	stats->matchframeID=packet->frameID;
     }
@@ -1739,7 +1738,6 @@ int reporter_condprint_frame_interval_report_server_tcp (struct ReporterData *da
 }
 
 int reporter_condprint_burst_interval_report_server_tcp (struct ReporterData *data, struct ReportStruct *packet) {
-    assert(packet->burstsize != 0);
     struct TransferInfo *stats = &data->info;
     int advance_jobq = 0;
     if (packet->transit_ready) {
@@ -1756,7 +1754,7 @@ int reporter_condprint_burst_interval_report_server_tcp (struct ReporterData *da
 }
 
 int reporter_condprint_burst_interval_report_client_tcp (struct ReporterData *data, struct ReportStruct *packet) {
-    assert(packet->burstsize != 0);
+
     struct TransferInfo *stats = &data->info;
     int advance_jobq = 0;
     // first packet of a burst and not a duplicate
