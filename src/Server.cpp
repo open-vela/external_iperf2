@@ -810,6 +810,7 @@ inline void Server::udp_isoch_processing (int rxlen) {
 	reportstruct->frameID = ntohl(udp_pkt->isoch.frameid);
 	reportstruct->prevframeID = ntohl(udp_pkt->isoch.prevframeid);
 	reportstruct->burstsize = ntohl(udp_pkt->isoch.burstsize);
+	assert(reportstruct->burstsize > 0);
 	reportstruct->burstperiod = ntohl(udp_pkt->isoch.burstperiod);
 	reportstruct->remaining = ntohl(udp_pkt->isoch.remaining);
 	if ((reportstruct->remaining == rxlen) && ((reportstruct->frameID - reportstruct->prevframeID) == 1)) {
