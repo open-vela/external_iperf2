@@ -955,8 +955,9 @@ inline void reporter_handle_packet_server_udp (struct ReporterData *data, struct
 static inline void reporter_handle_packet_tcpistats (struct ReporterData *data, struct ReportStruct *packet) {
     assert(data!=NULL);
     struct TransferInfo *stats = &data->info;
-    stats->sock_callstats.write.tcpstats.retry += (packet->tcpstats.retry_tot - stats->sock_callstats.write.tcpstats.retry);
-    stats->sock_callstats.write.tcpstats.retry = packet->tcpstats.retry_tot;
+    stats->sock_callstats.write.tcpstats.retry += (packet->tcpstats.retry_tot - stats->sock_callstats.write.tcpstats.retry_prev);
+    stats->sock_callstats.write.tcpstats.retry_prev = packet->tcpstats.retry_tot;
+    stats->sock_callstats.write.tcpstats.retry_tot = packet->tcpstats.retry_tot;
     stats->sock_callstats.write.tcpstats.cwnd = packet->tcpstats.cwnd;
     stats->sock_callstats.write.tcpstats.rtt = packet->tcpstats.rtt;
     stats->sock_callstats.write.tcpstats.rttvar = packet->tcpstats.rttvar;
@@ -1025,6 +1026,7 @@ static inline void reporter_reset_transfer_stats_client_tcp (struct TransferInfo
     stats->isochstats.framelostcnt.prev = stats->isochstats.framelostcnt.current;
     stats->isochstats.slipcnt.prev = stats->isochstats.slipcnt.current;
 #if HAVE_TCP_STATS
+    // set the interval retry counter to zero
     stats->sock_callstats.write.tcpstats.retry = 0;
 #endif
     if (isBounceBack(stats->common)) {
