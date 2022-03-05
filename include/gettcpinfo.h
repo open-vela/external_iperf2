@@ -62,6 +62,7 @@ struct iperf_tcpstats {
     int cwnd;
     int rttvar;
     intmax_t retry;
+    intmax_t retry_prev;
     intmax_t retry_tot;
     int mss_negotiated;
 #endif
