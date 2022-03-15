@@ -87,7 +87,7 @@ private:
     inline void SetReportStartTime();
     bool ReadBBWithRXTimestamp ();
     int ReadWithRxTimestamp(void);
-    bool ReadPacketID(void);
+    bool ReadPacketID(int);
     void L2_processing(void);
     int L2_quintuple_filter(void);
     void udp_isoch_processing(int);
