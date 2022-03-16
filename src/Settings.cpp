@@ -434,7 +434,7 @@ void Settings_Copy (struct thread_Settings *from, struct thread_Settings **into,
     mbuflen += TAPBYTESSLOP;
 #endif
     (*into)->mBuf = new char[mbuflen];
-    pattern((*into)->mBuf, mbuflen);
+    memset((*into)->mBuf, 0, mbuflen);
 
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Copy Settings: MBUF malloc %d bytes (%p)", mbuflen, (void *) (*into)->mBuf);
@@ -2174,7 +2174,10 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 
     // Check the corner case of small packets and trip times
     if (isUDP(client) && isSmallTripTime(client)) {
+        int buflen = (client->mBufLen < (int) sizeof(struct client_udpsmall_testhdr)) ? client->mBufLen \
+	             : sizeof(struct client_udpsmall_testhdr);
 	struct client_udpsmall_testhdr *hdr = static_cast<struct client_udpsmall_testhdr *>(testhdr);
+	memset(hdr, 0, buflen);
 	hdr->flags = htons(HEADER16_SMALL_TRIPTIMES);
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug("UDP small trip times flags = %X", ntohs(hdr->flags));
@@ -2195,7 +2198,9 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
     // Now setup UDP and TCP specific passed settings from client to server
     if (isUDP(client)) { // UDP test information passed in every packet per being stateless
 	struct client_udp_testhdr *hdr = static_cast<struct client_udp_testhdr *>(testhdr);
-	memset(hdr, 0, sizeof(struct client_udp_testhdr));
+        int buflen = (client->mBufLen < (int) sizeof(struct client_udp_testhdr)) ? client->mBufLen \
+	             : sizeof(struct client_udp_testhdr);
+	memset(hdr, 0, buflen);
 	flags |= HEADER_SEQNO64B; // use 64 bit by default
 	flags |= HEADER_EXTEND;
 	hdr->extend.version_u = htonl(IPERF_VERSION_MAJORHEX);
@@ -2301,7 +2306,9 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	    flags = HEADER_BOUNCEBACK;
 	    len = sizeof(struct bounceback_hdr);
 	} else {
-	    memset(hdr, 0, sizeof(struct client_tcp_testhdr));
+	    int buflen = (client->mBufLen < (int) sizeof(struct client_tcp_testhdr)) ? client->mBufLen \
+	                 : sizeof(struct client_tcp_testhdr);
+	    memset(hdr, 0, buflen);
 	    flags |= HEADER_EXTEND;
 	    hdr->extend.version_u = htonl(IPERF_VERSION_MAJORHEX);
 	    hdr->extend.version_l = htonl(IPERF_VERSION_MINORHEX);
