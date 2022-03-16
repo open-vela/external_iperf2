@@ -1096,7 +1096,13 @@ bool Listener::apply_client_settings_udp (thread_Settings *server) {
 	if (seqno != 1) {
 	    fprintf(stderr, "WARN: first received packet (id=%d) was not first sent packet, report start time will be off\n", seqno);
 	}
-	setTripTime(server);
+	Timestamp now;
+	if (!isTxStartTime(server) && ((abs(now.getSecs() - server->sent_time.tv_sec)) > (MAXDIFFTIMESTAMPSECS + 1))) {
+	    fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
+	    unsetTripTime(server);
+	} else {
+	    setTripTime(server);
+	}
 	setEnhanced(server);
     } else if ((flags & HEADER_VERSION1) || (flags & HEADER_VERSION2) || (flags & HEADER_EXTEND)) {
 	if ((flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2)) {
@@ -1144,6 +1150,7 @@ bool Listener::apply_client_settings_udp (thread_Settings *server) {
 		Timestamp now;
 		if (!isTxStartTime(server) && ((abs(now.getSecs() - server->sent_time.tv_sec)) > (MAXDIFFTIMESTAMPSECS + 1))) {
 		    fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
+		    unsetTripTime(server);
 		} else {
 		    setTripTime(server);
 		    setEnhanced(server);
@@ -1281,6 +1288,7 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 			server->sent_time.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
 			if (!isTxStartTime(server) && ((abs(now.getSecs() - server->sent_time.tv_sec)) > (MAXDIFFTIMESTAMPSECS + 1))) {
 			    fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
+			    unsetTripTime(server);
 			} else {
 			    setTripTime(server);
 			    setEnhanced(server);
