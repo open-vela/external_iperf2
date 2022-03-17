@@ -59,21 +59,39 @@
 #include "util.h"
 
 #if   defined( HAVE_POSIX_THREAD )
-typedef struct Condition {
+struct Condition {
     pthread_cond_t mCondition;
     pthread_mutex_t mMutex;
-} Condition;
+};
 #elif defined( HAVE_WIN32_THREAD )
-typedef struct Condition {
+struct Condition {
     HANDLE mCondition;
     HANDLE mMutex;
-} Condition;
+};
 #else
-typedef struct Condition {
+struct Condition {
     int mCondition;
     int mMutex;
-} Condition;
+};
 #endif
+
+struct AwaitMutex {
+    struct Condition await;
+    int ready;
+};
+
+struct BarrierMutex {
+    struct Condition await;
+    struct timeval release_time;
+    int count;
+    int timeout;
+};
+
+struct ReferenceMutex {
+    Mutex lock;
+    int count;
+    int maxcount;
+};
 
 #define Condition_Lock( Cond ) Mutex_Lock( &Cond.mMutex )
 
@@ -112,6 +130,24 @@ typedef struct Condition {
     #define Condition_Destroy( Cond )
 #endif
 
+#define Condition_Destroy_Reference(Ref) do { \
+	Mutex_Destroy(&(Ref)->lock);	     \
+    } while ( 0 )
+
+#if defined (HAVE_CLOCK_GETTIME)
+  #define SETABSTIME(ts, seconds) do { \
+    clock_gettime(CLOCK_REALTIME, &ts); \
+    ts.tv_sec  += seconds; \
+} while (0)
+#else
+  #define SETABSTIME(ts, seconds) do { \
+    struct timeval t1; \
+    gettimeofday(&t1, NULL);
+    ts.tv_sec = t1.tv_sec + inSeconds; \
+    ts.tv_nsec = t1.tv_sec * 1000; \
+} while (0)
+#endif
+
     // sleep this thread, waiting for condition signal
 #if   defined( HAVE_POSIX_THREAD )
     #define Condition_Wait( Cond ) pthread_cond_wait( &(Cond)->mCondition, &(Cond)->mMutex )
@@ -129,16 +165,20 @@ typedef struct Condition {
     // sleep this thread, waiting for condition signal,
     // but bound sleep time by the relative time inSeconds.
 #if   defined( HAVE_POSIX_THREAD )
-    #define Condition_TimedWait( Cond, inSeconds ) do {                         \
+    #define Condition_TimedWait( Cond, inSeconds ) do {                \
         struct timespec absTimeout;                                             \
-        absTimeout.tv_sec  = time( NULL ) + inSeconds;                          \
-        absTimeout.tv_nsec = 0;                                                 \
-       pthread_cond_timedwait( &(Cond)->mCondition, &(Cond)->mMutex, &absTimeout ); \
+        SETABSTIME(absTimeout, inSeconds);					\
+        pthread_cond_timedwait( &(Cond)->mCondition, &(Cond)->mMutex, &absTimeout ); \
+    } while ( 0 )
+    #define Condition_TimedLock( Cond, inSeconds ) do {		\
+        struct timespec absTimeout;                                             \
+        SETABSTIME(absTimeout, inSeconds);					\
+        pthread_mutex_timedlock(&Cond.mMutex, &absTimeout);	        \
     } while ( 0 )
 #elif defined( HAVE_WIN32_THREAD )
     // atomically release mutex and wait on condition,
     // then re-acquire the mutex
-    #define Condition_TimedWait( Cond, inSeconds ) do {                         \
+#define Condition_TimedWait( Cond, inSeconds ) do {			\
         SignalObjectAndWait( (Cond)->mMutex, (Cond)->mCondition, inSeconds*1000, false ); \
         Mutex_Lock( &(Cond)->mMutex );                          \
     } while ( 0 )
