@@ -214,14 +214,19 @@ bool Client::my_connect (bool close_on_fail) {
 	SockAddr_Ifrname(mSettings);
 	if (isUDP(mSettings)) {
 	    int max = checksock_max_udp_payload(mSettings);
-	    if ((max > 0) && (max > mSettings->mBufLen)) {
-		char *tmp = new char[max];
-		if (tmp) {
-		    pattern(tmp, max);
-		    memcpy(tmp, mSettings->mBuf, sizeof(char));
+	    if ((max > 0) && (max != mSettings->mBufLen)) {
+		if (max > mSettings->mBufLen) {
+		    char *tmp = new char[max];
+		    assert(tmp!=NULL);
+		    if (tmp) {
+			pattern(tmp, max);
+			memcpy(tmp, mSettings->mBuf, sizeof(char));
+			DELETE_ARRAY(mSettings->mBuf);
+			mSettings->mBuf = tmp;
+			mSettings->mBufLen = max;
+		    }
+		} else {
 		    mSettings->mBufLen = max;
-		    DELETE_ARRAY(mSettings->mBuf);
-		    mSettings->mBuf = tmp;
 		}
 	    }
 	}
