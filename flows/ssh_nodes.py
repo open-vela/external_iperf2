@@ -1,3 +1,5 @@
+#!/usr/bin/env python3.5
+#
 # ---------------------------------------------------------------
 # * Copyright (c) 2018
 # * Broadcom Corporation
@@ -36,9 +38,9 @@ import re
 logger = logging.getLogger(__name__)
 
 class ssh_node:
-    DEFAULT_IO_TIMEOUT = 30.0
+    DEFAULT_IO_TIMEOUT = 20.0
     DEFAULT_CMD_TIMEOUT = 30
-    DEFAULT_CONNECT_TIMEOUT = 60.0
+    DEFAULT_CONNECT_TIMEOUT = 10.0
     rexec_tasks = []
     loop = None
     instances = weakref.WeakSet()
@@ -51,24 +53,19 @@ class ssh_node:
             # On Windows, the ProactorEventLoop is necessary to listen on pipes
             cls.loop = asyncio.ProactorEventLoop()
         else:
-            cls.loop = asyncio.new_event_loop()
+            cls.loop = asyncio.get_event_loop()
         return cls.loop
 
     @classmethod
     def get_instances(cls):
-        try :
-            return list(ssh_node.instances)
-        except NameError :
-            return []
+        return list(ssh_node.instances)
 
     @classmethod
     def run_all_commands(cls, timeout=None, text=None, stoptext=None) :
-        if not ssh_node.loop :
-            ssh_node.set_loop()
         if ssh_node.rexec_tasks :
             if text :
                 logging.info('Run all tasks: {})'.format(time, text))
-            ssh_node.loop.run_until_complete(asyncio.wait(ssh_node.rexec_tasks, timeout=timeout))
+            ssh_node.loop.run_until_complete(asyncio.wait(ssh_node.rexec_tasks, timeout=timeout, loop=ssh_node.loop))
             if stoptext :
                 logging.info('Commands done ({})'.format(stoptext))
             ssh_node.rexec_tasks = []
@@ -79,41 +76,18 @@ class ssh_node:
         nodes = ssh_node.get_instances()
         node_names = []
         tasks = []
-        for node in nodes:
-            if node.sshtype.lower() == 'ssh' :
-                tasks.append(asyncio.ensure_future(node.clean(), loop=ssh_node.loop))
-        if tasks :
-            logging.info('Run consoles clean')
-            try :
-                ssh_node.loop.run_until_complete(asyncio.wait(tasks, timeout=20))
-            except asyncio.TimeoutError:
-                logging.error('console cleanup timeout')
-
-        tasks = []
-        ipaddrs = []
         for node in nodes :
-            #see if we need control master to be started
-            if node.ssh_speedups and not node.ssh_console_session and node.ipaddr not in ipaddrs:
-                logging.info('Run consoles speedup')
-                node.ssh_console_session = ssh_session(name=node.name, hostname=node.ipaddr, node=node, control_master=True, ssh_speedups=True, silent_mode=silent_mode)
-                node.console_task = asyncio.ensure_future(node.ssh_console_session.post_cmd(cmd='/usr/bin/dmesg -w', IO_TIMEOUT=None, CMD_TIMEOUT=None), loop=ssh_node.loop)
+            if not node.ssh_console_session :
+                node.ssh_console_session = ssh_session(name=node.name, hostname=node.ipaddr, node=node, control_master=True, silent_mode=silent_mode)
+                node.console_task = asyncio.ensure_future(node.ssh_console_session.post_cmd(cmd='dmesg -w', IO_TIMEOUT=None, CMD_TIMEOUT=None))
                 tasks.append(node.console_task)
-                ipaddrs.append(node.ipaddr)
                 node_names.append(node.name)
 
-        if tasks :
+        if tasks is not None:
             s = " "
             logging.info('Opening consoles: {}'.format(s.join(node_names)))
-            try :
-                ssh_node.loop.run_until_complete(asyncio.wait(tasks, timeout=60))
-            except asyncio.TimeoutError:
-                logging.error('open console timeout')
-                raise
-
-        if tasks :
-            # Sleep to let the control masters settle
-            ssh_node.loop.run_until_complete(asyncio.sleep(1))
-            logging.info('open_consoles done')
+            ssh_node.loop.run_until_complete(asyncio.wait(tasks, timeout=60, loop=ssh_node.loop))
+            logging.info('Open consoles done')
 
     @classmethod
     def close_consoles(cls) :
@@ -122,67 +96,61 @@ class ssh_node:
         node_names = []
         for node in nodes :
             if node.ssh_console_session :
-                node.console_task = asyncio.ensure_future(node.ssh_console_session.close(), loop=ssh_node.loop)
+                node.console_task = asyncio.ensure_future(node.ssh_console_session.close())
                 tasks.append(node.console_task)
                 node_names.append(node.name)
 
         if tasks :
             s = " "
             logging.info('Closing consoles: {}'.format(s.join(node_names)))
-            ssh_node.loop.run_until_complete(asyncio.wait(tasks, timeout=60))
-            logging.info('Closing consoles done: {}'.format(s.join(node_names)))
+            ssh_node.loop.run_until_complete(asyncio.wait(tasks, timeout=60, loop=ssh_node.loop))
 
-    def __init__(self, name=None, ipaddr=None, devip=None, console=False, device=None, ssh_speedups=True, silent_mode=False, sshtype='ssh', relay=None):
+    def __init__(self, name=None, ipaddr=None, devip=None, console=False, device=None, ssh_speedups=True, silent_mode=False):
         self.ipaddr = ipaddr
         self.name = name
         self.my_tasks = []
-        self.device = device
+        self.device=device
         self.devip = devip
-        self.sshtype = sshtype.lower()
-        if self.sshtype.lower() == 'ssh' :
-            self.ssh_speedups = ssh_speedups
-            self.controlmasters = '/tmp/controlmasters_{}'.format(self.ipaddr)
-        else :
-            self.ssh_speedups = False
-            self.controlmasters = None
+        self.controlmasters = '/tmp/controlmasters_{}'.format(self.ipaddr)
+        self.ssh_speedups = ssh_speedups
         self.ssh_console_session = None
-        self.relay = relay
         ssh_node.instances.add(self)
 
-    def wl (self, cmd) :
+    def wl (self, cmd, ASYNC=False) :
         if self.device :
-            results=self.rexec(cmd='/usr/bin/wl -i {} {}'.format(self.device, cmd))
+            results=self.rexec(cmd='/usr/bin/wl -i {} {}'.format(self.device, cmd), ASYNC=ASYNC)
         else :
-            results=self.rexec(cmd='/usr/bin/wl {}'.format(cmd))
+            results=self.rexec(cmd='/usr/bin/wl {}'.format(cmd), ASYNC=ASYNC)
         return results
 
-    def dhd (self, cmd) :
+    def dhd (self, cmd, ASYNC=False) :
         if self.device :
-            results=self.rexec(cmd='/usr/bin/dhd -i {} {}'.format(self.device, cmd))
+            results=self.rexec(cmd='/usr/bin/dhd -i {} {}'.format(self.device, cmd), ASYNC=ASYNC)
         else :
-            results=self.rexec(cmd='/usr/bin/dhd {}'.format(cmd))
+            results=self.rexec(cmd='/usr/bin/dhd {}'.format(cmd), ASYNC=ASYNC)
         return results
 
-    def rexec(self, cmd='pwd', IO_TIMEOUT=DEFAULT_IO_TIMEOUT, CMD_TIMEOUT=DEFAULT_CMD_TIMEOUT, CONNECT_TIMEOUT=DEFAULT_CONNECT_TIMEOUT, run_now=False) :
+    def rexec(self, cmd='pwd', ASYNC=False, IO_TIMEOUT=DEFAULT_IO_TIMEOUT, CMD_TIMEOUT=DEFAULT_CMD_TIMEOUT, CONNECT_TIMEOUT=DEFAULT_CONNECT_TIMEOUT) :
         io_timer = IO_TIMEOUT
         cmd_timer = CMD_TIMEOUT
         connect_timer = CONNECT_TIMEOUT
-        this_session = ssh_session(name=self.name, hostname=self.ipaddr, CONNECT_TIMEOUT=connect_timer, node=self, ssh_speedups=True)
-        this_task = asyncio.ensure_future(this_session.post_cmd(cmd=cmd, IO_TIMEOUT=io_timer, CMD_TIMEOUT=cmd_timer), loop=ssh_node.loop)
-        if run_now:
-            ssh_node.loop.run_until_complete(asyncio.wait([this_task], timeout=CMD_TIMEOUT))
-        else:
-            ssh_node.rexec_tasks.append(this_task)
-            self.my_tasks.append(this_task)
-        return this_session
 
-    async def clean(self) :
-        childprocess = await asyncio.create_subprocess_exec('/usr/bin/ssh', 'root@{}'.format(self.ipaddr), 'pkill', 'dmesg', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, loop=ssh_node.loop)
-        stdout, stderr = await childprocess.communicate()
-        if stdout :
-            logging.info('{}'.format(stdout))
-        if stderr :
-            logging.info('{}'.format(stderr))
+        this_session = ssh_session(name=self.name, hostname=self.ipaddr, CONNECT_TIMEOUT=connect_timer, node=self)
+        this_task = asyncio.ensure_future(this_session.post_cmd(cmd=cmd, IO_TIMEOUT=io_timer, CMD_TIMEOUT=cmd_timer))
+        ssh_node.rexec_tasks.append(this_task)
+        self.my_tasks.append(this_task)
+        if not ASYNC:
+            try :
+                ssh_node.loop.run_until_complete(asyncio.wait([this_task], timeout=30, loop=ssh_node.loop))
+            except asyncio.TimeoutError:
+                logging.error('command schedule timed out')
+                raise
+            finally:
+                ssh_node.rexec_tasks.remove(this_task)
+                self.my_tasks.remove(this_task)
+                return this_task.result()
+
+        return this_task
 
     def close_console(self) :
         if self.ssh_console_session:
@@ -213,7 +181,7 @@ class ssh_session:
             if self._session.CONNECT_TIMEOUT is not None :
                 self.watchdog = ssh_node.loop.call_later(self._session.CONNECT_TIMEOUT, self.wd_timer)
             self._session.closed.clear()
-            self.timeout_occurred = asyncio.Event()
+            self.timeout_occurred = asyncio.Event(loop=ssh_node.loop)
             self.timeout_occurred.clear()
 
         @property
@@ -254,13 +222,13 @@ class ssh_session:
                 while "\n" in self._stdoutbuffer:
                     line, self._stdoutbuffer = self._stdoutbuffer.split("\n", 1)
                     if not self._silent_mode :
-                        self._session.adapter.info('{}'.format(line.replace("\r","")))
+                        self._session.adapter.info('{}'.format(line))
 
             elif fd == 2:
                 self._stderrbuffer += data
                 while "\n" in self._stderrbuffer:
                     line, self._stderrbuffer = self._stderrbuffer.split("\n", 1)
-                    self._session.adapter.warning('{} {}'.format(self._session.name, line.replace("\r","")))
+                    self._session.adapter.warning('{} {}'.format(self._session.name, line))
 
             if self._session.IO_TIMEOUT is not None :
                 self.iowatchdog = ssh_node.loop.call_later(self._session.IO_TIMEOUT, self.io_timer)
@@ -299,13 +267,13 @@ class ssh_session:
         def process(self, msg, kwargs):
             return '[%s] %s' % (self.extra['connid'], msg), kwargs
 
-    def __init__(self, user='root', name=None, hostname='localhost', CONNECT_TIMEOUT=None, control_master=False, node=None, silent_mode=False, ssh_speedups=True):
+    def __init__(self, user='root', name=None, hostname='localhost', CONNECT_TIMEOUT=None, control_master=False, node=None, silent_mode=False):
         self.hostname = hostname
         self.name = name
         self.user = user
-        self.opened = asyncio.Event()
-        self.closed = asyncio.Event()
-        self.connected = asyncio.Event()
+        self.opened = asyncio.Event(loop=ssh_node.loop)
+        self.closed = asyncio.Event(loop=ssh_node.loop)
+        self.connected = asyncio.Event(loop=ssh_node.loop)
         self.closed.set()
         self.opened.clear()
         self.connected.clear()
@@ -316,19 +284,8 @@ class ssh_session:
         self.IO_TIMEOUT = None
         self.CMD_TIMEOUT = None
         self.control_master = control_master
-        if node.relay :
-            self.ssh = ['/usr/bin/ssh', 'root@{}'.format(node.relay)]
-        else :
-            self.ssh = []
-        if self.node.sshtype.lower() == 'ush' :
-            self.ssh.extend(['/usr/local/bin/ush'])
-        elif self.node.sshtype.lower() == 'ssh' :
-            self.ssh.extend(['/usr/bin/ssh'])
-        else :
-            raise ValueError("ssh type invalid")
-
+        self.ssh = '/usr/bin/ssh'
         self.silent_mode = silent_mode
-        self.ssh_speedups = ssh_speedups
         logger = logging.getLogger(__name__)
         if control_master :
             conn_id = self.name + '(console)'
@@ -348,55 +305,44 @@ class ssh_session:
 
     async def close(self) :
         if self.control_master :
-            logging.info('control master close called {}'.format(self.controlmasters))
-            childprocess = await asyncio.create_subprocess_exec('/usr/bin/ssh', 'root@{}'.format(self.ipaddr), 'pkill', 'dmesg', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, loop=ssh_node.loop)
-            stdout, stderr = await childprocess.communicate()
-            if stdout :
-                logging.info('{}'.format(stdout))
-            if stderr :
-                logging.info('{}'.format(stderr))
+            childprocess = await asyncio.create_subprocess_exec(self.ssh, '-o ControlPath={}'.format(self.controlmasters), '{}@{}'.format(self.user, self.hostname), 'pkill', 'dmesg', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, loop=ssh_node.loop)
+            stdout, _ = await childprocess.communicate()
+            if stdout:
+                logging.debug('dmesg pkilled')
             self.sshpipe.terminate()
             await self.closed.wait()
-            ssh_node.loop.run_until_complete(asyncio.sleep(2))
-            logging.info('control master exit called {}'.format(self.controlmasters))
-            childprocess = await asyncio.create_subprocess_exec(self.ssh, '-o ControlPath={}'.format(self.controlmasters), '-O exit dummy-arg-why-needed', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, loop=ssh_node.loop)
+            childprocess = await asyncio.create_subprocess_exec(self.ssh, '-O exit', '-o ControlPath={}'.format(self.controlmasters), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, loop=ssh_node.loop)
             stdout, stderr = await childprocess.communicate()
-            if stdout :
-                logging.info('{}'.format(stdout))
-            if stderr :
-                logging.info('{}'.format(stderr))
+            if stdout:
+                logging.info('control master exit for {}'.format(self.controlmasters))
+            if stderr:
+                logging.info('control master exit stderr for {}'.format(self.controlmasters))
 
         elif self.sshpipe :
             self.sshpipe.terminate()
             await self.closed.wait()
 
-    async def post_cmd(self, cmd=None, IO_TIMEOUT=None, CMD_TIMEOUT=None, ssh_speedups=True) :
+    async def post_cmd(self, cmd=None, IO_TIMEOUT=None, CMD_TIMEOUT=None, ssh_speedups=False) :
         logging.debug("{} Post command {}".format(self.name, cmd))
         self.opened.clear()
         self.cmd = cmd
         self.IO_TIMEOUT = IO_TIMEOUT
         self.CMD_TIMEOUT = CMD_TIMEOUT
-        sshcmd = self.ssh
+        sshcmd = [self.ssh]
         if self.control_master :
-            try:
-                os.remove(str(self.controlmasters))
-            except OSError:
-                pass
             sshcmd.extend(['-o ControlMaster=yes', '-o ControlPath={}'.format(self.controlmasters), '-o ControlPersist=1'])
-        elif self.node.sshtype == 'ssh' :
+        elif ssh_speedups :
             sshcmd.append('-o ControlPath={}'.format(self.controlmasters))
-        if self.node.ssh_speedups :
-            sshcmd.extend(['{}@{}'.format(self.user, self.hostname), cmd])
-        else :
-            sshcmd.extend(['{}'.format(self.hostname), cmd])
+        sshcmd.extend(['{}@{}'.format(self.user, self.hostname), cmd])
         s = " "
         logging.info('{} {}'.format(self.name, s.join(sshcmd)))
+#        logging.debug('{}'.format(sshcmd))
         # self in the ReaderProtocol() is this ssh_session instance
         self._transport, self._protocol = await ssh_node.loop.subprocess_exec(lambda: self.SSHReaderProtocol(self, self.silent_mode), *sshcmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=None)
         # self.sshpipe = self._transport.get_extra_info('subprocess')
         # Establish the remote command
-        await self.connected.wait()
-        logging.debug("post_cmd connected")
+        self.connected.wait()
+        logging.debug("Connected")
         # u = '{}\n'.format(cmd)
         # self.sshpipe.stdin.write(u.encode())
         # Wait for the command to complete
