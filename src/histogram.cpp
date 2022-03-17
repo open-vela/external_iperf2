@@ -53,7 +53,7 @@
 Histogram::Histogram(unsigned int bincount, unsigned int binwidth, float offset, char *name) : bincount(bincount), binwidth(binwidth), offset(offset) {
     mybins = new unsigned int[bincount];
     myname = new char[strlen(name)];
-    strcpy(myname, name); 
+    strcpy(myname, name);
 }
 
 Histogram::~Histogram() {
@@ -73,14 +73,14 @@ void Histogram::insert(float value) {
 	populationcnt++;
 	mybins[bin]++;
     }
-}    
+}
 
 void Histogram::clear(void) {
     int ix;
     for (ix = 0; ix < (int) bincount; ix++) {
 	mybins[ix]=0;
     }
-}    
+}
 
 int Histogram::get(int bin) {
     return mybins[bin];
@@ -91,7 +91,7 @@ void Histogram::add(Histogram *b) {
     for (ix=0; ix < (int) bincount; ix ++) {
 	mybins[ix] += b->get(ix);
     }
-}    
+}
 
 int Histogram::confidence_interval(float value) {
     float running = 0;
