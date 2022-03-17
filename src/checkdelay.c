@@ -54,7 +54,7 @@
 #include "headers.h"
 #include "util.h"
 #include "delay.h"
-#ifdef HAVE_SCHED_SETSCHEDULER
+#if HAVE_SCHED_SETSCHEDULER
 #include <sched.h>
 #ifdef HAVE_MLOCKALL
 #include <sys/mman.h>
@@ -76,7 +76,7 @@ int main (int argc, char **argv) {
 #if HAVE_DECL_CPU_SET
     int affinity = 0;
 #endif
-#ifdef HAVE_SCHED_SETSCHEDULER
+#if HAVE_SCHED_SETSCHEDULER
     int realtime = 0;
     struct sched_param sp;
 #endif
@@ -105,7 +105,7 @@ int main (int argc, char **argv) {
 	    affinity=atoi(optarg);
 	    break;
 #endif
-#ifdef HAVE_SCHED_SETSCHEDULER
+#if HAVE_SCHED_SETSCHEDULER
 	case 'r':
 	    realtime = 1;
 	    break;
@@ -115,7 +115,7 @@ int main (int argc, char **argv) {
 #if HAVE_DECL_CPU_SET
 		    ", -a affinity"
 #endif
-#ifdef HAVE_SCHED_SETSCHEDULER
+#if HAVE_SCHED_SETSCHEDULER
 		    ", -r realtime"
 #endif
 		    "\n");
@@ -128,7 +128,7 @@ int main (int argc, char **argv) {
     clockgettime = 1;
 #endif
 
-#ifdef HAVE_SCHED_SETSCHEDULER
+#if HAVE_SCHED_SETSCHEDULER
     if (realtime) {
 	fprintf(stdout,"Setting scheduler to realtime via SCHED_RR\n");
 	// SCHED_OTHER, SCHED_FIFO, SCHED_RR
