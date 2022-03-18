@@ -1963,8 +1963,12 @@ void Settings_ReadClientSettingsV1 (struct thread_Settings **client, struct clie
     (*client)->mTID = thread_zeroid();
     (*client)->mPort = static_cast<unsigned short>(ntohl(hdr->mPort));
     (*client)->mThreads = 1;
+    struct thread_Settings *tmpSettings  = *client;
     if (hdr->mBufLen != 0) {
 	(*client)->mBufLen = ntohl(hdr->mBufLen);
+	setBuflenSet(tmpSettings);
+    } else {
+	checksock_max_udp_payload(tmpSettings);
     }
     (*client)->mAmount = ntohl(hdr->mAmount);
     if (((*client)->mAmount & 0x80000000) > 0) {
@@ -2057,10 +2061,6 @@ void Settings_GenerateClientSettings (struct thread_Settings *server, struct thr
 		reversed_thread->mFQPacingRate |= (static_cast<uint64_t>(ntohl(hdr->start_fq.fqrateu)) << 32);
 #endif
 	    }
-	}
-	int max = checksock_max_udp_payload(server);
-	if (max > 0) {
-	    server->mBufLen = max;
 	}
     } else { //tcp first payload
 	struct client_tcp_testhdr *hdr = static_cast<struct client_tcp_testhdr *>(mBuf);

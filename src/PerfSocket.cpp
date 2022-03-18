@@ -417,32 +417,39 @@ int getsock_tcp_mss  (int inSock) {
     return theMSS;
 } /* end getsock_tcp_mss */
 
-int checksock_max_udp_payload (struct thread_Settings *inSettings) {
-    int max = inSettings->mBufLen;
+void checksock_max_udp_payload (struct thread_Settings *inSettings) {
 #if HAVE_DECL_SIOCGIFMTU
     struct ifreq ifr;
     if (!isBuflenSet(inSettings) && inSettings->mIfrname) {
 	strncpy(ifr.ifr_name, inSettings->mIfrname, (size_t) (IFNAMSIZ - 1));
 	if (!ioctl(inSettings->mSock, SIOCGIFMTU, &ifr)) {
+	    int max;
 	    if (!isIPV6(inSettings)) {
 		max = ifr.ifr_mtu - IPV4HDRLEN - UDPHDRLEN;
 	    } else {
 		max = ifr.ifr_mtu - IPV6HDRLEN - UDPHDRLEN;
 	    }
 	    if (max > 0) {
-		// adjust the payload size based upon the inerface MTU
-		if (!isIPV6(inSettings) && (max > kDefault_UDPBufLen)) {
-		    max = kDefault_UDPBufLen;
-		} else if (isIPV6(inSettings) && (max > kDefault_UDPBufLenV6)) {
-		    max = kDefault_UDPBufLenV6;
+		if (max != inSettings->mBufLen) {
+		    if (max > inSettings->mBufLen) {
+			char *tmp = new char[max];
+			assert(tmp!=NULL);
+			if (tmp) {
+			    pattern(tmp, max);
+			    memcpy(tmp, inSettings->mBuf, inSettings->mBufLen);
+			    DELETE_ARRAY(inSettings->mBuf);
+			    inSettings->mBuf = tmp;
+			    inSettings->mBufLen = max;
+			}
+		    } else {
+			inSettings->mBufLen = max;
+			fprintf(stdout,"**** diff mtu now smaller %d\n", max);
+		    }
 		}
-	    } else {
-		max = -1;
 	    }
 	}
     }
 #endif
-    return max;
 }
 
 
