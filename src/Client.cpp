@@ -212,7 +212,7 @@ bool Client::my_connect (bool close_on_fail) {
 	getsockname(mySocket, reinterpret_cast<sockaddr*>(&mSettings->local), &mSettings->size_local);
 	getpeername(mySocket, reinterpret_cast<sockaddr*>(&mSettings->peer), &mSettings->size_peer);
 	SockAddr_Ifrname(mSettings);
-	if (isUDP(mSettings)) {
+	if (isUDP(mSettings) && !isBuflenSet(mSettings)) {
 	    int max = checksock_max_udp_payload(mSettings);
 	    if ((max > 0) && (max != mSettings->mBufLen)) {
 		if (max > mSettings->mBufLen) {
