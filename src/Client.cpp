@@ -213,22 +213,7 @@ bool Client::my_connect (bool close_on_fail) {
 	getpeername(mySocket, reinterpret_cast<sockaddr*>(&mSettings->peer), &mSettings->size_peer);
 	SockAddr_Ifrname(mSettings);
 	if (isUDP(mSettings) && !isBuflenSet(mSettings)) {
-	    int max = checksock_max_udp_payload(mSettings);
-	    if ((max > 0) && (max != mSettings->mBufLen)) {
-		if (max > mSettings->mBufLen) {
-		    char *tmp = new char[max];
-		    assert(tmp!=NULL);
-		    if (tmp) {
-			pattern(tmp, max);
-			memcpy(tmp, mSettings->mBuf, sizeof(char));
-			DELETE_ARRAY(mSettings->mBuf);
-			mSettings->mBuf = tmp;
-			mSettings->mBufLen = max;
-		    }
-		} else {
-		    mSettings->mBufLen = max;
-		}
-	    }
+	    checksock_max_udp_payload(mSettings);
 	}
 	if (isUDP(mSettings) && !isIsochronous(mSettings) && !isIPG(mSettings)) {
 	    mSettings->mBurstIPG = get_delay_target() / 1e3; // this is being set for the settings report only
