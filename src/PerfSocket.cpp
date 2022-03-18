@@ -429,22 +429,19 @@ void checksock_max_udp_payload (struct thread_Settings *inSettings) {
 	    } else {
 		max = ifr.ifr_mtu - IPV6HDRLEN - UDPHDRLEN;
 	    }
-	    if (max > 0) {
-		if (max != inSettings->mBufLen) {
-		    if (max > inSettings->mBufLen) {
-			char *tmp = new char[max];
-			assert(tmp!=NULL);
-			if (tmp) {
-			    pattern(tmp, max);
-			    memcpy(tmp, inSettings->mBuf, inSettings->mBufLen);
-			    DELETE_ARRAY(inSettings->mBuf);
-			    inSettings->mBuf = tmp;
-			    inSettings->mBufLen = max;
-			}
-		    } else {
+	    if ((max > 0) && (max != inSettings->mBufLen)) {
+		if (max > inSettings->mBufLen) {
+		    char *tmp = new char[max];
+		    assert(tmp!=NULL);
+		    if (tmp) {
+			pattern(tmp, max);
+			memcpy(tmp, inSettings->mBuf, inSettings->mBufLen);
+			DELETE_ARRAY(inSettings->mBuf);
+			inSettings->mBuf = tmp;
 			inSettings->mBufLen = max;
-			fprintf(stdout,"**** diff mtu now smaller %d\n", max);
 		    }
+		} else {
+		    inSettings->mBufLen = max;
 		}
 	    }
 	}
