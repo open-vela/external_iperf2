@@ -1542,7 +1542,6 @@ void Client::AwaitServerFinPacket () {
 	    // try to trigger another FIN by resending a negative seq no
 	    WritePacketID(-(++reportstruct->packetID));
 	    // write data
-	    fprintf(stdout,"***** write fin %d\n", mSettings->mBufLen);
 	    rc = write(mySocket, mSettings->mBuf, mSettings->mBufLen);
 	    WARN_errno(rc < 0, "write-fin");
 #ifdef HAVE_THREAD_DEBUG
