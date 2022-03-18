@@ -69,7 +69,7 @@ void SetSocketOptionsReceiveTimeout(struct thread_Settings *mSettings, int timer
 void SetSocketOptionsIPTos (struct thread_Settings *mSettings, int tos);
 void setsock_tcp_mss(int inSock, int inMSS);
 int  getsock_tcp_mss(int inSock);
-int checksock_max_udp_payload (struct thread_Settings *inSettings);
+void checksock_max_udp_payload (struct thread_Settings *inSettings);
 
 #ifdef __cplusplus
 } /* end extern "C" */
