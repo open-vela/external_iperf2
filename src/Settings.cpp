@@ -1968,7 +1968,9 @@ void Settings_ReadClientSettingsV1 (struct thread_Settings **client, struct clie
 	(*client)->mBufLen = ntohl(hdr->mBufLen);
 	setBuflenSet(tmpSettings);
     } else {
+#ifdef MTU_DISCOVERY_LENGTH_ADJUST
 	checksock_max_udp_payload(tmpSettings);
+#endif
     }
     (*client)->mAmount = ntohl(hdr->mAmount);
     if (((*client)->mAmount & 0x80000000) > 0) {

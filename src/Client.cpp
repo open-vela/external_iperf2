@@ -212,9 +212,11 @@ bool Client::my_connect (bool close_on_fail) {
 	getsockname(mySocket, reinterpret_cast<sockaddr*>(&mSettings->local), &mSettings->size_local);
 	getpeername(mySocket, reinterpret_cast<sockaddr*>(&mSettings->peer), &mSettings->size_peer);
 	SockAddr_Ifrname(mSettings);
+#ifdef MTU_DISCOVERY_LENGTH_ADJUST
 	if (isUDP(mSettings) && !isBuflenSet(mSettings)) {
 	    checksock_max_udp_payload(mSettings);
 	}
+#endif
 	if (isUDP(mSettings) && !isIsochronous(mSettings) && !isIPG(mSettings)) {
 	    mSettings->mBurstIPG = get_delay_target() / 1e3; // this is being set for the settings report only
 	}
@@ -1540,6 +1542,7 @@ void Client::AwaitServerFinPacket () {
 	    // try to trigger another FIN by resending a negative seq no
 	    WritePacketID(-(++reportstruct->packetID));
 	    // write data
+	    fprintf(stdout,"***** write fin %d\n", mSettings->mBufLen);
 	    rc = write(mySocket, mSettings->mBuf, mSettings->mBufLen);
 	    WARN_errno(rc < 0, "write-fin");
 #ifdef HAVE_THREAD_DEBUG

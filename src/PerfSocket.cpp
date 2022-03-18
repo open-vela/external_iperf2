@@ -417,6 +417,7 @@ int getsock_tcp_mss  (int inSock) {
     return theMSS;
 } /* end getsock_tcp_mss */
 
+#ifdef MTU_DISCOVERY_LENGTH_ADJUST
 void checksock_max_udp_payload (struct thread_Settings *inSettings) {
 #if HAVE_DECL_SIOCGIFMTU
     struct ifreq ifr;
@@ -448,6 +449,6 @@ void checksock_max_udp_payload (struct thread_Settings *inSettings) {
     }
 #endif
 }
-
+#endif
 
 // end SetSocketOptions
