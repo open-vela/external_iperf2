@@ -55,6 +55,10 @@ AC_ARG_ENABLE(fastsampling, AC_HELP_STRING([--enable-fastsampling],
 	    [enable support for 100 microsecond report intervals (default is disable)]))
 AM_CONDITIONAL([FASTSAMPLING], [test "x$enable_fastsampling" = "xyes"])
 
+AC_ARG_ENABLE(discover_defaultlen, AC_HELP_STRING([--enable-discover-defaultlen],
+	    [enable support to set the default payload size after device MTU discovery  (default is disable)]))
+AM_CONDITIONAL([DISCOVER_DEFAULTLEN], [test "x$enable_discover_defaultlen" = "xyes"])
+
 AC_ARG_ENABLE(thread_debug, AC_HELP_STRING([--enable-thread-debug],
 	    [enable support for thread debugging (default is disable)]))
 AM_CONDITIONAL([THREAD_DEBUG], [test "x$enable_thread_debug" = "xyes"])
@@ -411,6 +415,9 @@ fi
 
 if test "$enable_fastsampling" = yes; then
 AC_DEFINE([HAVE_FASTSAMPLING], 1, [Define if fast sampling for report intervals is desired])
+fi
+if test "$enable_discover_defaultlen" = yes; then
+AC_DEFINE([DEFAULT_PAYLOAD_LEN_PER_MTU_DISCOVERY], 1, [Define if default UDP payload length is based on device MTU and socket buffer size])
 fi
 
 if test "$enable_packet_debug" = yes; then
