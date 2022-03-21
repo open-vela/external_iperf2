@@ -6,6 +6,10 @@
 /* Define if debugging info is desired */
 #undef DBG_MJZ
 
+/* Define if default UDP payload length is based on device MTU and socket
+   buffer size */
+#undef DEFAULT_PAYLOAD_LEN_PER_MTU_DISCOVERY
+
 /* AF_PACKET support is available */
 #undef HAVE_AF_PACKET
 
