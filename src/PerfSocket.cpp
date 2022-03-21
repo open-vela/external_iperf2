@@ -417,7 +417,8 @@ int getsock_tcp_mss  (int inSock) {
     return theMSS;
 } /* end getsock_tcp_mss */
 
-#ifdef MTU_DISCOVERY_LENGTH_ADJUST
+#ifdef DEFAULT_PAYLOAD_LEN_PER_MTU_DISCOVERY
+#define UDPMAXSIZE ((1024 * 64) - 64) // 16 bit field for UDP
 void checksock_max_udp_payload (struct thread_Settings *inSettings) {
 #if HAVE_DECL_SIOCGIFMTU
     struct ifreq ifr;
@@ -432,6 +433,13 @@ void checksock_max_udp_payload (struct thread_Settings *inSettings) {
 	    }
 	    if ((max > 0) && (max != inSettings->mBufLen)) {
 		if (max > inSettings->mBufLen) {
+		    int sockwin_sndsize = getsock_tcp_windowsize(inSettings->mSock, 1);
+		    if ((sockwin_sndsize > 0) && (max > sockwin_sndsize)) {
+			max = sockwin_sndsize;
+		    }
+		    if (max > UDPMAXSIZE) {
+			max = UDPMAXSIZE;
+		    }
 		    char *tmp = new char[max];
 		    assert(tmp!=NULL);
 		    if (tmp) {
