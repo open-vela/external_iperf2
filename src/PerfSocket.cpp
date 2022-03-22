@@ -432,14 +432,10 @@ void checksock_max_udp_payload (struct thread_Settings *inSettings) {
 		max = ifr.ifr_mtu - IPV6HDRLEN - UDPHDRLEN;
 	    }
 	    if ((max > 0) && (max != inSettings->mBufLen)) {
+		if (max > UDPMAXSIZE) {
+		    max = UDPMAXSIZE;
+		}
 		if (max > inSettings->mBufLen) {
-		    int sockwin_sndsize = getsock_tcp_windowsize(inSettings->mSock, 1);
-		    if ((sockwin_sndsize > 0) && (max > sockwin_sndsize)) {
-			max = sockwin_sndsize;
-		    }
-		    if (max > UDPMAXSIZE) {
-			max = UDPMAXSIZE;
-		    }
 		    char *tmp = new char[max];
 		    assert(tmp!=NULL);
 		    if (tmp) {
