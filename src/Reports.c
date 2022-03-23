@@ -896,13 +896,13 @@ struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings
 void write_UDP_AckFIN (struct TransferInfo *stats, int len) {
     assert(stats!= NULL);
     int ackpacket_length = (int) (sizeof(struct UDP_datagram) + sizeof(struct server_hdr));
-    char *ackPacket = (char *) calloc(1, len);
+    int readlen = ((ackpacket_length * 2) > len * 2) ? (ackpacket_length * 2) : (len * 2);
+    char *ackPacket = (char *) calloc(1, readlen);
     int success = 0;
     assert(ackPacket);
     fd_set readSet;
     int rc = 1;
     struct timeval timeout;
-    int readlen = ((ackpacket_length * 2) > len * 2) ? (ackpacket_length * 2) : (len * 2);
 
     if (ackPacket) {
 	struct UDP_datagram *UDP_Hdr = (struct UDP_datagram *)ackPacket;
