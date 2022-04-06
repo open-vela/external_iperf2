@@ -260,6 +260,9 @@ Set TCP_QUICKACK on the socket
 .BR "    --tcp-write-prefetch " \fIn\fR[kmKM]
 Set TCP_NOTSENT_LOWAT on the socket and use event based writes per select() on the socket.
 .TP
+.BR "    --tcp-write-times "
+Measure the socket write times
+.TP
 .BR -t ", " --time " \fIn\fR" | "\fI0\fR"
 time in seconds to transmit traffic, use zero for infinite (default is 10 secs)
 .TP

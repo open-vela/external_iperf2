@@ -743,11 +743,6 @@ static void reporter_handle_frame_isoch_oneway_transit (struct TransferInfo *sta
 		stats->matchframeID = 0;  // reset the matchid so any potential duplicate is ignored
 	    }
 	}
-#if HAVE_DECL_TCP_NOTSENT_LOWAT
-	if (stats->latency_histogram && (packet->drain_time > 0.0)) {
-	   histogram_insert(stats->latency_histogram, packet->drain_time, &packet->packetTime);
-       }
-#endif
 	stats->isochstats.frameID = packet->frameID;
     }
 }
@@ -800,15 +795,6 @@ static inline void reporter_handle_txmsg_oneway_transit (struct TransferInfo *st
 	    stats->isochstats.frameID = packet->frameID;
 	}
     }
-#if HAVE_DECL_TCP_NOTSENT_LOWAT
-    if (isTcpDrain(stats->common) && packet->transit_ready && (packet->drain_time)) {
-	reporter_update_mmm(&stats->drain_mmm.current, (double) packet->drain_time);
-	reporter_update_mmm(&stats->drain_mmm.total, (double) packet->drain_time);
-	if (stats->drain_histogram ) {
-	    histogram_insert(stats->drain_histogram, packet->drain_time, &packet->packetTime);
-	}
-    }
-#endif
 }
 // This is done in reporter thread context
 
@@ -828,6 +814,13 @@ void reporter_handle_packet_client (struct ReporterData *data, struct ReportStru
 	    reporter_handle_frame_isoch_oneway_transit(stats, packet);
 	} else if (isPeriodicBurst(stats->common)) {
 	    reporter_handle_txmsg_oneway_transit(stats, packet);
+	}
+	if (isTcpWriteTimes(stats->common) && !isUDP(stats->common) && (packet->write_time > 0)) {
+	    reporter_update_mmm(&stats->write_mmm.current, (double) packet->write_time);
+	    reporter_update_mmm(&stats->write_mmm.total, (double) packet->write_time);
+	    if (stats->write_histogram ) {
+		histogram_insert(stats->write_histogram, (1e-6 * packet->write_time), &packet->packetTime);
+	    }
 	}
     }
     if (isUDP(stats->common)) {
@@ -1035,17 +1028,15 @@ static inline void reporter_reset_transfer_stats_client_tcp (struct TransferInfo
 	reporter_reset_mmm(&stats->bbowdfro.current);
 	reporter_reset_mmm(&stats->bbasym.current);
     }
-#if HAVE_DECL_TCP_NOTSENT_LOWAT
-    if (isTcpDrain(stats->common)) {
-	stats->drain_mmm.current.cnt = 0;
-	stats->drain_mmm.current.min = FLT_MAX;
-	stats->drain_mmm.current.max = FLT_MIN;
-	stats->drain_mmm.current.sum = 0;
-	stats->drain_mmm.current.vd = 0;
-	stats->drain_mmm.current.mean = 0;
-	stats->drain_mmm.current.m2 = 0;
+    if (isTcpWriteTimes(stats->common)) {
+	stats->write_mmm.current.cnt = 0;
+	stats->write_mmm.current.min = FLT_MAX;
+	stats->write_mmm.current.max = FLT_MIN;
+	stats->write_mmm.current.sum = 0;
+	stats->write_mmm.current.vd = 0;
+	stats->write_mmm.current.mean = 0;
+	stats->write_mmm.current.m2 = 0;
     }
-#endif
 }
 
 static inline void reporter_reset_transfer_stats_client_udp (struct TransferInfo *stats) {
@@ -1400,14 +1391,12 @@ void reporter_transfer_protocol_client_tcp (struct ReporterData *data, int final
     struct TransferInfo *sumstats = (data->GroupSumReport != NULL) ? &data->GroupSumReport->info : NULL;
     struct TransferInfo *fullduplexstats = (data->FullDuplexReport != NULL) ? &data->FullDuplexReport->info : NULL;
     stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
-#if HAVE_DECL_TCP_NOTSENT_LOWAT
     if (stats->latency_histogram) {
         stats->latency_histogram->final = final;
     }
-    if (stats->drain_histogram) {
-        stats->drain_histogram->final = final;
+    if (stats->write_histogram) {
+        stats->write_histogram->final = final;
     }
-#endif
     if (isIsochronous(stats->common)) {
 	if (final) {
 	    stats->isochstats.cntFrames = stats->isochstats.framecnt.current;
@@ -1435,14 +1424,12 @@ void reporter_transfer_protocol_client_tcp (struct ReporterData *data, int final
 	fullduplexstats->total.Bytes.current += stats->cntBytes;
     }
     if (final) {
-#if HAVE_DECL_TCP_NOTSENT_LOWAT
 	if (stats->latency_histogram) {
 	    stats->latency_histogram->final = 1;
 	}
-	if (stats->drain_histogram) {
-	    stats->drain_histogram->final = 1;
+	if (stats->write_histogram) {
+	    stats->write_histogram->final = 1;
 	}
-#endif
 	if ((stats->cntBytes > 0) && stats->output_handler && !TimeZero(stats->ts.intervalTime)) {
 	    // print a partial interval report if enable and this a final
 	    if ((stats->output_handler) && !(stats->isMaskOutput)) {
@@ -1471,9 +1458,7 @@ void reporter_transfer_protocol_client_tcp (struct ReporterData *data, int final
 	    stats->framelatency_histogram->final = 1;
 	}
 	stats->cntBytes = stats->total.Bytes.current;
-#if HAVE_DECL_TCP_NOTSENT_LOWAT
-	stats->drain_mmm.current = stats->drain_mmm.total;
-#endif
+	stats->write_mmm.current = stats->write_mmm.total;
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
     } else if (isIsochronous(stats->common)) {
 	stats->isochstats.cntFrames = stats->isochstats.framecnt.current - stats->isochstats.framecnt.prev;

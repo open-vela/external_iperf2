@@ -77,7 +77,7 @@ struct ReportStruct {
     intmax_t remaining;
     int transit_ready;
     int writecnt;
-    long drain_time;
+    long write_time;
     struct timeval sentTimeRX;
     struct timeval sentTimeTX;
     struct iperf_tcpstats tcpstats;
