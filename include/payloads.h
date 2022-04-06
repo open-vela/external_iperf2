@@ -200,12 +200,9 @@ struct client_hdr_v1 {
 //    o) burst id is a running seq no
 //    o) send is the write timestamp
 //    o) bb_r2w_hold is an optional delay value between the read and bb write, typically expected as zero
-//    o) drain is the time from write to os indicating remote received payload (TCP only)
-//    o) drain times are deltas and not timestamps, computed by each end, units is microseconds
 //    o) triptimes will support OWD measurements in each direction (useful for asymmetry testing)
 //    o) min payload
 //         - seven 32b or 28 bytes with round trip only,
-//	   - nine 32b or 36 bytes when including drain times,
 //	   - eleven 32b or 44 bytes when including trip-times support
 //    o) no need for a bb read timestamp to be passed in the payload
 //    o) OWD calculations require e2e clock sync and --trip-times cli option
