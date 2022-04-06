@@ -140,6 +140,7 @@ Client specific:\n\
   -r, --tradeoff           Do a fullduplexectional test individually\n\
       --tcp-quickack       set the socket's TCP_QUICKACK option (off by default)\n\
       --tcp-write-prefetch set the socket's TCP_NOTSENT_LOWAT value in bytes and use event based writes\n\
+      --tcp-write-times    measure the socket write times at the application level\n\
   -t, --time      #        time in seconds to transmit for (default 10 secs)\n\
       --trip-times         enable end to end measurements (requires client and server clock sync)\n\
       --txdelay-time       time in seconds to hold back after connect and before first write\n\
@@ -370,16 +371,15 @@ const char report_client_bb_bw_format[] =
 const char report_client_bb_bw_triptime_format[] =
 "%s" IPERFTimeFrmt " sec  OWD Delays (ms) Cnt=%d(%d) To=%.3f/%.3f/%.3f/%.3f From=%.3f/%.3f/%.3f/%.3f Asymmetry=%.3f/%.3f/%.3f/%.3f\n";
 
-#if HAVE_DECL_TCP_NOTSENT_LOWAT
-const char report_write_enhanced_drain_header[] =
-"[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth       Write/Err  Rtry     Cwnd/RTT        NetPwr  Sojourn avg/min/max/stdev (cnt)\n";
+const char report_write_enhanced_write_header[] =
+"[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth       Write/Err  Rtry     Cwnd/RTT        NetPwr  write-times avg/min/max/stdev (cnt)\n";
 
-const char report_write_enhanced_drain_format[] =
+const char report_write_enhanced_write_format[] =
 "%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %10d %8dK/%u us  %s  %.3f/%.3f/%.3f/%.3f ms (%d)\n";
 
-const char report_write_enhanced_nocwnd_drain_format[] =
+const char report_write_enhanced_nocwnd_write_format[] =
 "%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %10d       NA/%u us  %s  %.3f/%.3f/%.3f/%.3f ms (%d)\n";
-#endif
+
 
 #if HAVE_TCP_STATS
 const char report_bw_write_enhanced_header[] =
@@ -404,6 +404,7 @@ const char report_write_enhanced_isoch_nocwnd_format[] =
 "%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %10d    NA/%u us  %9" PRIuMAX "/%" PRIuMAX "/%" PRIuMAX " %s\n";
 
 #else
+
 const char report_bw_write_enhanced_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth       Write/Err\n";
 
@@ -418,7 +419,6 @@ const char report_write_enhanced_isoch_header[] =
 
 const char report_write_enhanced_isoch_format[] =
 "%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %d/%d %9" PRIuMAX "/%" PRIuMAX "/%" PRIuMAX "\n";
-
 #endif
 
 const char report_sumcnt_bw_write_enhanced_header[] =

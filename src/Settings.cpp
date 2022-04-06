@@ -115,6 +115,7 @@ static int notcpbbquickack = 0;
 static int tcpquickack = 0;
 static int notcpbbquickack_cliset = 0;
 static int congest = 0;
+static int tcpwritetimes = 0;
 
 void Settings_Interpret(char option, const char *optarg, struct thread_Settings *mExtSettings);
 // apply compound settings after the command line has been fully parsed
@@ -219,6 +220,7 @@ const struct option long_options[] =
 {"tcp-rx-window-clamp", required_argument, &rxwinclamp, 1},
 {"tcp-quickack", no_argument, &tcpquickack, 1},
 {"tcp-write-prefetch", required_argument, &txnotsentlowwater, 1}, // see doc/DESIGN_NOTES
+{"tcp-write-times", no_argument, &tcpwritetimes, 1},
 {"tap-dev", optional_argument, &tapif, 1},
 {"tun-dev", optional_argument, &tunif, 1},
 {"NUM_REPORT_STRUCTS", required_argument, &numreportstructs, 1},
@@ -1094,6 +1096,10 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		fprintf(stderr, "--tcp-rx-window-clamp not supported on this platform\n");
 #endif
 	    }
+	    if (tcpwritetimes) {
+		tcpwritetimes = 0;
+		setTcpWriteTimes(mExtSettings);
+	    }
 	    if (notcpbbquickack) {
 		notcpbbquickack = 0;
 		notcpbbquickack_cliset = 1;
@@ -1552,7 +1558,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    }
 	}
 	if (!isReverse(mExtSettings) && !isFullDuplex(mExtSettings) && isHistogram(mExtSettings)){
-	    setTcpDrain(mExtSettings);
+	    setTcpWriteTimes(mExtSettings);
 	    mExtSettings->mHistBins = 100000; // 10 seconds wide
 	    mExtSettings->mHistBinsize = 100; // 100 usec bins
 	    mExtSettings->mHistUnits = 6;  // usecs 10 pow(x)

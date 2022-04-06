@@ -111,7 +111,7 @@ Client::Client (thread_Settings *inSettings) {
 	FAIL_errno(!(mSettings->mFPS > 0.0), "Invalid value for frames per second in the isochronous settings\n", mSettings);
     }
     peerclose = false;
-    isburst = (isIsochronous(mSettings) || isPeriodicBurst(mSettings) || ((isTripTime(mSettings) || isTcpDrain(mSettings)) && !isUDP(mSettings)));
+    isburst = (isIsochronous(mSettings) || isPeriodicBurst(mSettings) || (isTripTime(mSettings) && !isUDP(mSettings)));
 } // end Client
 
 /* -------------------------------------------------------------------
@@ -565,6 +565,7 @@ void Client::RunTCP () {
     now.setnow();
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
+    reportstruct->write_time = 0;
     while (InProgress()) {
 	reportstruct->writecnt = 0;
         if (isModeAmount(mSettings)) {
@@ -617,10 +618,6 @@ void Client::RunTCP () {
 	    myReport->info.ts.prevsendTime = reportstruct->packetTime;
 	    writelen = (mSettings->mBufLen > burst_remaining) ? burst_remaining : mSettings->mBufLen;
 	    // perform write, full header must succeed
-#if HAVE_DECL_TCP_NOTSENT_LOWAT
-	    if (isTcpDrain(mSettings))
-		drain_start.setnow();
-#endif
 	    reportstruct->packetLen = writen(mySocket, mSettings->mBuf, writelen, &reportstruct->writecnt);
 	    FAIL_errno(reportstruct->packetLen < (intmax_t) sizeof(struct TCP_burst_payload), "burst written", mSettings);
 	} else {
@@ -628,6 +625,9 @@ void Client::RunTCP () {
 	    // perform write
 	    if (isburst)
 		writelen = (mSettings->mBufLen > burst_remaining) ? burst_remaining : mSettings->mBufLen;
+	    if (isTcpWriteTimes(mSettings)) {
+		write_start.setnow();
+	    }
 #if HAVE_DECL_TCP_NOTSENT_LOWAT
 	    if (isWritePrefetch(mSettings)) {
 		AwaitWriteSelectEventTCP();
@@ -638,6 +638,9 @@ void Client::RunTCP () {
 	    reportstruct->writecnt++;
 	    reportstruct->packetTime.tv_sec = now.getSecs();
 	    reportstruct->packetTime.tv_usec = now.getUsecs();
+	    if (isTcpWriteTimes(mSettings)) {
+		reportstruct->write_time = now.subUsec(write_start);
+	    }
 	    reportstruct->sentTime = reportstruct->packetTime;
 	}
 	if (reportstruct->packetLen <= 0) {
@@ -708,10 +711,6 @@ void Client::RunNearCongestionTCP () {
 	    WriteTcpTxHdr(reportstruct, burst_remaining, burst_id++);
 	    reportstruct->sentTime = reportstruct->packetTime;
 	    myReport->info.ts.prevsendTime = reportstruct->packetTime;
-#if HAVE_DECL_TCP_NOTSENT_LOWAT
-	    if (isTcpDrain(mSettings))
-		drain_start.setnow();
-#endif
 	    // perform write
 	    int writelen = (mSettings->mBufLen > burst_remaining) ? burst_remaining : mSettings->mBufLen;
 	    reportstruct->packetLen = write(mySocket, mSettings->mBuf, writelen);
@@ -911,13 +910,6 @@ inline bool Client::AwaitWriteSelectEventTCP (void) {
 #endif
 	return false;
     }
-    if (isTcpDrain(mSettings)) {
-	drain_end.setnow();
-	reportstruct->drain_time = drain_end.subUsec(drain_start);
-#ifdef HAVE_THREAD_DEBUG
-	thread_debug("Drain time  = %f", reportstruct->drain_time);
-#endif
-    }
     return true;
 }
 
@@ -933,6 +925,10 @@ void Client::RunWriteEventsTCP () {
 	    writelen = ((mSettings->mAmount < static_cast<unsigned>(mSettings->mBufLen)) ? mSettings->mAmount : mSettings->mBufLen);
 	}
 	now.setnow();
+	reportstruct->write_time = 0;
+	if (isTcpWriteTimes(mSettings)) {
+	    write_start = now;
+	}
 	bool rc = AwaitWriteSelectEventTCP();
 	reportstruct->emptyreport = (rc == false) ? 1 : 0;
         if (rc) {
@@ -949,6 +945,9 @@ void Client::RunWriteEventsTCP () {
 		}
 		reportstruct->packetLen = 0;
 		reportstruct->emptyreport = 1;
+	    } else if (isTcpWriteTimes(mSettings)) {
+		Timestamp write_end;
+		reportstruct->write_time = write_end.subUsec(write_start);
 	    }
 	}
 	if (isModeAmount(mSettings) && !reportstruct->emptyreport) {
