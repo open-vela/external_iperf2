@@ -613,16 +613,14 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 		ireport->info.output_handler = tcp_output_basic_csv;
 	    } else if (isSumOnly(inSettings)) {
 		ireport->info.output_handler = NULL;
-#if HAVE_DECL_TCP_NOTSENT_LOWAT
-	    } else if (isTcpDrain(inSettings)) {
-		ireport->info.output_handler = tcp_output_write_enhanced_drain;
-#endif
 	    } else if (isBounceBack(inSettings)) {
 		ireport->packet_handler_post_report = reporter_handle_packet_bb_client;
 		ireport->transfer_protocol_handler = reporter_transfer_protocol_client_bb_tcp;
 		ireport->info.output_handler = tcp_output_write_bb;
 	    } else if (isIsochronous(inSettings)) {
 		ireport->info.output_handler = tcp_output_write_enhanced_isoch;
+	    } else if (isTcpWriteTimes(inSettings)) {
+		ireport->info.output_handler = tcp_output_write_enhanced_write;
 	    } else if (isEnhanced(inSettings)) {
 		ireport->info.output_handler = tcp_output_write_enhanced;
 	    } else if (isFullDuplex(inSettings)) {
@@ -662,14 +660,14 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	ireport->info.latency_histogram =  histogram_init(inSettings->mHistBins,inSettings->mHistBinsize,0,\
 							  pow(10,inSettings->mHistUnits), \
 							  inSettings->mHistci_lower, inSettings->mHistci_upper, ireport->info.common->transferID, name);
-    } else if ((inSettings->mThreadMode == kMode_Client) && isTcpDrain(inSettings) && isHistogram(inSettings) && !isUDP(inSettings)) {
-	char name[] = "D8";
+    } else if ((inSettings->mThreadMode == kMode_Client) && isTcpWriteTimes(inSettings) && isHistogram(inSettings) && !isUDP(inSettings)) {
+	char name[] = "W8";
 	inSettings->mHistBins = 100000; // 10 seconds wide
 	inSettings->mHistBinsize = 100; // 100 usec bins
 	inSettings->mHistUnits = 6;  // usecs 10 pow(x)
 	inSettings->mHistci_lower = 5;
 	inSettings->mHistci_upper = 95;
-	ireport->info.drain_histogram =  histogram_init(inSettings->mHistBins,inSettings->mHistBinsize,0,	\
+	ireport->info.write_histogram =  histogram_init(inSettings->mHistBins,inSettings->mHistBinsize,0,	\
 							pow(10,inSettings->mHistUnits), \
 							inSettings->mHistci_lower, inSettings->mHistci_upper, ireport->info.common->transferID, name);
     }

@@ -353,7 +353,7 @@ struct thread_Settings {
 #define FLAG_FQPACING       0x00001000
 #define FLAG_TRIPTIME       0x00002000
 #define FLAG_TXHOLDBACK     0x00004000
-#define FLAG_TCPWRITETIME   0x00008000
+#define FLAG_UNUSED         0x00008000
 #define FLAG_MODEINFINITE   0x00010000
 #define FLAG_CONNECTONLY    0x00020000
 #define FLAG_SERVERREVERSE  0x00040000
@@ -383,7 +383,7 @@ struct thread_Settings {
 #define FLAG_TAPDEV         0x00000040
 #define FLAG_HIDEIPS        0x00000080
 #define FLAG_BOUNCEBACK     0x00000100
-#define FLAG_TCPDRAIN       0x00000200
+#define FLAG_TCPWRITETIMES  0x00000200
 #define FLAG_INCRSRCPORT    0x00000400
 #define FLAG_OVERRIDETOS    0x00000800
 #define FLAG_TCPQUICKACK    0x00001000
@@ -460,7 +460,7 @@ struct thread_Settings {
 #define isTunDev(settings)         ((settings->flags_extend2 & FLAG_TUNDEV) != 0)
 #define isHideIPs(settings)        ((settings->flags_extend2 & FLAG_HIDEIPS) != 0)
 #define isBounceBack(settings)     ((settings->flags_extend2 & FLAG_BOUNCEBACK) != 0)
-#define isTcpDrain(settings)       ((settings->flags_extend2 & FLAG_TCPDRAIN) != 0)
+#define isTcpWriteTimes(settings)  ((settings->flags_extend2 & FLAG_TCPWRITETIMES) != 0)
 #define isOverrideTOS(settings)    ((settings->flags_extend2 & FLAG_OVERRIDETOS) != 0)
 #define isTcpQuickAck(settings)    ((settings->flags_extend2 & FLAG_TCPQUICKACK) != 0)
 #define isCongest(settings)        ((settings->flags_extend2 & FLAG_CONGEST) != 0)
@@ -532,7 +532,7 @@ struct thread_Settings {
 #define setTunDev(settings)        settings->flags_extend2 |= FLAG_TUNDEV
 #define setHideIPs(settings)       settings->flags_extend2 |= FLAG_HIDEIPS
 #define setBounceBack(settings)    settings->flags_extend2 |= FLAG_BOUNCEBACK
-#define setTcpDrain(settings)      settings->flags_extend2 |= FLAG_TCPDRAIN
+#define setTcpWriteTimes(settings) settings->flags_extend2 |= FLAG_TCPWRITETIMES
 #define setOverrideTOS(settings)   settings->flags_extend2 |= FLAG_OVERRIDETOS
 #define setTcpQuickAck(settings)   settings->flags_extend2 |= FLAG_TCPQUICKACK
 #define setCongest(settings)       settings->flags_extend2 |= FLAG_CONGEST
@@ -603,7 +603,7 @@ struct thread_Settings {
 #define unsetTunDev(settings)        settings->flags_extend2 &= ~FLAG_TUNDEV
 #define unsetHideIPs(settings)       settings->flags_extend2 &= ~FLAG_HIDEIPS
 #define unsetBounceBack(settings)    settings->flags_extend2 &= ~FLAG_BOUNCEBACK
-#define unsetTcpDrain(settings)      settings->flags_extend2 &= ~FLAG_TCPDRAIN
+#define unsetTcpWriteTimes(settings) settings->flags_extend2 &= ~FLAG_TCPWRITETIMES
 #define unsetOverrideTOS(settings)   settings->flags_extend2 &= ~FLAG_OVERRIDETOS
 #define unsetTcpQuickAck(settings)   settings->flags_extend2 &= ~FLAG_TCPQUICKACK
 #define unsetCongest(settings)       settings->flags_extend2 &= ~FLAG_CONGEST
