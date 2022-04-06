@@ -83,16 +83,14 @@ static inline int my_str_copy(char **dst, char *src) {
 static void common_copy (struct ReportCommon **common, struct thread_Settings *inSettings) {
     // Do deep copies from settings
     *common = (struct ReportCommon *) calloc(1, sizeof(struct ReportCommon));
-    int bytecnt = 0;
-    bytecnt = my_str_copy(&(*common)->Host, inSettings->mHost);
-    bytecnt += my_str_copy(&(*common)->HideHost, inSettings->mHideHost);
-    bytecnt += my_str_copy(&(*common)->Localhost, inSettings->mLocalhost);
-    bytecnt += my_str_copy(&(*common)->Ifrname, inSettings->mIfrname);
-    bytecnt += my_str_copy(&(*common)->Ifrnametx, inSettings->mIfrnametx);
-    bytecnt += my_str_copy(&(*common)->SSMMulticastStr, inSettings->mSSMMulticastStr);
-    bytecnt += my_str_copy(&(*common)->Congestion, inSettings->mCongestion);
-    bytecnt += my_str_copy(&(*common)->transferIDStr, inSettings->mTransferIDStr);
-    bytecnt += my_str_copy(&(*common)->PermitKey, inSettings->mPermitKey);
+    my_str_copy(&(*common)->HideHost, inSettings->mHideHost);
+    my_str_copy(&(*common)->Localhost, inSettings->mLocalhost);
+    my_str_copy(&(*common)->Ifrname, inSettings->mIfrname);
+    my_str_copy(&(*common)->Ifrnametx, inSettings->mIfrnametx);
+    my_str_copy(&(*common)->SSMMulticastStr, inSettings->mSSMMulticastStr);
+    my_str_copy(&(*common)->Congestion, inSettings->mCongestion);
+    my_str_copy(&(*common)->transferIDStr, inSettings->mTransferIDStr);
+    my_str_copy(&(*common)->PermitKey, inSettings->mPermitKey);
 
     // copy some relevant settings
     (*common)->flags = inSettings->flags;
