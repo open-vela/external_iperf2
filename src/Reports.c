@@ -83,6 +83,7 @@ static inline int my_str_copy(char **dst, char *src) {
 static void common_copy (struct ReportCommon **common, struct thread_Settings *inSettings) {
     // Do deep copies from settings
     *common = (struct ReportCommon *) calloc(1, sizeof(struct ReportCommon));
+    my_str_copy(&(*common)->Host, inSettings->mHost);
     my_str_copy(&(*common)->HideHost, inSettings->mHideHost);
     my_str_copy(&(*common)->Localhost, inSettings->mLocalhost);
     my_str_copy(&(*common)->Ifrname, inSettings->mIfrname);
