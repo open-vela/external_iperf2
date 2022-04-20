@@ -254,19 +254,6 @@ void SetSocketOptions (struct thread_Settings *inSettings) {
                                  reinterpret_cast<char*>(&bytecnt), len);
             WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_NOTSENT_LOWAT");
         }
-	if (isTcpDrain(inSettings)) {
-	    int value;
-	    int rc;
-	    Socklen_t len = sizeof(value);
-	    value = 4; // a small value, zero disables
-	    rc = setsockopt(inSettings->mSock, IPPROTO_TCP, TCP_NOTSENT_LOWAT,
-			    reinterpret_cast<char*>(&value), len);
-	    WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_NOTSENT_LOWAT");
-	    value = 1;
-	    rc = setsockopt(inSettings->mSock, IPPROTO_TCP, TCP_NODELAY,
-			    reinterpret_cast<char*>(&value), len);
-	    WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_NODELAY");
-	}
 #endif
     }
 
@@ -369,5 +356,90 @@ bool setsock_blocking (int fd, bool blocking) {
 #endif
 }
 
+/* -------------------------------------------------------------------
+ * If inMSS > 0, set the TCP maximum segment size  for inSock.
+ * Otherwise leave it as the system default.
+ * ------------------------------------------------------------------- */
+
+const char warn_mss_fail[] = "\
+WARNING: attempt to set TCP maxmimum segment size to %d failed\n";
+
+void setsock_tcp_mss (int inSock, int inMSS) {
+#if HAVE_DECL_TCP_MAXSEG
+    int rc;
+    int newMSS;
+    Socklen_t len;
+
+    assert(inSock != INVALID_SOCKET);
+
+    if (inMSS > 0) {
+        /* set */
+        newMSS = inMSS;
+        len = sizeof(newMSS);
+        rc = setsockopt(inSock, IPPROTO_TCP, TCP_MAXSEG, (char*) &newMSS,  len);
+        if (rc == SOCKET_ERROR) {
+            fprintf(stderr, warn_mss_fail, newMSS);
+            return;
+        }
+    }
+#endif
+} /* end setsock_tcp_mss */
+
+/* -------------------------------------------------------------------
+ * returns the TCP maximum segment size
+ * ------------------------------------------------------------------- */
+
+int getsock_tcp_mss  (int inSock) {
+    int theMSS = -1;
+#if HAVE_DECL_TCP_MAXSEG
+    int rc;
+    Socklen_t len;
+    assert(inSock >= 0);
+
+    /* query for MSS */
+    len = sizeof(theMSS);
+    rc = getsockopt(inSock, IPPROTO_TCP, TCP_MAXSEG, (char*)&theMSS, &len);
+    WARN_errno(rc == SOCKET_ERROR, "getsockopt TCP_MAXSEG");
+#endif
+    return theMSS;
+} /* end getsock_tcp_mss */
+
+#ifdef DEFAULT_PAYLOAD_LEN_PER_MTU_DISCOVERY
+#define UDPMAXSIZE ((1024 * 64) - 64) // 16 bit field for UDP
+void checksock_max_udp_payload (struct thread_Settings *inSettings) {
+#if HAVE_DECL_SIOCGIFMTU
+    struct ifreq ifr;
+    if (!isBuflenSet(inSettings) && inSettings->mIfrname) {
+	strncpy(ifr.ifr_name, inSettings->mIfrname, (size_t) (IFNAMSIZ - 1));
+	if (!ioctl(inSettings->mSock, SIOCGIFMTU, &ifr)) {
+	    int max;
+	    if (!isIPV6(inSettings)) {
+		max = ifr.ifr_mtu - IPV4HDRLEN - UDPHDRLEN;
+	    } else {
+		max = ifr.ifr_mtu - IPV6HDRLEN - UDPHDRLEN;
+	    }
+	    if ((max > 0) && (max != inSettings->mBufLen)) {
+		if (max > UDPMAXSIZE) {
+		    max = UDPMAXSIZE;
+		}
+		if (max > inSettings->mBufLen) {
+		    char *tmp = new char[max];
+		    assert(tmp!=NULL);
+		    if (tmp) {
+			pattern(tmp, max);
+			memcpy(tmp, inSettings->mBuf, inSettings->mBufLen);
+			DELETE_ARRAY(inSettings->mBuf);
+			inSettings->mBuf = tmp;
+			inSettings->mBufLen = max;
+		    }
+		} else {
+		    inSettings->mBufLen = max;
+		}
+	    }
+	}
+    }
+#endif
+}
+#endif
 
 // end SetSocketOptions

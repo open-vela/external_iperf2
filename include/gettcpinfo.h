@@ -49,18 +49,31 @@
 #define GETTCPINFO_H
 
 #include "headers.h"
-#include "Reporter.h"
-#include "packet_ring.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#if WIN32
-void gettcpinfo(SOCKET sock, struct ReportStruct *sample);
-#else
-void gettcpinfo(int sock, struct ReportStruct *sample);
+struct iperf_tcpstats {
+    bool isValid;
+    int rtt;
+    double connecttime;
+#if HAVE_TCP_STATS
+    int cwnd;
+    int rttvar;
+    intmax_t retry;
+    intmax_t retry_prev;
+    intmax_t retry_tot;
+    int mss_negotiated;
 #endif
+};
+
+#if WIN32
+void gettcpinfo(SOCKET sock, struct iperf_tcpstats *sample);
+#else
+void gettcpinfo(int sock, struct iperf_tcpstats *sample);
+#endif
+void tcpstats_copy (struct iperf_tcpstats *stats_dst, struct iperf_tcpstats *stats_src);
 
 #ifdef __cplusplus
 } /* end extern "C" */

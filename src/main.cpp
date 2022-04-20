@@ -230,6 +230,8 @@ int main(int argc, char **argv) {
     mbuflen += TAPBYTESSLOP;
 #endif
     ext_gSettings->mBuf = new char[mbuflen];
+    memset(ext_gSettings->mBuf, 0, mbuflen);
+
 
     unsetReport(ext_gSettings);
     switch (ext_gSettings->mThreadMode) {
