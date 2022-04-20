@@ -110,7 +110,6 @@ extern "C" {
 #define HEADER_EPOCH_START    0x1000
 #define HEADER_PERIODICBURST  0x2000
 #define HEADER_WRITEPREFETCH  0x4000
-#define HEADER_TCPQUICKACK    0x8000
 
 // later features
 #define HDRXACKMAX 2500000 // default 2.5 seconds, units microseconds
@@ -200,9 +199,12 @@ struct client_hdr_v1 {
 //    o) burst id is a running seq no
 //    o) send is the write timestamp
 //    o) bb_r2w_hold is an optional delay value between the read and bb write, typically expected as zero
+//    o) drain is the time from write to os indicating remote received payload (TCP only)
+//    o) drain times are deltas and not timestamps, computed by each end, units is microseconds
 //    o) triptimes will support OWD measurements in each direction (useful for asymmetry testing)
 //    o) min payload
 //         - seven 32b or 28 bytes with round trip only,
+//	   - nine 32b or 36 bytes when including drain times,
 //	   - eleven 32b or 44 bytes when including trip-times support
 //    o) no need for a bb read timestamp to be passed in the payload
 //    o) OWD calculations require e2e clock sync and --trip-times cli option
@@ -273,7 +275,7 @@ struct client_hdrext_starttime_fq {
  *                +--------+--------+--------+--------+
  *            3   |        flags                      |
  *                +--------+--------+--------+--------+
- *            4   |        isoch burst period (s)     |
+ *            4   |        reserved                   |
  *                +--------+--------+--------+--------+
  *            5   |        isoch burst period (us)    |
  *                +--------+--------+--------+--------+
@@ -330,7 +332,7 @@ struct TCP_burst_payload {
     uint32_t start_tv_sec;
     uint32_t start_tv_usec;
     struct TCP_oneway_triptime send_tt;
-    uint32_t burst_period_s;
+    uint32_t reserved0;
     uint32_t burst_period_us;
     uint32_t burst_id;
     uint32_t burst_size;
@@ -610,7 +612,7 @@ struct server_hdr {
 #define SIZEOF_UDPHDRMSG_EXT (sizeof(struct client_udp_testhdr))
 #define SIZEOF_TCPHDRMSG_V1 (sizeof(struct client_hdr_v1))
 #define SIZEOF_TCPHDRMSG_EXT (sizeof(struct client_tcp_testhdr))
-#define MINMBUFALLOCSIZE (int) (sizeof(struct client_tcp_testhdr)) + TAPBYTESSLOP
+#define MINMBUFALLOCSIZE (int) (sizeof(struct client_tcp_testhdr))
 #define MINTRIPTIMEPLAYOAD (int) (sizeof(struct client_udp_testhdr) - sizeof(struct client_hdrext_isoch_settings))
 #ifdef __cplusplus
 } /* end extern "C" */
