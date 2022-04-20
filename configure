@@ -683,6 +683,8 @@ PACKET_DEBUG_FALSE
 PACKET_DEBUG_TRUE
 THREAD_DEBUG_FALSE
 THREAD_DEBUG_TRUE
+DISCOVER_DEFAULTLEN_FALSE
+DISCOVER_DEFAULTLEN_TRUE
 FASTSAMPLING_FALSE
 FASTSAMPLING_TRUE
 MAINT
@@ -734,6 +736,7 @@ infodir
 docdir
 oldincludedir
 includedir
+runstatedir
 localstatedir
 sharedstatedir
 sysconfdir
@@ -770,6 +773,7 @@ enable_role_reversal_id
 enable_default_localonly
 enable_seqno64b
 enable_fastsampling
+enable_discover_defaultlen
 enable_thread_debug
 enable_packet_debug
 enable_checkprograms
@@ -830,6 +834,7 @@ datadir='${datarootdir}'
 sysconfdir='${prefix}/etc'
 sharedstatedir='${prefix}/com'
 localstatedir='${prefix}/var'
+runstatedir='${localstatedir}/run'
 includedir='${prefix}/include'
 oldincludedir='/usr/include'
 docdir='${datarootdir}/doc/${PACKAGE_TARNAME}'
@@ -1082,6 +1087,15 @@ do
   | -silent | --silent | --silen | --sile | --sil)
     silent=yes ;;
 
+  -runstatedir | --runstatedir | --runstatedi | --runstated \
+  | --runstate | --runstat | --runsta | --runst | --runs \
+  | --run | --ru | --r)
+    ac_prev=runstatedir ;;
+  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \
+  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \
+  | --run=* | --ru=* | --r=*)
+    runstatedir=$ac_optarg ;;
+
   -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
     ac_prev=sbindir ;;
   -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
@@ -1219,7 +1233,7 @@ fi
 for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
 		datadir sysconfdir sharedstatedir localstatedir includedir \
 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
-		libdir localedir mandir
+		libdir localedir mandir runstatedir
 do
   eval ac_val=\$$ac_var
   # Remove trailing slashes.
@@ -1372,6 +1386,7 @@ Fine tuning of the installation directories:
   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
   --localstatedir=DIR     modifiable single-machine data [PREFIX/var]
+  --runstatedir=DIR       modifiable per-process data [LOCALSTATEDIR/run]
   --libdir=DIR            object code libraries [EPREFIX/lib]
   --includedir=DIR        C header files [PREFIX/include]
   --oldincludedir=DIR     C header files for non-gcc [/usr/include]
@@ -1433,6 +1448,9 @@ Optional Features:
                           enable)
   --enable-fastsampling   enable support for 100 microsecond report intervals
                           (default is disable)
+  --enable-discover-defaultlen
+                          enable support to set the default payload size after
+                          device MTU discovery (default is disable)
   --enable-thread-debug   enable support for thread debugging (default is
                           disable)
   --enable-packet-debug   enable support for packet level debugging (default
@@ -3276,6 +3294,20 @@ fi
 else
   FASTSAMPLING_TRUE='#'
   FASTSAMPLING_FALSE=
+fi
+
+
+# Check whether --enable-discover_defaultlen was given.
+if test "${enable_discover_defaultlen+set}" = set; then :
+  enableval=$enable_discover_defaultlen;
+fi
+
+ if test "x$enable_discover_defaultlen" = "xyes"; then
+  DISCOVER_DEFAULTLEN_TRUE=
+  DISCOVER_DEFAULTLEN_FALSE='#'
+else
+  DISCOVER_DEFAULTLEN_TRUE='#'
+  DISCOVER_DEFAULTLEN_FALSE=
 fi
 
 
@@ -7188,7 +7220,7 @@ fi
 done
 
 
-for ac_header in arpa/inet.h libintl.h net/ethernet.h net/if.h linux/ip.h linux/udp.h linux/if_packet.h linux/filter.h linux/if_tun.h netdb.h netinet/in.h netinet/tcp.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h signal.h ifaddrs.h
+for ac_header in arpa/inet.h libintl.h net/ethernet.h net/if.h sys/ioctl.h sys/sockio.h linux/sockios.h linux/ip.h linux/udp.h linux/if_packet.h linux/filter.h linux/if_tun.h netdb.h netinet/in.h netinet/tcp.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h signal.h ifaddrs.h
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
 ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
@@ -7930,6 +7962,25 @@ cat >>confdefs.h <<_ACEOF
 #define HAVE_DECL_EWOULDBLOCK $ac_have_decl
 _ACEOF
 
+ac_fn_c_check_decl "$LINENO" "SIOCGIFMTU" "ac_cv_have_decl_SIOCGIFMTU" "
+#ifdef HAVE_LINUX_SOCKIOS_H
+#include <linux/sockios.h>
+#endif
+#ifdef HAVE_SYS_SOCKIO_H
+#include <sys/sockio.h>
+#endif
+
+"
+if test "x$ac_cv_have_decl_SIOCGIFMTU" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_SIOCGIFMTU $ac_have_decl
+_ACEOF
+
 ac_fn_c_check_decl "$LINENO" "pthread_cancel" "ac_cv_have_decl_pthread_cancel" "#include <pthread.h>
 "
 if test "x$ac_cv_have_decl_pthread_cancel" = xyes; then :
@@ -8259,6 +8310,17 @@ fi
 
 cat >>confdefs.h <<_ACEOF
 #define HAVE_DECL_TCP_NOTSENT_LOWAT $ac_have_decl
+_ACEOF
+ac_fn_c_check_decl "$LINENO" "TCP_MAXSEG" "ac_cv_have_decl_TCP_MAXSEG" "$in_h
+"
+if test "x$ac_cv_have_decl_TCP_MAXSEG" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_TCP_MAXSEG $ac_have_decl
 _ACEOF
 ac_fn_c_check_decl "$LINENO" "IP_ADD_MEMBERSHIP" "ac_cv_have_decl_IP_ADD_MEMBERSHIP" "$in_h
 "
@@ -8999,6 +9061,11 @@ if test "$enable_fastsampling" = yes; then
 $as_echo "#define HAVE_FASTSAMPLING 1" >>confdefs.h
 
 fi
+if test "$enable_discover_defaultlen" = yes; then
+
+$as_echo "#define DEFAULT_PAYLOAD_LEN_PER_MTU_DISCOVERY 1" >>confdefs.h
+
+fi
 
 if test "$enable_packet_debug" = yes; then
 
@@ -9166,6 +9233,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${FASTSAMPLING_TRUE}" && test -z "${FASTSAMPLING_FALSE}"; then
   as_fn_error $? "conditional \"FASTSAMPLING\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${DISCOVER_DEFAULTLEN_TRUE}" && test -z "${DISCOVER_DEFAULTLEN_FALSE}"; then
+  as_fn_error $? "conditional \"DISCOVER_DEFAULTLEN\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${THREAD_DEBUG_TRUE}" && test -z "${THREAD_DEBUG_FALSE}"; then

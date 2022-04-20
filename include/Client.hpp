@@ -99,7 +99,6 @@ private:
     void PostNullEvent(void);
     void AwaitServerCloseEvent(void);
     inline void tcp_shutdown(void);
-    inline void tcp_drain(void);
     bool connected;
     ReportStruct scratchpad;
     ReportStruct *reportstruct;
@@ -140,9 +139,7 @@ private:
     Isochronous::FrameCounter *framecounter;
     bool isburst;
     bool peerclose;
-    Timestamp drain_start;
-    Timestamp drain_end;
-    struct tcp_init_conditions my_init_cond;
+    Timestamp write_start;
 }; // end class Client
 
 #endif // CLIENT_H

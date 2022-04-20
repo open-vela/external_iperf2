@@ -64,7 +64,7 @@ class iperf_flow(object):
 
     @classmethod
     def sleep(cls, time=0, text=None, stoptext=None) :
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         if text :
             logging.info('Sleep {} ({})'.format(time, text))
         loop.run_until_complete(asyncio.sleep(time))
@@ -83,12 +83,15 @@ class iperf_flow(object):
             # On Windows, the ProactorEventLoop is necessary to listen on pipes
             iperf_flow.loop = asyncio.ProactorEventLoop()
         else:
-            loop = asyncio.get_event_loop()
-            iperf_flow.loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
+            iperf_flow.loop = asyncio.get_running_loop()
 
     @classmethod
     def close_loop(cls, loop=None):
-        iperf_flow.loop.close()
+        loop = asyncio.get_running_loop()
+        if loop and loop.is_running():
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            loop.close()
 
     @classmethod
     def run(cls, time=None, amount=None, flows='all', sample_delay=None, io_timer=None, preclean=False, parallel=None) :
@@ -102,9 +105,9 @@ class iperf_flow(object):
             hosts = [flow.server for flow in flows]
             hosts.extend([flow.client for flow in flows])
             hosts=list(set(hosts))
-            tasks = [asyncio.ensure_future(iperf_flow.cleanup(user='root', host=host)) for host in hosts]
+            tasks = [asyncio.ensure_future(iperf_flow.cleanup(user='root', host=host), loop=iperf_flow.loop) for host in hosts]
             try :
-                iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=10, loop=iperf_flow.loop))
+                iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=10))
             except asyncio.TimeoutError:
                 logging.error('preclean timeout')
                 raise
@@ -112,13 +115,14 @@ class iperf_flow(object):
         logging.info('flow run invoked')
         tasks = [asyncio.ensure_future(flow.rx.start(time=time), loop=iperf_flow.loop) for flow in flows]
         try :
-            iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=10, loop=iperf_flow.loop))
+            iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=10))
         except asyncio.TimeoutError:
             logging.error('flow server start timeout')
             raise
+        iperf_flow.sleep(time=0.3, text="wait for rx up", stoptext="rx up done")
         tasks = [asyncio.ensure_future(flow.tx.start(time=time, amount=amount, parallel=parallel), loop=iperf_flow.loop) for flow in flows]
         try :
-            iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=10, loop=iperf_flow.loop))
+            iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=10))
         except asyncio.TimeoutError:
             logging.error('flow client start timeout')
             raise
@@ -127,7 +131,7 @@ class iperf_flow(object):
         if io_timer :
             tasks = [asyncio.ensure_future(flow.is_traffic(), loop=iperf_flow.loop) for flow in flows]
             try :
-                iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=10, loop=iperf_flow.loop))
+                iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=10))
             except asyncio.TimeoutError:
                 logging.error('flow traffic check timeout')
                 raise
@@ -136,7 +140,7 @@ class iperf_flow(object):
             # Signal the remote iperf client sessions to stop them
             tasks = [asyncio.ensure_future(flow.tx.signal_stop(), loop=iperf_flow.loop) for flow in flows]
             try :
-                iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=3, loop=iperf_flow.loop))
+                iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=3))
             except asyncio.TimeoutError:
                 logging.error('flow tx stop timeout')
                 raise
@@ -144,7 +148,7 @@ class iperf_flow(object):
         elif amount:
             tasks = [asyncio.ensure_future(flow.transmit_completed(), loop=iperf_flow.loop) for flow in flows]
             try :
-                iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=10, loop=iperf_flow.loop))
+                iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=10))
             except asyncio.TimeoutError:
                 logging.error('flow tx completed timed out')
                 raise
@@ -153,7 +157,7 @@ class iperf_flow(object):
         # Now signal the remote iperf server sessions to stop them
         tasks = [asyncio.ensure_future(flow.rx.signal_stop(), loop=iperf_flow.loop) for flow in flows]
         try :
-            iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=3, loop=iperf_flow.loop))
+            iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=3))
         except asyncio.TimeoutError:
             logging.error('flow tx stop timeout')
             raise
@@ -173,9 +177,9 @@ class iperf_flow(object):
             hosts = [flow.server for flow in flows]
             hosts.extend([flow.client for flow in flows])
             hosts=list(set(hosts))
-            tasks = [asyncio.ensure_future(iperf_flow.cleanup(user='root', host=host)) for host in hosts]
+            tasks = [asyncio.ensure_future(iperf_flow.cleanup(user='root', host=host), loop=iperf_flow.loop) for host in hosts]
             try :
-                iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=10, loop=iperf_flow.loop))
+                iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=10))
             except asyncio.TimeoutError:
                 logging.error('preclean timeout')
                 raise
@@ -183,13 +187,14 @@ class iperf_flow(object):
         logging.info('flow start invoked')
         tasks = [asyncio.ensure_future(flow.rx.start(time=time), loop=iperf_flow.loop) for flow in flows]
         try :
-            iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=10, loop=iperf_flow.loop))
+            iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=10))
         except asyncio.TimeoutError:
             logging.error('flow server start timeout')
             raise
+        iperf_flow.sleep(time=0.3, text="wait for rx up", stoptext="rx up done")
         tasks = [asyncio.ensure_future(flow.tx.start(time=time), loop=iperf_flow.loop) for flow in flows]
         try :
-            iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=10, loop=iperf_flow.loop))
+            iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=10))
         except asyncio.TimeoutError:
             logging.error('flow client start timeout')
             raise
@@ -218,7 +223,7 @@ class iperf_flow(object):
                     i += 1
         try :
             logging.info('runnings tasks')
-            iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=600, loop=iperf_flow.loop))
+            iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=600))
         except asyncio.TimeoutError:
             logging.error('plot timed out')
             raise
@@ -227,7 +232,7 @@ class iperf_flow(object):
     @classmethod
     def cease(cls, flows='all') :
         if not iperf_flow.loop :
-            iperf_flow.loop = asyncio.get_event_loop()
+            iperf_flow.loop = asyncio.get_running_loop()
 
         if flows == 'all' :
             flows = iperf_flow.get_instances()
@@ -235,14 +240,14 @@ class iperf_flow(object):
         # Signal the remote iperf client sessions to stop them
         tasks = [asyncio.ensure_future(flow.tx.signal_stop(), loop=iperf_flow.loop) for flow in flows]
         try :
-            iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=10, loop=iperf_flow.loop))
+            iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=10))
         except asyncio.TimeoutError:
             logging.error('flow tx stop timeout')
 
         # Now signal the remote iperf server sessions to stop them
         tasks = [asyncio.ensure_future(flow.rx.signal_stop(), loop=iperf_flow.loop) for flow in flows]
         try :
-            iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=10, loop=iperf_flow.loop))
+            iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=10))
         except asyncio.TimeoutError:
             logging.error('flow rx stop timeout')
 
@@ -283,7 +288,7 @@ class iperf_flow(object):
         }
         return switcher.get(txt.upper(), None)
 
-    def __init__(self, name='iperf', server='localhost', client = 'localhost', user = None, proto = 'TCP', dstip = '127.0.0.1', interval = 1, offered_load = '10M', tos='BE', window='4M', src=None, srcip = None, srcport = None, dstport = None,  debug = False, length = None, ipg=0.005, amount=None, trip_times=True, prefetch=None, latency=True):
+    def __init__(self, name='iperf', server='localhost', client = 'localhost', user = None, proto = 'TCP', dstip = '127.0.0.1', interval = 1, offered_load = None, tos='BE', window='4M', src=None, srcip = None, srcport = None, dstport = None,  debug = False, length = None, ipg=0.005, amount=None, trip_times=True, prefetch=None, latency=True, bounceback=False, bounceback_congest=False):
         iperf_flow.instances.add(self)
         if not iperf_flow.loop :
             iperf_flow.set_loop()
@@ -334,6 +339,8 @@ class iperf_flow(object):
         self.ipg = ipg
         self.debug = debug
         self.TRAFFIC_EVENT_TIMEOUT = round(self.interval * 4, 3)
+        self.bounceback = bounceback
+        self.bounceback_congest = bounceback_congest
         # use python composition for the server and client
         # i.e. a flow has a server and a client
         self.rx = iperf_server(name='{}->RX({})'.format(name, str(self.server)), loop=self.loop, host=self.server, flow=self, debug=self.debug)
@@ -342,6 +349,9 @@ class iperf_flow(object):
         self.tx.window=window
         self.ks_critical_p = 0.01
         self.stats_reset()
+
+    #def __del__(self) :
+    #    iperf_flow.instances.remove(self)
 
     def destroy(self) :
         iperf_flow.instances.remove(self)
@@ -430,7 +440,7 @@ class iperf_flow(object):
                 if tasks :
                     try :
                         logging.debug('running KS table plotting coroutines for {} row {}'.format(this_name,str(rowindex)))
-                        iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=300, loop=iperf_flow.loop))
+                        iperf_flow.loop.run_until_complete(asyncio.wait(tasks, timeout=300))
                     except asyncio.TimeoutError:
                         logging.error('plot timed out')
                         raise
@@ -534,23 +544,24 @@ class iperf_server(object):
                                 m = self._server.regex_trip_time.match(line)
                                 if m :
                                     self.flowstats['trip_time'].append(float(m.group('trip_time')) * 1000)
-                        else :
-                            m = self._server.regex_final_histogram_traffic.match(line)
-                            if m :
-                                timestamp = datetime.now(timezone.utc).astimezone()
-                                self.flowstats['endtime']= timestamp
-                                self.flowstats['histogram_names'].add(m.group('pdfname'))
-                                self.flowstats['histograms'].append(flow_histogram(name=m.group('pdfname'),values=m.group('pdf'), population=m.group('population'), binwidth=m.group('binwidth'), starttime=self.flowstats['starttime'], endtime=timestamp, outliers=m.group('outliers'), uci=m.group('uci'), uci_val=m.group('uci_val'), lci=m.group('lci'), lci_val=m.group('lci_val')))
-                                # logging.debug('pdf {} {}={}'.format(m.group('pdfname'), m.group('pdf'), m.group('binwidth')))
-                                logging.info('pdf {} found with bin width={} us'.format(m.group('pdfname'),  m.group('binwidth')))
-
+                        m = self._server.regex_final_histogram_traffic.match(line)
+                        if m :
+                            timestamp = datetime.now(timezone.utc).astimezone()
+                            self.flowstats['endtime']= timestamp
+                            self.flowstats['histogram_names'].add(m.group('pdfname'))
+                            self.flowstats['histograms'].append(flow_histogram(name=m.group('pdfname'),values=m.group('pdf'), population=m.group('population'), binwidth=m.group('binwidth'), starttime=self.flowstats['starttime'], endtime=timestamp, outliers=m.group('outliers'), uci=m.group('uci'), uci_val=m.group('uci_val'), lci=m.group('lci'), lci_val=m.group('lci_val')))
+                            logging.info('pdf {} found with bin width={} us'.format(m.group('pdfname'),  m.group('binwidth')))
 
             elif fd == 2:
                 self._stderrbuffer += data
                 while "\n" in self._stderrbuffer:
                     line, self._stderrbuffer = self._stderrbuffer.split("\n", 1)
                     logging.info('{} {} (stderr)'.format(self._server.name, line))
-
+                    m = self._server.regex_rx_bind_failed.match(line)
+                    if m :
+                        logging.error('RX Bind Failed. Check LAN / WLAN between server and client.')
+                        iperf_flow.loop.stop()
+                        raise
 
         def pipe_connection_lost(self, fd, exc):
             if fd == 1:
@@ -582,10 +593,10 @@ class iperf_server(object):
         self.host = host
         self.flow = flow
         self.debug = debug
-        self.opened = asyncio.Event(loop=self.loop)
-        self.closed = asyncio.Event(loop=self.loop)
+        self.opened = asyncio.Event()
+        self.closed = asyncio.Event()
         self.closed.set()
-        self.traffic_event = asyncio.Event(loop=self.loop)
+        self.traffic_event = asyncio.Event()
         self._transport = None
         self._protocol = None
         self.time = time
@@ -597,6 +608,7 @@ class iperf_server(object):
         self.regex_final_histogram_traffic = re.compile(r'\[\s*\d+\] (?P<timestamp>.*) sec\s+(?P<pdfname>[A-Za-z0-9\-]+)\(f\)-PDF: bin\(w=(?P<binwidth>[0-9]+)us\):cnt\((?P<population>[0-9]+)\)=(?P<pdf>.+)\s+\((?P<lci>[0-9\.]+)/(?P<uci>[0-9\.]+)/(?P<uci2>[0-9\.]+)%=(?P<lci_val>[0-9]+)/(?P<uci_val>[0-9]+)/(?P<uci_val2>[0-9]+),Outliers=(?P<outliers>[0-9]+),obl/obu=[0-9]+/[0-9]+\)')
         # 0.0000-0.5259 trip-time (3WHS done->fin+finack) = 0.5597 sec
         self.regex_trip_time = re.compile(r'.+trip\-time\s+\(3WHS\sdone\->fin\+finack\)\s=\s(?P<trip_time>\d+\.\d+)\ssec')
+        self.regex_rx_bind_failed = re.compile(r'listener bind failed: Cannot assign requested address')
 
     def __getattr__(self, attr):
         return getattr(self.flow, attr)
@@ -612,11 +624,13 @@ class iperf_server(object):
         self.remotepid = None
         if time :
             iperftime = time + 30
-            self.sshcmd=[self.ssh, self.user + '@' + self.host, self.iperf, '-s', '-p ' + str(self.dstport), '-e',  '-t ' + str(iperftime), '-z', '-fb', '-w' , self.window]
+            self.sshcmd=[self.ssh, self.user + '@' + self.host, self.iperf, '-s', '-p ' + str(self.dstport), '-e', '-t ' + str(iperftime), '-fb', '-w' , self.window, '--realtime']
         else :
-            self.sshcmd=[self.ssh, self.user + '@' + self.host, self.iperf, '-s', '-p ' + str(self.dstport), '-e',  '-z', '-fb', '-w' , self.window]
+            self.sshcmd=[self.ssh, self.user + '@' + self.host, self.iperf, '-s', '-p ' + str(self.dstport), '-e', '-fb', '-w' , self.window, '--realtime']
         if self.interval >= 0.005 :
             self.sshcmd.extend(['-i ', str(self.interval)])
+        if self.server_device and self.srcip :
+            self.sshcmd.extend(['-B ', '{}%{}'.format(self.dstip, self.server_device)])
         if self.proto == 'UDP' :
             self.sshcmd.extend(['-u'])
         if self.latency :
@@ -725,8 +739,12 @@ class iperf_client(object):
                                     proto32 = ctypes.c_uint32(0x06)
                                 quintuplehash = srcip32.value ^ dstip32.value ^ ports32.value ^ proto32.value
                                 self.flowstats['flowid'] = '0x{:08x}'.format(quintuplehash)
-                                iperf_flow.flowid2name[self.flowstats['flowid']] = self._client.name
-                                logging.info('Flow hash = {} uses name {}'.format(self.flowstats['flowid'], self._client.name))
+                                if self._client.flow.name :
+                                    flowkey = self._client.flow.name
+                                else :
+                                    flowkey = '0x{:08x}'.format(quintuplehash)
+                                iperf_flow.flowid2name[self.flowstats['flowid']] = flowkey
+                                logging.info('Flow quintuple hash of {} uses name {}'.format(self.flowstats['flowid'], flowkey))
 
                         if self._client.proto == 'TCP':
                             m = self._client.regex_traffic.match(line)
@@ -768,6 +786,11 @@ class iperf_client(object):
                 while "\n" in self._stderrbuffer:
                     line, self._stderrbuffer = self._stderrbuffer.split("\n", 1)
                     logging.info('{} {} (stderr)'.format(self._client.name, line))
+                    m = self._client.regex_tx_bind_failed.match(line)
+                    if m :
+                        logging.error('TX Bind Failed. Check LAN / WLAN between server and client.')
+                        iperf_flow.loop.stop()
+                        raise
 
         def pipe_connection_lost(self, fd, exc):
             if fd == 1:
@@ -791,17 +814,18 @@ class iperf_client(object):
     def __init__(self, name='Client', loop=None, host='localhost', flow = None, debug=False):
         self.__dict__['flow'] = flow
         self.loop = loop
-        self.opened = asyncio.Event(loop=self.loop)
-        self.closed = asyncio.Event(loop=self.loop)
-        self.txcompleted = asyncio.Event(loop=self.loop)
+        self.opened = asyncio.Event()
+        self.closed = asyncio.Event()
+        self.txcompleted = asyncio.Event()
         self.closed.set()
         self.txcompleted.clear()
-        self.traffic_event = asyncio.Event(loop=self.loop)
+        self.traffic_event = asyncio.Event()
         self.name = name
         self.iperf = '/usr/local/bin/iperf'
         self.ssh = '/usr/bin/ssh'
         self.host = host
         self.debug = debug
+        self.flow = flow
         self._transport = None
         self._protocol = None
         conn_id = '{}'.format(self.name)
@@ -811,6 +835,8 @@ class iperf_client(object):
         self.regex_connect_time = re.compile(r'\[\s+\d+]\slocal.*\(ct=(?P<connect_time>\d+\.\d+) ms\)')
         # local 192.168.1.4 port 56949 connected with 192.168.1.1 port 61001
         self.regex_flowid = re.compile(r'\[\s+\d+]\slocal\s(?P<srcip>[0-9]{0,3}\.[0-9]{0,3}\.[0-9]{0,3}\.[0-9]{0,3}).*\sport\s(?P<srcport>[0-9]+)\sconnected with\s(?P<dstip>[0-9]{0,3}\.[0-9]{0,3}\.[0-9]{0,3}\.[0-9]{0,3})\sport\s(?P<dstport>[0-9]+)')
+        self.regex_tx_bind_failed = re.compile(r'bind failed: Cannot assign requested address')
+
     def __getattr__(self, attr):
         return getattr(self.flow, attr)
 
@@ -825,7 +851,11 @@ class iperf_client(object):
 
         # Client connecting to 192.168.100.33, TCP port 61009 with pid 1903
         self.regex_open_pid = re.compile(r'Client connecting to .*, {} port {} with pid (?P<pid>\d+)'.format(self.proto, str(self.dstport)))
-        self.sshcmd=[self.ssh, self.user + '@' + self.host, self.iperf, '-c', self.dstip + '%' + self.client_device, '-p ' + str(self.dstport), '-e', '-fb', '-S ', iperf_flow.txt_to_tos(self.tos), '-w' , self.window ,'--realtime']
+        if self.client_device :
+            client_dst = self.dstip + '%' + self.client_device
+        else :
+            client_dst = self.dstip
+        self.sshcmd=[self.ssh, self.user + '@' + self.host, self.iperf, '-c', client_dst, '-p ' + str(self.dstport), '-e', '-fb', '-S ', iperf_flow.txt_to_tos(self.tos), '-w' , self.window ,'--realtime']
         if self.length :
             self.sshcmd.extend(['-l ', str(self.length)])
         if time:
@@ -851,20 +881,26 @@ class iperf_client(object):
             self.sshcmd.extend(['-i ', str(self.interval)])
 
         if self.proto == 'UDP' :
-             if self.isoch :
-                 self.sshcmd.extend(['-u', '--isochronous=' + self.offered_load + ' --ipg ' + str(self.ipg)])
-             else :
-                 self.sshcmd.extend(['-u', '-b', self.offered_load])
+            self.sshcmd.extend(['-u '])
+            if self.isoch :
+                self.sshcmd.extend(['--isochronous=' + self.offered_load + ' --ipg ' + str(self.ipg)])
+            elif self.offered_load :
+                self.sshcmd.extend(['-b', self.offered_load])
         elif self.proto == 'TCP' and self.offered_load :
             self.sshcmd.extend(['-b', self.offered_load])
+
+        if self.flow.bounceback :
+            self.sshcmd.extend(['--bounceback'])
+            if self.flow.bounceback_congest :
+                self.sshcmd.extend(['--bounceback-congest'])
 
         logging.info('{}'.format(str(self.sshcmd)))
         try :
             self._transport, self._protocol = await self.loop.subprocess_exec(lambda: self.IperfClientProtocol(self, self.flow), *self.sshcmd)
             await self.opened.wait()
         except:
-            logging.error('flow client start error')
-            raise
+            logging.error('flow client start error per: {}'.format(str(self.sshcmd)))
+            pass
 
     async def signal_stop(self):
         if self.remotepid :
@@ -969,9 +1005,13 @@ class flow_histogram(object):
                     fid.write('set xrange [{}:75]\n'.format(default_minx))
                     fid.write('set xtics add 5\n')
                     fid.write('set format x \"%.0f"\n')
-                else :
+                elif :
                     fid.write('set xrange [{}:100]\n'.format(default_minx))
                     fid.write('set xtics add 10\n')
+                    fid.write('set format x \"%.0f"\n')
+                else :
+                    fid.write('set xrange [{}:*]\n'.format(default_minx))
+                    fid.write('set xtics auto\n')
                     fid.write('set format x \"%.0f"\n')
                 fid.write('plot \"{0}\" using 1:2 index 0 axes x1y2 with impulses linetype 3 notitle,  \"{1}\" using 1:2 index 0 axes x1y2 with impulses linetype 2 notitle, \"{1}\" using 1:3 index 0 axes x1y1 with lines linetype 1 linewidth 2 notitle, \"{0}\" using 1:3 index 0 axes x1y1 with lines linetype -1 linewidth 2 notitle\n'.format(h1.datafilename, h2.datafilename))
 
@@ -1056,16 +1096,11 @@ class flow_histogram(object):
                 #logging.debug('bin={} x={} y={}'.format(bin, x, y))
                 cummulative += float(y)
                 perc = cummulative / float(self.population)
-                if not self.max and (perc > 0.98) :
-                    self.max = float(x) * float(self.binwidth) / 1000.0
-                    logging.debug('98% max = {}'.format(self.max))
+                self.max = float(x) * float(self.binwidth) / 1000.0 # max is the last value
                 fid.write('{} {} {}\n'.format((float(x) * float(self.binwidth) / 1000.0), int(y), perc))
 
-        if self.max :
-            self.basefilename = basefilename
-            self.datafilename = datafilename
-        else :
-            self.basefilename = None
+        self.basefilename = basefilename
+        self.datafilename = datafilename
 
     async def async_plot(self, title=None, directory='.', outputtype='png', filename=None) :
         if self.basefilename is None :

@@ -58,11 +58,23 @@
 
 #include "Mutex.h"
 #include "Settings.hpp"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 // int timer units is micorseconds
 void SetSocketOptions(struct thread_Settings *inSettings);
 void SetSocketOptionsSendTimeout(struct thread_Settings *mSettings, int timer);
 void SetSocketOptionsReceiveTimeout(struct thread_Settings *mSettings, int timer);
 void SetSocketOptionsIPTos (struct thread_Settings *mSettings, int tos);
+void setsock_tcp_mss(int inSock, int inMSS);
+int  getsock_tcp_mss(int inSock);
+#ifdef DEFAULT_PAYLOAD_LEN_PER_MTU_DISCOVERY
+void checksock_max_udp_payload (struct thread_Settings *inSettings);
+#endif
+
+#ifdef __cplusplus
+} /* end extern "C" */
+#endif
 
 #endif // PERFSOCKET_H
