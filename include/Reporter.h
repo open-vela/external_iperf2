@@ -57,7 +57,6 @@
 #include "Mutex.h"
 #include "histogram.h"
 #include "packet_ring.h"
-#include "gettcpinfo.h"
 
 // forward declarations found in Settings.hpp
 struct thread_Settings;
@@ -118,9 +117,20 @@ struct WriteStats {
     int WriteErr;
     int totWriteCnt;
     int totWriteErr;
-    struct iperf_tcpstats tcpstats;
+#if (HAVE_TCP_STATS)
+    int TCPretry;
+    int totTCPretry;
+    int cwnd;
+    int rtt;
+    int rttvar;
+#endif
 };
 
+struct tcp_init_conditions {
+    int cwnd;
+    int rtt;
+    double connecttime;
+};
 /*
  * This struct contains all important information from the sending or
  * recieving thread.
@@ -248,7 +258,8 @@ struct ConnectionInfo {
     int winsize;
     char peerversion[PEERVERBUFSIZE];
     struct MeanMinMaxStats connect_times;
-    struct iperf_tcpstats tcpinitstats;
+    int MSS;
+    struct tcp_init_conditions init_cond;
 };
 
 struct ShiftIntCounter {
@@ -292,7 +303,6 @@ struct ReportSettings {
     iperf_sockaddr local;
     Socklen_t size_local;
     int pid;
-    int sockmaxseg;
     struct IsochStats isochstats;
     void (*output_handler) (struct ReportSettings *settings);
 };
@@ -355,8 +365,10 @@ struct TransferInfo {
     bool final;
     bool burstid_transition;
     bool isEnableTcpInfo;
-    struct RunningMMMStats write_mmm;
-    struct histogram *write_histogram;
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+    struct RunningMMMStats drain_mmm;
+    struct histogram *drain_histogram;
+#endif
 };
 
 struct SumReport {
@@ -407,7 +419,7 @@ typedef void (* report_serverstatistics)( struct ConnectionInfo *, struct Transf
 void SetSumHandlers (struct thread_Settings *inSettings, struct SumReport* sumreport);
 struct SumReport* InitSumReport(struct thread_Settings *inSettings, int inID, int fullduplex);
 struct ReportHeader* InitIndividualReport(struct thread_Settings *inSettings);
-struct ReportHeader* InitConnectionReport(struct thread_Settings *inSettings);
+struct ReportHeader* InitConnectionReport(struct thread_Settings *inSettings, struct tcp_init_conditions *init_cond);
 struct ConnectionInfo* InitConnectOnlyReport(struct thread_Settings *thread);
 struct ReportHeader *InitSettingsReport(struct thread_Settings *inSettings);
 struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings, struct server_hdr *server);
@@ -495,7 +507,9 @@ void tcp_output_write_enhanced (struct TransferInfo *stats);
 void tcp_output_write_enhanced_isoch (struct TransferInfo *stats);
 void tcp_output_sum_write_enhanced (struct TransferInfo *stats);
 void tcp_output_sumcnt_write_enhanced (struct TransferInfo *stats);
-void tcp_output_write_enhanced_write (struct TransferInfo *stats);
+#if (HAVE_DECL_TCP_NOTSENT_LOWAT)
+void tcp_output_write_enhanced_drain (struct TransferInfo *stats);
+#endif
 void tcp_output_write_bb(struct TransferInfo *stats);
 // TCP fullduplex
 void tcp_output_fullduplex(struct TransferInfo *stats);
@@ -504,6 +518,7 @@ void tcp_output_fullduplex_sum (struct TransferInfo *stats);
 
 // UDP server
 void udp_output_read(struct TransferInfo *stats);
+void udp_output_read_enhanced(struct TransferInfo *stats);
 void udp_output_read_enhanced_triptime(struct TransferInfo *stats);
 void udp_output_read_enhanced_triptime_isoch(struct TransferInfo *stats);
 void udp_output_sum_read(struct TransferInfo *stats);
