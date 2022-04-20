@@ -177,6 +177,15 @@ void Server::RunTCP () {
 	    if (burst_nleft > 0)
 		readLen = (mSettings->mBufLen < burst_nleft) ? mSettings->mBufLen : burst_nleft;
 	    reportstruct->emptyreport=1;
+#if HAVE_DECL_TCP_QUICKACK
+		if (isTcpQuickAck(mSettings)) {
+		    int opt = 1;
+		    Socklen_t len = sizeof(opt);
+		    int rc = setsockopt(mySocket, IPPROTO_TCP, TCP_QUICKACK,
+					reinterpret_cast<char*>(&opt), len);
+		    WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_QUICKACK");
+		}
+#endif
 	    if (isburst && (burst_nleft == 0)) {
 		if ((n = recvn(mSettings->mSock, reinterpret_cast<char *>(&burst_info), sizeof(struct TCP_burst_payload), 0)) == sizeof(struct TCP_burst_payload)) {
 		    // burst_info.typelen.type = ntohl(burst_info.typelen.type);
@@ -530,6 +539,7 @@ void Server::ClientReverseFirstRead (void) {
 }
 
 bool Server::InitTrafficLoop (void) {
+    bool UDPReady = true;
     myJob = InitIndividualReport(mSettings);
     myReport = static_cast<struct ReporterData *>(myJob->this_report);
     assert(myJob != NULL);
@@ -590,7 +600,8 @@ bool Server::InitTrafficLoop (void) {
 	reportstruct->frameID = 0;
 	reportstruct->packetLen = mSettings->firstreadbytes;
 	if (isUDP(mSettings)) {
-	    ReadPacketID();
+	    int offset = 0;
+	    UDPReady = !ReadPacketID(offset);
 	    reportstruct->packetTime = mSettings->accept_time;
 	} else {
 	    reportstruct->sentTime.tv_sec = myReport->info.ts.startTime.tv_sec;
@@ -599,7 +610,7 @@ bool Server::InitTrafficLoop (void) {
 	}
 	ReportPacket(myReport, reportstruct);
     }
-    return true;
+    return UDPReady;
 }
 
 inline int Server::ReadWithRxTimestamp () {
@@ -642,10 +653,9 @@ inline int Server::ReadWithRxTimestamp () {
 }
 
 // Returns true if the client has indicated this is the final packet
-inline bool Server::ReadPacketID () {
+inline bool Server::ReadPacketID (int offset_adjust) {
     bool terminate = false;
-    struct UDP_datagram* mBuf_UDP  = reinterpret_cast<struct UDP_datagram*>(mSettings->mBuf + mSettings->l4payloadoffset);
-
+    struct UDP_datagram* mBuf_UDP  = reinterpret_cast<struct UDP_datagram*>(mSettings->mBuf + offset_adjust);
     // terminate when datagram begins with negative index
     // the datagram ID should be correct, just negated
 
@@ -805,6 +815,7 @@ inline void Server::udp_isoch_processing (int rxlen) {
 	reportstruct->frameID = ntohl(udp_pkt->isoch.frameid);
 	reportstruct->prevframeID = ntohl(udp_pkt->isoch.prevframeid);
 	reportstruct->burstsize = ntohl(udp_pkt->isoch.burstsize);
+	assert(reportstruct->burstsize > 0);
 	reportstruct->burstperiod = ntohl(udp_pkt->isoch.burstperiod);
 	reportstruct->remaining = ntohl(udp_pkt->isoch.remaining);
 	if ((reportstruct->remaining == rxlen) && ((reportstruct->frameID - reportstruct->prevframeID) == 1)) {
@@ -820,52 +831,51 @@ inline void Server::udp_isoch_processing (int rxlen) {
  * ------------------------------------------------------------------- */
 void Server::RunUDP () {
     int rxlen;
-    bool lastpacket = false;
+    bool isLastPacket = false;
 
-    if (!InitTrafficLoop())
-	return;
-
-    // Exit loop on three conditions
-    // 1) Fatal read error
-    // 2) Last packet of traffic flow sent by client
-    // 3) -t timer expires
-    while (InProgress() && !lastpacket) {
-	// The emptyreport flag can be set
-	// by any of the packet processing routines
-	// If it's set the iperf reporter won't do
-	// bandwidth accounting, basically it's indicating
-	// that the reportstruct itself couldn't be
-	// completely filled out.
-	reportstruct->emptyreport=1;
-	reportstruct->packetLen=0;
-	// read the next packet with timestamp
-	// will also set empty report or not
-	rxlen=ReadWithRxTimestamp();
-	if (!peerclose && (rxlen > 0)) {
-	    reportstruct->emptyreport = 0;
-	    reportstruct->packetLen = rxlen;
-	    if (isL2LengthCheck(mSettings)) {
-		reportstruct->l2len = rxlen;
-		// L2 processing will set the reportstruct packet length with the length found in the udp header
-		// and also set the expected length in the report struct.  The reporter thread
-		// will do the compare and account and print l2 errors
-		reportstruct->l2errors = 0x0;
-		L2_processing();
+    if (InitTrafficLoop()) {
+        // Exit loop on three conditions
+        // 1) Fatal read error
+        // 2) Last packet of traffic flow sent by client
+        // 3) -t timer expires
+        while (InProgress() && !isLastPacket) {
+	    // The emptyreport flag can be set
+	    // by any of the packet processing routines
+	    // If it's set the iperf reporter won't do
+	    // bandwidth accounting, basically it's indicating
+	    // that the reportstruct itself couldn't be
+	    // completely filled out.
+	    reportstruct->emptyreport=1;
+	    reportstruct->packetLen=0;
+	    // read the next packet with timestamp
+	    // will also set empty report or not
+	    rxlen=ReadWithRxTimestamp();
+	    if (!peerclose && (rxlen > 0)) {
+	        reportstruct->emptyreport = 0;
+	        reportstruct->packetLen = rxlen;
+	        if (isL2LengthCheck(mSettings)) {
+	            reportstruct->l2len = rxlen;
+	            // L2 processing will set the reportstruct packet length with the length found in the udp header
+	            // and also set the expected length in the report struct.  The reporter thread
+	            // will do the compare and account and print l2 errors
+	            reportstruct->l2errors = 0x0;
+	            L2_processing();
+	        }
+	        if (!(reportstruct->l2errors & L2UNKNOWN)) {
+	            // ReadPacketID returns true if this is the last UDP packet sent by the client
+	            // also sets the packet rx time in the reportstruct
+	            reportstruct->prevSentTime = myReport->info.ts.prevsendTime;
+	            reportstruct->prevPacketTime = myReport->info.ts.prevpacketTime;
+	            isLastPacket = ReadPacketID(mSettings->l4payloadoffset);
+	            myReport->info.ts.prevsendTime = reportstruct->sentTime;
+	            myReport->info.ts.prevpacketTime = reportstruct->packetTime;
+	            if (isIsochronous(mSettings)) {
+	                udp_isoch_processing(rxlen);
+	            }
+	        }
 	    }
-	    if (!(reportstruct->l2errors & L2UNKNOWN)) {
-		// ReadPacketID returns true if this is the last UDP packet sent by the client
-		// also sets the packet rx time in the reportstruct
-		reportstruct->prevSentTime = myReport->info.ts.prevsendTime;
-		reportstruct->prevPacketTime = myReport->info.ts.prevpacketTime;
-		lastpacket = ReadPacketID();
-		myReport->info.ts.prevsendTime = reportstruct->sentTime;
-		myReport->info.ts.prevpacketTime = reportstruct->packetTime;
-		if (isIsochronous(mSettings)) {
-		    udp_isoch_processing(rxlen);
-		}
-	    }
-	}
-	ReportPacket(myReport, reportstruct);
+	    ReportPacket(myReport, reportstruct);
+        }
     }
     disarm_itimer();
     int do_close = EndJob(myJob, reportstruct);

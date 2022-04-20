@@ -1,6 +1,17 @@
 See doc/DESIGN_NOTES for some description around the software design
 See doc/CLOCKSYNC_NOTES for some description around synchronizing the realtime clocks
 
+
+2.1.7 (as of April 5th, 2022)
+----------------------------
+o Support for tcp bounceback test
+o Code clean up
+o Regression fixes (see git-log)
+
+2.1.6
+-----
+o Fix to major 2.1.5 regeressions
+
 2.1.5 change set as of (December 3, 2021)
 --------------------------------------
 o fix some HAVE_IPV6 conditional changes

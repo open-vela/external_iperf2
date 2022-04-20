@@ -143,11 +143,10 @@ int setsock_tcp_windowsize (int inSock, int inTCPWin, int inSend) {
  * ------------------------------------------------------------------- */
 
 int getsock_tcp_windowsize (int inSock, int inSend) {
-    int theTCPWin = 0;
+    int rc = -1;
 #ifdef SO_SNDBUF
-    int rc;
     Socklen_t len;
-
+    int theTCPWin = 0;
     /* send buffer -- query for buffer size */
     len = sizeof(theTCPWin);
     if (inSend) {
@@ -157,11 +156,11 @@ int getsock_tcp_windowsize (int inSock, int inSend) {
         rc = getsockopt(inSock, SOL_SOCKET, SO_RCVBUF,
                          (char*) &theTCPWin, &len);
     }
-    if (rc < 0) {
-        return rc;
+    if (rc == 0) {
+        rc = theTCPWin;
     }
 #endif
-    return theTCPWin;
+    return rc;
 } /* end getsock_tcp_windowsize */
 
 #if HAVE_DECL_TCP_WINDOW_CLAMP

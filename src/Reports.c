@@ -54,6 +54,7 @@
 #include "headers.h"
 #include <math.h>
 #include "Settings.hpp"
+#include "PerfSocket.hpp"
 #include "Reporter.h"
 #include "Locale.h"
 #include "active_hosts.h"
@@ -82,16 +83,15 @@ static inline int my_str_copy(char **dst, char *src) {
 static void common_copy (struct ReportCommon **common, struct thread_Settings *inSettings) {
     // Do deep copies from settings
     *common = (struct ReportCommon *) calloc(1, sizeof(struct ReportCommon));
-    int bytecnt = 0;
-    bytecnt = my_str_copy(&(*common)->Host, inSettings->mHost);
-    bytecnt += my_str_copy(&(*common)->HideHost, inSettings->mHideHost);
-    bytecnt += my_str_copy(&(*common)->Localhost, inSettings->mLocalhost);
-    bytecnt += my_str_copy(&(*common)->Ifrname, inSettings->mIfrname);
-    bytecnt += my_str_copy(&(*common)->Ifrnametx, inSettings->mIfrnametx);
-    bytecnt += my_str_copy(&(*common)->SSMMulticastStr, inSettings->mSSMMulticastStr);
-    bytecnt += my_str_copy(&(*common)->Congestion, inSettings->mCongestion);
-    bytecnt += my_str_copy(&(*common)->transferIDStr, inSettings->mTransferIDStr);
-    bytecnt += my_str_copy(&(*common)->PermitKey, inSettings->mPermitKey);
+    my_str_copy(&(*common)->Host, inSettings->mHost);
+    my_str_copy(&(*common)->HideHost, inSettings->mHideHost);
+    my_str_copy(&(*common)->Localhost, inSettings->mLocalhost);
+    my_str_copy(&(*common)->Ifrname, inSettings->mIfrname);
+    my_str_copy(&(*common)->Ifrnametx, inSettings->mIfrnametx);
+    my_str_copy(&(*common)->SSMMulticastStr, inSettings->mSSMMulticastStr);
+    my_str_copy(&(*common)->Congestion, inSettings->mCongestion);
+    my_str_copy(&(*common)->transferIDStr, inSettings->mTransferIDStr);
+    my_str_copy(&(*common)->PermitKey, inSettings->mPermitKey);
 
     // copy some relevant settings
     (*common)->flags = inSettings->flags;
@@ -550,7 +550,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 		    else
 			ireport->info.output_handler = udp_output_read_enhanced_triptime;
 		} else if (isEnhanced(inSettings)) {
-		    ireport->info.output_handler = udp_output_read_enhanced;
+		    ireport->info.output_handler = udp_output_read_enhanced_triptime;
 		} else if (isFullDuplex(inSettings)) {
 		    ireport->info.output_handler = udp_output_read;
 		} else {
@@ -612,16 +612,14 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 		ireport->info.output_handler = tcp_output_basic_csv;
 	    } else if (isSumOnly(inSettings)) {
 		ireport->info.output_handler = NULL;
-#if HAVE_DECL_TCP_NOTSENT_LOWAT
-	    } else if (isTcpDrain(inSettings)) {
-		ireport->info.output_handler = tcp_output_write_enhanced_drain;
-#endif
 	    } else if (isBounceBack(inSettings)) {
 		ireport->packet_handler_post_report = reporter_handle_packet_bb_client;
 		ireport->transfer_protocol_handler = reporter_transfer_protocol_client_bb_tcp;
 		ireport->info.output_handler = tcp_output_write_bb;
 	    } else if (isIsochronous(inSettings)) {
 		ireport->info.output_handler = tcp_output_write_enhanced_isoch;
+	    } else if (isTcpWriteTimes(inSettings)) {
+		ireport->info.output_handler = tcp_output_write_enhanced_write;
 	    } else if (isEnhanced(inSettings)) {
 		ireport->info.output_handler = tcp_output_write_enhanced;
 	    } else if (isFullDuplex(inSettings)) {
@@ -661,14 +659,14 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 	ireport->info.latency_histogram =  histogram_init(inSettings->mHistBins,inSettings->mHistBinsize,0,\
 							  pow(10,inSettings->mHistUnits), \
 							  inSettings->mHistci_lower, inSettings->mHistci_upper, ireport->info.common->transferID, name);
-    } else if ((inSettings->mThreadMode == kMode_Client) && isTcpDrain(inSettings) && isHistogram(inSettings) && !isUDP(inSettings)) {
-	char name[] = "D8";
+    } else if ((inSettings->mThreadMode == kMode_Client) && isTcpWriteTimes(inSettings) && isHistogram(inSettings) && !isUDP(inSettings)) {
+	char name[] = "W8";
 	inSettings->mHistBins = 100000; // 10 seconds wide
 	inSettings->mHistBinsize = 100; // 100 usec bins
 	inSettings->mHistUnits = 6;  // usecs 10 pow(x)
 	inSettings->mHistci_lower = 5;
 	inSettings->mHistci_upper = 95;
-	ireport->info.drain_histogram =  histogram_init(inSettings->mHistBins,inSettings->mHistBinsize,0,	\
+	ireport->info.write_histogram =  histogram_init(inSettings->mHistBins,inSettings->mHistBinsize,0,	\
 							pow(10,inSettings->mHistUnits), \
 							inSettings->mHistci_lower, inSettings->mHistci_upper, ireport->info.common->transferID, name);
     }
@@ -707,7 +705,7 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
  * to achieve this.  Such code will be easier to maintain
  * and to extend.
  */
-struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, struct tcp_init_conditions *init_cond) {
+struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings) {
     assert(inSettings != NULL);
     struct ReportHeader *reporthdr = (struct ReportHeader *) calloc(1, sizeof(struct ReportHeader));
     if (reporthdr == NULL) {
@@ -722,24 +720,9 @@ struct ReportHeader* InitConnectionReport (struct thread_Settings *inSettings, s
 
     struct ConnectionInfo * creport = (struct ConnectionInfo *)(reporthdr->this_report);
     common_copy(&creport->common, inSettings);
-    if (!isUDP(inSettings) && (inSettings->mSock > 0) && !isDontRoute(inSettings) && \
-	(inSettings->mThreadMode == kMode_Client) && \
-	(init_cond && (init_cond->connecttime > 0.0))) {
-	creport->MSS = getsock_tcp_mss(inSettings->mSock);
-    } else {
-	creport->MSS = -1;
-    }
+    tcpstats_copy(&creport->tcpinitstats, &inSettings->tcpinitstats);
     // Fill out known fields for the connection report
     reporter_peerversion(creport, inSettings->peer_version_u, inSettings->peer_version_l);
-    if (init_cond) {
-        creport->init_cond.connecttime = init_cond->connecttime;
-        creport->init_cond.rtt = init_cond->rtt;
-        creport->init_cond.cwnd = init_cond->cwnd;
-    } else {
-        creport->init_cond.connecttime = -1;
-        creport->init_cond.rtt = -1;
-        creport->init_cond.cwnd = -1;
-    }
     if (isEnhanced(inSettings) && isTxStartTime(inSettings)) {
 	creport->epochStartTime.tv_sec = inSettings->txstart_epoch.tv_sec;
 	creport->epochStartTime.tv_usec = inSettings->txstart_epoch.tv_usec;
@@ -804,6 +787,13 @@ struct ReportHeader *InitSettingsReport (struct thread_Settings *inSettings) {
     sreport->isochstats.mVariance = inSettings->mVariance/8;
     sreport->isochstats.mBurstIPG = (unsigned int) (inSettings->mBurstIPG*1000.0);
     sreport->isochstats.mBurstInterval = (unsigned int) (1 / inSettings->mFPS * 1000000);
+    if (!isUDP(inSettings)) {
+	if (inSettings->mMSS > 0) {
+	    sreport->sockmaxseg = inSettings->mMSS;
+	} else if (isPrintMSS(inSettings) && !(inSettings->mMSS > 0)) {
+	    sreport->sockmaxseg = getsock_tcp_mss(inSettings->mSock);
+	}
+    }
 #ifdef HAVE_THREAD_DEBUG
     char rs[REPORTTXTMAX];
     reporttype_text(reporthdr, &rs[0]);
@@ -876,6 +866,7 @@ struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings
 	stats->transit.current.mean += ntohl(server->extend.meanTransit2) / (double)rMillion;
 	stats->transit.current.m2 = ntohl(server->extend.m2Transit1);
 	stats->transit.current.m2 += ntohl(server->extend.m2Transit2) / (double)rMillion;
+	stats->transit.current.m2 *= 1e-12;
 	stats->transit.current.vd = ntohl(server->extend.vdTransit1);
 	stats->transit.current.vd += ntohl(server->extend.vdTransit2) / (double)rMillion;
 	stats->transit.current.cnt = ntohl(server->extend.cntTransit);
@@ -902,13 +893,13 @@ struct ReportHeader* InitServerRelayUDPReport(struct thread_Settings *inSettings
 void write_UDP_AckFIN (struct TransferInfo *stats, int len) {
     assert(stats!= NULL);
     int ackpacket_length = (int) (sizeof(struct UDP_datagram) + sizeof(struct server_hdr));
-    char *ackPacket = (char *) calloc(1, len);
+    int readlen = ((ackpacket_length * 2) > len * 2) ? (ackpacket_length * 2) : (len * 2);
+    char *ackPacket = (char *) calloc(1, readlen);
     int success = 0;
     assert(ackPacket);
     fd_set readSet;
     int rc = 1;
     struct timeval timeout;
-    int readlen = ((ackpacket_length * 2) > len * 2) ? (ackpacket_length * 2) : (len * 2);
 
     if (ackPacket) {
 	struct UDP_datagram *UDP_Hdr = (struct UDP_datagram *)ackPacket;
@@ -949,6 +940,7 @@ void write_UDP_AckFIN (struct TransferInfo *stats, int len) {
 	hdr->extend.sumTransit2  = htonl((long) ((stats->transit.total.sum - (long)stats->transit.total.sum) * rMillion));
 	hdr->extend.meanTransit1  = htonl((long) stats->transit.total.mean);
 	hdr->extend.meanTransit2  = htonl((long) ((stats->transit.total.mean - (long)stats->transit.total.mean) * rMillion));
+	stats->transit.total.m2 *= 1e12;
 	hdr->extend.m2Transit1  = htonl((long) stats->transit.total.m2);
 	hdr->extend.m2Transit2  = htonl((long) ((stats->transit.total.m2 - (long)stats->transit.total.m2) * rMillion));
 	hdr->extend.vdTransit1  = htonl((long) stats->transit.total.vd);
