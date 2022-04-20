@@ -6,6 +6,10 @@
 /* Define if debugging info is desired */
 #undef DBG_MJZ
 
+/* Define if default UDP payload length is based on device MTU and socket
+   buffer size */
+#undef DEFAULT_PAYLOAD_LEN_PER_MTU_DISCOVERY
+
 /* AF_PACKET support is available */
 #undef HAVE_AF_PACKET
 
@@ -109,6 +113,10 @@
    don't. */
 #undef HAVE_DECL_SIGALRM
 
+/* Define to 1 if you have the declaration of `SIOCGIFMTU', and to 0 if you
+   don't. */
+#undef HAVE_DECL_SIOCGIFMTU
+
 /* Define to 1 if you have the declaration of `SO_BINDTODEVICE', and to 0 if
    you don't. */
 #undef HAVE_DECL_SO_BINDTODEVICE
@@ -140,6 +148,10 @@
 /* Define to 1 if you have the declaration of `TCP_INFO', and to 0 if you
    don't. */
 #undef HAVE_DECL_TCP_INFO
+
+/* Define to 1 if you have the declaration of `TCP_MAXSEG', and to 0 if you
+   don't. */
+#undef HAVE_DECL_TCP_MAXSEG
 
 /* Define to 1 if you have the declaration of `TCP_NODELAY', and to 0 if you
    don't. */
@@ -220,6 +232,9 @@
 
 /* Define to 1 if you have the <linux/ip.h> header file. */
 #undef HAVE_LINUX_IP_H
+
+/* Define to 1 if you have the <linux/sockios.h> header file. */
+#undef HAVE_LINUX_SOCKIOS_H
 
 /* Define to 1 if you have the <linux/udp.h> header file. */
 #undef HAVE_LINUX_UDP_H
@@ -357,11 +372,17 @@
 /* Define to 1 if you have the <syslog.h> header file. */
 #undef HAVE_SYSLOG_H
 
+/* Define to 1 if you have the <sys/ioctl.h> header file. */
+#undef HAVE_SYS_IOCTL_H
+
 /* Define to 1 if you have the <sys/select.h> header file. */
 #undef HAVE_SYS_SELECT_H
 
 /* Define to 1 if you have the <sys/socket.h> header file. */
 #undef HAVE_SYS_SOCKET_H
+
+/* Define to 1 if you have the <sys/sockio.h> header file. */
+#undef HAVE_SYS_SOCKIO_H
 
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #undef HAVE_SYS_STAT_H

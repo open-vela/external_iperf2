@@ -71,6 +71,7 @@
 #include "isochronous.hpp"
 #include "pdfs.h"
 #include "payloads.h"
+#include "PerfSocket.hpp"
 #include <math.h>
 
 static int reversetest = 0;
@@ -109,11 +110,12 @@ static int hideips = 0;
 static int bounceback = 0;
 static int bouncebackhold = 0;
 static int bouncebackperiod = 0;
-static int tcpdrain = 0;
 static int overridetos = 0;
-static int notcpquickack = 0;
-static int notcpquickack_cliset = 0;
+static int notcpbbquickack = 0;
+static int tcpquickack = 0;
+static int notcpbbquickack_cliset = 0;
 static int congest = 0;
+static int tcpwritetimes = 0;
 
 void Settings_Interpret(char option, const char *optarg, struct thread_Settings *mExtSettings);
 // apply compound settings after the command line has been fully parsed
@@ -164,7 +166,7 @@ const struct option long_options[] =
 {"bounceback", no_argument, &bounceback, 1},
 {"bounceback-congest", no_argument, &congest, 1},
 {"bounceback-hold", required_argument, &bouncebackhold, 1},
-{"bounceback-no-quickack", no_argument, &notcpquickack, 1},
+{"bounceback-no-quickack", no_argument, &notcpbbquickack, 1},
 {"bounceback-period", required_argument, &bouncebackperiod, 1},
 {"compatibility",    no_argument, NULL, 'C'},
 {"daemon",           no_argument, NULL, 'D'},
@@ -214,11 +216,11 @@ const struct option long_options[] =
 {"permit-key-timeout", required_argument, &permitkeytimeout, 1},
 {"burst-size", required_argument, &burstsize, 1},
 {"burst-period", required_argument, &burstperiodic, 1},
-{"tcp-drain", no_argument, &tcpdrain, 1},
 {"tos-override", required_argument, &overridetos, 1},
 {"tcp-rx-window-clamp", required_argument, &rxwinclamp, 1},
-
+{"tcp-quickack", no_argument, &tcpquickack, 1},
 {"tcp-write-prefetch", required_argument, &txnotsentlowwater, 1}, // see doc/DESIGN_NOTES
+{"tcp-write-times", no_argument, &tcpwritetimes, 1},
 {"tap-dev", optional_argument, &tapif, 1},
 {"tun-dev", optional_argument, &tunif, 1},
 {"NUM_REPORT_STRUCTS", required_argument, &numreportstructs, 1},
@@ -283,11 +285,6 @@ const char short_options[] = "146b:c:def:hi:l:mn:o:p:rst:uvw:x:y:zAB:CDF:H:IL:M:
 #define DEFAULTS()
 
 const long kDefault_UDPRate = 1024 * 1024; // -u  if set, 1 Mbit/sec
-const int  kDefault_UDPBufLen = 1470;      // -u  if set, read/write 1470 bytes
-
-// v4: 1470 bytes UDP payload will fill one and only one ethernet datagram (IPv4 overhead is 20 bytes)
-const int  kDefault_UDPBufLenV6 = 1450;      // -u  if set, read/write 1470 bytes
-// v6: 1450 bytes UDP payload will fill one and only one ethernet datagram (IPv6 overhead is 40 bytes)
 const int kDefault_TCPBufLen = 128 * 1024; // TCP default read/write size
 const int kDefault_BBTCPBufLen = 100; // default bounce-back size in bytes
 
@@ -439,6 +436,8 @@ void Settings_Copy (struct thread_Settings *from, struct thread_Settings **into,
     mbuflen += TAPBYTESSLOP;
 #endif
     (*into)->mBuf = new char[mbuflen];
+    memset((*into)->mBuf, 0, mbuflen);
+
 #ifdef HAVE_THREAD_DEBUG
     thread_debug("Copy Settings: MBUF malloc %d bytes (%p)", mbuflen, (void *) (*into)->mBuf);
 #endif
@@ -633,7 +632,9 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
             break;
 
         case 'm': // print TCP MSS
+#if HAVE_DECL_TCP_MAXSEG
             setPrintMSS(mExtSettings);
+#endif
             break;
 
         case 'n': // bytes of data
@@ -825,9 +826,11 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
             break;
 
         case 'M': // specify TCP MSS (maximum segment size)
-            mExtSettings->mMSS = byte_atoi(optarg);
-            setPrintMSS(mExtSettings);
+#if HAVE_DECL_TCP_MAXSEG
+	    mExtSettings->mMSS = byte_atoi(optarg);
             setTCPMSS(mExtSettings);
+            setPrintMSS(mExtSettings);
+#endif
             break;
 
         case 'N': // specify TCP nodelay option (disable Jacobson's Algorithm)
@@ -1093,18 +1096,19 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		fprintf(stderr, "--tcp-rx-window-clamp not supported on this platform\n");
 #endif
 	    }
-	    if (tcpdrain) {
-		tcpdrain = 0;
-#if HAVE_DECL_TCP_NOTSENT_LOWAT
-		setTcpDrain(mExtSettings);
-		setEnhanced(mExtSettings);
-#else
-		fprintf(stderr, "--tcp-drain not supported on this platform\n");
-#endif
+	    if (tcpwritetimes) {
+		tcpwritetimes = 0;
+		setTcpWriteTimes(mExtSettings);
 	    }
-	    if (notcpquickack) {
-		notcpquickack = 0;
-		notcpquickack_cliset = 1;
+	    if (notcpbbquickack) {
+		notcpbbquickack = 0;
+		notcpbbquickack_cliset = 1;
+	    }
+	    if (tcpquickack) {
+		tcpquickack = 0;
+#if HAVE_DECL_TCP_QUICKACK
+		setTcpQuickAck(mExtSettings);
+#endif
 	    }
 	    if (congest) {
 		congest= 0;
@@ -1116,11 +1120,6 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		mExtSettings->mWritePrefetch = byte_atoi(optarg);
 		setWritePrefetch(mExtSettings);
 		setEnhanced(mExtSettings);
-		mExtSettings->mHistBins = 100000; // 10 seconds wide
-		mExtSettings->mHistBinsize = 100; // 100 usec bins
-		mExtSettings->mHistUnits = 6;  // usecs 10 pow(x)
-		mExtSettings->mHistci_lower = 5;
-		mExtSettings->mHistci_upper = 95;
 #else
 		fprintf(stderr, "--tcp-write-prefetch not supported on this platform\n");
 #endif
@@ -1436,12 +1435,18 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    mExtSettings->mBounceBackBytes = mExtSettings->mBufLen;
 	    mExtSettings->mBurstSize = mExtSettings->mBufLen;
 #if HAVE_DECL_TCP_QUICKACK
+	    if (notcpbbquickack_cliset && isTcpQuickAck(mExtSettings)) {
+		fprintf(stderr, "ERROR: --tcp-quickack and --bounceback-no-quickack are mutually exclusive\n");
+		bail = true;
+	    }
 	    // be wary of double negatives here
-	    if (!notcpquickack_cliset && (mExtSettings->mBounceBackHold > 0))
+	    if (!notcpbbquickack_cliset && (mExtSettings->mBounceBackHold > 0)) {
 		setTcpQuickAck(mExtSettings);
+	    }
 #endif
 
 	}
+
 	if (isPeriodicBurst(mExtSettings)) {
 	    if (isIsochronous(mExtSettings)) {
 		fprintf(stderr, "ERROR: options of --burst-period and --isochronous cannot be applied together\n");
@@ -1490,9 +1495,9 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		fprintf(stderr, "WARN: setting of option --tcp-write-prefetch is not supported with -u UDP\n");
 		unsetWritePrefetch(mExtSettings);
 	    }
-	    if (isTcpDrain(mExtSettings)) {
-		fprintf(stderr, "WARN: setting of option --tcp-drain is not supported with -u UDP\n");
-		unsetTcpDrain(mExtSettings);
+	    if (isTcpQuickAck(mExtSettings)) {
+		fprintf(stderr, "WARN: setting of option --tcp-quickack is not supported with -u UDP\n");
+		unsetWritePrefetch(mExtSettings);
 	    }
 
 	    {
@@ -1552,8 +1557,13 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		bail = true;
 	    }
 	}
-	if (!isReverse(mExtSettings) && !isFullDuplex(mExtSettings) && isHistogram(mExtSettings) && !isWritePrefetch(mExtSettings)) {
-	    fprintf(stderr, "WARN: option of --histograms on the client requires --tcp-write-prefetch\n");
+	if (!isReverse(mExtSettings) && !isFullDuplex(mExtSettings) && isHistogram(mExtSettings)){
+	    setTcpWriteTimes(mExtSettings);
+	    mExtSettings->mHistBins = 100000; // 10 seconds wide
+	    mExtSettings->mHistBinsize = 100; // 100 usec bins
+	    mExtSettings->mHistUnits = 6;  // usecs 10 pow(x)
+	    mExtSettings->mHistci_lower = 5;
+	    mExtSettings->mHistci_upper = 95;
 	}
 	if (isCongestionControl(mExtSettings) && isReverse(mExtSettings)) {
 	    fprintf(stderr, "ERROR: tcp congestion control -Z and --reverse cannot be applied together\n");
@@ -1599,10 +1609,6 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
         if (isWritePrefetch(mExtSettings)) {
             fprintf(stderr, "WARN: setting of option --tcp-write-prefetch is not supported on the server\n");
 	    unsetWritePrefetch(mExtSettings);
-	}
-        if (isTcpDrain(mExtSettings)) {
-            fprintf(stderr, "WARN: setting of option --tcp-drain is not supported on the server\n");
-	    unsetTcpDrain(mExtSettings);
 	}
         if (isIncrSrcIP(mExtSettings)) {
             fprintf(stderr, "WARN: setting of option --incr-srcip is not supported on the server\n");
@@ -1963,8 +1969,14 @@ void Settings_ReadClientSettingsV1 (struct thread_Settings **client, struct clie
     (*client)->mTID = thread_zeroid();
     (*client)->mPort = static_cast<unsigned short>(ntohl(hdr->mPort));
     (*client)->mThreads = 1;
+    struct thread_Settings *tmpSettings  = *client;
     if (hdr->mBufLen != 0) {
 	(*client)->mBufLen = ntohl(hdr->mBufLen);
+	setBuflenSet(tmpSettings);
+    } else {
+#ifdef DEFAULT_PAYLOAD_LEN_PER_MTU_DISCOVERY
+	checksock_max_udp_payload(tmpSettings);
+#endif
     }
     (*client)->mAmount = ntohl(hdr->mAmount);
     if (((*client)->mAmount & 0x80000000) > 0) {
@@ -2170,7 +2182,10 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 
     // Check the corner case of small packets and trip times
     if (isUDP(client) && isSmallTripTime(client)) {
+        int buflen = (client->mBufLen < (int) sizeof(struct client_udpsmall_testhdr)) ? client->mBufLen \
+	             : sizeof(struct client_udpsmall_testhdr);
 	struct client_udpsmall_testhdr *hdr = static_cast<struct client_udpsmall_testhdr *>(testhdr);
+	memset(hdr, 0, buflen);
 	hdr->flags = htons(HEADER16_SMALL_TRIPTIMES);
 #ifdef HAVE_THREAD_DEBUG
 	thread_debug("UDP small trip times flags = %X", ntohs(hdr->flags));
@@ -2191,7 +2206,9 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
     // Now setup UDP and TCP specific passed settings from client to server
     if (isUDP(client)) { // UDP test information passed in every packet per being stateless
 	struct client_udp_testhdr *hdr = static_cast<struct client_udp_testhdr *>(testhdr);
-	memset(hdr, 0, sizeof(struct client_udp_testhdr));
+        int buflen = (client->mBufLen < (int) sizeof(struct client_udp_testhdr)) ? client->mBufLen \
+	             : sizeof(struct client_udp_testhdr);
+	memset(hdr, 0, buflen);
 	flags |= HEADER_SEQNO64B; // use 64 bit by default
 	flags |= HEADER_EXTEND;
 	hdr->extend.version_u = htonl(IPERF_VERSION_MAJORHEX);
@@ -2297,7 +2314,9 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	    flags = HEADER_BOUNCEBACK;
 	    len = sizeof(struct bounceback_hdr);
 	} else {
-	    memset(hdr, 0, sizeof(struct client_tcp_testhdr));
+	    int buflen = (client->mBufLen < (int) sizeof(struct client_tcp_testhdr)) ? client->mBufLen \
+	                 : sizeof(struct client_tcp_testhdr);
+	    memset(hdr, 0, buflen);
 	    flags |= HEADER_EXTEND;
 	    hdr->extend.version_u = htonl(IPERF_VERSION_MAJORHEX);
 	    hdr->extend.version_l = htonl(IPERF_VERSION_MINORHEX);
@@ -2338,6 +2357,11 @@ int Settings_GenerateClientHdr (struct thread_Settings *client, void *testhdr, s
 	    if (isWritePrefetch(client) && (isReverse(client) || isFullDuplex(client))) {
 		upperflags  |= HEADER_WRITEPREFETCH;
 		hdr->extend.TCPWritePrefetch = htonl((long)client->mWritePrefetch);
+	    }
+#endif
+#if HAVE_DECL_TCP_QUICKACK
+	    if (isTcpQuickAck(client) && (!isReverse(client) || isFullDuplex(client))) {
+		upperflags  |= HEADER_TCPQUICKACK;
 	    }
 #endif
 	    if (isIsochronous(client) || isPeriodicBurst(client)) {

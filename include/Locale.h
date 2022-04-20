@@ -140,6 +140,8 @@ extern const char client_burstperiod[];
 
 extern const char client_bounceback[];
 
+extern const char client_bounceback_noqack[];
+
 extern const char server_burstperiod[];
 
 extern const char client_fq_pacing[];
@@ -211,15 +213,15 @@ extern const char report_bw_write_enhanced_header[];
 
 extern const char report_bw_write_enhanced_header[];
 
-extern const char report_sumcnt_write_enhanced_drain_header[];
+extern const char report_sumcnt_write_enhanced_write_header[];
 
 extern const char report_bw_write_enhanced_format[];
 
-extern const char report_write_enhanced_drain_header[];
+extern const char report_write_enhanced_write_header[];
 
-extern const char report_write_enhanced_drain_format[];
+extern const char report_write_enhanced_write_format[];
 
-extern const char report_write_enhanced_nocwnd_drain_format[];
+extern const char report_write_enhanced_nocwnd_write_format[];
 
 extern const char report_bw_write_enhanced_nocwnd_format[];
 
@@ -330,6 +332,8 @@ extern const char report_peer_fail[];
 extern const char report_mss_unsupported[];
 
 extern const char report_mss[];
+
+extern const char report_default_mss[];
 
 extern const char report_datagrams[];
 

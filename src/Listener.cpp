@@ -283,7 +283,7 @@ void Listener::Run () {
 	// This is required for accurate traffic statistics
 	if (!isCompat(server) && (isConnectOnly(server) || !apply_client_settings(server))) {
 	    if (isConnectionReport(server) && !isSumOnly(server)) {
-		struct ReportHeader *reporthdr = InitConnectionReport(server, NULL);
+		struct ReportHeader *reporthdr = InitConnectionReport(server);
 		struct ConnectionInfo *cr = static_cast<struct ConnectionInfo *>(reporthdr->this_report);
 		cr->connect_timestamp.tv_sec = server->accept_time.tv_sec;
 		cr->connect_timestamp.tv_usec = server->accept_time.tv_usec;
@@ -372,7 +372,7 @@ void Listener::Run () {
 	}
 	setTransferID(server, 0);
 	if (isConnectionReport(server) && !isSumOnly(server)) {
-	    struct ReportHeader *reporthdr = InitConnectionReport(server, NULL);
+	    struct ReportHeader *reporthdr = InitConnectionReport(server);
 	    struct ConnectionInfo *cr = static_cast<struct ConnectionInfo *>(reporthdr->this_report);
 	    cr->connect_timestamp.tv_sec = server->accept_time.tv_sec;
 	    cr->connect_timestamp.tv_usec = server->accept_time.tv_usec;
@@ -1096,7 +1096,13 @@ bool Listener::apply_client_settings_udp (thread_Settings *server) {
 	if (seqno != 1) {
 	    fprintf(stderr, "WARN: first received packet (id=%d) was not first sent packet, report start time will be off\n", seqno);
 	}
-	setTripTime(server);
+	Timestamp now;
+	if (!isTxStartTime(server) && ((abs(now.getSecs() - server->sent_time.tv_sec)) > (MAXDIFFTIMESTAMPSECS + 1))) {
+	    fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
+	    unsetTripTime(server);
+	} else {
+	    setTripTime(server);
+	}
 	setEnhanced(server);
     } else if ((flags & HEADER_VERSION1) || (flags & HEADER_VERSION2) || (flags & HEADER_EXTEND)) {
 	if ((flags & HEADER_VERSION1) && !(flags & HEADER_VERSION2)) {
@@ -1144,6 +1150,7 @@ bool Listener::apply_client_settings_udp (thread_Settings *server) {
 		Timestamp now;
 		if (!isTxStartTime(server) && ((abs(now.getSecs() - server->sent_time.tv_sec)) > (MAXDIFFTIMESTAMPSECS + 1))) {
 		    fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
+		    unsetTripTime(server);
 		} else {
 		    setTripTime(server);
 		    setEnhanced(server);
@@ -1168,6 +1175,11 @@ bool Listener::apply_client_settings_udp (thread_Settings *server) {
 }
 bool Listener::apply_client_settings_tcp (thread_Settings *server) {
     bool rc = false;
+#if HAVE_TCP_STATS
+    if (!isUDP(mSettings)) {
+        gettcpinfo(server->mSock, &server->tcpinitstats);
+    }
+#endif
     int nread = recvn(server->mSock, server->mBuf, sizeof(uint32_t), 0);
     char *readptr = server->mBuf;
     if (nread == 0) {
@@ -1210,11 +1222,17 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 	    }
 #endif
 	    int remaining =  server->mBounceBackBytes - (sizeof(struct bounceback_hdr) + sizeof(uint32_t));
-	    nread = recvn(server->mSock, readptr, remaining, 0);
-	    if (nread != remaining) {
-		WARN(1, "read bounce back payload failed");
+	    if (remaining < 0) {
+		WARN(1, "bounce back bytes too small");
 		rc = false;
 		goto DONE;
+	    } else if (remaining > 0) {
+		nread = recvn(server->mSock, readptr, remaining, 0);
+		if (nread != remaining) {
+		    WARN(1, "read bounce back payload failed");
+		    rc = false;
+		    goto DONE;
+		}
 	    }
 	    Timestamp now;
 	    bbhdr->bbserverRx_ts.sec = htonl(now.getSecs());
@@ -1270,6 +1288,7 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 			server->sent_time.tv_usec = ntohl(hdr->start_fq.start_tv_usec);
 			if (!isTxStartTime(server) && ((abs(now.getSecs() - server->sent_time.tv_sec)) > (MAXDIFFTIMESTAMPSECS + 1))) {
 			    fprintf(stdout,"WARN: ignore --trip-times because client didn't provide valid start timestamp within %d seconds of now\n", MAXDIFFTIMESTAMPSECS);
+			    unsetTripTime(server);
 			} else {
 			    setTripTime(server);
 			    setEnhanced(server);
@@ -1304,6 +1323,11 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 			if (server->mWritePrefetch > 0) {
 			    setWritePrefetch(server);
 			}
+		    }
+#endif
+#if HAVE_DECL_TCP_QUICKACK
+		    if (upperflags & HEADER_TCPQUICKACK) {
+			setTcpQuickAck(server);
 		    }
 #endif
 		    if (upperflags & HEADER_BOUNCEBACK) {

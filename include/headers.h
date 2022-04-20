@@ -102,15 +102,29 @@ typedef bool _Bool;
 #endif
 
 
+// v4: 1470 bytes UDP payload will fill one and only one ethernet datagram (IPv4 overhead is 20 bytes)
+#define  kDefault_UDPBufLen 1470
+// v6: 1450 bytes UDP payload will fill one and only one ethernet datagram (IPv6 overhead is 40 bytes)
+#define  kDefault_UDPBufLenV6 1450
+#define  IPV4HDRLEN 20
+#define  IPV6HDRLEN 40
+#define  UDPHDRLEN  8
+
 #if ((defined HAVE_SSM_MULTICAST) || (defined HAVE_DECL_SO_BINDTODEVICE))  && (defined HAVE_NET_IF_H)
 #include <net/if.h>
 #endif
-
-#if ((HAVE_TUNTAP_TAP) || (HAVE_TUNTAP_TUN))
-#include <linux/if_tun.h>
+#ifdef HAVE_SYS_IOCTL_H
 #include <sys/ioctl.h>
 #endif
-
+#ifdef HAVE_SYS_SOCKIO_H
+#include <sys/sockio.h>
+#endif
+#ifdef HAVE_LINUX_SOCKIOS_H
+#include <linux/sockios.h>
+#endif
+#if ((HAVE_TUNTAP_TAP) || (HAVE_TUNTAP_TUN))
+#include <linux/if_tun.h>
+#endif
 
 // AF_PACKET HEADERS
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
@@ -143,7 +157,7 @@ typedef bool _Bool;
 // #include <netinet/in.h>
 //
 // force the ipv6hdr length to 40 vs use of sizeof(struct ipv6hdr)
-#define  IPV6HDRLEN 40
+
 #endif // HAVE_AF_PACKET
 
 #ifdef WIN32

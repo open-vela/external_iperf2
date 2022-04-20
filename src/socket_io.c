@@ -58,65 +58,6 @@ extern "C" {
 #endif
 
 /* -------------------------------------------------------------------
- * If inMSS > 0, set the TCP maximum segment size  for inSock.
- * Otherwise leave it as the system default.
- * ------------------------------------------------------------------- */
-
-const char warn_mss_fail[] = "\
-WARNING: attempt to set TCP maxmimum segment size to %d failed.\n\
-Setting the MSS may not be implemented on this OS.\n";
-
-const char warn_mss_notset[] =
-"WARNING: attempt to set TCP maximum segment size to %d, but got %d\n";
-
-void setsock_tcp_mss (int inSock, int inMSS) {
-#ifdef TCP_MAXSEG
-    int rc;
-    int newMSS;
-    Socklen_t len;
-
-    assert(inSock != INVALID_SOCKET);
-
-    if (inMSS > 0) {
-        /* set */
-        newMSS = inMSS;
-        len = sizeof(newMSS);
-        rc = setsockopt(inSock, IPPROTO_TCP, TCP_MAXSEG, (char*) &newMSS,  len);
-        if (rc == SOCKET_ERROR) {
-            fprintf(stderr, warn_mss_fail, newMSS);
-            return;
-        }
-
-        /* verify results */
-        rc = getsockopt(inSock, IPPROTO_TCP, TCP_MAXSEG, (char*) &newMSS, &len);
-        WARN_errno(rc == SOCKET_ERROR, "getsockopt TCP_MAXSEG");
-        if (newMSS != inMSS) {
-            fprintf(stderr, warn_mss_notset, inMSS, newMSS);
-        }
-    }
-#endif
-} /* end setsock_tcp_mss */
-
-/* -------------------------------------------------------------------
- * returns the TCP maximum segment size
- * ------------------------------------------------------------------- */
-
-int getsock_tcp_mss  (int inSock) {
-    int theMSS = -1;
-#ifdef TCP_MAXSEG
-    int rc;
-    Socklen_t len;
-    assert(inSock >= 0);
-
-    /* query for MSS */
-    len = sizeof(theMSS);
-    rc = getsockopt(inSock, IPPROTO_TCP, TCP_MAXSEG, (char*)&theMSS, &len);
-    WARN_errno(rc == SOCKET_ERROR, "getsockopt TCP_MAXSEG");
-#endif
-    return theMSS;
-} /* end getsock_tcp_mss */
-
-/* -------------------------------------------------------------------
  * Attempts to reads n bytes from a socket.
  * Returns number actually read, or -1 on error.
  * If number read < inLen then we reached EOF.
@@ -179,6 +120,7 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
 		if (FATALTCPREADERR(errno)) {
 		    WARN_errno(1, "recvn peek");
 		    nread = -1;
+		    sInterupted = 1;
 		    goto DONE;
 		}
 #ifdef HAVE_THREAD_DEBUG
@@ -210,6 +152,7 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
 		if (FATALTCPREADERR(errno)) {
 		    WARN_errno(1, "recvn");
 		    nread = -1;
+		    sInterupted = 1;
 		    goto DONE;
 		}
 #ifdef HAVE_THREAD_DEBUG
@@ -266,6 +209,7 @@ int writen (int inSock, const void *inBuf, int inLen, int *count) {
 	    if (!(errno == EINTR) || (errno == EAGAIN) || (errno == EWOULDBLOCK)) {
 		nwritten = inLen - nleft;
 		WARN_errno(1, "writen fatal");
+		sInterupted = 1;
 		goto DONE;
 	    }
 	    break;
