@@ -100,11 +100,6 @@ Client::Client (thread_Settings *inSettings) {
     pattern(mSettings->mBuf, mSettings->mBufLen);
     if (isIsochronous(mSettings)) {
 	FAIL_errno(!(mSettings->mFPS > 0.0), "Invalid value for frames per second in the isochronous settings\n", mSettings);
-	// set the mbuf valid for burst period ahead of time. Will be set ahead of time for all burst writes
-	if (!isUDP(mSettings)) {
-	    struct TCP_burst_payload * mBuf_burst = reinterpret_cast<struct TCP_burst_payload *>(mSettings->mBuf);
-	    mBuf_burst->burst_period_us  = htonl(htonl(framecounter->period_us()));
-	}
     }
     if (isFileInput(mSettings)) {
         if (!isSTDIN(mSettings))
@@ -1682,6 +1677,11 @@ int Client::SendFirstPayload () {
 #endif
 	    }
 	    WARN_errno(pktlen < 0, "send_hdr");
+	}
+	// set the mbuf valid for burst period ahead of time. The same value will be set for all burst writes
+	if (!isUDP(mSettings) && framecounter) {
+	    struct TCP_burst_payload * mBuf_burst = reinterpret_cast<struct TCP_burst_payload *>(mSettings->mBuf);
+	    mBuf_burst->burst_period_us  = htonl(htonl(framecounter->period_us()));
 	}
     }
     return pktlen;

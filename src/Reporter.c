@@ -724,11 +724,9 @@ static void reporter_handle_frame_isoch_oneway_transit (struct TransferInfo *sta
 	    // it's calculated from the very first start time and frame id w/o trip timees
 	    if (isTripTime(stats->common)) {
 		frametransit = TimeDifference(packet->packetTime, packet->isochStartTime);
-		printf("**** ft with trip %f\n", frametransit);
 	    } else {
 		frametransit = TimeDifference(packet->packetTime, packet->isochStartTime) \
 		    - ((packet->burstperiod * (packet->frameID - 1)) / 1e6);
-		printf("**** ft no trip %f\n", frametransit);
 	    }
 	    reporter_update_mmm(&stats->transit.total, frametransit);
 	    if (framedelta > 1) {
