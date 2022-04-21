@@ -1,0 +1,10 @@
+*~
+*.a
+*.la
+*.lo
+*.o
+*.orig
+*.Po
+.built
+.depend
+Make.dep
