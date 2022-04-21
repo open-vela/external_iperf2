@@ -1,3 +1,4 @@
+
 /*---------------------------------------------------------------
  * Copyright (c) 1999,2000,2001,2002,2003
  * The Board of Trustees of the University of Illinois
@@ -44,62 +45,90 @@
  * http://www.ncsa.uiuc.edu
  * ________________________________________________________________
  *
- * inet_aton.h
- *
- * Mark Gates <mgates@nlanr.net>
- *      Kevin Gibbs <kgibbs@ncsa.uiuc.edu> Sept. 2002
- * to use this prototype, make sure HAVE_INET_PTON is not defined
- * to use this prototype, make sure HAVE_INET_NTOP is not defined
- *
- * =================================================================== */
-
-#ifndef INET_ATON_H
-#define INET_ATON_H
-
-
-#include "headers.h"
-
-/*
- * inet_pton is the new, better version of inet_aton.
- * inet_aton is not IP version agnostic.
- * inet_aton is the new, better version of inet_addr.
- * inet_addr is incorrect in that it returns -1 as an error value,
- * while -1 (0xFFFFFFFF) is a valid IP address (255.255.255.255).
+ * List.cpp
+ * by Kevin Gibbs <kgibbs@ncsa.uiuc.edu>
+ * -------------------------------------------------------------------
  */
 
-#ifndef HAVE_INET_NTOP
+#include "List.h"
+#include "Mutex.h"
+#include "SocketAddr.h"
 
-    #ifdef __cplusplus
-extern "C" {
-#endif
-const char* inet_ntop(int af, const void *src, char *dst, socklen_t size);
-const char* inet_ntop4(const unsigned char *src, char *dst,
-                      socklen_t size);
-#ifdef HAVE_IPV6
-const char* inet_ntop6(const unsigned char *src, char *dst,
-                      socklen_t size);
-#endif
+/*
+ * Global List and Mutex variables
+ */
+Iperf_ListEntry *clients = NULL;
+Mutex clients_mutex;
 
+/*
+ * Add Entry add to the List
+ */
+void Iperf_pushback ( Iperf_ListEntry *add, Iperf_ListEntry **root ) {
+    add->next = *root;
+    *root = add;
+}
 
-#ifdef __cplusplus
-} /* end extern "C" */
-    #endif
+/*
+ * Delete Entry del from the List
+ */
+void Iperf_delete ( iperf_sockaddr *del, Iperf_ListEntry **root ) {
+    Iperf_ListEntry *temp = Iperf_present( del, *root );
+    if ( temp != NULL ) {
+        if ( temp == *root ) {
+            *root = (*root)->next;
+        } else {
+            Iperf_ListEntry *itr = *root;
+            while ( itr->next != NULL ) {
+                if ( itr->next == temp ) {
+                    itr->next = itr->next->next;
+                    break;
+                }
+                itr = itr->next;
+            }
+        }
+        delete temp;
+    }
+}
 
-#endif /* HAVE_INET_NTOP */
-#ifndef HAVE_INET_PTON
+/*
+ * Destroy the List (cleanup function)
+ */
+void Iperf_destroy ( Iperf_ListEntry **root ) {
+    Iperf_ListEntry *itr1 = *root, *itr2;
+    while ( itr1 != NULL ) {
+        itr2 = itr1->next;
+        delete itr1;
+        itr1 = itr2;
+    }
+    *root = NULL;
+}
 
-    #ifdef __cplusplus
-extern "C" {
-#endif
-int inet_pton(int af, const char *src, void *dst);
-int inet_pton4(const char *src, unsigned char *dst);
-#ifdef HAVE_IPV6
-int inet_pton6(const char *src, unsigned char *dst);
-#endif
+/*
+ * Check if the exact Entry find is present
+ */
+Iperf_ListEntry* Iperf_present ( iperf_sockaddr *find, Iperf_ListEntry *root ) {
+    Iperf_ListEntry *itr = root;
+    while ( itr != NULL ) {
+        if ( SockAddr_are_Equal( (sockaddr*)itr, (sockaddr*)find ) ) {
+            return itr;
+        }
+        itr = itr->next;
+    }
+    return NULL;
+}
 
-#ifdef __cplusplus
-} /* end extern "C" */
-    #endif
-
-#endif /* HAVE_INET_PTON */
-#endif /* INET_ATON_H */
+/*
+ * Check if a Entry find is in the List or if any
+ * Entry exists that has the same host as the
+ * Entry find
+ */
+Iperf_ListEntry* Iperf_hostpresent ( iperf_sockaddr *find, Iperf_ListEntry *root ) {
+    Iperf_ListEntry *itr = root;
+    while ( itr != NULL ) {
+        if ( SockAddr_Hostare_Equal( (sockaddr*)itr, (sockaddr*)find ) ) {
+            return itr;
+        }
+        itr = itr->next;
+    }
+    return NULL;
+}
