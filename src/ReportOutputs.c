@@ -89,6 +89,7 @@ static int HEADING_FLAG(report_bw_jitter_loss_enhanced_isoch_triptime) = 0;
 static int HEADING_FLAG(report_sumcnt_bw_jitter_loss) = 0;
 static int HEADING_FLAG(report_burst_read_tcp) = 0;
 static int HEADING_FLAG(report_burst_write_tcp) = 0;
+static int HEADING_FLAG(report_bw_isoch_enhanced_netpwr) = 0;
 
 void reporter_default_heading_flags (int flag) {
     HEADING_FLAG(report_bw) = flag;
@@ -117,6 +118,7 @@ void reporter_default_heading_flags (int flag) {
     HEADING_FLAG(report_sumcnt_bw_pps_enhanced) = flag;
     HEADING_FLAG(report_burst_read_tcp) = flag;
     HEADING_FLAG(report_burst_write_tcp) = flag;
+    HEADING_FLAG(report_bw_isoch_enhanced_netpwr) = flag;
 }
 static inline void _print_stats_common (struct TransferInfo *stats) {
     assert(stats!=NULL);
@@ -293,6 +295,59 @@ void tcp_output_read_enhanced_triptime (struct TransferInfo *stats) {
     }
     fflush(stdout);
 }
+void tcp_output_read_enhanced_isoch (struct TransferInfo *stats) {
+    HEADING_PRINT_COND(report_bw_isoch_enhanced_netpwr);
+    double meantransit = (stats->transit.current.cnt > 0) ? (stats->transit.current.sum / stats->transit.current.cnt) : 0;
+    _print_stats_common(stats);
+    if (stats->cntBytes) {
+        set_netpowerbuf(meantransit, stats);
+	printf(report_bw_isoch_enhanced_netpwr_format,
+	       stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
+	       outbuffer, outbufferext,
+	       (meantransit * 1e3),
+	       (stats->transit.current.cnt < 2) ? 0 : stats->transit.current.min * 1e3,
+	       (stats->transit.current.cnt < 2) ? 0 : stats->transit.current.max * 1e3,
+	       (stats->transit.current.cnt < 2) ? 0 : 1e3 * (sqrt(stats->transit.current.m2 / (stats->transit.current.cnt - 1))),
+	       stats->transit.current.cnt,
+	       stats->transit.current.cnt ? (long) ((double)stats->cntBytes / (double) stats->transit.current.cnt) : 0,
+	       netpower_buf,
+	       stats->sock_callstats.read.cntRead,
+	       stats->sock_callstats.read.bins[0],
+	       stats->sock_callstats.read.bins[1],
+	       stats->sock_callstats.read.bins[2],
+	       stats->sock_callstats.read.bins[3],
+	       stats->sock_callstats.read.bins[4],
+	       stats->sock_callstats.read.bins[5],
+	       stats->sock_callstats.read.bins[6],
+	       stats->sock_callstats.read.bins[7]);
+    } else {
+        set_netpowerbuf(meantransit, stats);
+	printf(report_bw_isoch_enhanced_netpwr_format,
+	       stats->common->transferIDStr, stats->ts.iStart, stats->ts.iEnd,
+	       outbuffer, outbufferext,
+	       (meantransit * 1e3),
+	       stats->transit.current.min * 1e3,
+	       stats->transit.current.max * 1e3,
+	       (stats->transit.current.cnt < 2) ? 0 : 1e3 * (sqrt(stats->transit.current.m2 / (stats->transit.current.cnt - 1))),
+	       stats->transit.current.cnt,
+	       stats->transit.current.cnt ? (long) ((double)stats->cntBytes / (double) stats->transit.current.cnt) : 0,
+	       netpower_buf,
+	       stats->sock_callstats.read.cntRead,
+	       stats->sock_callstats.read.bins[0],
+	       stats->sock_callstats.read.bins[1],
+	       stats->sock_callstats.read.bins[2],
+	       stats->sock_callstats.read.bins[3],
+	       stats->sock_callstats.read.bins[4],
+	       stats->sock_callstats.read.bins[5],
+	       stats->sock_callstats.read.bins[6],
+	       stats->sock_callstats.read.bins[7]);
+    }
+    if (stats->framelatency_histogram) {
+	histogram_print(stats->framelatency_histogram, stats->ts.iStart, stats->ts.iEnd);
+    }
+    fflush(stdout);
+}
+
 void tcp_output_frame_read (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_frame_tcp_enhanced);
     _print_stats_common(stats);

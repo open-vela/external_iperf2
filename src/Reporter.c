@@ -729,6 +729,7 @@ static void reporter_handle_frame_isoch_oneway_transit (struct TransferInfo *sta
 		    - ((packet->burstperiod * (packet->frameID - 1)) / 1e6);
 	    }
 	    reporter_update_mmm(&stats->transit.total, frametransit);
+	    reporter_update_mmm(&stats->transit.current, frametransit);
 	    if (framedelta > 1) {
 		if (stats->common->ThreadMode == kMode_Server) {
 		    int lost = framedelta - (packet->frameID - packet->prevframeID);

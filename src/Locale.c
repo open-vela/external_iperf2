@@ -349,6 +349,12 @@ const char report_bw_read_enhanced_netpwr_header[] =
 const char report_bw_read_enhanced_netpwr_format[] =
 "%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %.3f/%.3f/%.3f/%.3f ms (%d/%d) %s %s  %d=%d:%d:%d:%d:%d:%d:%d:%d\n";
 
+const char report_bw_isoch_enhanced_netpwr_header[] =
+"[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth    Burst Latency avg/min/max/stdev (cnt/size) NetPwr  Reads=Dist\n";
+
+const char report_bw_isoch_enhanced_netpwr_format[] =
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec  %.3f/%.3f/%.3f/%.3f ms (%d/%d) %s  %d=%d:%d:%d:%d:%d:%d:%d:%d\n";
+
 const char report_sum_bw_read_enhanced_format[] =
 "[SUM] " IPERFTimeFrmt " sec  %ss  %ss/sec  %d=%d:%d:%d:%d:%d:%d:%d:%d\n";
 
