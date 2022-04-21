@@ -37,7 +37,7 @@ config TOOLS_IPERF2_STACKSIZE
 
 config TOOLS_IPERF2_TCP_BUFSIZE
 	int "iperf2 default TCP buffer size"
-	default 32768
+	default 16384
 
 config TOOLS_IPERF2_DATA_REPORT_NUM
 	int "iperf2 default TCP buffer size"
@@ -45,7 +45,7 @@ config TOOLS_IPERF2_DATA_REPORT_NUM
 
 config TOOLS_IPERF2_RECV_BUFSIZE
 	int "Net Receive buffer size"
-	default 327680
+	default 16384
 
 endif
 
