@@ -325,6 +325,11 @@ int Client::StartSynch () {
         Timestamp tmp;
         tmp.set(mSettings->txstart_epoch.tv_sec, mSettings->txstart_epoch.tv_usec);
         framecounter = new Isochronous::FrameCounter(mSettings->mFPS, tmp);
+	// set the mbuf valid for burst period ahead of time. The same value will be set for all burst writes
+	if (!isUDP(mSettings) && framecounter) {
+	    struct TCP_burst_payload * mBuf_burst = reinterpret_cast<struct TCP_burst_payload *>(mSettings->mBuf);
+	    mBuf_burst->burst_period_us  = htonl(framecounter->period_us());
+	}
     }
     int setfullduplexflag = 0;
     if (isFullDuplex(mSettings) && !isServerReverse(mSettings)) {
@@ -1677,11 +1682,6 @@ int Client::SendFirstPayload () {
 #endif
 	    }
 	    WARN_errno(pktlen < 0, "send_hdr");
-	}
-	// set the mbuf valid for burst period ahead of time. The same value will be set for all burst writes
-	if (!isUDP(mSettings) && framecounter) {
-	    struct TCP_burst_payload * mBuf_burst = reinterpret_cast<struct TCP_burst_payload *>(mSettings->mBuf);
-	    mBuf_burst->burst_period_us  = htonl(htonl(framecounter->period_us()));
 	}
     }
     return pktlen;
