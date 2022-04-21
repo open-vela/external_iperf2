@@ -485,7 +485,7 @@ void tcp_output_sumcnt_read_enhanced (struct TransferInfo *stats);
 void tcp_output_frame_read(struct TransferInfo *stats);
 void tcp_output_frame_read_triptime(struct TransferInfo *stats);
 void tcp_output_burst_read(struct TransferInfo *stats);
-
+void tcp_output_read_enhanced_isoch(struct TransferInfo *stats);
 // TCP client
 void tcp_output_write(struct TransferInfo *stats);
 void tcp_output_burst_write(struct TransferInfo *stats);

@@ -311,6 +311,9 @@ extern const char report_client_bb_bw_format[];
 
 extern const char report_client_bb_bw_triptime_format[];
 
+extern const char report_bw_isoch_enhanced_netpwr_header[];
+
+extern const char report_bw_isoch_enhanced_netpwr_format[];
 /* -------------------------------------------------------------------
  * Misc reports
  * ------------------------------------------------------------------- */

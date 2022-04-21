@@ -197,14 +197,11 @@ void Server::RunTCP () {
 		    burst_info.burst_id = ntohl(burst_info.burst_id);
 		    reportstruct->frameID = burst_info.burst_id;
 		    if (isTripTime(mSettings)) {
-			reportstruct->sentTime.tv_sec = ntohl(burst_info.send_tt.write_tv_sec);
-			reportstruct->sentTime.tv_usec = ntohl(burst_info.send_tt.write_tv_usec);
-		    } else {
-			now.setnow();
-			reportstruct->sentTime.tv_sec = now.getSecs();
-			reportstruct->sentTime.tv_usec = now.getUsecs();
-		    }
-		    if (isIsochronous(mSettings) && !burst_info.burst_period_us) {
+			burst_info.send_tt.write_tv_sec = ntohl(burst_info.send_tt.write_tv_sec);
+			burst_info.send_tt.write_tv_usec = ntohl(burst_info.send_tt.write_tv_usec);
+		    } else if (isIsochronous(mSettings)) {
+			burst_info.send_tt.write_tv_sec = (uint32_t)myReport->info.ts.startTime.tv_sec;
+			burst_info.send_tt.write_tv_usec = (uint32_t)myReport->info.ts.startTime.tv_usec;
 			burst_info.burst_period_us = ntohl(burst_info.burst_period_us);
 		    }
 		    // This is the first stamp of the burst
@@ -213,6 +210,7 @@ void Server::RunTCP () {
 		    if (burst_nleft == 0) {
 			reportstruct->prevSentTime = myReport->info.ts.prevsendTime;
 			reportstruct->transit_ready = 1;
+			reportstruct->burstperiod = burst_info.burst_period_us;
 		    }
 		    currLen += n;
 		    readLen = (mSettings->mBufLen < burst_nleft) ? mSettings->mBufLen : burst_nleft;
@@ -238,7 +236,11 @@ void Server::RunTCP () {
 			burst_nleft -= n;
 			if (burst_nleft == 0) {
 			    reportstruct->prevSentTime = myReport->info.ts.prevsendTime;
-			    reportstruct->isochStartTime = myReport->info.ts.startTime;
+			    if (isTripTime(mSettings) || isIsochronous(mSettings)) {
+				reportstruct->isochStartTime.tv_sec = burst_info.send_tt.write_tv_sec;
+				reportstruct->isochStartTime.tv_usec = burst_info.send_tt.write_tv_usec;
+				reportstruct->burstperiod = burst_info.burst_period_us;
+			    }
 			    reportstruct->transit_ready = 1;
 			}
 		    }
