@@ -54,6 +54,7 @@
 #include "headers.h"
 #include "util.h"
 #include "delay.h"
+#include "Thread.h"
 #include <math.h>
 
 #define MILLION 1000000
@@ -64,6 +65,7 @@
  * o Use a busy loop or nanosleep
  *
  * Some notes:
+ * o clock nanosleep with a relative is preferred (see man page for why)
  * o clock_gettime() (if available) is preferred over gettimeofday()
  *   as it give nanosecond resolution and should be more efficient.
  *   It also supports CLOCK_MONOTONIC and CLOCK_MONOTONIC_RAW
@@ -92,15 +94,95 @@
 
 void delay_loop(unsigned long usec)
 {
-#ifdef HAVE_KALMAN
+#ifdef HAVE_CLOCK_NANOSLEEP
+  {
+    struct timespec res;
+    res.tv_sec = usec/MILLION;
+    res.tv_nsec = (usec * 1000) % BILLION;
+  #ifndef WIN32
+    clock_nanosleep(CLOCK_MONOTONIC, 0, &res, NULL);
+  #else
+    clock_nanosleep(0, 0, &res, NULL);
+  #endif
+  }
+#else
+  #ifdef HAVE_KALMAN
     delay_kalman(usec);
-#else
-#ifdef HAVE_NANOSLEEP
+  #else
+  #ifdef HAVE_NANOSLEEP
     delay_nanosleep(usec);
-#else
+  #else
     delay_busyloop(usec);
+  #endif
+  #endif
 #endif
+}
+
+int clock_usleep (struct timeval *request) {
+    int rc = 0;
+#if HAVE_THREAD_DEBUG
+    thread_debug("Thread called clock_usleep() until %ld.%ld", request->tv_sec, request->tv_usec);
 #endif
+#ifdef HAVE_CLOCK_NANOSLEEP
+    struct timespec tmp;
+    tmp.tv_sec = request->tv_sec;
+    tmp.tv_nsec = request->tv_usec * 1000;
+
+// Cygwin systems have an issue with CLOCK_MONOTONIC
+#if defined(CLOCK_MONOTONIC) && !defined(WIN32)
+    rc = clock_nanosleep(CLOCK_MONOTONIC, 0, &tmp, NULL);
+#else
+    rc = clock_nanosleep(0, 0, &tmp, NULL);
+#endif
+    if (rc) {
+	fprintf(stderr, "failed clock_nanosleep()=%d\n", rc);
+    }
+#else
+    struct timeval now;
+    struct timeval next = *request;
+#ifdef HAVE_CLOCK_GETTIME
+    struct timespec t1;
+    clock_gettime(CLOCK_REALTIME, &t1);
+    now.tv_sec  = t1.tv_sec;
+    now.tv_usec = t1.tv_nsec / 1000;
+#else
+    gettimeofday(&now, NULL);
+#endif
+    double delta_usecs;
+    if ((delta_usecs = TimeDifference(next, now)) > 0.0) {
+	delay_loop(delta_usecs);
+    }
+#endif
+    return rc;
+}
+
+int clock_usleep_abstime (struct timeval *request) {
+    int rc = 0;
+#if defined(HAVE_CLOCK_NANOSLEEP) && defined(TIMER_ABSTIME) && !defined(WIN32)
+    struct timespec tmp;
+    tmp.tv_sec = request->tv_sec;
+    tmp.tv_nsec = request->tv_usec * 1000;
+    rc = clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &tmp, NULL);
+    if (rc) {
+	fprintf(stderr, "failed clock_nanosleep()=%d\n", rc);
+    }
+#else
+    struct timeval now;
+    struct timeval next = *request;
+#ifdef HAVE_CLOCK_GETTIME
+    struct timespec t1;
+    clock_gettime(CLOCK_REALTIME, &t1);
+    now.tv_sec  = t1.tv_sec;
+    now.tv_usec = t1.tv_nsec / 1000;
+#else
+    gettimeofday(&now, NULL);
+#endif
+    double delta_usecs;
+    if ((delta_usecs = (1e6 * TimeDifference(next, now))) > 0.0) {
+	delay_loop(delta_usecs);
+    }
+#endif
+    return rc;
 }
 
 #ifdef HAVE_NANOSLEEP
@@ -117,7 +199,8 @@ void delay_nanosleep (unsigned long usec) {
 
 #if defined (HAVE_NANOSLEEP) || defined (HAVE_CLOCK_GETTIME)
 static void timespec_add_ulong (struct timespec *tv0, unsigned long value) {
-    tv0->tv_nsec += value;
+    tv0->tv_sec += (value / BILLION);
+    tv0->tv_nsec += (value % BILLION);
     if (tv0->tv_nsec >= BILLION) {
 	tv0->tv_sec++;
 	tv0->tv_nsec -= BILLION;
@@ -130,7 +213,7 @@ static void timespec_add_ulong (struct timespec *tv0, unsigned long value) {
 // accuracy over a minimum guaranteed delay by
 // prediciting the delay error. This is
 // the basic recursive algorithm.
-static void kalman_update (kalman_state *state, double measurement) {
+static void kalman_update (struct kalman_state *state, double measurement) {
     //prediction update
     state->p = state->p + state->q;
     //measurement update
@@ -196,7 +279,7 @@ void delay_busyloop (unsigned long usec) {
 void delay_kalman (unsigned long usec) {
     struct timespec t1, t2, finishtime, requested={0,0}, remaining;
     double nsec_adjusted, err;
-    static kalman_state kalmanerr={
+    static struct kalman_state kalmanerr={
 	0.00001, //q process noise covariance
 	0.1, //r measurement noise covariance
 	0.0, //x value, error predictio (units nanoseconds)
@@ -228,7 +311,7 @@ void delay_kalman (unsigned long usec) {
     }
     // Compute the delay error in units of nanoseconds
     // and cast to type double
-    err = (double) (timespec_diff(t2, t1) - (usec * 1000));
+    err = (timespec_diff(t2, t1) - (usec * 1000));
     // printf("req: %ld adj: %f err: %.5f (ns)\n", usec, nsec_adjusted, kalmanerr.x);
     kalman_update(&kalmanerr, err);
 }
@@ -279,7 +362,7 @@ void delay_kalman (unsigned long usec) {
     struct timeval t1, t2, finishtime;
     long usec_adjusted;
     double err;
-    static kalman_state kalmanerr={
+    static struct kalman_state kalmanerr={
 	0.00001, //q process noise covariance
 	0.1, //r measurement noise covariance
 	0.0, //x value, error predictio (units nanoseconds)
@@ -322,5 +405,3 @@ void delay_kalman (unsigned long usec) {
 }
 #endif // Kalman
 #endif
-
-
