@@ -50,8 +50,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-float normal(float mean, float stdev);
-float lognormal(float mean, float stdev);
+float normal(float mean, float variance);
+float lognormal(float mu, float sigma);
 float box_muller(void);
 #ifdef __cplusplus
 } /* end extern "C" */
