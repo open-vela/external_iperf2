@@ -90,6 +90,8 @@ static void reporter_reset_mmm (struct MeanMinMaxStats *stats);
 
 // one way delay (OWD) calculations
 static void reporter_handle_packet_oneway_transit(struct TransferInfo *stats, struct ReportStruct *packet);
+static void reporter_handle_isoch_oneway_transit_tcp(struct TransferInfo *stats, struct ReportStruct *packet);
+static void reporter_handle_isoch_oneway_transit_udp(struct TransferInfo *stats, struct ReportStruct *packet);
 static void reporter_handle_frame_isoch_oneway_transit(struct TransferInfo *stats, struct ReportStruct *packet);
 static void reporter_handle_txmsg_oneway_transit(struct TransferInfo *stats, struct ReportStruct *packet);
 static void reporter_handle_rxmsg_oneway_transit(struct TransferInfo *stats, struct ReportStruct *packet);
@@ -708,7 +710,43 @@ static void reporter_handle_packet_oneway_transit (struct TransferInfo *stats, s
     stats->transit.current.last = transit;
 }
 
-static void reporter_handle_frame_isoch_oneway_transit (struct TransferInfo *stats, struct ReportStruct *packet) {
+
+static void reporter_handle_isoch_oneway_transit_tcp (struct TransferInfo *stats, struct ReportStruct *packet) {
+    // printf("fid=%lu bs=%lu remain=%lu\n", packet->frameID, packet->burstsize, packet->remaining);
+    if (packet->frameID && packet->transit_ready) {
+	int framedelta = 0;
+	double frametransit = 0;
+	// very first isochronous frame
+	if (!stats->isochstats.frameID) {
+	    stats->isochstats.framecnt.current=packet->frameID;
+	}
+	// perform client and server frame based accounting
+	if ((framedelta = (packet->frameID - stats->isochstats.frameID))) {
+	    stats->isochstats.framecnt.current++;
+	    if (framedelta > 1) {
+		stats->isochstats.framelostcnt.current += (framedelta-1);
+		stats->isochstats.slipcnt.current++;
+	    } else if (stats->common->ThreadMode == kMode_Server) {
+		// Triptimes use the frame start time in passed in the frame header while
+		// it's calculated from the very first start time and frame id w/o trip timees
+		if (isTripTime(stats->common)) {
+		    frametransit = TimeDifference(packet->packetTime, packet->isochStartTime);
+		} else {
+		    frametransit = TimeDifference(packet->packetTime, packet->isochStartTime) \
+			- ((packet->burstperiod * (packet->frameID - 1)) / 1e6);
+		}
+		reporter_update_mmm(&stats->transit.total, frametransit);
+		reporter_update_mmm(&stats->transit.current, frametransit);
+		if (stats->framelatency_histogram) {
+		    histogram_insert(stats->framelatency_histogram, frametransit, &packet->packetTime);
+		}
+	    }
+	}
+	stats->isochstats.frameID = packet->frameID;
+    }
+}
+
+static void reporter_handle_isoch_oneway_transit_udp (struct TransferInfo *stats, struct ReportStruct *packet) {
     // printf("fid=%lu bs=%lu remain=%lu\n", packet->frameID, packet->burstsize, packet->remaining);
     if (packet->frameID && packet->transit_ready) {
 	int framedelta = 0;
@@ -739,6 +777,9 @@ static void reporter_handle_frame_isoch_oneway_transit (struct TransferInfo *sta
 		}
 		reporter_update_mmm(&stats->transit.total, frametransit);
 		reporter_update_mmm(&stats->transit.current, frametransit);
+		if (stats->framelatency_histogram) {
+		    histogram_insert(stats->framelatency_histogram, frametransit, &packet->packetTime);
+		}
 	    }
 	}
 	// peform frame latency checks
@@ -806,8 +847,47 @@ static inline void reporter_handle_txmsg_oneway_transit (struct TransferInfo *st
 	}
     }
 }
-// This is done in reporter thread context
 
+static void reporter_handle_frame_isoch_oneway_transit (struct TransferInfo *stats, struct ReportStruct *packet) {
+    // printf("fid=%lu bs=%lu remain=%lu\n", packet->frameID, packet->burstsize, packet->remaining);
+    if (packet->frameID && packet->transit_ready) {
+	int framedelta=0;
+	// very first isochronous frame
+	if (!stats->isochstats.frameID) {
+	    stats->isochstats.framecnt.current=packet->frameID;
+	}
+	// perform client and server frame based accounting
+	if ((framedelta = (packet->frameID - stats->isochstats.frameID))) {
+	    stats->isochstats.framecnt.current++;
+	    if (framedelta > 1) {
+		if (stats->common->ThreadMode == kMode_Server) {
+		    int lost = framedelta - (packet->frameID - packet->prevframeID);
+		    stats->isochstats.framelostcnt.current += lost;
+		} else {
+		    stats->isochstats.framelostcnt.current += (framedelta-1);
+		    stats->isochstats.slipcnt.current++;
+		}
+	    }
+	}
+	// peform frame latency checks
+	if (stats->framelatency_histogram) {
+	    // first packet of a burst and not a duplicate
+	    if ((packet->burstsize == packet->remaining) && (stats->matchframeID!=packet->frameID)) {
+		stats->matchframeID=packet->frameID;
+	    }
+	    if ((packet->packetLen == packet->remaining) && (packet->frameID == stats->matchframeID)) {
+		// last packet of a burst (or first-last in case of a duplicate) and frame id match
+		double frametransit = TimeDifference(packet->packetTime, packet->isochStartTime) \
+		    - ((packet->burstperiod * (packet->frameID - 1)) / 1000000.0);
+		histogram_insert(stats->framelatency_histogram, frametransit, NULL);
+		stats->matchframeID = 0;  // reset the matchid so any potential duplicate is ignored
+	    }
+	}
+	stats->isochstats.frameID = packet->frameID;
+    }
+}
+
+// This is done in reporter thread context
 void reporter_handle_packet_client (struct ReporterData *data, struct ReportStruct *packet) {
     struct TransferInfo *stats = &data->info;
     stats->ts.packetTime = packet->packetTime;
@@ -892,7 +972,7 @@ inline void reporter_handle_packet_server_tcp (struct ReporterData *data, struct
 	}
 	if (packet->transit_ready) {
 	    if (isIsochronous(stats->common) && packet->frameID) {
-		reporter_handle_frame_isoch_oneway_transit(stats, packet);
+		reporter_handle_isoch_oneway_transit_tcp(stats, packet);
 	    } else if (isPeriodicBurst(stats->common) || isTripTime(stats->common)) {
 		reporter_handle_rxmsg_oneway_transit(stats, packet);
 	    }
@@ -943,10 +1023,10 @@ inline void reporter_handle_packet_server_udp (struct ReporterData *data, struct
 	}
 	reporter_compute_packet_pps(stats, packet);
 	reporter_handle_packet_oneway_transit(stats, packet);
-	if (packet->transit_ready) {
-	    if (isIsochronous(stats->common) && packet->frameID) {
-		reporter_handle_frame_isoch_oneway_transit(stats, packet);
-	    } else if (isPeriodicBurst(stats->common) && packet->frameID) {
+	if (packet->transit_ready && packet->frameID) {
+	    if (isIsochronous(stats->common)) {
+		reporter_handle_isoch_oneway_transit_udp(stats, packet);
+	    } else if (isPeriodicBurst(stats->common)) {
 		reporter_handle_txmsg_oneway_transit(stats, packet);
 	    }
 	}

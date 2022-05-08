@@ -288,7 +288,7 @@ output, e.g. --sum-only
 write/frame/burst reporting, supports special type of sampling
 
 These vectors are initialized after the thread settings object and
-as part of report instantiation.  Code is in src/Reports.c
+as part of report instantiation.  That code is in src/Reports.c
 
 Startup (src/main.cpp src/Launch.cpp)
 -------------------------------------
