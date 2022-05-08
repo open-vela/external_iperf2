@@ -546,11 +546,11 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 		    ireport->info.output_handler = NULL;
 		} else if (isTripTime(inSettings)) {
 		    if (isIsochronous(inSettings))
-			ireport->info.output_handler = udp_output_read_enhanced_triptime_isoch;
+			ireport->info.output_handler = udp_output_read_triptime_isoch;
 		    else
-			ireport->info.output_handler = udp_output_read_enhanced_triptime;
+			ireport->info.output_handler = udp_output_read_triptime;
 		} else if (isEnhanced(inSettings)) {
-		    ireport->info.output_handler = udp_output_read_enhanced_triptime;
+		    ireport->info.output_handler = udp_output_read_triptime;
 		} else if (isFullDuplex(inSettings)) {
 		    ireport->info.output_handler = udp_output_read;
 		} else {

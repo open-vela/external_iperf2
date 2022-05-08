@@ -239,7 +239,7 @@ void tcp_output_read_enhanced (struct TransferInfo *stats) {
 	   stats->sock_callstats.read.bins[7]);
     fflush(stdout);
 }
-void tcp_output_read_enhanced_triptime (struct TransferInfo *stats) {
+void tcp_output_read_triptime (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw_read_enhanced_netpwr);
     double meantransit = (stats->transit.current.cnt > 0) ? (stats->transit.current.sum / stats->transit.current.cnt) : 0;
     double lambda = (stats->IPGsum > 0.0) ? ((double)stats->cntBytes / stats->IPGsum) : 0.0;
@@ -706,7 +706,7 @@ void udp_output_read (struct TransferInfo *stats) {
     fflush(stdout);
 }
 
-void udp_output_read_enhanced_triptime (struct TransferInfo *stats) {
+void udp_output_read_triptime (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw_jitter_loss_enhanced_triptime);
     _print_stats_common(stats);
 
@@ -753,7 +753,7 @@ void udp_output_read_enhanced_triptime (struct TransferInfo *stats) {
     _output_outoforder(stats);
     fflush(stdout);
 }
-void udp_output_read_enhanced_triptime_isoch (struct TransferInfo *stats) {
+void udp_output_read_triptime_isoch (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw_jitter_loss_enhanced_isoch_triptime);
     _print_stats_common(stats);
     if (!stats->cntIPG) {
@@ -1688,10 +1688,10 @@ void reporter_peerversion (struct ConnectionInfo *report, uint32_t upper, uint32
 
 void reporter_print_server_relay_report (struct ServerRelay *report) {
     printf(server_reporting, report->info.common->transferID);
-    if (!isEnhanced(report->info.common)) {
-	udp_output_read(&report->info);
+    if (isTripTime(report->info.common) || isEnhanced(report->info.common)) {
+	udp_output_read_triptime(&report->info);
     } else {
-	udp_output_read_enhanced_triptime(&report->info);
+	udp_output_read(&report->info);
     }
     fflush(stdout);
 }
