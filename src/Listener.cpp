@@ -896,18 +896,20 @@ int Listener::udp_accept (thread_Settings *server) {
     // Preset the server socket to INVALID, hang recvfrom on the Listener's socket
     // The INVALID socket is used to keep the while loop going
     server->mSock = INVALID_SOCKET;
-    nread = recvfrom(ListenSocket, server->mBuf, server->mBufLen, 0, \
-		     reinterpret_cast<struct sockaddr*>(&server->peer), &server->size_peer);
-    // filter and ignore negative sequence numbers, these can be heldover from a previous run
-    struct UDP_datagram* mBuf_UDP  = reinterpret_cast<struct UDP_datagram*>(server->mBuf);
     intmax_t packetID;
-    if (isSeqNo64b(mSettings)) {
-	// New client - Signed PacketID packed into unsigned id2,id
-	packetID = (static_cast<uint32_t>(ntohl(mBuf_UDP->id))) | (static_cast<uintmax_t>(ntohl(mBuf_UDP->id2)) << 32);
-    } else {
-	// Old client - Signed PacketID in Signed id
-	packetID = static_cast<int32_t>(ntohl(mBuf_UDP->id));
-    }
+    struct UDP_datagram* mBuf_UDP  = reinterpret_cast<struct UDP_datagram*>(server->mBuf);
+    do {
+	nread = recvfrom(ListenSocket, server->mBuf, server->mBufLen, 0, \
+			 reinterpret_cast<struct sockaddr*>(&server->peer), &server->size_peer);
+	// filter and ignore negative sequence numbers, these can be heldover from a previous run
+	if (isSeqNo64b(mSettings)) {
+	    // New client - Signed PacketID packed into unsigned id2,id
+	    packetID = (static_cast<uint32_t>(ntohl(mBuf_UDP->id))) | (static_cast<uintmax_t>(ntohl(mBuf_UDP->id2)) << 32);
+	} else {
+	    // Old client - Signed PacketID in Signed id
+	    packetID = static_cast<int32_t>(ntohl(mBuf_UDP->id));
+	}
+    } while ((nread > 0) && (packetID < 0) && !sInterupted); //drain any leftover or stale packets
     if (packetID > 0) {
 	Timestamp now;
 	server->accept_time.tv_sec = now.getSecs();
