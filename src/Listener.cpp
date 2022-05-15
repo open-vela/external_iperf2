@@ -898,6 +898,13 @@ int Listener::udp_accept (thread_Settings *server) {
     server->mSock = INVALID_SOCKET;
     intmax_t packetID;
     struct UDP_datagram* mBuf_UDP  = reinterpret_cast<struct UDP_datagram*>(server->mBuf);
+    // Look for a postive seq no packet while draining any leftover or stale neg seq no packets
+    // UDP client traffic thread uses negative seq numbers to indicate to the server that
+    // traffic is over. Those packets can be in the stack/network pipeline after the server
+    // thread has ended and closed its reporting. The Listener will now receive them. Since UDP
+    // is stateless, any packet causes a new "udp accept" So, in the case of negative seq no,
+    // we know that this is not a new client thread but remnants of an old one that already ended.
+    // Hence, ignore "first packets" when they have negative seq numbers.
     do {
 	packetID = 0;
 	nread = recvfrom(ListenSocket, server->mBuf, server->mBufLen, 0, \
@@ -912,7 +919,7 @@ int Listener::udp_accept (thread_Settings *server) {
 		packetID = static_cast<int32_t>(ntohl(mBuf_UDP->id));
 	    }
 	}
-    } while ((nread > 0) && (packetID < 0) && !sInterupted); //drain any leftover or stale neg seq no packets
+    } while ((nread > 0) && (packetID < 0) && !sInterupted);
     FAIL_errno(nread == SOCKET_ERROR, "recvfrom", mSettings);
     if ((nread > 0) && !sInterupted) {
 	Timestamp now;
