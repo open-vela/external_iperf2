@@ -805,6 +805,7 @@ int Server::L2_quintuple_filter () {
 }
 
 inline void Server::udp_isoch_processing (int rxlen) {
+    reportstruct->transit_ready = 0;
     // Ignore runt sized isoch packets
     if (rxlen < static_cast<int>(sizeof(struct UDP_datagram) +  sizeof(struct client_hdr_v1) + sizeof(struct client_hdrext) + sizeof(struct isoch_payload))) {
 	reportstruct->burstsize = 0;
