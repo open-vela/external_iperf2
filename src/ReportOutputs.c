@@ -1,3 +1,4 @@
+
 /*---------------------------------------------------------------
  * Copyright (c) 2020
  * Broadcom Corporation
@@ -153,7 +154,7 @@ static inline void _output_outoforder(struct TransferInfo *stats) {
 //  lambda the arrival rate and W is the processing time
 //
 #define LLAW_LOWERBOUNDS -1e7
-static inline void set_llawbuf(double lambda, double meantransit, struct TransferInfo *stats) {
+static inline void set_llawbuf(double lambda, double meantransit) {
     double L  = lambda * meantransit;
     if (L < LLAW_LOWERBOUNDS) {
 	strcpy(llaw_buf, "OBL");
@@ -163,7 +164,7 @@ static inline void set_llawbuf(double lambda, double meantransit, struct Transfe
 	llaw_buf[sizeof(llaw_buf)-1] = '\0';
     }
 }
-static inline void set_llawbuf_udp (int lambda, double meantransit, double variance, struct TransferInfo *stats) {
+static inline void set_llawbuf_udp (int lambda, double meantransit, double variance, intmax_t pktcnt) {
     int Lvar = 0;
     int L  = round(lambda * meantransit);
     if (variance > 0.0) {
@@ -171,7 +172,19 @@ static inline void set_llawbuf_udp (int lambda, double meantransit, double varia
     } else {
 	Lvar = 0;
     }
-    snprintf(llaw_buf, sizeof(llaw_buf), "%" PRIdMAX "/%d(%d) pkts", stats->cntIPG, L, Lvar);
+    snprintf(llaw_buf, sizeof(llaw_buf), "%" PRIdMAX "/%d(%d) pkts", pktcnt, L, Lvar);
+    llaw_buf[sizeof(llaw_buf) - 1] = '\0';
+}
+
+static inline void set_llawbuf_frames (int lambda, double meantransit, double variance, intmax_t framecnt) {
+    int Lvar = 0;
+    int L  = round(lambda * meantransit);
+    if (variance > 0.0) {
+	Lvar  = round(lambda * variance);
+    } else {
+	Lvar = 0;
+    }
+    snprintf(llaw_buf, sizeof(llaw_buf), "%" PRIdMAX "/%d(%d) frames", framecnt, L, Lvar);
     llaw_buf[sizeof(llaw_buf) - 1] = '\0';
 }
 
@@ -243,7 +256,7 @@ void tcp_output_read_triptime (struct TransferInfo *stats) {
     HEADING_PRINT_COND(report_bw_read_enhanced_netpwr);
     double meantransit = (stats->transit.current.cnt > 0) ? (stats->transit.current.sum / stats->transit.current.cnt) : 0;
     double lambda = (stats->IPGsum > 0.0) ? ((double)stats->cntBytes / stats->IPGsum) : 0.0;
-    set_llawbuf(lambda, meantransit, stats);
+    set_llawbuf(lambda, meantransit);
     _print_stats_common(stats);
     if (stats->cntBytes) {
         set_netpowerbuf(meantransit, stats);
@@ -731,7 +744,7 @@ void udp_output_read_triptime (struct TransferInfo *stats) {
 	    int lambda =  ((stats->IPGsum > 0.0) ? (round (stats->cntIPG / stats->IPGsum)) : 0.0);
 	    double variance = (stats->transit.current.cnt < 2) ? 0 : \
 		(sqrt(stats->transit.current.m2 / (stats->transit.current.cnt - 1)));
-	    set_llawbuf_udp(lambda, meantransit, variance, stats);
+	    set_llawbuf_udp(lambda, meantransit, variance, stats->cntIPG);
 	    set_netpowerbuf(meantransit, stats);
 	    printf(report_bw_jitter_loss_enhanced_triptime_format, stats->common->transferIDStr,
 		   stats->ts.iStart, stats->ts.iEnd,
@@ -777,10 +790,8 @@ void udp_output_read_triptime_isoch (struct TransferInfo *stats) {
 		   (100.0 * stats->cntError) / stats->cntDatagrams,
 		   (stats->cntIPG / stats->IPGsum));
 	} else {
+	    double frame_meantransit = (stats->isochstats.transit.current.cnt > 0) ? (stats->isochstats.transit.current.sum / stats->isochstats.transit.current.cnt) : 0;
 	    double meantransit = (stats->transit.current.cnt > 0) ? (stats->transit.current.sum / stats->transit.current.cnt) : 0;
-	    int lambda =  ((stats->IPGsum > 0.0) ? (round (stats->cntIPG / stats->IPGsum)) : 0.0);
-	    double variance = (stats->transit.current.cnt < 2) ? 0 : (sqrt(stats->transit.current.m2 / (stats->transit.current.cnt - 1)));
-	    set_llawbuf_udp(lambda, meantransit, variance, stats);
 	    set_netpowerbuf(meantransit, stats);
 	    printf(report_bw_jitter_loss_enhanced_isoch_format, stats->common->transferIDStr,
 		   stats->ts.iStart, stats->ts.iEnd,
@@ -792,9 +803,12 @@ void udp_output_read_triptime_isoch (struct TransferInfo *stats) {
 		   stats->transit.current.max * 1e3,
 		   (stats->transit.current.cnt < 2) ? 0 : 1e3 * (sqrt(stats->transit.current.m2 / (stats->transit.current.cnt - 1))),
 		   (stats->cntIPG / stats->IPGsum),
-		   llaw_buf,
-		   netpower_buf,
-		   stats->isochstats.cntFrames, stats->isochstats.cntFramesMissed);
+		   stats->isochstats.cntFrames, stats->isochstats.cntFramesMissed,
+		   (frame_meantransit * 1e3),
+		   stats->isochstats.transit.current.min * 1e3,
+		   stats->isochstats.transit.current.max * 1e3,
+		   (stats->isochstats.transit.current.cnt < 2) ? 0 : 1e3 * (sqrt(stats->isochstats.transit.current.m2 / (stats->isochstats.transit.current.cnt - 1))),
+		   netpower_buf);
 	}
     }
     if (stats->latency_histogram) {

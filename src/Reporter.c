@@ -735,8 +735,8 @@ static void reporter_handle_isoch_oneway_transit_tcp (struct TransferInfo *stats
 		    frametransit = TimeDifference(packet->packetTime, packet->isochStartTime) \
 			- ((packet->burstperiod * (packet->frameID - 1)) / 1e6);
 		}
-		reporter_update_mmm(&stats->transit.total, frametransit);
-		reporter_update_mmm(&stats->transit.current, frametransit);
+		reporter_update_mmm(&stats->isochstats.transit.total, frametransit);
+		reporter_update_mmm(&stats->isochstats.transit.current, frametransit);
 		if (stats->framelatency_histogram) {
 		    histogram_insert(stats->framelatency_histogram, frametransit, &packet->packetTime);
 		}
@@ -753,50 +753,34 @@ static void reporter_handle_isoch_oneway_transit_udp (struct TransferInfo *stats
 	double frametransit = 0;
 	// very first isochronous frame
 	if (!stats->isochstats.frameID) {
-	    stats->isochstats.framecnt.current=packet->frameID;
+	    stats->isochstats.framecnt.current=1;
 	}
 	// perform client and server frame based accounting
-	if ((framedelta = (packet->frameID - stats->isochstats.frameID))) {
-	    stats->isochstats.framecnt.current++;
-	    if (framedelta > 1) {
-		if (stats->common->ThreadMode == kMode_Server) {
-		    int lost = framedelta - (packet->frameID - packet->prevframeID);
-		    stats->isochstats.framelostcnt.current += lost;
-		} else {
-		    stats->isochstats.framelostcnt.current += (framedelta-1);
-		    stats->isochstats.slipcnt.current++;
-		}
-	    } else if (stats->common->ThreadMode == kMode_Server) {
-		// Triptimes use the frame start time in passed in the frame header while
-		// it's calculated from the very first start time and frame id w/o trip timees
-		if (isTripTime(stats->common)) {
-		    frametransit = TimeDifference(packet->packetTime, packet->isochStartTime);
-		} else {
-		    frametransit = TimeDifference(packet->packetTime, packet->isochStartTime) \
-			- ((packet->burstperiod * (packet->frameID - 1)) / 1e6);
-		}
-		reporter_update_mmm(&stats->transit.total, frametransit);
-		reporter_update_mmm(&stats->transit.current, frametransit);
-		if (stats->framelatency_histogram) {
-		    histogram_insert(stats->framelatency_histogram, frametransit, &packet->packetTime);
-		}
+	framedelta = (packet->frameID - stats->isochstats.frameID);
+	stats->isochstats.framecnt.current++;
+//      stats->matchframeID = packet->frameID + 1;
+	if (framedelta == 1) {
+	    // Triptimes use the frame start time in passed in the frame header while
+	    // it's calculated from the very first start time and frame id w/o trip timees
+	    frametransit = TimeDifference(packet->packetTime, packet->isochStartTime) \
+		- ((packet->burstperiod * (packet->frameID - 1)) / 1e6);
+	    reporter_update_mmm(&stats->isochstats.transit.total, frametransit);
+	    reporter_update_mmm(&stats->isochstats.transit.current, frametransit);
+	    if (stats->framelatency_histogram) {
+		histogram_insert(stats->framelatency_histogram, frametransit, &packet->packetTime);
 	    }
-	}
-	// peform frame latency checks
-	if (stats->framelatency_histogram) {
-	    // first packet of a burst and not a duplicate
-	    if ((packet->burstsize == packet->remaining) && (stats->matchframeID!=packet->frameID)) {
-		stats->matchframeID=packet->frameID;
-	    }
-	    if ((packet->packetLen == packet->remaining) && (packet->frameID == stats->matchframeID)) {
-		// last packet of a burst (or first-last in case of a duplicate) and frame id match
-		histogram_insert(stats->framelatency_histogram, frametransit, NULL);
-		stats->matchframeID = 0;  // reset the matchid so any potential duplicate is ignored
+	} else {
+	    if (stats->common->ThreadMode == kMode_Server) {
+		stats->isochstats.framelostcnt.current += framedelta;
+	    } else {
+		stats->isochstats.framelostcnt.current += framedelta;
+		stats->isochstats.slipcnt.current++;
 	    }
 	}
 	stats->isochstats.frameID = packet->frameID;
     }
 }
+
 
 static void reporter_handle_rxmsg_oneway_transit (struct TransferInfo *stats, struct ReportStruct *packet) {
     // very first burst
