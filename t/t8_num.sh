@@ -8,5 +8,5 @@
 # results returned in $results
 
 run_iperf    \
-    -s -P 1 -i 1 -t 3     \
+    -s -P 1 -i 1 -t 8     \
     -c $ip -P 1 -i 1 --num 1G
