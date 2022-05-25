@@ -1227,8 +1227,8 @@ void Client::RunUDPIsochronous () {
 	lastPacketTime.setnow();
 	if (!initdone) {
 	    initdone = 1;
-	    udp_payload->isoch.start_tv_sec = htonl(framecounter->getSecs());
-	    udp_payload->isoch.start_tv_usec = htonl(framecounter->getUsecs());
+	    udp_payload->isoch.start_tv_sec = htonl(lastPacketTime.getSecs());
+	    udp_payload->isoch.start_tv_usec = htonl(lastPacketTime.getUsecs());
 	}
 	while ((bytecnt > 0) && InProgress()) {
 	    t1.setnow();
