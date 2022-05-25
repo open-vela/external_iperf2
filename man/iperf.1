@@ -17,8 +17,9 @@ metrics supported include throughput and latency. Iperf can use both TCP and UDP
 protocols.) It supports unidirectional, full duplex (same socket) and bidirectional traffic, and supports
 multiple, simultaneous traffic streams. It supports multicast traffic including source specific
 multicast (SSM) joins. Its multi-threaded design allows for peak performance. Metrics displayed help to
-characterize host to host network performance. Note: Setting the enhanced (-e) option provides all
-available metrics.
+characterize host to host network performance. Setting the enhanced (-e) option provides all
+available metrics. Note: the metrics are at the socket level reads and writes. They do
+not include the overhead associated with lower level protocol layer headers.
 .LP
 The user must establish both a both a server (to receive traffic)
 and a client (to generate and send traffic) for a test to occur.
