@@ -422,7 +422,9 @@ void reporter_spawn (struct thread_Settings *thread) {
 #ifdef HAVE_THREAD_DEBUG
     thread_debug( "Reporter thread started");
 #endif
-    myConnectionReport = InitConnectOnlyReport(thread);
+    if (isEnhanced(thread)) {
+        myConnectionReport = InitConnectOnlyReport(thread);
+    }
     /*
      * reporter main loop needs to wait on all threads being started
      */
