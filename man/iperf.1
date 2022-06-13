@@ -1,4 +1,4 @@
-.TH IPERF 1 "January 2022" NLANR/DAST "User Manuals"
+.TH IPERF 1 "June 2022" NLANR/DAST "User Manuals"
 .SH NAME
 iperf \- perform network traffic tests using network sockets. Metrics include throughput and latency.
 .SH SYNOPSIS
@@ -172,8 +172,8 @@ set target bandwidth to \fIn\fR bits/sec (default 1 Mbit/sec) or
 .BR "    --bounceback "
 run a tcp bounceback test (set size with -l or --len, defaults to 100 bytes)
 .TP
-.BR "    --bounceback-congest "
-request a concurrent full-duplex TCP stream
+.BR "    --bounceback-congest[="\fBup|down]\fR
+request a concurrent working load TCP stream, defaults to full duplex unless the \fBup\fR or \fBdown\fR option is provided, ToS will be BE (0x0)
 .TP
 .BR "    --bounceback-hold " \fIn\fR
 request the server to insert a delay of n milliseconds between its read and write (default is no delay)
