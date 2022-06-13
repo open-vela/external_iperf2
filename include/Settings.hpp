@@ -387,8 +387,9 @@ struct thread_Settings {
 #define FLAG_INCRSRCPORT    0x00000400
 #define FLAG_OVERRIDETOS    0x00000800
 #define FLAG_TCPQUICKACK    0x00001000
-#define FLAG_CONGEST        0x00002000
-#define FLAG_DOMAINV4       0x00004000
+#define FLAG_WORKING_LOAD_DOWN 0x00002000
+#define FLAG_WORKING_LOAD_UP 0x00004000
+#define FLAG_DOMAINV4       0x00008000
 
 #define isBuflenSet(settings)      ((settings->flags & FLAG_BUFLENSET) != 0)
 #define isCompat(settings)         ((settings->flags & FLAG_COMPAT) != 0)
@@ -424,7 +425,7 @@ struct thread_Settings {
 #define isPeerVerDetect(settings)  ((settings->flags_extend & FLAG_PEERVER) != 0)
 #define isSeqNo64b(settings)       ((settings->flags_extend & FLAG_SEQNO64) != 0)
 #define isReverse(settings)        ((settings->flags_extend & FLAG_REVERSE) != 0)
-#define isFullDuplex(settings)          ((settings->flags_extend & FLAG_FULLDUPLEX) != 0)
+#define isFullDuplex(settings)     ((settings->flags_extend & FLAG_FULLDUPLEX) != 0)
 #define isServerReverse(settings)  ((settings->flags_extend & FLAG_SERVERREVERSE) != 0)
 #define isIsochronous(settings)    ((settings->flags_extend & FLAG_ISOCHRONOUS) != 0)
 #define isHistogram(settings)    ((settings->flags_extend & FLAG_HISTOGRAM) != 0)
@@ -463,7 +464,8 @@ struct thread_Settings {
 #define isTcpWriteTimes(settings)  ((settings->flags_extend2 & FLAG_TCPWRITETIMES) != 0)
 #define isOverrideTOS(settings)    ((settings->flags_extend2 & FLAG_OVERRIDETOS) != 0)
 #define isTcpQuickAck(settings)    ((settings->flags_extend2 & FLAG_TCPQUICKACK) != 0)
-#define isCongest(settings)        ((settings->flags_extend2 & FLAG_CONGEST) != 0)
+#define isWorkingLoadUp(settings)  ((settings->flags_extend2 & FLAG_WORKING_LOAD_UP) != 0)
+#define isWorkingLoadDown(settings)  ((settings->flags_extend2 & FLAG_WORKING_LOAD_DOWN) != 0)
 
 #define setBuflenSet(settings)     settings->flags |= FLAG_BUFLENSET
 #define setCompat(settings)        settings->flags |= FLAG_COMPAT
@@ -535,7 +537,8 @@ struct thread_Settings {
 #define setTcpWriteTimes(settings) settings->flags_extend2 |= FLAG_TCPWRITETIMES
 #define setOverrideTOS(settings)   settings->flags_extend2 |= FLAG_OVERRIDETOS
 #define setTcpQuickAck(settings)   settings->flags_extend2 |= FLAG_TCPQUICKACK
-#define setCongest(settings)       settings->flags_extend2 |= FLAG_CONGEST
+#define setWorkingLoadUp(settings)   settings->flags_extend2 |= FLAG_WORKING_LOAD_UP
+#define setWorkingLoadDown(settings) settings->flags_extend2 |= FLAG_WORKING_LOAD_DOWN
 
 #define unsetBuflenSet(settings)   settings->flags &= ~FLAG_BUFLENSET
 #define unsetCompat(settings)      settings->flags &= ~FLAG_COMPAT
@@ -606,7 +609,8 @@ struct thread_Settings {
 #define unsetTcpWriteTimes(settings) settings->flags_extend2 &= ~FLAG_TCPWRITETIMES
 #define unsetOverrideTOS(settings)   settings->flags_extend2 &= ~FLAG_OVERRIDETOS
 #define unsetTcpQuickAck(settings)   settings->flags_extend2 &= ~FLAG_TCPQUICKACK
-#define unsetCongest(settings)       settings->flags_extend2 &= ~FLAG_CONGEST
+#define unsetWorkingLoadUp(settings)   settings->flags_extend2 &= ~FLAG_WORKING_LOAD_UP
+#define unsetWorkingLoadDown(settings) settings->flags_extend2 &= ~FLAG_WORKING_LOAD_DOWN
 
 // set to defaults
 void Settings_Initialize(struct thread_Settings* main);
