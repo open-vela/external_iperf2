@@ -114,7 +114,7 @@ static int overridetos = 0;
 static int notcpbbquickack = 0;
 static int tcpquickack = 0;
 static int notcpbbquickack_cliset = 0;
-static int congest = 0;
+static int workingload = 0;
 static int tcpwritetimes = 0;
 
 void Settings_Interpret(char option, const char *optarg, struct thread_Settings *mExtSettings);
@@ -164,7 +164,7 @@ const struct option long_options[] =
 {"awdl",             no_argument, NULL, 'A'},
 {"bind",       required_argument, NULL, 'B'},
 {"bounceback", no_argument, &bounceback, 1},
-{"bounceback-congest", no_argument, &congest, 1},
+{"bounceback-congest", optional_argument, &workingload, 1},
 {"bounceback-hold", required_argument, &bouncebackhold, 1},
 {"bounceback-no-quickack", no_argument, &notcpbbquickack, 1},
 {"bounceback-period", required_argument, &bouncebackperiod, 1},
@@ -1110,9 +1110,25 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		setTcpQuickAck(mExtSettings);
 #endif
 	    }
-	    if (congest) {
-		congest= 0;
-		setCongest(mExtSettings);
+	    if (workingload) {
+		workingload = 0;
+		setWorkingLoadUp(mExtSettings);
+		setWorkingLoadDown(mExtSettings);
+		if (optarg) {
+		    char *tmp= new char [strlen(optarg) + 1];
+		    if (tmp) {
+			strcpy(tmp, optarg);
+			for (size_t ix = 0; ix < strlen(tmp); ix++) {
+			    tmp[ix] = tolower(tmp[ix]);
+			}
+			if (strcmp(tmp, "up") == 0) {
+			    unsetWorkingLoadDown(mExtSettings);
+			} else if (strcmp(tmp, "down") == 0) {
+			    unsetWorkingLoadUp(mExtSettings);
+			}
+			delete [] tmp;
+		    }
+		}
 	    }
 	    if (txnotsentlowwater) {
 		txnotsentlowwater = 0;
@@ -1182,7 +1198,6 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		bounceback = 0;
 		setBounceBack(mExtSettings);
 		setNoDelay(mExtSettings);
-		setEnhanced(mExtSettings);
 	    }
 	    if (bouncebackhold) {
 		bouncebackhold = 0;

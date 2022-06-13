@@ -394,13 +394,17 @@ void client_init(struct thread_Settings *clients) {
 	itr->runNow = next;
 	itr = next;
     }
-    if (isBounceBack(clients) && isCongest(clients)) {
+    if (isBounceBack(clients) && (isWorkingLoadUp(clients) || isWorkingLoadDown(clients))) {
 	Settings_Copy(clients, &next, 1);
 	if (next != NULL) {
-	    setFullDuplex(next);
 	    unsetBounceBack(next);
-	    unsetEnhanced(next);
-	    next->mTOS = 0;
+//	    unsetEnhanced(next);
+	    next->mTOS = 0; // disable any QoS on the congestion stream
+	    if (isWorkingLoadUp(clients) && isWorkingLoadDown(clients)) {
+		setFullDuplex(next);
+	    } else if (isWorkingLoadDown(clients)) {
+		setReverse(next);
+	    }
 	    itr->runNow = next;
 	    itr = next;
 	}
