@@ -363,19 +363,19 @@ const char report_triptime_enhanced_format[] =
 
 #if HAVE_TCP_STATS
 const char report_client_bb_bw_header[] =
-"[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth         BB cnt(cnt/s)=avg/min/max/stdev         Rtry  Cwnd/RTT\n";
+"[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth         BB cnt=avg/min/max/stdev         Rtry  Cwnd/RTT    RPM\n";
 
 const char report_client_bb_bw_format[] =
-"%s" IPERFTimeFrmt " sec  %ss  %ss/sec    %d(%d)=%.3f/%.3f/%.3f/%.3f ms %4d %4dK/%u us\n";
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec    %d=%.3f/%.3f/%.3f/%.3f ms %4d %4dK/%u us    %d rpm\n";
 #else
 const char report_client_bb_bw_header[] =
-"[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth         BB cnt(cnt/s)=avg/min/max/stdev\n";
+"[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth         BB cnt=avg/min/max/stdev    RPM\n";
 
 const char report_client_bb_bw_format[] =
-"%s" IPERFTimeFrmt " sec  %ss  %ss/sec    %d(%d)=%.3f/%.3f/%.3f/%.3f ms\n";
+"%s" IPERFTimeFrmt " sec  %ss  %ss/sec    %d=%.3f/%.3f/%.3f/%.3f ms    %d rpm\n";
 #endif
 const char report_client_bb_bw_triptime_format[] =
-"%s" IPERFTimeFrmt " sec  OWD Delays (ms) Cnt=%d(%d) To=%.3f/%.3f/%.3f/%.3f From=%.3f/%.3f/%.3f/%.3f Asymmetry=%.3f/%.3f/%.3f/%.3f\n";
+"%s" IPERFTimeFrmt " sec  OWD Delays (ms) Cnt=%d To=%.3f/%.3f/%.3f/%.3f From=%.3f/%.3f/%.3f/%.3f Asymmetry=%.3f/%.3f/%.3f/%.3f    %d rpm\n";
 
 const char report_write_enhanced_write_header[] =
 "[ ID] Interval" IPERFTimeSpace "Transfer    Bandwidth       Write/Err  Rtry     Cwnd/RTT        NetPwr  write-times avg/min/max/stdev (cnt)\n";
