@@ -1228,6 +1228,7 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 		goto DONE;
 	    }
 	    readptr += nread;
+	    server->mAmount = ntohl(bbhdr->bbRunTime);
 	    server->mBounceBackBytes = ntohl(bbhdr->bbsize);
 	    server->mBounceBackHold = ntohl(bbhdr->bbhold);
 	    uint16_t bbflags = ntohs(bbhdr->bbflags);
