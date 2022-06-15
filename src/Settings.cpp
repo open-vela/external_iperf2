@@ -1119,22 +1119,20 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    }
 	    if (workingload) {
 		workingload = 0;
-		setWorkingLoadUp(mExtSettings);
-		setWorkingLoadDown(mExtSettings);
 		if (optarg) {
-		    char *tmp= new char [strlen(optarg) + 1];
-		    if (tmp) {
-			strcpy(tmp, optarg);
-			for (size_t ix = 0; ix < strlen(tmp); ix++) {
-			    tmp[ix] = tolower(tmp[ix]);
-			}
-			if (strcmp(tmp, "up") == 0) {
-			    unsetWorkingLoadDown(mExtSettings);
-			} else if (strcmp(tmp, "down") == 0) {
-			    unsetWorkingLoadUp(mExtSettings);
-			}
-			delete [] tmp;
+		    if (strcasecmp(optarg, "up") == 0) {
+			unsetWorkingLoadDown(mExtSettings);
+		    } else if (strcasecmp(optarg, "down") == 0) {
+			unsetWorkingLoadUp(mExtSettings);
+		    } else if (strcasecmp(optarg, "bidir") == 0) {
+			setWorkingLoadUp(mExtSettings);
+			setWorkingLoadDown(mExtSettings);
+		    } else {
+			fprintf(stderr, "Unrecoginized value of %s for bounceback-congestion, use 'up', 'down' or 'bidir'\n", optarg);
 		    }
+		} else {
+		    setWorkingLoadUp(mExtSettings);
+		    setWorkingLoadDown(mExtSettings);
 		}
 	    }
 	    if (txnotsentlowwater) {

@@ -172,6 +172,10 @@ Miscellaneous:\n\
 Lowercase format characters are 10^3 based and uppercase are 2^n based\n\
 (e.g. 1k = 1000, 1K = 1024, 1m = 1,000,000 and 1M = 1,048,576)\n\
 \n\
+Accepted tos values are: af11, af12, af13, af21, af22, af23, af31, af32, af33, af41, af42, af43,\n\
+cs0, cs1, cs2, cs3, cs4, cs5, cs6, cs7, ef, le, nqb, nqb2, be, bk, vi, vo, lowdelay, throughput,\n\
+reliability, or a numeric value.\n\
+\n\
 The TCP window size option can be set by the environment variable\n\
 TCP_WINDOW_SIZE. Most other options can be set by an environment variable\n\
 IPERF_<long option name>, such as IPERF_BANDWIDTH.\n\
