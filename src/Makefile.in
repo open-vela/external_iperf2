@@ -137,7 +137,7 @@ am__iperf_SOURCES_DIST = Client.cpp Extractor.c isochronous.cpp \
 	PerfSocket.cpp Reporter.c Reports.c ReportOutputs.c Server.cpp \
 	Settings.cpp SocketAddr.c gnu_getopt.c gnu_getopt_long.c \
 	histogram.c main.cpp service.c socket_io.c stdio.c \
-	packet_ring.c tcp_window_size.c pdfs.c checksums.c
+	packet_ring.c tcp_window_size.c pdfs.c dscp.c checksums.c
 @AF_PACKET_TRUE@am__objects_1 = checksums.$(OBJEXT)
 am_iperf_OBJECTS = Client.$(OBJEXT) Extractor.$(OBJEXT) \
 	isochronous.$(OBJEXT) Launch.$(OBJEXT) active_hosts.$(OBJEXT) \
@@ -147,7 +147,8 @@ am_iperf_OBJECTS = Client.$(OBJEXT) Extractor.$(OBJEXT) \
 	gnu_getopt.$(OBJEXT) gnu_getopt_long.$(OBJEXT) \
 	histogram.$(OBJEXT) main.$(OBJEXT) service.$(OBJEXT) \
 	socket_io.$(OBJEXT) stdio.$(OBJEXT) packet_ring.$(OBJEXT) \
-	tcp_window_size.$(OBJEXT) pdfs.$(OBJEXT) $(am__objects_1)
+	tcp_window_size.$(OBJEXT) pdfs.$(OBJEXT) dscp.$(OBJEXT) \
+	$(am__objects_1)
 iperf_OBJECTS = $(am_iperf_OBJECTS)
 iperf_DEPENDENCIES = $(am__DEPENDENCIES_1)
 iperf_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(iperf_LDFLAGS) \
@@ -175,13 +176,13 @@ am__depfiles_remade = ./$(DEPDIR)/Client.Po ./$(DEPDIR)/Extractor.Po \
 	./$(DEPDIR)/Settings.Po ./$(DEPDIR)/SocketAddr.Po \
 	./$(DEPDIR)/active_hosts.Po ./$(DEPDIR)/checkdelay.Po \
 	./$(DEPDIR)/checkisoch.Po ./$(DEPDIR)/checkpdfs.Po \
-	./$(DEPDIR)/checksums.Po ./$(DEPDIR)/gnu_getopt.Po \
-	./$(DEPDIR)/gnu_getopt_long.Po ./$(DEPDIR)/histogram.Po \
-	./$(DEPDIR)/igmp_querier.Po ./$(DEPDIR)/isochronous.Po \
-	./$(DEPDIR)/main.Po ./$(DEPDIR)/packet_ring.Po \
-	./$(DEPDIR)/pdfs.Po ./$(DEPDIR)/service.Po \
-	./$(DEPDIR)/socket_io.Po ./$(DEPDIR)/stdio.Po \
-	./$(DEPDIR)/tcp_window_size.Po
+	./$(DEPDIR)/checksums.Po ./$(DEPDIR)/dscp.Po \
+	./$(DEPDIR)/gnu_getopt.Po ./$(DEPDIR)/gnu_getopt_long.Po \
+	./$(DEPDIR)/histogram.Po ./$(DEPDIR)/igmp_querier.Po \
+	./$(DEPDIR)/isochronous.Po ./$(DEPDIR)/main.Po \
+	./$(DEPDIR)/packet_ring.Po ./$(DEPDIR)/pdfs.Po \
+	./$(DEPDIR)/service.Po ./$(DEPDIR)/socket_io.Po \
+	./$(DEPDIR)/stdio.Po ./$(DEPDIR)/tcp_window_size.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -368,7 +369,7 @@ iperf_SOURCES = Client.cpp Extractor.c isochronous.cpp Launch.cpp \
 	Reporter.c Reports.c ReportOutputs.c Server.cpp Settings.cpp \
 	SocketAddr.c gnu_getopt.c gnu_getopt_long.c histogram.c \
 	main.cpp service.c socket_io.c stdio.c packet_ring.c \
-	tcp_window_size.c pdfs.c $(am__append_5)
+	tcp_window_size.c pdfs.c dscp.c $(am__append_5)
 iperf_LDADD = $(LIBCOMPAT_LDADDS)
 @CHECKPROGRAMS_TRUE@checkdelay_SOURCES = checkdelay.c
 @CHECKPROGRAMS_TRUE@checkdelay_LDADD = $(LIBCOMPAT_LDADDS)
@@ -499,6 +500,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/checkisoch.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/checkpdfs.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/checksums.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dscp.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gnu_getopt.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gnu_getopt_long.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/histogram.Po@am__quote@ # am--include-marker
@@ -691,6 +693,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/checkisoch.Po
 	-rm -f ./$(DEPDIR)/checkpdfs.Po
 	-rm -f ./$(DEPDIR)/checksums.Po
+	-rm -f ./$(DEPDIR)/dscp.Po
 	-rm -f ./$(DEPDIR)/gnu_getopt.Po
 	-rm -f ./$(DEPDIR)/gnu_getopt_long.Po
 	-rm -f ./$(DEPDIR)/histogram.Po
@@ -765,6 +768,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/checkisoch.Po
 	-rm -f ./$(DEPDIR)/checkpdfs.Po
 	-rm -f ./$(DEPDIR)/checksums.Po
+	-rm -f ./$(DEPDIR)/dscp.Po
 	-rm -f ./$(DEPDIR)/gnu_getopt.Po
 	-rm -f ./$(DEPDIR)/gnu_getopt_long.Po
 	-rm -f ./$(DEPDIR)/histogram.Po

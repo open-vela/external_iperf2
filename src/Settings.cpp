@@ -72,6 +72,7 @@
 #include "pdfs.h"
 #include "payloads.h"
 #include "PerfSocket.hpp"
+#include "dscp.h"
 #include <math.h>
 
 static int reversetest = 0;
@@ -861,7 +862,10 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
             // TODO use a function that understands base-2
             // the zero base here allows the user to specify
             // "0x#" hex, "0#" octal, and "#" decimal numbers
-            mExtSettings->mTOS = strtol(optarg, NULL, 0);
+	    if ((mExtSettings->mTOS = parse_ipqos(optarg)) == -1) {
+		fprintf(stderr, "Invalid --tos value of %s\n", optarg);
+		mExtSettings->mTOS = 0;
+	    }
             break;
 
         case 'T': // time-to-live for both unicast and multicast
@@ -1050,8 +1054,11 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    }
 	    if (overridetos) {
 		overridetos = 0;
-		mExtSettings->mRTOS = strtol(optarg, NULL, 0);
-		setOverrideTOS(mExtSettings);
+		if ((mExtSettings->mRTOS = parse_ipqos(optarg)) == -1) {
+		    fprintf(stderr, "Invalid --tos-overide value of %s\n", optarg);
+		} else {
+		    setOverrideTOS(mExtSettings);
+		}
 	    }
 	    if (fqrate) {
 #if defined(HAVE_DECL_SO_MAX_PACING_RATE)
