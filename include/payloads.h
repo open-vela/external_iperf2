@@ -91,6 +91,7 @@ extern "C" {
 #define HEADER_BBQUICKACK    0x8000
 #define HEADER_BBCLOCKSYNCED 0x4000 // used in the bb header only
 #define HEADER_BBTOS         0x2000
+#define HEADER_BBSTOP        0x1000
 
 // newer flags available per HEADER_EXTEND
 // Below flags are used to pass test settings in *every* UDP packet
@@ -221,6 +222,7 @@ struct bounceback_hdr {
     uint32_t bbid;
     uint16_t bbflags;
     uint16_t tos;
+    uint32_t bbRunTime; //units 10 ms
     struct bb_ts bbclientTx_ts;
     struct bb_ts bbserverRx_ts;
     struct bb_ts bbserverTx_ts;
