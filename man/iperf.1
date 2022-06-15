@@ -139,8 +139,8 @@ Set the socket option of TCP_WINDOW_CLAMP, units is bytes.
 .BR -t ", " --time " \fIn\fR"
 time in seconds to listen for new traffic connections and/or receive traffic (defaults to infinite)
 .TP
-.BR "    --tos-override "  \fIn\fR
-set the socket's IP_TOS (byte) field for reverse or full duplex traffic. Supported in versions 2.1.5 or greater. Previous versions won't set IP_TOS on reverse traffic.
+.BR "    --tos-override "  \fI<val>\fR
+set the socket's IP_TOS value for reverse or full duplex traffic. Supported in versions 2.1.5 or greater. Previous versions won't set IP_TOS on reverse traffic. See NOTES for values.
 .TP
 .BR -B ", " --bind " \fIip\fR | \fIip\fR%\fIdevice\fR"
 bind src ip addr and optional src device for receiving
@@ -294,8 +294,8 @@ number of parallel client threads to run
 .BR -R ", " --reverse " "
 reverse the traffic flow (useful for testing through firewalls, see NOTES)
 .TP
-.BR -S ", " --tos " \fIn\fR"
-set the socket's IP_TOS (byte) field. Versions 2.1.5 or greater will reflect this tos setting back with --reverse or --full-duplex option. (Previous versions won't set tos on the reverse traffic.) Note: use server side --tos-override to override.
+.BR -S ", " --tos " \fI<val>\fR"
+set the socket's IP_TOS value. Versions 2.1.5 or greater will reflect this tos setting back with --reverse or --full-duplex option. (Previous versions won't set tos on the reverse traffic.) Note: use server side --tos-override to override. See NOTES for values.
 .TP
 .BR -T ", " --ttl " \fIn\fR"
 time-to-live, for multicast (default 1)
@@ -740,6 +740,12 @@ on the client also supports variable offered loads through the <mean>,<standard 
 option. The -b on the server rate limits the reads. Socket based pacing is also
 supported using the --fq-rate long option. This will work with the --reverse
 and --full-duplex options as well.
+.P
+.B
+IPQoS:
+Specifies the type-of-service or DSCP class for connections.  Accepted values are \fBaf11, af12, af13, af21,
+af22, af23, af31, af32, af33, af41, af42, af43, cs0, cs1, cs2, cs3, cs4, cs5, cs6, cs7, ef, le, lowdelay, throughput,
+reliability\fR, a numeric value, or none to use the operating system default.
 .P
 .B Synchronized clocks:
 The --trip-times option indicates that the client's and server's clocks are synchronized to a common reference.
