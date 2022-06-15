@@ -88,7 +88,7 @@ public:
 private:
     inline void WritePacketID(intmax_t);
     inline void WriteTcpTxHdr(struct ReportStruct *, int, int);
-    inline void WriteTcpTxBBHdr(struct ReportStruct *, int);
+    inline void WriteTcpTxBBHdr(struct ReportStruct *, int, int);
     inline double get_delay_target(void);
     void InitTrafficLoop(void);
     void SetReportStartTime(void);

@@ -1004,7 +1004,7 @@ void Client::RunBounceBackTCP () {
 	now.setnow();
 	reportstruct->sentTime.tv_sec = now.getSecs();
 	reportstruct->sentTime.tv_usec = now.getUsecs();
-	WriteTcpTxBBHdr(reportstruct, burst_id);
+	WriteTcpTxBBHdr(reportstruct, burst_id, 0);
 	myReport->info.ts.prevsendTime = reportstruct->sentTime;
 	reportstruct->packetLen = writen(mySocket, mSettings->mBuf, writelen, &reportstruct->writecnt);
 	if (reportstruct->packetLen == writelen) {
@@ -1046,6 +1046,7 @@ void Client::RunBounceBackTCP () {
 	    FAIL_errno(1, "tcp bounce-back write", mSettings);
 	}
     }
+    WriteTcpTxBBHdr(reportstruct, 0x0, 1);
     disarm_itimer();
     FinishTrafficActions();
 }
@@ -1393,7 +1394,7 @@ inline void Client::WriteTcpTxHdr (struct ReportStruct *reportstruct, int burst_
 }
 
 // See payloads.h
-void Client::WriteTcpTxBBHdr (struct ReportStruct *reportstruct, int bbid) {
+void Client::WriteTcpTxBBHdr (struct ReportStruct *reportstruct, int bbid, int final) {
     struct bounceback_hdr * mBuf_bb = reinterpret_cast<struct bounceback_hdr *>(mSettings->mBuf);
     // store packet ID into buffer
     uint32_t flags = HEADER_BOUNCEBACK;
@@ -1408,6 +1409,12 @@ void Client::WriteTcpTxBBHdr (struct ReportStruct *reportstruct, int bbid) {
     }
     if (isTcpQuickAck(mSettings)) {
 	bbflags |= HEADER_BBQUICKACK;
+    }
+    if (isModeTime(mSettings)) {
+	mBuf_bb->bbRunTime = htonl((mSettings->mAmount + (100 * 5))); // add 5 seconds slop
+    }
+    if (final) {
+	bbflags |= HEADER_BBSTOP;
     }
     mBuf_bb->bbflags = htons(bbflags);
     mBuf_bb->bbsize = htonl(mSettings->mBufLen);
