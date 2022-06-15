@@ -45,8 +45,7 @@
 #define snprintf _snprintf
 #endif
 
-int parse_ipqos(const char *cp);
-const char * iptos2str(int iptos);
+#include "dscp.h"
 
 /*
  * Definitions for IP type of service (ip_tos)
