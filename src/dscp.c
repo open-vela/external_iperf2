@@ -1,6 +1,5 @@
-/* dscp lookup routines lifted wholesale from openssh */
-
-/*
+/* DSCP lookup routines lifted wholesale from openssh
+ *
  * Copyright (c) 2000 Markus Friedl.  All rights reserved.
  * Copyright (c) 2005,2006 Damien Miller.  All rights reserved.
  *
@@ -72,7 +71,7 @@ const char * iptos2str(int iptos);
 #endif /* IPTOS_LOWDELAY */
 
 /*
- * Definitions for DiffServ Codepoints as per RFC2474
+ * Definitions for DiffServ Codepoints as per RFC2474, rfc8622, rfc8325
  */
 #ifndef IPTOS_DSCP_AF11
 # define	IPTOS_DSCP_AF11		0x28
@@ -88,6 +87,10 @@ const char * iptos2str(int iptos);
 # define	IPTOS_DSCP_AF42		0x90
 # define	IPTOS_DSCP_AF43		0x98
 # define	IPTOS_DSCP_EF		0xb8
+# define	IPTOS_DSCP_LE		0x01 // rfc8622
+# define	IPTOS_DSCP_NQB		0x05 // rfc8325
+# define	IPTOS_DSCP_NQB2		0x2D // rfc8325 45 decimal
+
 #endif /* IPTOS_DSCP_AF11 */
 
 #ifndef IPTOS_DSCP_CS0
@@ -129,6 +132,9 @@ static const struct {
 	{ "cs6", IPTOS_DSCP_CS6 },
 	{ "cs7", IPTOS_DSCP_CS7 },
 	{ "ef", IPTOS_DSCP_EF },
+	{ "le", IPTOS_DSCP_LE },
+	{ "nqb", IPTOS_DSCP_NQB },
+	{ "nqb2", IPTOS_DSCP_NQB2 },
 	{ "lowdelay", IPTOS_LOWDELAY },
 	{ "throughput", IPTOS_THROUGHPUT },
 	{ "reliability", IPTOS_RELIABILITY },
