@@ -395,17 +395,27 @@ void client_init(struct thread_Settings *clients) {
 	itr = next;
     }
     if (isBounceBack(clients) && (isWorkingLoadUp(clients) || isWorkingLoadDown(clients))) {
-	Settings_Copy(clients, &next, 1);
-	if (next != NULL) {
-	    unsetBounceBack(next);
-	    next->mTOS = 0; // disable any QoS on the congestion stream
-	    if (isWorkingLoadUp(clients) && isWorkingLoadDown(clients)) {
-		setFullDuplex(next);
-	    } else if (isWorkingLoadDown(clients)) {
-		setReverse(next);
+	int bbwlthreads = (clients->mBounceBackCongestThreads == 0) ? 1 : clients->mBounceBackCongestThreads;
+	while (bbwlthreads--) {
+	    Settings_Copy(clients, &next, 1);
+	    if (next != NULL) {
+		unsetBounceBack(next);
+		unsetTxHoldback(next); // don't delay working load threads
+		next->mTOS = 0; // disable any QoS on the congestion stream
+		if (isWorkingLoadUp(clients) && isWorkingLoadDown(clients)) {
+		    setFullDuplex(next);
+		} else if (isWorkingLoadDown(clients)) {
+		    setReverse(next);
+		}
+		// Bump the bounceback time to include the delay time
+		if (next->txholdback_timer.tv_sec || next->txholdback_timer.tv_usec) {
+		    // mAmount units are 10 ms
+		    next->mAmount += (next->txholdback_timer.tv_sec * 100);
+		    next->mAmount += (next->txholdback_timer.tv_usec / 10000);
+		}
+		itr->runNow = next;
+		itr = next;
 	    }
-	    itr->runNow = next;
-	    itr = next;
 	}
     }
 #else

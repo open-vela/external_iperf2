@@ -286,6 +286,7 @@ struct thread_Settings {
     int tuntapdev;
     int firstreadbytes;
     int mBounceBackBytes;
+    int mBounceBackCongestThreads; // number of congest threads
     uint32_t mBounceBackHold; // units of usecs
     struct iperf_tcpstats tcpinitstats;
 #if HAVE_DECL_TCP_WINDOW_CLAMP
