@@ -116,6 +116,7 @@ static int notcpbbquickack = 0;
 static int tcpquickack = 0;
 static int notcpbbquickack_cliset = 0;
 static int workingload = 0;
+static int bouncebackdelaystart = 0;
 static int tcpwritetimes = 0;
 
 void Settings_Interpret(char option, const char *optarg, struct thread_Settings *mExtSettings);
@@ -166,6 +167,7 @@ const struct option long_options[] =
 {"bind",       required_argument, NULL, 'B'},
 {"bounceback", no_argument, &bounceback, 1},
 {"bounceback-congest", optional_argument, &workingload, 1},
+{"bounceback-txdelay", required_argument, &bouncebackdelaystart, 1},
 {"bounceback-hold", required_argument, &bouncebackhold, 1},
 {"bounceback-no-quickack", no_argument, &notcpbbquickack, 1},
 {"bounceback-period", required_argument, &bouncebackperiod, 1},
@@ -519,713 +521,740 @@ void Settings_ParseCommandLine (int argc, char **argv, struct thread_Settings *m
 void Settings_Interpret (char option, const char *optarg, struct thread_Settings *mExtSettings) {
     char *results;
     switch (option) {
-        case '1': // Single Client
-            setSingleClient(mExtSettings);
-            break;
+    case '1': // Single Client
+	setSingleClient(mExtSettings);
+	break;
 
-        case '4': // v4 only
-            setIPV4(mExtSettings);
-            break;
+    case '4': // v4 only
+	setIPV4(mExtSettings);
+	break;
 
-        case '6': // v4 only
-            setIPV6(mExtSettings);
-            break;
+    case '6': // v4 only
+	setIPV6(mExtSettings);
+	break;
 
-        case 'b': // UDP bandwidth
-	    {
-		char *tmp= new char [strlen(optarg) + 1];
-		strcpy(tmp, optarg);
-		// scan for PPS units, just look for 'p' as that's good enough
-		if ((((results = strtok(tmp, "p")) != NULL) && strcmp(results,optarg) != 0) \
-		    || (((results = strtok(tmp, "P")) != NULL)  && strcmp(results,optarg) != 0)) {
-		    mExtSettings->mAppRateUnits = kRate_PPS;
-		    mExtSettings->mAppRate = byte_atoi(results);
-		} else {
-		    mExtSettings->mAppRateUnits = kRate_BW;
-		    mExtSettings->mAppRate = byte_atoi(optarg);
-		    if (((results = strtok(tmp, ",")) != NULL) && strcmp(results,optarg) != 0) {
-			setVaryLoad(mExtSettings);
-			mExtSettings->mVariance = byte_atoi(optarg);
-		    }
-		}
-		delete [] tmp;
+    case 'b': // UDP bandwidth
+    {
+	char *tmp= new char [strlen(optarg) + 1];
+	strcpy(tmp, optarg);
+	// scan for PPS units, just look for 'p' as that's good enough
+	if ((((results = strtok(tmp, "p")) != NULL) && strcmp(results,optarg) != 0) \
+	    || (((results = strtok(tmp, "P")) != NULL)  && strcmp(results,optarg) != 0)) {
+	    mExtSettings->mAppRateUnits = kRate_PPS;
+	    mExtSettings->mAppRate = byte_atoi(results);
+	} else {
+	    mExtSettings->mAppRateUnits = kRate_BW;
+	    mExtSettings->mAppRate = byte_atoi(optarg);
+	    if (((results = strtok(tmp, ",")) != NULL) && strcmp(results,optarg) != 0) {
+		setVaryLoad(mExtSettings);
+		mExtSettings->mVariance = byte_atoi(optarg);
 	    }
-	    setBWSet(mExtSettings);
-	    break;
-        case 'c': // client mode w/ server host to connect to
-            mExtSettings->mHost = new char[ strlen(optarg) + 1 ];
-            strcpy(mExtSettings->mHost, optarg);
-
-            if (mExtSettings->mThreadMode == kMode_Unknown) {
-                mExtSettings->mThreadMode = kMode_Client;
-                mExtSettings->mThreads = 1;
-            }
-            break;
-
-        case 'd': // Dual-test Mode
-            if (mExtSettings->mThreadMode != kMode_Client) {
-                fprintf(stderr, warn_invalid_server_option, option);
-                break;
-            }
-            if (isCompat(mExtSettings)) {
-                fprintf(stderr, warn_invalid_compatibility_option, option);
-            }
-#ifdef HAVE_THREAD
-            mExtSettings->mMode = kTest_DualTest;
-#else
-            fprintf(stderr, warn_invalid_single_threaded, option);
-            mExtSettings->mMode = kTest_TradeOff;
-#endif
-            break;
-        case 'e': // Use enhanced reports
-            setEnhanced(mExtSettings);
-            break;
-        case 'f': // format to print in
-            mExtSettings->mFormat = (*optarg);
-            break;
-
-        case 'h': // print help and exit
-	    fprintf(stderr, "%s", usage_long1);
-            fprintf(stderr, "%s", usage_long2);
-            exit(1);
-            break;
-
-        case 'i': // specify interval between periodic bw reports
-	    {
-		char framechar;
-		char *tmp= new char [strlen(optarg) + 1];
-		strcpy(tmp, optarg);
-		// scan for frames as units
-		if ((sscanf(optarg,"%c", &framechar)) && ((framechar == 'f') || (framechar == 'F'))) {
-		    mExtSettings->mIntervalMode = kInterval_Frames;
-		    setEnhanced(mExtSettings);
-		    setFrameInterval(mExtSettings);
-		} else {
-		    char *end;
-		    strcpy(tmp, optarg);
-		    double itime = strtof(optarg, &end);
-		    if (*end != '\0') {
-			fprintf (stderr, "Invalid value of '%s' for -i interval\n", optarg);
-			exit(1);
-		    }
-		    if (itime > (UINT_MAX / 1e6)) {
-			fprintf (stderr, "Too large value of '%s' for -i interval, max is %f\n", optarg, (UINT_MAX / 1e6));
-			exit(1);
-		    }
-		    mExtSettings->mInterval = static_cast<unsigned int>(ceil(itime * 1e6));
-		    if (!mExtSettings->mInterval) {
-			fprintf (stderr, "Interval per -i cannot be zero\n");
-			exit(1);
-		    }
-		    mExtSettings->mIntervalMode = kInterval_Time;
-		    if (mExtSettings->mInterval < SMALLEST_INTERVAL) {
-			mExtSettings->mInterval = SMALLEST_INTERVAL;
-			fprintf (stderr, report_interval_small, (double) mExtSettings->mInterval / 1e3);
-		    }
-		}
-		delete [] tmp;
-	    }
-            break;
-
-        case 'l': // length of each buffer
-            mExtSettings->mBufLen = byte_atoi(optarg);
-            setBuflenSet(mExtSettings);
-            break;
-
-        case 'm': // print TCP MSS
-#if HAVE_DECL_TCP_MAXSEG
-            setPrintMSS(mExtSettings);
-#endif
-            break;
-
-        case 'n': // bytes of data
-            // amount mode (instead of time mode)
-            unsetModeTime(mExtSettings);
-            mExtSettings->mAmount = byte_atoi(optarg);
-	    if (!(mExtSettings->mAmount > 0)) {
-		fprintf (stderr, "Invalid value for -n amount of '%s'\n", optarg);
-	        exit(1);
-	    }
-            break;
-
-        case 'o' : // output the report and other messages into the file
-            unsetSTDOUT(mExtSettings);
-            mExtSettings->mOutputFileName = new char[strlen(optarg)+1];
-            strcpy(mExtSettings->mOutputFileName, optarg);
-            break;
-
-        case 'p': // server port
-	{
-	    char *tmp= new char [strlen(optarg) + 1];
-	    strcpy(tmp, optarg);
-	    if ((results = strtok(tmp, "-")) != NULL) {
-		mExtSettings->mPort = atoi(results);
-		if (strcmp(results,optarg)) {
-		    mExtSettings->mPortLast = atoi(strtok(NULL, "-"));
-		    setIncrDstPort(mExtSettings);
-		}
-	    }
-	    delete [] tmp;
-            break;
 	}
-        case 'r': // test mode tradeoff
-            if (mExtSettings->mThreadMode != kMode_Client) {
-                fprintf(stderr, warn_invalid_server_option, option);
-                break;
-            }
-            if (isCompat(mExtSettings)) {
-                fprintf(stderr, warn_invalid_compatibility_option, option);
-            }
-            mExtSettings->mMode = kTest_TradeOff;
-            break;
+	delete [] tmp;
+    }
+    setBWSet(mExtSettings);
+    break;
+    case 'c': // client mode w/ server host to connect to
+	mExtSettings->mHost = new char[ strlen(optarg) + 1 ];
+	strcpy(mExtSettings->mHost, optarg);
 
-        case 's': // server mode
-            if (mExtSettings->mThreadMode != kMode_Unknown) {
-                fprintf(stderr, warn_invalid_client_option, option);
-                break;
-            }
+	if (mExtSettings->mThreadMode == kMode_Unknown) {
+	    mExtSettings->mThreadMode = kMode_Client;
+	    mExtSettings->mThreads = 1;
+	}
+	break;
 
-            mExtSettings->mThreadMode = kMode_Listener;
-            break;
-
-        case 't': // seconds to run the client, server, listener
-            // time mode (instead of amount mode), units is 10 ms
-            setModeTime(mExtSettings);
-            setServerModeTime(mExtSettings);
-	    if (atof(optarg) > 0.0)
-                mExtSettings->mAmount = static_cast<size_t>(atof(optarg) * 100.0);
-	    else
-	        infinitetime = 1;
-            break;
-
-        case 'u': // UDP instead of TCP
-	    setUDP(mExtSettings);
-            break;
-
-        case 'v': // print version and exit
-	    fprintf(stderr, "%s", version);
-            exit(1);
-            break;
-
-        case 'w': // TCP window size (socket buffer size)
-            mExtSettings->mTCPWin = byte_atoi(optarg);
-            if (mExtSettings->mTCPWin < 2048) {
-                fprintf(stderr, warn_window_small, mExtSettings->mTCPWin);
-            }
-            break;
-
-        case 'x': // Limit Reports
-            while (*optarg != '\0') {
-                switch (*optarg) {
-                    case 's':
-                    case 'S':
-                        setNoSettReport(mExtSettings);
-                        break;
-                    case 'c':
-                    case 'C':
-                        setNoConnReport(mExtSettings);
-                        break;
-                    case 'd':
-                    case 'D':
-                        setNoDataReport(mExtSettings);
-                        break;
-                    case 'v':
-                    case 'V':
-                        setNoServReport(mExtSettings);
-                        break;
-                    case 'm':
-                    case 'M':
-                        setNoMultReport(mExtSettings);
-                        break;
-                    default:
-                        fprintf(stderr, warn_invalid_report, *optarg);
-                }
-                optarg++;
-            }
-            break;
-#if HAVE_SCHED_SETSCHEDULER
-        case 'z': // Use realtime scheduling
-	    setRealtime(mExtSettings);
-            break;
-#endif
-
-        case 'y': // Reporting Style
-            switch (*optarg) {
-	    case 'c':
-	    case 'C':
-		mExtSettings->mReportMode = kReport_CSV;
-		setNoSettReport(mExtSettings);
-		setNoConnReport(mExtSettings);
-		break;
-	    default:
-		fprintf(stderr, warn_invalid_report_style, optarg);
-            }
-            break;
-
-            // more esoteric options
-
-        case 'B': // specify bind address
-	    if (mExtSettings->mLocalhost == NULL) {
-		mExtSettings->mLocalhost = new char[ strlen(optarg) + 1 ];
-		strcpy(mExtSettings->mLocalhost, optarg);
-	    }
-            break;
-
-        case 'C': // Run in Compatibility Mode, i.e. no intial nor final header messaging
-            setCompat(mExtSettings);
-            if (mExtSettings->mMode != kTest_Normal) {
-                fprintf(stderr, warn_invalid_compatibility_option,
-                        (mExtSettings->mMode == kTest_DualTest ?
-                          'd' : 'r'));
-                mExtSettings->mMode = kTest_Normal;
-            }
-            break;
-
-        case 'D': // Run as a daemon
-            setDaemon(mExtSettings);
-            break;
-
-        case 'F' : // Get the input for the data stream from a file
-            if (mExtSettings->mThreadMode != kMode_Client) {
-                fprintf(stderr, warn_invalid_server_option, option);
-                break;
-            }
-
-            setFileInput(mExtSettings);
-            mExtSettings->mFileName = new char[strlen(optarg)+1];
-            strcpy(mExtSettings->mFileName, optarg);
-            break;
-
-        case 'H' : // Get the SSM host (or Source per the S,G)
-            if (mExtSettings->mThreadMode == kMode_Client) {
-                fprintf(stderr, warn_invalid_client_option, option);
-                break;
-            }
-            mExtSettings->mSSMMulticastStr = new char[strlen(optarg)+1];
-            strcpy(mExtSettings->mSSMMulticastStr, optarg);
-            setSSMMulticast(mExtSettings);
-            break;
-
-        case 'I' : // Set the stdin as the input source
-            if (mExtSettings->mThreadMode != kMode_Client) {
-                fprintf(stderr, warn_invalid_server_option, option);
-                break;
-            }
-
-            setFileInput(mExtSettings);
-            setSTDIN(mExtSettings);
-            mExtSettings->mFileName = new char[strlen("<stdin>")+1];
-            strcpy(mExtSettings->mFileName,"<stdin>");
-            break;
-
-        case 'L': // Listen Port (bidirectional testing client-side)
-            if (mExtSettings->mThreadMode != kMode_Client) {
-                fprintf(stderr, warn_invalid_server_option, option);
-                break;
-            }
-            mExtSettings->mListenPort = atoi(optarg);
-            break;
-
-        case 'M': // specify TCP MSS (maximum segment size)
-#if HAVE_DECL_TCP_MAXSEG
-	    mExtSettings->mMSS = byte_atoi(optarg);
-            setTCPMSS(mExtSettings);
-            setPrintMSS(mExtSettings);
-#endif
-            break;
-
-        case 'N': // specify TCP nodelay option (disable Jacobson's Algorithm)
-            setNoDelay(mExtSettings);
-            break;
-
-        case 'P': // number of client threads
-#ifdef HAVE_THREAD
-            mExtSettings->mThreads = atoi(optarg);
-#else
-            if (mExtSettings->mThreadMode != kMode_Server) {
-                fprintf(stderr, warn_invalid_single_threaded, option);
-            } else {
-                mExtSettings->mThreads = atoi(optarg);
-            }
-#endif
-            break;
-#ifdef WIN32
-        case 'R':
-            setRemoveService(mExtSettings);
-            break;
-#else
-        case 'R':
-	    setReverse(mExtSettings);
-            break;
-#endif
-        case 'S': // IP type-of-service
-            // TODO use a function that understands base-2
-            // the zero base here allows the user to specify
-            // "0x#" hex, "0#" octal, and "#" decimal numbers
-	    if ((mExtSettings->mTOS = parse_ipqos(optarg)) == -1) {
-		fprintf(stderr, "Invalid --tos value of %s\n", optarg);
-		mExtSettings->mTOS = 0;
-	    }
-            break;
-
-        case 'T': // time-to-live for both unicast and multicast
-            mExtSettings->mTTL = atoi(optarg);
-            break;
-
-        case 'U': // single threaded UDP server
-	    setUDP(mExtSettings);
-            setSingleUDP(mExtSettings);
-            setSingleClient(mExtSettings);
-            break;
-
-        case 'V': // IPv6 Domain
-#if HAVE_IPV6
-            setIPV6(mExtSettings);
-#else
-	    fprintf(stderr, "The --ipv6_domain (-V) option is not enabled in this build.\n");
-	    exit(1);
-#endif
-            break;
-
-        case 'W' :
-            setSuggestWin(mExtSettings);
-            fprintf(stderr, "The -W option is not available in this release\n");
-            break;
-
-        case 'X' :
-            setPeerVerDetect(mExtSettings);
-            break;
-
-        case 'Z':
-#ifdef TCP_CONGESTION
-	    setCongestionControl(mExtSettings);
-	    mExtSettings->mCongestion = new char[strlen(optarg)+1];
-	    strcpy(mExtSettings->mCongestion, optarg);
-#else
-            fprintf(stderr, "The -Z option is not available on this operating system\n");
-#endif
+    case 'd': // Dual-test Mode
+	if (mExtSettings->mThreadMode != kMode_Client) {
+	    fprintf(stderr, warn_invalid_server_option, option);
 	    break;
+	}
+	if (isCompat(mExtSettings)) {
+	    fprintf(stderr, warn_invalid_compatibility_option, option);
+	}
+#ifdef HAVE_THREAD
+	mExtSettings->mMode = kTest_DualTest;
+#else
+	fprintf(stderr, warn_invalid_single_threaded, option);
+	mExtSettings->mMode = kTest_TradeOff;
+#endif
+	break;
+    case 'e': // Use enhanced reports
+	setEnhanced(mExtSettings);
+	break;
+    case 'f': // format to print in
+	mExtSettings->mFormat = (*optarg);
+	break;
 
-        case 0:
-	    if (incrdstip) {
-		incrdstip = 0;
-		setIncrDstIP(mExtSettings);
+    case 'h': // print help and exit
+	fprintf(stderr, "%s", usage_long1);
+	fprintf(stderr, "%s", usage_long2);
+	exit(1);
+	break;
+
+    case 'i': // specify interval between periodic bw reports
+    {
+	char framechar;
+	char *tmp= new char [strlen(optarg) + 1];
+	strcpy(tmp, optarg);
+	// scan for frames as units
+	if ((sscanf(optarg,"%c", &framechar)) && ((framechar == 'f') || (framechar == 'F'))) {
+	    mExtSettings->mIntervalMode = kInterval_Frames;
+	    setEnhanced(mExtSettings);
+	    setFrameInterval(mExtSettings);
+	} else {
+	    char *end;
+	    strcpy(tmp, optarg);
+	    double itime = strtof(optarg, &end);
+	    if (*end != '\0') {
+		fprintf (stderr, "Invalid value of '%s' for -i interval\n", optarg);
+		exit(1);
 	    }
-	    if (incrdstport) {
-		incrdstport = 0;
+	    if (itime > (UINT_MAX / 1e6)) {
+		fprintf (stderr, "Too large value of '%s' for -i interval, max is %f\n", optarg, (UINT_MAX / 1e6));
+		exit(1);
+	    }
+	    mExtSettings->mInterval = static_cast<unsigned int>(ceil(itime * 1e6));
+	    if (!mExtSettings->mInterval) {
+		fprintf (stderr, "Interval per -i cannot be zero\n");
+		exit(1);
+	    }
+	    mExtSettings->mIntervalMode = kInterval_Time;
+	    if (mExtSettings->mInterval < SMALLEST_INTERVAL) {
+		mExtSettings->mInterval = SMALLEST_INTERVAL;
+		fprintf (stderr, report_interval_small, (double) mExtSettings->mInterval / 1e3);
+	    }
+	}
+	delete [] tmp;
+    }
+    break;
+
+    case 'l': // length of each buffer
+	mExtSettings->mBufLen = byte_atoi(optarg);
+	setBuflenSet(mExtSettings);
+	break;
+
+    case 'm': // print TCP MSS
+#if HAVE_DECL_TCP_MAXSEG
+	setPrintMSS(mExtSettings);
+#endif
+	break;
+
+    case 'n': // bytes of data
+	// amount mode (instead of time mode)
+	unsetModeTime(mExtSettings);
+	mExtSettings->mAmount = byte_atoi(optarg);
+	if (!(mExtSettings->mAmount > 0)) {
+	    fprintf (stderr, "Invalid value for -n amount of '%s'\n", optarg);
+	    exit(1);
+	}
+	break;
+
+    case 'o' : // output the report and other messages into the file
+	unsetSTDOUT(mExtSettings);
+	mExtSettings->mOutputFileName = new char[strlen(optarg)+1];
+	strcpy(mExtSettings->mOutputFileName, optarg);
+	break;
+
+    case 'p': // server port
+    {
+	char *tmp= new char [strlen(optarg) + 1];
+	strcpy(tmp, optarg);
+	if ((results = strtok(tmp, "-")) != NULL) {
+	    mExtSettings->mPort = atoi(results);
+	    if (strcmp(results,optarg)) {
+		mExtSettings->mPortLast = atoi(strtok(NULL, "-"));
 		setIncrDstPort(mExtSettings);
 	    }
-	    if (incrsrcip) {
-		incrsrcip = 0;
-		setIncrSrcIP(mExtSettings);
-	    }
-	    if (incrsrcport) {
-		incrsrcport = 0;
-		setIncrSrcPort(mExtSettings);
-	    }
-	    if (sumdstip) {
-		sumdstip = 0;
-		setSumServerDstIP(mExtSettings);
-	    }
-	    if (txstarttime) {
-		long seconds;
-		long usecs;
-		int match = 0;
-		txstarttime = 0;
-		setTxStartTime(mExtSettings);
-		setEnhanced(mExtSettings);
-		match = sscanf(optarg,"%ld.%6ld", &seconds, &usecs);
-		mExtSettings->txstart_epoch.tv_usec = 0;
-		switch (match) {
-		case 2:
-		    mExtSettings->txstart_epoch.tv_usec = usecs;
-		case 1:
-		    mExtSettings->txstart_epoch.tv_sec = seconds;
-		    break;
-		default:
-		    unsetTxStartTime(mExtSettings);
-		    fprintf(stderr, "WARNING: invalid --txstart-time format\n");
-		}
-	    }
-	    if (noconnectsync) {
-#ifdef HAVE_THREAD
-		noconnectsync = 0;
-		setNoConnectSync(mExtSettings);
-#else
-	        fprintf(stderr, "WARNING: --no-connect-sync requires thread support and not supported\n");
-#endif
-	    }
-	    if (txholdback) {
-		txholdback = 0;
-	        char *end;
-		Timestamp holdbackdelay;
-		double delay = strtof(optarg, &end);
-		if (*end != '\0') {
-		    fprintf (stderr, "Invalid value of '%s' for --tcp-holdback time\n", optarg);
-		} else {
-		    holdbackdelay.set(delay);
-		    mExtSettings->txholdback_timer.tv_sec = holdbackdelay.getSecs();
-		    mExtSettings->txholdback_timer.tv_usec = (holdbackdelay.getUsecs());
-		    setTxHoldback(mExtSettings);
-		}
-	    }
-	    if (triptime) {
-		triptime = 0;
-		setTripTime(mExtSettings);
-	    }
-	    if (noudpfin) {
-		noudpfin = 0;
-		setNoUDPfin(mExtSettings);
-	    }
-	    if (connectonly) {
-		connectonly = 0;
-		setConnectOnly(mExtSettings);
-		unsetNoConnReport(mExtSettings);
-		if (optarg) {
-		  mExtSettings->connectonly_count = atoi(optarg);
-		} else {
-		  mExtSettings->connectonly_count = -1;
-		}
-	    }
-	    if (connectretry) {
-		connectretry = 0;
-		mExtSettings->mConnectRetries = atoi(optarg);
-	    }
-	    if (sumonly) {
-		sumonly = 0;
-		setSumOnly(mExtSettings);
-	    }
-	    if (so_dontroute) {
-		so_dontroute = 0;
-#if HAVE_DECL_SO_DONTROUTE
-		setDontRoute(mExtSettings);
-		if (optarg) {
-		    if (atoi(optarg))
-			setDontRoute(mExtSettings);
-		    else
-			unsetDontRoute(mExtSettings);
-		}
-#else
-		fprintf(stderr, "WARNING: The --local-only option is not supported on this platform\n");
-#endif
-	    }
-	    if (nearcongest) {
-		nearcongest = 0;
-		setNearCongest(mExtSettings);
-		if (optarg && (atof(optarg) >=  0.0)) {
-		    mExtSettings->rtt_nearcongest_weight_factor = atof(optarg);
-		} else {
-		    mExtSettings->rtt_nearcongest_weight_factor = NEARCONGEST_DEFAULT;
-		}
-	    }
-	    if (permitkey) {
-		permitkey = 0;
-		if (optarg) {
-		    strncpy(mExtSettings->mPermitKey, optarg, MAX_PERMITKEY_LEN);
-		    mExtSettings->mPermitKey[MAX_PERMITKEY_LEN] = '\0';
-		} else {
-		    mExtSettings->mPermitKey[0] = '\0';
-		}
-		setPermitKey(mExtSettings);
-	    }
-	    if (permitkeytimeout) {
-		permitkeytimeout = 0;
-		if (atof(optarg) >= 0.0)
-		    mExtSettings->mListenerTimeout = static_cast<size_t>(atof(optarg));
-	    }
-	    if (histogram) {
-		histogram = 0;
-		setHistogram(mExtSettings);
-		setEnhanced(mExtSettings);
-		if (optarg) {
-		    mExtSettings->mHistogramStr = new char[ strlen(optarg) + 1 ];
-		    strcpy(mExtSettings->mHistogramStr, optarg);
-		} else {
-		    mExtSettings->mHistogramStr = NULL;
-		}
-	    }
-	    if (reversetest) {
-		reversetest = 0;
-		setReverse(mExtSettings);
-	    }
-	    if (fullduplextest) {
-		fullduplextest = 0;
-		setFullDuplex(mExtSettings);
-	    }
-	    if (overridetos) {
-		overridetos = 0;
-		if ((mExtSettings->mRTOS = parse_ipqos(optarg)) == -1) {
-		    fprintf(stderr, "Invalid --tos-overide value of %s\n", optarg);
-		} else {
-		    setOverrideTOS(mExtSettings);
-		}
-	    }
-	    if (fqrate) {
-#if defined(HAVE_DECL_SO_MAX_PACING_RATE)
-	        fqrate=0;
-		setFQPacing(mExtSettings);
-		mExtSettings->mFQPacingRate = static_cast<uintmax_t>(bitorbyte_atoi(optarg) / 8);
-#else
-		fprintf(stderr, "WARNING: The --fq-rate option is not supported\n");
-#endif
-	    }
-	    if (isochronous) {
-		isochronous = 0;
-		setEnhanced(mExtSettings);
-		setIsochronous(mExtSettings);
-		// The following are default values which
-		// may be overwritten during modal parsing
-		mExtSettings->mFPS = 60.0;
-		mExtSettings->mMean = 20000000.0;
-		mExtSettings->mVariance = 0.0;
-		mExtSettings->mBurstIPG = 5e-6;
-		if (optarg) {
-		    mExtSettings->mIsochronousStr = new char[ strlen(optarg) + 1 ];
-		    strcpy(mExtSettings->mIsochronousStr, optarg);
-		}
-	    }
-	    if (burstipg) {
-		burstipg = 0;
-		setIPG(mExtSettings);
-		char *end;
-		mExtSettings->mBurstIPG = strtof(optarg,&end);
-		if (*end != '\0') {
-		    fprintf (stderr, "ERRPORE: Invalid value of '%s' for --ipg\n", optarg);
-		    exit(1);
-		}
-	    }
-	    if (rxwinclamp) {
-		rxwinclamp = 0;
-#if HAVE_DECL_TCP_WINDOW_CLAMP
-		mExtSettings->mClampSize = byte_atoi(optarg);
-		setRxClamp(mExtSettings);
-#else
-		fprintf(stderr, "--tcp-rx-window-clamp not supported on this platform\n");
-#endif
-	    }
-	    if (tcpwritetimes) {
-		tcpwritetimes = 0;
-		setTcpWriteTimes(mExtSettings);
-	    }
-	    if (notcpbbquickack) {
-		notcpbbquickack = 0;
-		notcpbbquickack_cliset = 1;
-	    }
-	    if (tcpquickack) {
-		tcpquickack = 0;
-#if HAVE_DECL_TCP_QUICKACK
-		setTcpQuickAck(mExtSettings);
-#endif
-	    }
-	    if (workingload) {
-		workingload = 0;
-		if (optarg) {
-		    if (strcasecmp(optarg, "up") == 0) {
-			unsetWorkingLoadDown(mExtSettings);
-		    } else if (strcasecmp(optarg, "down") == 0) {
-			unsetWorkingLoadUp(mExtSettings);
-		    } else if (strcasecmp(optarg, "bidir") == 0) {
-			setWorkingLoadUp(mExtSettings);
-			setWorkingLoadDown(mExtSettings);
-		    } else {
-			fprintf(stderr, "Unrecoginized value of %s for bounceback-congestion, use 'up', 'down' or 'bidir'\n", optarg);
-		    }
-		} else {
-		    setWorkingLoadUp(mExtSettings);
-		    setWorkingLoadDown(mExtSettings);
-		}
-	    }
-	    if (txnotsentlowwater) {
-		txnotsentlowwater = 0;
-#if HAVE_DECL_TCP_NOTSENT_LOWAT
-		mExtSettings->mWritePrefetch = byte_atoi(optarg);
-		setWritePrefetch(mExtSettings);
-		setEnhanced(mExtSettings);
-#else
-		fprintf(stderr, "--tcp-write-prefetch not supported on this platform\n");
-#endif
-	    }
-	    if (burstperiodic) {
-		burstperiodic = 0;
-		setPeriodicBurst(mExtSettings);
-		if (optarg && (atof(optarg) > 1e-5)) { // limit to 10 usecs
-		    mExtSettings->mFPS = 1.0/atof(optarg);
-		} else {
-		    if (atof(optarg) != 0)
-			fprintf(stderr, "WARN: burst-period too small, must be greater than 10 usecs\n");
-		    unsetPeriodicBurst(mExtSettings);
-		}
-	    }
-	    if (burstsize) {
-		burstsize = 0;
-		setPeriodicBurst(mExtSettings);
-		if (optarg) {
-		    mExtSettings->mBurstSize = byte_atoi(optarg);
-		}
-	    }
-	    if (numreportstructs) {
-		numreportstructs = 0;
-		mExtSettings->numreportstructs = byte_atoi(optarg);
-	    }
-	    if (tapif) {
-		tapif = 0;
-#if HAVE_TUNTAP_TAP
-		if (optarg) {
-		    mExtSettings->mIfrname = static_cast<char *>(calloc(strlen(optarg) + 1, sizeof(char)));
-		    strcpy(mExtSettings->mIfrname, optarg);
-		}
-		setTapDev(mExtSettings);
-		setEnhanced(mExtSettings);
-		setL2LengthCheck(mExtSettings);
-#else
-		fprintf(stderr, "ERROR: tap devices not supported\n");
-		exit(1);
-#endif
-	    }
-	    if (tunif) {
-		tunif = 0;
-		fprintf(stderr, "ERROR: tun devices not yet supported\n");
-		exit(1);
-#if HAVE_TUNTAP_TUN
-		if (optarg) {
-		    mExtSettings->mIfrname = static_cast<char *>(calloc(strlen(optarg) + 1, sizeof(char)));
-		    strcpy(mExtSettings->mIfrname, optarg);
-		}
-		setTunDev(mExtSettings);
-		setEnhanced(mExtSettings);
-#endif
-	    }
-	    if (hideips) {
-		hideips = 0;
-		setHideIPs(mExtSettings);
-	    }
-	    if (bounceback) {
-		bounceback = 0;
-		setBounceBack(mExtSettings);
-		setNoDelay(mExtSettings);
-	    }
-	    if (bouncebackhold) {
-		bouncebackhold = 0;
-		if (optarg)
-		    //cli units is ms, working units is us
-		    mExtSettings->mBounceBackHold = int(atof(optarg) * 1e3);
-		else
-		    mExtSettings->mBounceBackHold = 0;
-	    }
-	    if (bouncebackperiod) {
-		bouncebackperiod = 0;
-		setPeriodicBurst(mExtSettings);
-		if (optarg && (atof(optarg) > 1e-2)) { // limit to 10 usecs
-		    mExtSettings->mFPS = 1e3/atof(optarg); // cli units is ms
-		} else {
-		    if (atof(optarg) != 0)
-			fprintf(stderr, "WARN: bouncback-period too small, must be greater than 10 usecs\n");
-		    unsetPeriodicBurst(mExtSettings);
-		}
-	    }
+	}
+	delete [] tmp;
+	break;
+    }
+    case 'r': // test mode tradeoff
+	if (mExtSettings->mThreadMode != kMode_Client) {
+	    fprintf(stderr, warn_invalid_server_option, option);
 	    break;
-        default: // ignore unknown
-            break;
+	}
+	if (isCompat(mExtSettings)) {
+	    fprintf(stderr, warn_invalid_compatibility_option, option);
+	}
+	mExtSettings->mMode = kTest_TradeOff;
+	break;
+
+    case 's': // server mode
+	if (mExtSettings->mThreadMode != kMode_Unknown) {
+	    fprintf(stderr, warn_invalid_client_option, option);
+	    break;
+	}
+
+	mExtSettings->mThreadMode = kMode_Listener;
+	break;
+
+    case 't': // seconds to run the client, server, listener
+	// time mode (instead of amount mode), units is 10 ms
+	setModeTime(mExtSettings);
+	setServerModeTime(mExtSettings);
+	if (atof(optarg) > 0.0)
+	    mExtSettings->mAmount = static_cast<size_t>(atof(optarg) * 100.0);
+	else
+	    infinitetime = 1;
+	break;
+
+    case 'u': // UDP instead of TCP
+	setUDP(mExtSettings);
+	break;
+
+    case 'v': // print version and exit
+	fprintf(stderr, "%s", version);
+	exit(1);
+	break;
+
+    case 'w': // TCP window size (socket buffer size)
+	mExtSettings->mTCPWin = byte_atoi(optarg);
+	if (mExtSettings->mTCPWin < 2048) {
+	    fprintf(stderr, warn_window_small, mExtSettings->mTCPWin);
+	}
+	break;
+
+    case 'x': // Limit Reports
+	while (*optarg != '\0') {
+	    switch (*optarg) {
+	    case 's':
+	    case 'S':
+		setNoSettReport(mExtSettings);
+		break;
+	    case 'c':
+	    case 'C':
+		setNoConnReport(mExtSettings);
+		break;
+	    case 'd':
+	    case 'D':
+		setNoDataReport(mExtSettings);
+		break;
+	    case 'v':
+	    case 'V':
+		setNoServReport(mExtSettings);
+		break;
+	    case 'm':
+	    case 'M':
+		setNoMultReport(mExtSettings);
+		break;
+	    default:
+		fprintf(stderr, warn_invalid_report, *optarg);
+	    }
+	    optarg++;
+	}
+	break;
+#if HAVE_SCHED_SETSCHEDULER
+    case 'z': // Use realtime scheduling
+	setRealtime(mExtSettings);
+	break;
+#endif
+
+    case 'y': // Reporting Style
+	switch (*optarg) {
+	case 'c':
+	case 'C':
+	    mExtSettings->mReportMode = kReport_CSV;
+	    setNoSettReport(mExtSettings);
+	    setNoConnReport(mExtSettings);
+	    break;
+	default:
+	    fprintf(stderr, warn_invalid_report_style, optarg);
+	}
+	break;
+
+	// more esoteric options
+
+    case 'B': // specify bind address
+	if (mExtSettings->mLocalhost == NULL) {
+	    mExtSettings->mLocalhost = new char[ strlen(optarg) + 1 ];
+	    strcpy(mExtSettings->mLocalhost, optarg);
+	}
+	break;
+
+    case 'C': // Run in Compatibility Mode, i.e. no intial nor final header messaging
+	setCompat(mExtSettings);
+	if (mExtSettings->mMode != kTest_Normal) {
+	    fprintf(stderr, warn_invalid_compatibility_option,
+		    (mExtSettings->mMode == kTest_DualTest ?
+		     'd' : 'r'));
+	    mExtSettings->mMode = kTest_Normal;
+	}
+	break;
+
+    case 'D': // Run as a daemon
+	setDaemon(mExtSettings);
+	break;
+
+    case 'F' : // Get the input for the data stream from a file
+	if (mExtSettings->mThreadMode != kMode_Client) {
+	    fprintf(stderr, warn_invalid_server_option, option);
+	    break;
+	}
+
+	setFileInput(mExtSettings);
+	mExtSettings->mFileName = new char[strlen(optarg)+1];
+	strcpy(mExtSettings->mFileName, optarg);
+	break;
+
+    case 'H' : // Get the SSM host (or Source per the S,G)
+	if (mExtSettings->mThreadMode == kMode_Client) {
+	    fprintf(stderr, warn_invalid_client_option, option);
+	    break;
+	}
+	mExtSettings->mSSMMulticastStr = new char[strlen(optarg)+1];
+	strcpy(mExtSettings->mSSMMulticastStr, optarg);
+	setSSMMulticast(mExtSettings);
+	break;
+
+    case 'I' : // Set the stdin as the input source
+	if (mExtSettings->mThreadMode != kMode_Client) {
+	    fprintf(stderr, warn_invalid_server_option, option);
+	    break;
+	}
+
+	setFileInput(mExtSettings);
+	setSTDIN(mExtSettings);
+	mExtSettings->mFileName = new char[strlen("<stdin>")+1];
+	strcpy(mExtSettings->mFileName,"<stdin>");
+	break;
+
+    case 'L': // Listen Port (bidirectional testing client-side)
+	if (mExtSettings->mThreadMode != kMode_Client) {
+	    fprintf(stderr, warn_invalid_server_option, option);
+	    break;
+	}
+	mExtSettings->mListenPort = atoi(optarg);
+	break;
+
+    case 'M': // specify TCP MSS (maximum segment size)
+#if HAVE_DECL_TCP_MAXSEG
+	mExtSettings->mMSS = byte_atoi(optarg);
+	setTCPMSS(mExtSettings);
+	setPrintMSS(mExtSettings);
+#endif
+	break;
+
+    case 'N': // specify TCP nodelay option (disable Jacobson's Algorithm)
+	setNoDelay(mExtSettings);
+	break;
+
+    case 'P': // number of client threads
+#ifdef HAVE_THREAD
+	mExtSettings->mThreads = atoi(optarg);
+#else
+	if (mExtSettings->mThreadMode != kMode_Server) {
+	    fprintf(stderr, warn_invalid_single_threaded, option);
+	} else {
+	    mExtSettings->mThreads = atoi(optarg);
+	}
+#endif
+	break;
+#ifdef WIN32
+    case 'R':
+	setRemoveService(mExtSettings);
+	break;
+#else
+    case 'R':
+	setReverse(mExtSettings);
+	break;
+#endif
+    case 'S': // IP type-of-service
+	// TODO use a function that understands base-2
+	// the zero base here allows the user to specify
+	// "0x#" hex, "0#" octal, and "#" decimal numbers
+	if ((mExtSettings->mTOS = parse_ipqos(optarg)) == -1) {
+	    fprintf(stderr, "Invalid --tos value of %s\n", optarg);
+	    mExtSettings->mTOS = 0;
+	}
+	break;
+
+    case 'T': // time-to-live for both unicast and multicast
+	mExtSettings->mTTL = atoi(optarg);
+	break;
+
+    case 'U': // single threaded UDP server
+	setUDP(mExtSettings);
+	setSingleUDP(mExtSettings);
+	setSingleClient(mExtSettings);
+	break;
+
+    case 'V': // IPv6 Domain
+#if HAVE_IPV6
+	setIPV6(mExtSettings);
+#else
+	fprintf(stderr, "The --ipv6_domain (-V) option is not enabled in this build.\n");
+	exit(1);
+#endif
+	break;
+
+    case 'W' :
+	setSuggestWin(mExtSettings);
+	fprintf(stderr, "The -W option is not available in this release\n");
+	break;
+
+    case 'X' :
+	setPeerVerDetect(mExtSettings);
+	break;
+
+    case 'Z':
+#ifdef TCP_CONGESTION
+	setCongestionControl(mExtSettings);
+	mExtSettings->mCongestion = new char[strlen(optarg)+1];
+	strcpy(mExtSettings->mCongestion, optarg);
+#else
+	fprintf(stderr, "The -Z option is not available on this operating system\n");
+#endif
+	break;
+
+    case 0:
+	if (incrdstip) {
+	    incrdstip = 0;
+	    setIncrDstIP(mExtSettings);
+	}
+	if (incrdstport) {
+	    incrdstport = 0;
+	    setIncrDstPort(mExtSettings);
+	}
+	if (incrsrcip) {
+	    incrsrcip = 0;
+	    setIncrSrcIP(mExtSettings);
+	}
+	if (incrsrcport) {
+	    incrsrcport = 0;
+	    setIncrSrcPort(mExtSettings);
+	}
+	if (sumdstip) {
+	    sumdstip = 0;
+	    setSumServerDstIP(mExtSettings);
+	}
+	if (txstarttime) {
+	    long seconds;
+	    long usecs;
+	    int match = 0;
+	    txstarttime = 0;
+	    setTxStartTime(mExtSettings);
+	    setEnhanced(mExtSettings);
+	    match = sscanf(optarg,"%ld.%6ld", &seconds, &usecs);
+	    mExtSettings->txstart_epoch.tv_usec = 0;
+	    switch (match) {
+	    case 2:
+		mExtSettings->txstart_epoch.tv_usec = usecs;
+	    case 1:
+		mExtSettings->txstart_epoch.tv_sec = seconds;
+		break;
+	    default:
+		unsetTxStartTime(mExtSettings);
+		fprintf(stderr, "WARNING: invalid --txstart-time format\n");
+	    }
+	}
+	if (noconnectsync) {
+#ifdef HAVE_THREAD
+	    noconnectsync = 0;
+	    setNoConnectSync(mExtSettings);
+#else
+	    fprintf(stderr, "WARNING: --no-connect-sync requires thread support and not supported\n");
+#endif
+	}
+	if (txholdback) {
+	    txholdback = 0;
+	    char *end;
+	    Timestamp holdbackdelay;
+	    double delay = strtof(optarg, &end);
+	    if (*end != '\0') {
+		fprintf (stderr, "Invalid value of '%s' for --txdelay-time time\n", optarg);
+	    } else {
+		holdbackdelay.set(delay);
+		mExtSettings->txholdback_timer.tv_sec = holdbackdelay.getSecs();
+		mExtSettings->txholdback_timer.tv_usec = (holdbackdelay.getUsecs());
+		setTxHoldback(mExtSettings);
+	    }
+	}
+	if (triptime) {
+	    triptime = 0;
+	    setTripTime(mExtSettings);
+	}
+	if (noudpfin) {
+	    noudpfin = 0;
+	    setNoUDPfin(mExtSettings);
+	}
+	if (connectonly) {
+	    connectonly = 0;
+	    setConnectOnly(mExtSettings);
+	    unsetNoConnReport(mExtSettings);
+	    if (optarg) {
+		mExtSettings->connectonly_count = atoi(optarg);
+	    } else {
+		mExtSettings->connectonly_count = -1;
+	    }
+	}
+	if (connectretry) {
+	    connectretry = 0;
+	    mExtSettings->mConnectRetries = atoi(optarg);
+	}
+	if (sumonly) {
+	    sumonly = 0;
+	    setSumOnly(mExtSettings);
+	}
+	if (so_dontroute) {
+	    so_dontroute = 0;
+#if HAVE_DECL_SO_DONTROUTE
+	    setDontRoute(mExtSettings);
+	    if (optarg) {
+		if (atoi(optarg))
+		    setDontRoute(mExtSettings);
+		else
+		    unsetDontRoute(mExtSettings);
+	    }
+#else
+	    fprintf(stderr, "WARNING: The --local-only option is not supported on this platform\n");
+#endif
+	}
+	if (nearcongest) {
+	    nearcongest = 0;
+	    setNearCongest(mExtSettings);
+	    if (optarg && (atof(optarg) >=  0.0)) {
+		mExtSettings->rtt_nearcongest_weight_factor = atof(optarg);
+	    } else {
+		mExtSettings->rtt_nearcongest_weight_factor = NEARCONGEST_DEFAULT;
+	    }
+	}
+	if (permitkey) {
+	    permitkey = 0;
+	    if (optarg) {
+		strncpy(mExtSettings->mPermitKey, optarg, MAX_PERMITKEY_LEN);
+		mExtSettings->mPermitKey[MAX_PERMITKEY_LEN] = '\0';
+	    } else {
+		mExtSettings->mPermitKey[0] = '\0';
+	    }
+	    setPermitKey(mExtSettings);
+	}
+	if (permitkeytimeout) {
+	    permitkeytimeout = 0;
+	    if (atof(optarg) >= 0.0)
+		mExtSettings->mListenerTimeout = static_cast<size_t>(atof(optarg));
+	}
+	if (histogram) {
+	    histogram = 0;
+	    setHistogram(mExtSettings);
+	    setEnhanced(mExtSettings);
+	    if (optarg) {
+		mExtSettings->mHistogramStr = new char[ strlen(optarg) + 1 ];
+		strcpy(mExtSettings->mHistogramStr, optarg);
+	    } else {
+		mExtSettings->mHistogramStr = NULL;
+	    }
+	}
+	if (reversetest) {
+	    reversetest = 0;
+	    setReverse(mExtSettings);
+	}
+	if (fullduplextest) {
+	    fullduplextest = 0;
+	    setFullDuplex(mExtSettings);
+	}
+	if (overridetos) {
+	    overridetos = 0;
+	    if ((mExtSettings->mRTOS = parse_ipqos(optarg)) == -1) {
+		fprintf(stderr, "Invalid --tos-overide value of %s\n", optarg);
+	    } else {
+		setOverrideTOS(mExtSettings);
+	    }
+	}
+	if (fqrate) {
+#if defined(HAVE_DECL_SO_MAX_PACING_RATE)
+	    fqrate=0;
+	    setFQPacing(mExtSettings);
+	    mExtSettings->mFQPacingRate = static_cast<uintmax_t>(bitorbyte_atoi(optarg) / 8);
+#else
+	    fprintf(stderr, "WARNING: The --fq-rate option is not supported\n");
+#endif
+	}
+	if (isochronous) {
+	    isochronous = 0;
+	    setEnhanced(mExtSettings);
+	    setIsochronous(mExtSettings);
+	    // The following are default values which
+	    // may be overwritten during modal parsing
+	    mExtSettings->mFPS = 60.0;
+	    mExtSettings->mMean = 20000000.0;
+	    mExtSettings->mVariance = 0.0;
+	    mExtSettings->mBurstIPG = 5e-6;
+	    if (optarg) {
+		mExtSettings->mIsochronousStr = new char[ strlen(optarg) + 1 ];
+		strcpy(mExtSettings->mIsochronousStr, optarg);
+	    }
+	}
+	if (burstipg) {
+	    burstipg = 0;
+	    setIPG(mExtSettings);
+	    char *end;
+	    mExtSettings->mBurstIPG = strtof(optarg,&end);
+	    if (*end != '\0') {
+		fprintf (stderr, "ERRPORE: Invalid value of '%s' for --ipg\n", optarg);
+		exit(1);
+	    }
+	}
+	if (rxwinclamp) {
+	    rxwinclamp = 0;
+#if HAVE_DECL_TCP_WINDOW_CLAMP
+	    mExtSettings->mClampSize = byte_atoi(optarg);
+	    setRxClamp(mExtSettings);
+#else
+	    fprintf(stderr, "--tcp-rx-window-clamp not supported on this platform\n");
+#endif
+	}
+	if (tcpwritetimes) {
+	    tcpwritetimes = 0;
+	    setTcpWriteTimes(mExtSettings);
+	}
+	if (notcpbbquickack) {
+	    notcpbbquickack = 0;
+	    notcpbbquickack_cliset = 1;
+	}
+	if (tcpquickack) {
+	    tcpquickack = 0;
+#if HAVE_DECL_TCP_QUICKACK
+	    setTcpQuickAck(mExtSettings);
+#endif
+	}
+	if (workingload) {
+	    workingload = 0;
+#ifdef HAVE_THREAD
+	    setWorkingLoadUp(mExtSettings);
+	    setWorkingLoadDown(mExtSettings);
+	    if (optarg) {
+		char *tmp= new char [strlen(optarg) + 1];
+		if (tmp) {
+		    strcpy(tmp, optarg);
+		    if ((results = strtok(tmp, ",")) != NULL) {
+			if (strcasecmp(results, "up") == 0) {
+			    unsetWorkingLoadDown(mExtSettings);
+			} else if (strcasecmp(results, "down") == 0) {
+			    unsetWorkingLoadUp(mExtSettings);
+			} else if (strcasecmp(results, "bidir") == 0) {
+			    setWorkingLoadUp(mExtSettings);
+			    setWorkingLoadDown(mExtSettings);
+			} else {
+			    fprintf(stderr, "Unrecoginized value of %s for bounceback-congestion, use 'up', 'down' or 'bidir'\n", results);
+			}
+			if ((results = strtok(NULL, ",")) != NULL) {
+			    mExtSettings->mBounceBackCongestThreads = atoi(results);
+			}
+			delete [] tmp;
+		    }
+		}
+#else
+		fprintf(stderr, "bounceback-congest option requires a platform that supports threads\n");
+#endif
+	    }
+	}
+	if (bouncebackdelaystart) {
+	    bouncebackdelaystart = 0;
+	    char *end;
+	    Timestamp holdbackdelay;
+	    double delay = strtof(optarg, &end);
+	    if (*end != '\0') {
+		fprintf (stderr, "Invalid value of '%s' for --bounceback-txdelay time\n", optarg);
+	    } else {
+		holdbackdelay.set(delay);
+		mExtSettings->txholdback_timer.tv_sec = holdbackdelay.getSecs();
+		mExtSettings->txholdback_timer.tv_usec = (holdbackdelay.getUsecs());
+		setTxHoldback(mExtSettings);
+	    }
+	}
+	if (txnotsentlowwater) {
+	    txnotsentlowwater = 0;
+#if HAVE_DECL_TCP_NOTSENT_LOWAT
+	    mExtSettings->mWritePrefetch = byte_atoi(optarg);
+	    setWritePrefetch(mExtSettings);
+	    setEnhanced(mExtSettings);
+#else
+	    fprintf(stderr, "--tcp-write-prefetch not supported on this platform\n");
+#endif
+	}
+	if (burstperiodic) {
+	    burstperiodic = 0;
+	    setPeriodicBurst(mExtSettings);
+	    if (optarg && (atof(optarg) > 1e-5)) { // limit to 10 usecs
+		mExtSettings->mFPS = 1.0/atof(optarg);
+	    } else {
+		if (atof(optarg) != 0)
+		    fprintf(stderr, "WARN: burst-period too small, must be greater than 10 usecs\n");
+		unsetPeriodicBurst(mExtSettings);
+	    }
+	}
+	if (burstsize) {
+	    burstsize = 0;
+	    setPeriodicBurst(mExtSettings);
+	    if (optarg) {
+		mExtSettings->mBurstSize = byte_atoi(optarg);
+	    }
+	}
+	if (numreportstructs) {
+	    numreportstructs = 0;
+	    mExtSettings->numreportstructs = byte_atoi(optarg);
+	}
+	if (tapif) {
+	    tapif = 0;
+#if HAVE_TUNTAP_TAP
+	    if (optarg) {
+		mExtSettings->mIfrname = static_cast<char *>(calloc(strlen(optarg) + 1, sizeof(char)));
+		strcpy(mExtSettings->mIfrname, optarg);
+	    }
+	    setTapDev(mExtSettings);
+	    setEnhanced(mExtSettings);
+	    setL2LengthCheck(mExtSettings);
+#else
+	    fprintf(stderr, "ERROR: tap devices not supported\n");
+	    exit(1);
+#endif
+	}
+	if (tunif) {
+	    tunif = 0;
+	    fprintf(stderr, "ERROR: tun devices not yet supported\n");
+	    exit(1);
+#if HAVE_TUNTAP_TUN
+	    if (optarg) {
+		mExtSettings->mIfrname = static_cast<char *>(calloc(strlen(optarg) + 1, sizeof(char)));
+		strcpy(mExtSettings->mIfrname, optarg);
+	    }
+	    setTunDev(mExtSettings);
+	    setEnhanced(mExtSettings);
+#endif
+	}
+	if (hideips) {
+	    hideips = 0;
+	    setHideIPs(mExtSettings);
+	}
+	if (bounceback) {
+	    bounceback = 0;
+	    setBounceBack(mExtSettings);
+	    setNoDelay(mExtSettings);
+	}
+	if (bouncebackhold) {
+	    bouncebackhold = 0;
+	    if (optarg)
+		//cli units is ms, working units is us
+		mExtSettings->mBounceBackHold = int(atof(optarg) * 1e3);
+	    else
+		mExtSettings->mBounceBackHold = 0;
+	}
+	if (bouncebackperiod) {
+	    bouncebackperiod = 0;
+	    setPeriodicBurst(mExtSettings);
+	    if (optarg && (atof(optarg) > 1e-2)) { // limit to 10 usecs
+		mExtSettings->mFPS = 1e3/atof(optarg); // cli units is ms
+	    } else {
+		if (atof(optarg) != 0)
+		    fprintf(stderr, "WARN: bouncback-period too small, must be greater than 10 usecs\n");
+		unsetPeriodicBurst(mExtSettings);
+	    }
+	}
+	break;
+    default: // ignore unknown
+	break;
     }
 } // end Interpret
 
