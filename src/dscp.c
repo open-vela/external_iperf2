@@ -1,7 +1,8 @@
-/* DSCP lookup routines lifted wholesale from openssh
+/* DSCP lookup routines lifted from openssh, modified a bit for WiFi WMMM
  *
  * Copyright (c) 2000 Markus Friedl.  All rights reserved.
  * Copyright (c) 2005,2006 Damien Miller.  All rights reserved.
+ * Copyright (c) 2022 Robert McMahon.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
