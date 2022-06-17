@@ -172,8 +172,8 @@ set target bandwidth to \fIn\fR bits/sec (default 1 Mbit/sec) or
 .BR "    --bounceback "
 run a tcp bounceback test (set size with -l or --len, defaults to 100 bytes)
 .TP
-.BR "    --bounceback-congest[="\fBup|down]\fR
-request a concurrent working load TCP stream, defaults to full duplex unless the \fBup\fR or \fBdown\fR option is provided, ToS will be BE (0x0)
+.BR "    --bounceback-congest[="\fBup|down|bidir][\fR,\fIn\fR\fB]\fR
+request a concurrent working load or TCP stream(s), defaults to full duplex (or bidir) unless the \fBup\fR or \fBdown\fR option is provided. The number of TCP streams defaults to 1 and can be changed via the n value, e.g. \fB--bounceback-congest=down,4\fR will use four TCP streams from server to the client as the working load. The IP ToS will be BE (0x0) for working load traffic.
 .TP
 .BR "    --bounceback-hold " \fIn\fR
 request the server to insert a delay of n milliseconds between its read and write (default is no delay)
@@ -183,6 +183,9 @@ request the client schedule a send every n milliseconds (w/o option bouncebacks 
 .TP
 .BR "    --bounceback-no-quickack "
 request the server not set the TCP_QUICKACK socket option (disabling TCP ACK delays) during a bounceback test (see NOTES)
+.TP
+.BR "    --bounceback-txdelay " \fIn\fR
+request the client to delay n seconds between the start of the working load and the bounceback traffic (default is no delay)
 .TP
 .BR "    --burst-period " \fIn\fR
 Set the burst period in seconds. Defaults to one second. (Note: assumed use case is low duty cycle traffic bursts)
