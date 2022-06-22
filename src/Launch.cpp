@@ -220,7 +220,9 @@ static void clientside_client_fullduplex (struct thread_Settings *thread, Client
     struct thread_Settings *reverse_client = NULL;
     setTransferID(thread, 0);
     SockAddr_remoteAddr(thread);
-    thread->mFullDuplexReport = InitSumReport(thread, -1, 1);
+    if (!isBounceBack(thread)) {
+        thread->mFullDuplexReport = InitSumReport(thread, -1, 1);
+    }
     Settings_Copy(thread, &reverse_client, 0);
     if ((thread->mThreads > 1) || isSumOnly(thread) || \
 	(!(thread->mThreads > 1) && !isEnhanced(thread))) {
@@ -406,6 +408,9 @@ void client_init(struct thread_Settings *clients) {
 		    setFullDuplex(next);
 		} else if (isWorkingLoadDown(clients)) {
 		    setReverse(next);
+		}
+		if (isBounceBack(clients) && (clients->mBounceBackCongestThreads > 1)) {
+		    Iperf_push_host(clients);
 		}
 		// Bump the bounceback time to include the delay time
 		if (next->txholdback_timer.tv_sec || next->txholdback_timer.tv_usec) {
