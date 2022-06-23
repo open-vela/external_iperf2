@@ -578,8 +578,10 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 		ireport->info.output_handler = tcp_output_write;
 	    } else if (isSumOnly(inSettings)) {
 		ireport->info.output_handler = NULL;
-	    } else if (isTripTime(inSettings) || isIsochronous(inSettings)) {
+	    } else if (isTripTime(inSettings) && isIsochronous(inSettings)) {
 		ireport->info.output_handler = tcp_output_read_enhanced_isoch;
+	    } else if (isTripTime(inSettings)) {
+		ireport->info.output_handler = tcp_output_read_triptime;
 	    } else if (isEnhanced(inSettings)) {
 		ireport->info.output_handler = tcp_output_read_enhanced;
 	    } else if (!isFullDuplex(inSettings)) {
