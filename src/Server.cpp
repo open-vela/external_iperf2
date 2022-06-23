@@ -239,7 +239,6 @@ void Server::RunTCP () {
 		    if (isburst) {
 			burst_nleft -= n;
 			if (burst_nleft == 0) {
-			    reportstruct->prevSentTime = myReport->info.ts.prevsendTime;
 			    reportstruct->sentTime = myReport->info.ts.prevsendTime;
 			    if (isTripTime(mSettings) || isIsochronous(mSettings)) {
 				reportstruct->isochStartTime.tv_sec = burst_info.send_tt.write_tv_sec;
