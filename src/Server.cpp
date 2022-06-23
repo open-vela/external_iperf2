@@ -190,6 +190,7 @@ void Server::RunTCP () {
 		if ((n = recvn(mSettings->mSock, reinterpret_cast<char *>(&burst_info), sizeof(struct TCP_burst_payload), 0)) == sizeof(struct TCP_burst_payload)) {
 		    // burst_info.typelen.type = ntohl(burst_info.typelen.type);
 		    // burst_info.typelen.length = ntohl(burst_info.typelen.length);
+		    // This is the first stamp of the burst
 		    burst_info.flags = ntohl(burst_info.flags);
 		    burst_info.burst_size = ntohl(burst_info.burst_size);
 		    assert(burst_info.burst_size > 0);
@@ -203,8 +204,11 @@ void Server::RunTCP () {
 			burst_info.send_tt.write_tv_sec = (uint32_t)myReport->info.ts.startTime.tv_sec;
 			burst_info.send_tt.write_tv_usec = (uint32_t)myReport->info.ts.startTime.tv_usec;
 			burst_info.burst_period_us = ntohl(burst_info.burst_period_us);
+		    } else {
+			fprintf(stderr, "Program error in server per burst");
 		    }
-		    // This is the first stamp of the burst
+		    reportstruct->sentTime.tv_sec = burst_info.send_tt.write_tv_sec;
+		    reportstruct->sentTime.tv_usec = burst_info.send_tt.write_tv_usec;
 		    myReport->info.ts.prevsendTime = reportstruct->sentTime;
 		    burst_nleft = burst_info.burst_size - n;
 		    if (burst_nleft == 0) {
@@ -236,6 +240,7 @@ void Server::RunTCP () {
 			burst_nleft -= n;
 			if (burst_nleft == 0) {
 			    reportstruct->prevSentTime = myReport->info.ts.prevsendTime;
+			    reportstruct->sentTime = myReport->info.ts.prevsendTime;
 			    if (isTripTime(mSettings) || isIsochronous(mSettings)) {
 				reportstruct->isochStartTime.tv_sec = burst_info.send_tt.write_tv_sec;
 				reportstruct->isochStartTime.tv_usec = burst_info.send_tt.write_tv_usec;
