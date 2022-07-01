@@ -100,24 +100,24 @@ struct MeanMinMaxStats {
     double mean;
     double m2;
     double vd;
-    int cnt;
-    int err;
+    intmax_t cnt;
+    intmax_t err;
 };
 
 #define TCPREADBINCOUNT 8
 struct ReadStats {
-    int cntRead;
-    int totcntRead;
+    intmax_t cntRead;
+    intmax_t totcntRead;
     int bins[TCPREADBINCOUNT];
     int totbins[TCPREADBINCOUNT];
     int binsize;
 };
 
 struct WriteStats {
-    int WriteCnt;
-    int WriteErr;
-    int totWriteCnt;
-    int totWriteErr;
+    intmax_t WriteCnt;
+    intmax_t WriteErr;
+    intmax_t totWriteCnt;
+    intmax_t totWriteErr;
     struct iperf_tcpstats tcpstats;
 };
 
