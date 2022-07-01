@@ -1413,7 +1413,7 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
 void reporter_connect_printf_tcp_final (struct ConnectionInfo * report) {
     if (report->connect_times.cnt > 1) {
         double variance = (report->connect_times.cnt < 2) ? 0 : 1e3* (sqrt(report->connect_times.m2 / (report->connect_times.cnt - 1)));
-        fprintf(stdout, "[ CT] final connect times (min/avg/max/stdev) = %0.3f/%0.3f/%0.3f/%0.3f ms (tot/err) = %d/%d\n", \
+        fprintf(stdout, "[ CT] final connect times (min/avg/max/stdev) = %0.3f/%0.3f/%0.3f/%0.3f ms (tot/err) = %" PRIdMAX "/%" PRIdMAX "\n", \
 		report->connect_times.min,  \
 	        (report->connect_times.sum / report->connect_times.cnt), \
 		report->connect_times.max, variance,  \
