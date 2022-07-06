@@ -655,24 +655,19 @@ struct ReportHeader* InitIndividualReport (struct thread_Settings *inSettings) {
 								   inSettings->mHistci_upper, ireport->info.common->transferID, name);
 	}
     }
-#if HAVE_DECL_TCP_NOTSENT_LOWAT
-    if ((inSettings->mThreadMode == kMode_Client) && isWritePrefetch(inSettings) && !isUDP(inSettings) && isHistogram(inSettings)) {
-	char name[] = "S8";
-	ireport->info.latency_histogram =  histogram_init(inSettings->mHistBins,inSettings->mHistBinsize,0,\
-							  pow(10,inSettings->mHistUnits), \
-							  inSettings->mHistci_lower, inSettings->mHistci_upper, ireport->info.common->transferID, name);
-    } else if ((inSettings->mThreadMode == kMode_Client) && isTcpWriteTimes(inSettings) && isHistogram(inSettings) && !isUDP(inSettings)) {
-	char name[] = "W8";
-	inSettings->mHistBins = 100000; // 10 seconds wide
-	inSettings->mHistBinsize = 100; // 100 usec bins
-	inSettings->mHistUnits = 6;  // usecs 10 pow(x)
-	inSettings->mHistci_lower = 5;
-	inSettings->mHistci_upper = 95;
-	ireport->info.write_histogram =  histogram_init(inSettings->mHistBins,inSettings->mHistBinsize,0,	\
-							pow(10,inSettings->mHistUnits), \
-							inSettings->mHistci_lower, inSettings->mHistci_upper, ireport->info.common->transferID, name);
+    if ((inSettings->mThreadMode == kMode_Client) && !isUDP(inSettings) && isHistogram(inSettings)) {
+	if (isTcpWriteTimes(inSettings)) {
+	    char name[] = "W8";
+	    ireport->info.write_histogram =  histogram_init(inSettings->mHistBins,inSettings->mHistBinsize,0,\
+							    pow(10,inSettings->mHistUnits), \
+							    inSettings->mHistci_lower, inSettings->mHistci_upper, ireport->info.common->transferID, name);
+	} else if (isWritePrefetch(inSettings)) {
+	    char name[] = "S8";
+	    ireport->info.latency_histogram =  histogram_init(inSettings->mHistBins,inSettings->mHistBinsize,0,\
+							      pow(10,inSettings->mHistUnits), \
+							      inSettings->mHistci_lower, inSettings->mHistci_upper, ireport->info.common->transferID, name);
+	}
     }
-#endif
     if ((inSettings->mThreadMode == kMode_Client) && isBounceBack(inSettings)) {
 	char name[] = "BB8";
 	inSettings->mHistBins = 100000; // 10 seconds wide
