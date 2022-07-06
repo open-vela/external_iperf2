@@ -1400,11 +1400,12 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
 	if (isWritePrefetch(report->common)) {
 	    fprintf(stdout, "Event based writes (pending queue watermark at %d bytes)\n", report->common->WritePrefetch);
 	}
+#endif
 	if (isHistogram(report->common)) {
-	    fprintf(stdout, "Enabled select histograms bin-width=%0.3f ms, bins=%d\n", \
+	    fprintf(stdout, "Enabled write histograms bin-width=%0.3f ms, bins=%d\n", \
 		((1e3 * report->common->HistBinsize) / pow(10,report->common->HistUnits)), report->common->HistBins);
 	}
-#endif
+
     }
     fflush(stdout);
 }
