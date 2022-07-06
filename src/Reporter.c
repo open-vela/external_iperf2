@@ -892,10 +892,10 @@ void reporter_handle_packet_client (struct ReporterData *data, struct ReportStru
 	    reporter_handle_txmsg_oneway_transit(stats, packet);
 	}
 	if (isTcpWriteTimes(stats->common) && !isUDP(stats->common) && (packet->write_time > 0)) {
-	    reporter_update_mmm(&stats->write_mmm.current, (double) packet->write_time);
-	    reporter_update_mmm(&stats->write_mmm.total, (double) packet->write_time);
+	    reporter_update_mmm(&stats->write_mmm.current, ((double) packet->write_time));
+	    reporter_update_mmm(&stats->write_mmm.total, ((double) packet->write_time));
 	    if (stats->write_histogram ) {
-		histogram_insert(stats->write_histogram, (1e-6 * packet->write_time), &packet->packetTime);
+		histogram_insert(stats->write_histogram, (1e-6 * packet->write_time), NULL);
 	    }
 	}
     }

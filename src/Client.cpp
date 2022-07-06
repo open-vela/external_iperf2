@@ -922,6 +922,7 @@ inline bool Client::AwaitWriteSelectEventTCP (void) {
 void Client::RunWriteEventsTCP () {
     int burst_id = 0;
     int writelen = mSettings->mBufLen;
+    Timestamp write_end;
 
     now.setnow();
     reportstruct->packetTime.tv_sec = now.getSecs();
@@ -952,7 +953,7 @@ void Client::RunWriteEventsTCP () {
 		reportstruct->packetLen = 0;
 		reportstruct->emptyreport = 1;
 	    } else if (isTcpWriteTimes(mSettings)) {
-		Timestamp write_end;
+		write_end.setnow();
 		reportstruct->write_time = write_end.subUsec(write_start);
 	    }
 	}
