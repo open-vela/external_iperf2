@@ -143,7 +143,7 @@ static void common_copy (struct ReportCommon **common, struct thread_Settings *i
     (*common)->WritePrefetch = inSettings->mWritePrefetch;
 #endif
 #ifdef HAVE_THREAD_DEBUG
-    thread_debug("Alloc common rpt/com/size/strsz %p/%p/%d/%d", (void *) common, (void *)(*common), sizeof(struct ReportCommon), bytecnt);
+    thread_debug("Alloc common rpt/com/size %p/%p/%d", (void *) common, (void *)(*common), sizeof(struct ReportCommon));
 #endif
 }
 
