@@ -624,8 +624,15 @@ void Client::RunTCP () {
 	    myReport->info.ts.prevsendTime = reportstruct->packetTime;
 	    writelen = (mSettings->mBufLen > burst_remaining) ? burst_remaining : mSettings->mBufLen;
 	    // perform write, full header must succeed
+	    if (isTcpWriteTimes(mSettings)) {
+		write_start.setnow();
+	    }
 	    reportstruct->packetLen = writen(mySocket, mSettings->mBuf, writelen, &reportstruct->writecnt);
 	    FAIL_errno(reportstruct->packetLen < (intmax_t) sizeof(struct TCP_burst_payload), "burst written", mSettings);
+	    if (isTcpWriteTimes(mSettings)) {
+		now.setnow();
+		reportstruct->write_time = now.subUsec(write_start);
+	    }
 	} else {
 	    // printf("pl=%ld\n",reportstruct->packetLen);
 	    // perform write
