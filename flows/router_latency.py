@@ -188,17 +188,6 @@ else :
 
 traffic_flows = iperf_flow.get_instances()
 
-if args.ampdudump:
-    for sta in stas_list :
-        cmd = "wl dump_clear ampdu"
-        logging.info('ampdu clear for STA {} using ({})'.format(str(sta.ipaddr), cmd))
-        ret = sta.rexec(cmd=cmd, run_now=True)
-        cmd_results = ret.results.decode()
-        cmd_results = cmd_results.splitlines()
-
-        for line in cmd_results:
-            logging.info('{}'.format(str(line)))
-
 try:
     if traffic_flows:
         for runid in range(args.runcount) :
