@@ -1,0 +1,20 @@
+TESTBED:
+    yaml_file:      ./default_testbed.yaml
+
+TEST_RUNNER:
+    TRAFFIC_SRC:    TRAFFIC_GEN_1x10G
+    TRAFFIC_DST1:   TRAFFIC_GEN_4x1G PORT1
+    TRAFFIC_DST2:   TRAFFIC_GEN_4x1G PORT2
+    TRAFFIC_DST3:   TRAFFIC_GEN_4x1G PORT3
+    AP:             AP1
+
+TEST_WLAN:
+    TRAFFIC_SRC:    TRAFFIC_GEN_1x10G
+    TRAFFIC_DST1:   DUT1
+    TRAFFIC_DST2:   DUT2
+    TRAFFIC_DST3:   DUT3
+    AP:             AP1
+
+TEST:
+    NAME:           TEST_RUNNER 
+    
