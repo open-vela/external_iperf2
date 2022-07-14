@@ -1,6 +1,6 @@
 The following steps needs to be done before running pyflows test:
 
-1) Install Python 3.7 and above
+1) Install Python 3.10 and above
 
 2) sudo dnf install python3-matplotlib
 
@@ -10,9 +10,9 @@ The following steps needs to be done before running pyflows test:
 export PYTHONPATH=/your_local_dir/iperf2-code/flows:$PYTHONPATH
 echo $PYTHONPATH
 
-5) compile the following moudlues:
+5) compile the following modules:
 cd /your_local_dir/iperf2-code/flows
-python3 -m py_compile aeroflex.py  flows.py  netlink.py  rf_topology.py  ssh_nodes.py
+python3 -m py_compile flows.py  ssh_nodes.py
 
 6) Configure the IP addresses and LAN addresses in the router_latency.py
 
