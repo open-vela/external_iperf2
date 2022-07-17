@@ -165,7 +165,7 @@ const struct option long_options[] =
 // more esoteric options
 {"awdl",             no_argument, NULL, 'A'},
 {"bind",       required_argument, NULL, 'B'},
-{"bounceback", no_argument, &bounceback, 1},
+{"bounceback", optional_argument, &bounceback, 1},
 {"bounceback-congest", optional_argument, &workingload, 1},
 {"bounceback-txdelay", required_argument, &bouncebackdelaystart, 1},
 {"bounceback-hold", required_argument, &bouncebackhold, 1},
@@ -1232,6 +1232,9 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    bounceback = 0;
 	    setBounceBack(mExtSettings);
 	    setNoDelay(mExtSettings);
+	    if (optarg) {
+		mExtSettings->mBounceBackBurst = atoi(optarg);
+	    }
 	}
 	if (bouncebackhold) {
 	    bouncebackhold = 0;
