@@ -309,7 +309,6 @@ enum TimeStampType {
 struct ReportTimeStamps {
     double iStart;
     double iEnd;
-    double iLastBB;
     double significant_partial;
     struct timeval startTime;
     struct timeval matchTime;
