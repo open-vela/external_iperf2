@@ -920,6 +920,7 @@ void reporter_handle_packet_bb_client (struct ReporterData *data, struct ReportS
 	double bbowdto = TimeDifference(packet->sentTimeRX, packet->sentTime);
 	double bbowdfro = TimeDifference(packet->packetTime, packet->sentTimeTX);
 	double asym = bbowdfro - bbowdto;
+	stats->ts.prevpacketTime = packet->packetTime;
 #if 0
 	fprintf(stderr, "BB Debug: ctx=%lx.%lx srx=%lx.%lx stx=%lx.%lx crx=%lx.%lx\n", packet->sentTime.tv_sec, packet->sentTime.tv_usec, packet->sentTimeRX.tv_sec, packet->sentTimeRX.tv_usec, packet->sentTimeTX.tv_sec, packet->sentTimeTX.tv_usec, packet->packetTime.tv_sec, packet->packetTime.tv_usec);
 	fprintf(stderr, "BB Debug: ctx=%ld.%ld srx=%ld.%ld stx=%ld.%ld crx=%ld.%ld\n", packet->sentTime.tv_sec, packet->sentTime.tv_usec, packet->sentTimeRX.tv_sec, packet->sentTimeRX.tv_usec, packet->sentTimeTX.tv_sec, packet->sentTimeTX.tv_usec, packet->packetTime.tv_sec, packet->packetTime.tv_usec);
@@ -1582,6 +1583,7 @@ void reporter_transfer_protocol_sum_client_tcp (struct TransferInfo *stats, int 
 
 void reporter_transfer_protocol_client_bb_tcp (struct ReporterData *data, int final) {
     struct TransferInfo *stats = &data->info;
+    stats->ts.iLastBB = TimeDifference(stats->ts.prevpacketTime, stats->ts.startTime);
     if (final) {
 	if ((stats->cntBytes > 0) && stats->output_handler && !TimeZero(stats->ts.intervalTime)) {
 	    // print a partial interval report if enable and this a final
