@@ -1003,55 +1003,58 @@ void Client::RunBounceBackTCP () {
     reportstruct->packetTime.tv_usec = now.getUsecs();
     while (InProgress()) {
 	int n;
-	reportstruct->writecnt = 0;
-	if (framecounter) {
-	    burst_id = framecounter->wait_tick();
-	} else {
-	    burst_id++;
-	}
-	now.setnow();
-	reportstruct->sentTime.tv_sec = now.getSecs();
-	reportstruct->sentTime.tv_usec = now.getUsecs();
-	WriteTcpTxBBHdr(reportstruct, burst_id, 0);
-	myReport->info.ts.prevsendTime = reportstruct->sentTime;
-	reportstruct->packetLen = writen(mySocket, mSettings->mBuf, writelen, &reportstruct->writecnt);
-	if (reportstruct->packetLen == writelen) {
-	    reportstruct->emptyreport = 0;
-	    totLen += reportstruct->packetLen;
-	    reportstruct->errwrite=WriteNoErr;
-#if HAVE_DECL_TCP_QUICKACK
-	    if (isTcpQuickAck(mSettings)) {
-		int opt = 1;
-		Socklen_t len = sizeof(opt);
-		int rc = setsockopt(mySocket, IPPROTO_TCP, TCP_QUICKACK,
-				    reinterpret_cast<char*>(&opt), len);
-		WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_QUICKACK");
+	int bb_burst = (mSettings->mBounceBackBurst > 0) ? mSettings->mBounceBackBurst : 1;
+	while (bb_burst--) {
+	    reportstruct->writecnt = 0;
+	    if (framecounter) {
+		burst_id = framecounter->wait_tick();
+	    } else {
+		burst_id++;
 	    }
-#endif
-	    if ((n = recvn(mySocket, mSettings->mBuf, mSettings->mBounceBackBytes, 0)) == mSettings->mBounceBackBytes) {
-		struct bounceback_hdr *bbhdr = reinterpret_cast<struct bounceback_hdr *>(mSettings->mBuf);
-		now.setnow();
-		reportstruct->sentTimeRX.tv_sec = ntohl(bbhdr->bbserverRx_ts.sec);
-		reportstruct->sentTimeRX.tv_usec = ntohl(bbhdr->bbserverRx_ts.usec);
-		reportstruct->sentTimeTX.tv_sec = ntohl(bbhdr->bbserverTx_ts.sec);
-		reportstruct->sentTimeTX.tv_usec = ntohl(bbhdr->bbserverTx_ts.usec);
-		reportstruct->packetTime.tv_sec = now.getSecs();
-		reportstruct->packetTime.tv_usec = now.getUsecs();
-		reportstruct->packetLen += n;
+	    now.setnow();
+	    reportstruct->sentTime.tv_sec = now.getSecs();
+	    reportstruct->sentTime.tv_usec = now.getUsecs();
+	    WriteTcpTxBBHdr(reportstruct, burst_id, 0);
+	    myReport->info.ts.prevsendTime = reportstruct->sentTime;
+	    reportstruct->packetLen = writen(mySocket, mSettings->mBuf, writelen, &reportstruct->writecnt);
+	    if (reportstruct->packetLen == writelen) {
 		reportstruct->emptyreport = 0;
+		totLen += reportstruct->packetLen;
+		reportstruct->errwrite=WriteNoErr;
+#if HAVE_DECL_TCP_QUICKACK
+		if (isTcpQuickAck(mSettings)) {
+		    int opt = 1;
+		    Socklen_t len = sizeof(opt);
+		    int rc = setsockopt(mySocket, IPPROTO_TCP, TCP_QUICKACK,
+					reinterpret_cast<char*>(&opt), len);
+		    WARN_errno(rc == SOCKET_ERROR, "setsockopt TCP_QUICKACK");
+		}
+#endif
+		if ((n = recvn(mySocket, mSettings->mBuf, mSettings->mBounceBackBytes, 0)) == mSettings->mBounceBackBytes) {
+		    struct bounceback_hdr *bbhdr = reinterpret_cast<struct bounceback_hdr *>(mSettings->mBuf);
+		    now.setnow();
+		    reportstruct->sentTimeRX.tv_sec = ntohl(bbhdr->bbserverRx_ts.sec);
+		    reportstruct->sentTimeRX.tv_usec = ntohl(bbhdr->bbserverRx_ts.usec);
+		    reportstruct->sentTimeTX.tv_sec = ntohl(bbhdr->bbserverTx_ts.sec);
+		    reportstruct->sentTimeTX.tv_usec = ntohl(bbhdr->bbserverTx_ts.usec);
+		    reportstruct->packetTime.tv_sec = now.getSecs();
+		    reportstruct->packetTime.tv_usec = now.getUsecs();
+		    reportstruct->packetLen += n;
+		    reportstruct->emptyreport = 0;
+		    myReportPacket();
+		} else if (n == 0) {
+		    peerclose = true;
+		}
+	    } else if ((reportstruct->packetLen < 0 ) && NONFATALTCPWRITERR(errno)) {
+		reportstruct->packetLen = 0;
+		reportstruct->emptyreport = 1;
+		reportstruct->errwrite=WriteErrNoAccount;
 		myReportPacket();
-	    } else if (n == 0) {
-		peerclose = true;
+	    } else {
+		reportstruct->errwrite=WriteErrFatal;
+		reportstruct->packetLen = -1;
+		FAIL_errno(1, "tcp bounce-back write", mSettings);
 	    }
-	} else if ((reportstruct->packetLen < 0 ) && NONFATALTCPWRITERR(errno)) {
-	    reportstruct->packetLen = 0;
-	    reportstruct->emptyreport = 1;
-	    reportstruct->errwrite=WriteErrNoAccount;
-	    myReportPacket();
-	} else {
-	    reportstruct->errwrite=WriteErrFatal;
-	    reportstruct->packetLen = -1;
-	    FAIL_errno(1, "tcp bounce-back write", mSettings);
 	}
     }
     WriteTcpTxBBHdr(reportstruct, 0x0, 1);
