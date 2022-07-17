@@ -1004,7 +1004,8 @@ void Client::RunBounceBackTCP () {
     while (InProgress()) {
 	int n;
 	int bb_burst = (mSettings->mBounceBackBurst > 0) ? mSettings->mBounceBackBurst : 1;
-	while (bb_burst--) {
+	while (bb_burst > 0) {
+	    bb_burst--;
 	    reportstruct->writecnt = 0;
 	    if (framecounter) {
 		burst_id = framecounter->wait_tick();
