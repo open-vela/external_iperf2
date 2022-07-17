@@ -179,7 +179,7 @@ request a concurrent working load or TCP stream(s), defaults to full duplex (or 
 request the server to insert a delay of n milliseconds between its read and write (default is no delay)
 .TP
 .BR "    --bounceback-period " \fIn\fR
-request the client schedule a send every n milliseconds (w/o option bouncebacks are immediately scheduled. With command option and no optional value given, the interval will be one second.)
+request the client schedule a send every n seconds (w/o option bouncebacks are immediately scheduled. With command option and no optional value given, the interval will be one second.)
 .TP
 .BR "    --bounceback-no-quickack "
 request the server not set the TCP_QUICKACK socket option (disabling TCP ACK delays) during a bounceback test (see NOTES)
