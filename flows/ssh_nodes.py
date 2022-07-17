@@ -27,11 +27,15 @@
 # Python object to support sending remote commands to a host
 #
 # Date April 2018
+
 import logging
 import asyncio, subprocess
+import time, datetime
 import weakref
 import os
 import re
+
+from datetime import datetime as datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -40,19 +44,33 @@ class ssh_node:
     DEFAULT_CMD_TIMEOUT = 30
     DEFAULT_CONNECT_TIMEOUT = 60.0
     rexec_tasks = []
-    loop = None
+    _loop = None
     instances = weakref.WeakSet()
+    periodic_cmd_futures = []
+    periodic_cmd_running_event = asyncio.Event()
+    periodic_cmd_done_event = asyncio.Event()
 
     @classmethod
-    def set_loop(cls, loop=None):
-        if loop :
-            cls.loop = loop
-        elif os.name == 'nt':
-            # On Windows, the ProactorEventLoop is necessary to listen on pipes
-            cls.loop = asyncio.ProactorEventLoop()
-        else:
-            cls.loop = asyncio.new_event_loop()
-        return cls.loop
+    @property
+    def loop(cls):
+        if not cls._loop :
+            try :
+                cls._loop = asyncio.get_running_loop()
+            except :
+              if os.name == 'nt':
+                  # On Windows, the ProactorEventLoop is necessary to listen on pipes
+                  cls._loop = asyncio.ProactorEventLoop()
+              else:
+                  cls._loop = asyncio.new_event_loop()
+        return cls._loop
+
+    @classmethod
+    def sleep(cls, time=0, text=None, stoptext=None) :
+        if text :
+            logging.info('Sleep {} ({})'.format(time, text))
+        ssh_node.loop.run_until_complete(asyncio.sleep(time))
+        if stoptext :
+            logging.info('Sleep done ({})'.format(stoptext))
 
     @classmethod
     def get_instances(cls):
@@ -63,8 +81,6 @@ class ssh_node:
 
     @classmethod
     def run_all_commands(cls, timeout=None, text=None, stoptext=None) :
-        if not ssh_node.loop :
-            ssh_node.set_loop()
         if ssh_node.rexec_tasks :
             if text :
                 logging.info('Run all tasks: {})'.format(time, text))
@@ -75,7 +91,6 @@ class ssh_node:
 
     @classmethod
     def open_consoles(cls, silent_mode=False) :
-        ssh_node.set_loop()
         nodes = ssh_node.get_instances()
         node_names = []
         tasks = []
@@ -132,10 +147,20 @@ class ssh_node:
             ssh_node.loop.run_until_complete(asyncio.wait(tasks, timeout=60))
             logging.info('Closing consoles done: {}'.format(s.join(node_names)))
 
-    def __init__(self, name=None, ipaddr=None, devip=None, console=False, device=None, ssh_speedups=True, silent_mode=False, sshtype='ssh', relay=None):
+    @classmethod
+    def periodic_cmds_stop(cls) :
+        logging.info("Stop periodic futures")
+        ssh_node.periodic_cmd_futures = []
+        ssh_node.periodic_cmd_running_event.clear()
+        while not ssh_node.periodic_cmd_done_event.is_set() :
+            ssh_node.loop.run_until_complete(asyncio.sleep(0.25))
+            logging.debug("Awaiting kill periodic futures")
+        logging.debug("Stop periodic futures done")
+
+    def __init__(self, name=None, ipaddr=None, devip=None, console=False, device=None, ssh_speedups=False, silent_mode=False, sshtype='ssh', relay=None):
         self.ipaddr = ipaddr
         self.name = name
-        self.my_tasks = []
+        self.my_futures = []
         self.device = device
         self.devip = devip
         self.sshtype = sshtype.lower()
@@ -146,7 +171,26 @@ class ssh_node:
             self.ssh_speedups = False
             self.controlmasters = None
         self.ssh_console_session = None
-        self.relay = relay
+
+        self.relay = None
+        if relay :
+            self.relay = relay
+            self.ssh = ['/usr/bin/ssh', 'root@{}'.format(relay), '/usr/local/bin/ush']
+        else :
+            self.ssh = []
+        if self.sshtype.lower() == 'ush' :
+            if not self.ssh :
+                logging.debug("node add /usr/local/bin/ush")
+                self.ssh.extend(['/usr/local/bin/ush'])
+            logging.debug("ush={} ".format(self.ssh))
+        elif self.sshtype.lower() == 'ssh' :
+            if not self.ssh :
+                logging.debug("node add /usr/bin/ssh")
+                self.ssh.extend(['/usr/bin/ssh'])
+            logging.debug("ssh={} ".format(self.ssh))
+        else :
+            raise ValueError("ssh type invalid")
+
         ssh_node.instances.add(self)
 
     def wl (self, cmd) :
@@ -168,16 +212,16 @@ class ssh_node:
         cmd_timer = CMD_TIMEOUT
         connect_timer = CONNECT_TIMEOUT
         this_session = ssh_session(name=self.name, hostname=self.ipaddr, CONNECT_TIMEOUT=connect_timer, node=self, ssh_speedups=True)
-        this_task = asyncio.ensure_future(this_session.post_cmd(cmd=cmd, IO_TIMEOUT=io_timer, CMD_TIMEOUT=cmd_timer), loop=ssh_node.loop)
+        this_future = asyncio.ensure_future(this_session.post_cmd(cmd=cmd, IO_TIMEOUT=io_timer, CMD_TIMEOUT=cmd_timer), loop=ssh_node.loop)
         if run_now:
-            ssh_node.loop.run_until_complete(asyncio.wait([this_task], timeout=CMD_TIMEOUT))
+            ssh_node.loop.run_until_complete(asyncio.wait([this_future], timeout=CMD_TIMEOUT))
         else:
-            ssh_node.rexec_tasks.append(this_task)
-            self.my_tasks.append(this_task)
+            ssh_node.rexec_tasks.append(this_future)
+            self.my_futures.append(this_future)
         return this_session
 
     async def clean(self) :
-        childprocess = await asyncio.create_subprocess_exec('/usr/bin/ssh', 'root@{}'.format(self.ipaddr), 'pkill', 'dmesg', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, loop=ssh_node.loop)
+        childprocess = await asyncio.create_subprocess_exec('/usr/bin/ssh', 'root@{}'.format(self.ipaddr), 'pkill', 'dmesg', stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         stdout, stderr = await childprocess.communicate()
         if stdout :
             logging.info('{}'.format(stdout))
@@ -187,6 +231,82 @@ class ssh_node:
     def close_console(self) :
         if self.ssh_console_session:
             self.ssh_console_session.close()
+
+    async def repeat(self,interval, func, *args, **kwargs):
+        """
+        Run func every interval seconds.
+        If func has not finished before *interval*, will run again
+        immediately when the previous iteration finished.
+        *args and **kwargs are passed as the arguments to func.
+        """
+        logging.debug("repeat args={} kwargs={}".format(args, kwargs))
+
+        while ssh_node.periodic_cmd_running_event.is_set() :
+            await asyncio.gather(
+                func(*args, **kwargs),
+                asyncio.sleep(interval),
+            )
+            if interval == 0 :
+                break
+
+        logging.debug("Closing log_fh={}".format(kwargs['log_fh']))
+        kwargs['log_fh'].flush()
+        kwargs['log_fh'].close()
+        ssh_node.periodic_cmd_done_event.set()
+
+    def periodic_cmd_enable(self, cmd='ls', time_period=None, cmd_log_file=None) :
+        log_file_handle = open(cmd_log_file, 'w', errors='ignore')
+
+        if ssh_node.loop :
+            future = asyncio.ensure_future(self.repeat(time_period, self.run_cmd, cmd=cmd, log_fh=log_file_handle), loop=ssh_node.loop)
+            ssh_node.periodic_cmd_futures.append(future)
+            ssh_node.periodic_cmd_running_event.set()
+            ssh_node.periodic_cmd_done_event.clear()
+        else :
+            raise
+
+    async def run_cmd(self, *args, **kwargs) :
+        log_file_handle = kwargs['log_fh']
+        cmd = kwargs['cmd']
+
+        msg = "********************** Periodic Command '{}' Begins **********************".format(cmd)
+        logging.info(msg)
+        t = '%s' % datetime.now()
+        t = t[:-3] + " " + str(msg)
+        log_file_handle.write(t + '\n')
+        logging.debug("ssh={} ipaddr={} cmd={} ".format(self.ssh, self.ipaddr, cmd))
+        this_cmd = []
+        ush_flag = False
+
+        for item in self.ssh:
+            if 'ush' in item :
+                ush_flag = True
+
+        if ush_flag :
+            this_cmd.extend([*self.ssh, self.ipaddr, cmd])
+        else:
+            this_cmd.extend([*self.ssh, 'root@{}'.format(self.ipaddr), cmd])
+        logging.info("run cmd = {}".format(this_cmd))
+
+        childprocess = await asyncio.create_subprocess_exec(*this_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        logging.info("subprocess for periodic cmd = {}".format(this_cmd))
+        stdout, stderr = await childprocess.communicate()
+        if stderr:
+            msg = 'Command {} failed with {}'.format(cmd, stderr)
+            logging.error(msg)
+            t = '%s' % datetime.now()
+            t = t[:-3] + " " + str(msg)
+            log_file_handle.write(t + '\n')
+            log_file_handle.flush()
+        if stdout:
+            stdout = stdout.decode("utf-8")
+            log_file_handle.write(stdout)
+        msg = "********************** Periodic Command Ends **********************"
+        logging.info(msg)
+        t = '%s' % datetime.now()
+        t = t[:-3] + " " + str(msg)
+        log_file_handle.write(t + '\n')
+        log_file_handle.flush()
 
 # Multiplexed sessions need a control master to connect to. The run time parameters -M and -S also correspond
 # to ControlMaster and ControlPath, respectively. So first an initial master connection is established using
@@ -209,7 +329,6 @@ class ssh_session:
             self.debug = False
             self._session = session
             self._silent_mode = silent_mode
-            self.loop = ssh_node.loop
             if self._session.CONNECT_TIMEOUT is not None :
                 self.watchdog = ssh_node.loop.call_later(self._session.CONNECT_TIMEOUT, self.wd_timer)
             self._session.closed.clear()
@@ -316,16 +435,14 @@ class ssh_session:
         self.IO_TIMEOUT = None
         self.CMD_TIMEOUT = None
         self.control_master = control_master
+        ################################
+        # Why this is needed since we have it in the node?
+        # In the node, ssh=['/usr/bin/ssh'] but we are clearing it here. Why?
         if node.relay :
-            self.ssh = ['/usr/bin/ssh', 'root@{}'.format(node.relay)]
+            self.ssh = ['/usr/bin/ssh', 'root@{}'.format(node.relay), '/usr/local/bin/ush', self.ipddr]
         else :
             self.ssh = []
-        if self.node.sshtype.lower() == 'ush' :
-            self.ssh.extend(['/usr/local/bin/ush'])
-        elif self.node.sshtype.lower() == 'ssh' :
-            self.ssh.extend(['/usr/bin/ssh'])
-        else :
-            raise ValueError("ssh type invalid")
+        ################################
 
         self.silent_mode = silent_mode
         self.ssh_speedups = ssh_speedups
@@ -349,7 +466,7 @@ class ssh_session:
     async def close(self) :
         if self.control_master :
             logging.info('control master close called {}'.format(self.controlmasters))
-            childprocess = await asyncio.create_subprocess_exec('/usr/bin/ssh', 'root@{}'.format(self.ipaddr), 'pkill', 'dmesg', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, loop=ssh_node.loop)
+            childprocess = await asyncio.create_subprocess_exec('/usr/bin/ssh', 'root@{}'.format(self.ipaddr), 'pkill', 'dmesg', stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             stdout, stderr = await childprocess.communicate()
             if stdout :
                 logging.info('{}'.format(stdout))
@@ -357,9 +474,8 @@ class ssh_session:
                 logging.info('{}'.format(stderr))
             self.sshpipe.terminate()
             await self.closed.wait()
-            ssh_node.loop.run_until_complete(asyncio.sleep(2))
             logging.info('control master exit called {}'.format(self.controlmasters))
-            childprocess = await asyncio.create_subprocess_exec(self.ssh, '-o ControlPath={}'.format(self.controlmasters), '-O exit dummy-arg-why-needed', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, loop=ssh_node.loop)
+            childprocess = await asyncio.create_subprocess_exec(self.ssh, '-o ControlPath={}'.format(self.controlmasters), '-O exit dummy-arg-why-needed', stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             stdout, stderr = await childprocess.communicate()
             if stdout :
                 logging.info('{}'.format(stdout))
