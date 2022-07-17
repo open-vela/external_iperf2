@@ -1583,7 +1583,7 @@ void reporter_transfer_protocol_sum_client_tcp (struct TransferInfo *stats, int 
 
 void reporter_transfer_protocol_client_bb_tcp (struct ReporterData *data, int final) {
     struct TransferInfo *stats = &data->info;
-    stats->ts.iLastBB = (double) stats->ts.prevpacketTime.tv_sec + ((1e-6) * (stats->ts.prevpacketTime.tv_usec));
+    stats->ts.iLastBB = TimeDifference(stats->ts.prevpacketTime, stats->ts.startTime);
     if (final) {
 	if ((stats->cntBytes > 0) && stats->output_handler && !TimeZero(stats->ts.intervalTime)) {
 	    // print a partial interval report if enable and this a final
