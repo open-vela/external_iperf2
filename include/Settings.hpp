@@ -286,7 +286,6 @@ struct thread_Settings {
     int tuntapdev;
     int firstreadbytes;
     int mBounceBackBytes;
-    int mBounceBackBurst;
     int mBounceBackCongestThreads; // number of congest threads
     uint32_t mBounceBackHold; // units of usecs
     struct iperf_tcpstats tcpinitstats;
