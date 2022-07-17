@@ -1003,20 +1003,27 @@ void Client::RunBounceBackTCP () {
     reportstruct->packetTime.tv_usec = now.getUsecs();
     while (InProgress()) {
 	int n;
+	bool isFirst;
+	reportstruct->writecnt = 0;
+	if (framecounter) {
+	    burst_id = framecounter->wait_tick();
+	    isFirst = true;
+	} else {
+	    burst_id++;
+	    isFirst = false;
+	}
 	int bb_burst = (mSettings->mBounceBackBurst > 0) ? mSettings->mBounceBackBurst : 1;
 	while (bb_burst > 0) {
 	    bb_burst--;
-	    reportstruct->writecnt = 0;
-	    if (framecounter) {
-		burst_id = framecounter->wait_tick();
-	    } else {
-		burst_id++;
-	    }
 	    now.setnow();
 	    reportstruct->sentTime.tv_sec = now.getSecs();
 	    reportstruct->sentTime.tv_usec = now.getUsecs();
 	    WriteTcpTxBBHdr(reportstruct, burst_id, 0);
 	    myReport->info.ts.prevsendTime = reportstruct->sentTime;
+	    if (isFirst) {
+		myReport->info.ts.iFirstBB = TimeDifference(reportstruct->sentTime, myReport->info.ts.startTime);
+		isFirst = false;
+	    }
 	    reportstruct->packetLen = writen(mySocket, mSettings->mBuf, writelen, &reportstruct->writecnt);
 	    if (reportstruct->packetLen == writelen) {
 		reportstruct->emptyreport = 0;

@@ -310,6 +310,7 @@ struct ReportTimeStamps {
     double iStart;
     double iEnd;
     double iLastBB;
+    double iFirstBB;
     double significant_partial;
     struct timeval startTime;
     struct timeval matchTime;
