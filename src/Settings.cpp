@@ -691,15 +691,32 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	break;
 
     case 't': // seconds to run the client, server, listener
-	// time mode (instead of amount mode), units is 10 ms
-	setModeTime(mExtSettings);
-	setServerModeTime(mExtSettings);
-	if (atof(optarg) > 0.0)
-	    mExtSettings->mAmount = static_cast<size_t>(atof(optarg) * 100.0);
-	else
+	if (!optarg) {
+	  fprintf(stderr, "ERROR: option -t requires value\n");
+	  exit(1);
+	}
+	{
+	  double val;
+#if HAVE_STRTOD
+	  char *end;
+	  errno = 0;
+	  val = strtod(optarg, &end);
+	  if (errno || (*end != '\0')) {
+	    fprintf(stderr, "ERROR: -t value of '%s' not recognized\n", optarg);
+	    exit(1);
+	  }
+#else
+	  val = atof(optarg);
+#endif
+	  if (val > 0.0)
+	    mExtSettings->mAmount = static_cast<size_t>(val * 100.0);
+	  else
 	    infinitetime = 1;
+	  // time mode (instead of amount mode), units is 10 ms
+	  setModeTime(mExtSettings);
+	  setServerModeTime(mExtSettings);
+	}
 	break;
-
     case 'u': // UDP instead of TCP
 	setUDP(mExtSettings);
 	break;
