@@ -1337,7 +1337,11 @@ static void reporter_output_client_settings (struct ReportSettings *report) {
 	char tmpbuf[40];
 	byte_snprintf(tmpbuf, sizeof(tmpbuf), report->common->BurstSize, 'A');
 	tmpbuf[39]='\0';
-	printf(client_burstperiod, (1.0 / report->common->FPS), tmpbuf);
+	if (report->common->bbcount) {
+	    printf(client_burstperiodcount, tmpbuf, report->common->bbcount, (1.0 / report->common->FPS));
+	} else {
+	    printf(client_burstperiod, tmpbuf, (1.0 / report->common->FPS));
+	}
     }
     if (isBounceBack(report->common)) {
 	char tmpbuf[40];

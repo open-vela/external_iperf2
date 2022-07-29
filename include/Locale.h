@@ -138,6 +138,8 @@ extern const char client_isochronous[];
 
 extern const char client_burstperiod[];
 
+extern const char client_burstperiodcount[];
+
 extern const char client_bounceback[];
 
 extern const char client_bounceback_noqack[];

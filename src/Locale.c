@@ -269,7 +269,10 @@ const char client_isochronous[] =
 "Isochronous: %0.2f frames/sec mean=%s/s, stddev=%s/s, Period/IPG=%0.2f/%.3f ms\n";
 
 const char client_burstperiod[] =
-"Bursting: %s every %0.2f seconds\n";
+"Bursting: %s every %0.2f second(s)\n";
+
+const char client_burstperiodcount[] =
+"Bursting: %s writes %d times every %0.2f second(s)\n";
 
 const char client_bounceback[] =
 "Bounce-back test (size=%s) (server hold req=%d usecs & tcp_quickack)\n";

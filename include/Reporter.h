@@ -230,6 +230,7 @@ struct ReportCommon {
     double FPS;
     int bbsize;
     int bbhold;
+    int bbcount;
 #if WIN32
     SOCKET socket;
 #else
