@@ -995,9 +995,6 @@ void Client::RunBounceBackTCP () {
     }
     if (isModeTime(mSettings)) {
 	int end_usecs = (mSettings->mAmount * 10000);
-	if (isBounceBack(mSettings) && isPeriodicBurst(mSettings)) {
-	    end_usecs += 500000;
-	}
 	if (int err = set_itimer(end_usecs)) {
 	    FAIL_errno(err != 0, "setitimer", mSettings);
 	}
@@ -1035,7 +1032,7 @@ void Client::RunBounceBackTCP () {
 	    if (reportstruct->packetLen <= 0) {
 		peerclose = true;
 		reportstruct->errwrite=WriteErrFatal;
-		WARN_errno(1, "tcp bounce-back write");
+		// WARN_errno(1, "tcp bounce-back write");
 		break;
 	    }
 	    if (reportstruct->packetLen == writelen) {
