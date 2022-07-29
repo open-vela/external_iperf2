@@ -1007,10 +1007,14 @@ void Client::RunBounceBackTCP () {
     reportstruct->packetTime.tv_usec = now.getUsecs();
     while (InProgress()) {
 	int n;
-	bool isFirst;
 	reportstruct->writecnt = 0;
+	bool isFirst;
 	if (framecounter) {
 	    burst_id = framecounter->wait_tick();
+	    PostNullEvent(); // this will set the now timestamp
+	    reportstruct->sentTime.tv_sec = now.getSecs();
+	    reportstruct->sentTime.tv_usec = now.getUsecs();
+	    reportstruct->BBTime0 = reportstruct->sentTime;
 	    isFirst = true;
 	} else {
 	    burst_id++;
@@ -1019,14 +1023,14 @@ void Client::RunBounceBackTCP () {
 	int bb_burst = (mSettings->mBounceBackBurst > 0) ? mSettings->mBounceBackBurst : 1;
 	while (bb_burst > 0) {
 	    bb_burst--;
-	    now.setnow();
-	    reportstruct->sentTime.tv_sec = now.getSecs();
-	    reportstruct->sentTime.tv_usec = now.getUsecs();
-	    WriteTcpTxBBHdr(reportstruct, burst_id, 0);
 	    if (isFirst) {
-	        reportstruct->BBTime0 = reportstruct->sentTime;
 		isFirst = false;
+	    } else {
+		now.setnow();
+		reportstruct->sentTime.tv_sec = now.getSecs();
+		reportstruct->sentTime.tv_usec = now.getUsecs();
 	    }
+	    WriteTcpTxBBHdr(reportstruct, burst_id, 0);
 	    reportstruct->packetLen = writen(mySocket, mSettings->mBuf, writelen, &reportstruct->writecnt);
 	    if (reportstruct->packetLen <= 0) {
 		peerclose = true;
