@@ -311,6 +311,7 @@ struct ReportTimeStamps {
     double iEnd;
     double iLastBB;
     double iFirstBB;
+    double iRunningBB;
     double significant_partial;
     struct timeval startTime;
     struct timeval matchTime;
@@ -321,6 +322,7 @@ struct ReportTimeStamps {
     struct timeval intervalTime;
     struct timeval IPGstart;
     struct timeval nextTCPSampleTime;
+    struct timeval BBTime0;
 };
 
 struct TransferInfo {

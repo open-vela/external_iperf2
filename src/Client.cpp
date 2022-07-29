@@ -395,6 +395,7 @@ inline void Client::SetReportStartTime () {
     myReport->info.ts.startTime.tv_usec = now.getUsecs();
     myReport->info.ts.IPGstart = myReport->info.ts.startTime;
     myReport->info.ts.prevpacketTime = myReport->info.ts.startTime;
+    myReport->info.ts.BBTime0 = myReport->info.ts.startTime;
     if (!TimeZero(myReport->info.ts.intervalTime)) {
 	myReport->info.ts.nextTime = myReport->info.ts.startTime;
 	TimeAdd(myReport->info.ts.nextTime, myReport->info.ts.intervalTime);
@@ -993,7 +994,7 @@ void Client::RunBounceBackTCP () {
 	SetSocketOptionsSendTimeout(mSettings, sotimer);
     }
     if (isModeTime(mSettings)) {
-	int end_usecs  (mSettings->mAmount * 10000); //amount units is 10 ms
+      int end_usecs = 2000000 + (mSettings->mAmount * 10000); //amount units is 10 ms
 	if (int err = set_itimer(end_usecs)) {
 	    FAIL_errno(err != 0, "setitimer", mSettings);
 	}
@@ -1019,12 +1020,18 @@ void Client::RunBounceBackTCP () {
 	    reportstruct->sentTime.tv_sec = now.getSecs();
 	    reportstruct->sentTime.tv_usec = now.getUsecs();
 	    WriteTcpTxBBHdr(reportstruct, burst_id, 0);
-	    myReport->info.ts.prevsendTime = reportstruct->sentTime;
 	    if (isFirst) {
-		myReport->info.ts.iFirstBB = TimeDifference(reportstruct->sentTime, myReport->info.ts.startTime);
+	        reportstruct->BBTime0 = reportstruct->sentTime;
 		isFirst = false;
 	    }
 	    reportstruct->packetLen = writen(mySocket, mSettings->mBuf, writelen, &reportstruct->writecnt);
+	    if (reportstruct->packetLen <= 0) {
+		peerclose = true;
+		reportstruct->errwrite=WriteErrFatal;
+		WARN_errno(1, "tcp bounce-back write");
+		printf("***** write = %ld %d\n", reportstruct->packetLen, writelen);
+		break;
+	    }
 	    if (reportstruct->packetLen == writelen) {
 		reportstruct->emptyreport = 0;
 		totLen += reportstruct->packetLen;
@@ -1052,6 +1059,8 @@ void Client::RunBounceBackTCP () {
 		    myReportPacket();
 		} else if (n == 0) {
 		    peerclose = true;
+		} else {
+		    FAIL_errno(1, "tcp bounce-back read", mSettings);
 		}
 	    } else if ((reportstruct->packetLen < 0 ) && NONFATALTCPWRITERR(errno)) {
 		reportstruct->packetLen = 0;
