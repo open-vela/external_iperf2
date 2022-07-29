@@ -1032,7 +1032,6 @@ void Client::RunBounceBackTCP () {
 		peerclose = true;
 		reportstruct->errwrite=WriteErrFatal;
 		WARN_errno(1, "tcp bounce-back write");
-		printf("***** write = %ld %d\n", reportstruct->packetLen, writelen);
 		break;
 	    }
 	    if (reportstruct->packetLen == writelen) {
