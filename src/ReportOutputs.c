@@ -479,7 +479,7 @@ void tcp_output_write_bb (struct TransferInfo *stats) {
 		   rpm);
 	}
 	if (stats->bbrtt_histogram) {
-	  histogram_print(stats->bbrtt_histogram, stats->ts.iStart, stats->ts.iEnd);
+	    histogram_print(stats->bbrtt_histogram, stats->ts.iStart, stats->ts.iEnd);
 	}
     } else {
 	int rpm = (stats->bbrtt.total.cnt > 0) ? ((int) ((double) stats->bbrtt.current.cnt * 60 / (stats->ts.iLastBB - stats->ts.iFirstBB))) : 0;
