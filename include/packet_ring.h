@@ -82,6 +82,7 @@ struct ReportStruct {
     long write_time;
     struct timeval sentTimeRX;
     struct timeval sentTimeTX;
+    struct timeval BBTime0;
     struct iperf_tcpstats tcpstats;
 };
 
