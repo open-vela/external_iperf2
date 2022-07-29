@@ -912,9 +912,15 @@ void reporter_handle_packet_client (struct ReporterData *data, struct ReportStru
 }
 
 void reporter_handle_packet_bb_client (struct ReporterData *data, struct ReportStruct *packet) {
-    struct TransferInfo *stats = &data->info;
-    stats->ts.packetTime = packet->packetTime;
     if (!packet->emptyreport && (packet->packetLen > 0)) {
+        struct TransferInfo *stats = &data->info;
+	if (isBounceBack(stats->common) && isPeriodicBurst(stats->common)) {
+	    if ((packet->BBTime0.tv_usec == packet->sentTime.tv_usec)	\
+		&& (packet->BBTime0.tv_sec == packet->sentTime.tv_sec)) {
+		// First of the burst, update the transfer info struct so iFirst is known
+		stats->ts.BBTime0 = packet->sentTime;
+	    }
+	}
 	stats->total.Bytes.current += packet->packetLen;
 	double bbrtt = TimeDifference(packet->packetTime, packet->sentTime);
 	double bbowdto = TimeDifference(packet->sentTimeRX, packet->sentTime);
@@ -1583,8 +1589,9 @@ void reporter_transfer_protocol_sum_client_tcp (struct TransferInfo *stats, int 
 
 void reporter_transfer_protocol_client_bb_tcp (struct ReporterData *data, int final) {
     struct TransferInfo *stats = &data->info;
-    stats->ts.iLastBB = TimeDifference(stats->ts.prevpacketTime, stats->ts.startTime);
+
     if (final) {
+        stats->ts.iLastBB = TimeDifference(stats->ts.packetTime, stats->ts.startTime);
 	if ((stats->cntBytes > 0) && stats->output_handler && !TimeZero(stats->ts.intervalTime)) {
 	    // print a partial interval report if enable and this a final
 	    if ((stats->output_handler) && !(stats->isMaskOutput)) {
@@ -1601,13 +1608,20 @@ void reporter_transfer_protocol_client_bb_tcp (struct ReporterData *data, int fi
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
 	stats->final=1;
     } else {
+        stats->ts.iLastBB = TimeDifference(stats->ts.prevpacketTime, stats->ts.startTime);
+	stats->ts.iFirstBB = TimeDifference(stats->ts.BBTime0, stats->ts.startTime);
+	stats->ts.iRunningBB += (stats->ts.iLastBB - stats->ts.iFirstBB);
 	stats->final=0;
 	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
     }
     if ((stats->output_handler) && !(stats->isMaskOutput))
 	(*stats->output_handler)(stats);
-    if (!final)
+    if (!final) {
 	reporter_reset_transfer_stats_client_tcp(stats);
+	if (isBounceBack(stats->common) && !isPeriodicBurst(stats->common)) {
+	    stats->ts.BBTime0 = stats->ts.prevpacketTime;
+	}
+    }
 }
 
 void reporter_transfer_protocol_server_bb_tcp (struct ReporterData *data, int final) {
