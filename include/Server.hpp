@@ -94,6 +94,7 @@ private:
     bool InProgress(void);
     int SkipFirstPayload(void);
     void ClientReverseFirstRead(void);
+    void PostNullEvent(void);
     Timestamp connect_done;
     bool peerclose;
     bool isburst;
