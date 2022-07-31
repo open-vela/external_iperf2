@@ -298,6 +298,19 @@ void Server::RunTCP () {
     FreeReport(myJob);
 }
 
+void Server::PostNullEvent () {
+    assert(myReport!=NULL);
+    // push a nonevent into the packet ring
+    // this will cause the reporter to process
+    // up to this event
+    memset(reportstruct, 0, sizeof(struct ReportStruct));
+    now.setnow();
+    reportstruct->packetTime.tv_sec = now.getSecs();
+    reportstruct->packetTime.tv_usec = now.getUsecs();
+    reportstruct->emptyreport=1;
+    ReportPacket(myReport, reportstruct);
+}
+
 inline bool Server::ReadBBWithRXTimestamp () {
     bool rc = false;
     int n;
@@ -313,7 +326,7 @@ inline bool Server::ReadBBWithRXTimestamp () {
 	    // write the rx timestamp back into the payload
 	    bbhdr->bbserverRx_ts.sec = htonl(reportstruct->packetTime.tv_sec);
 	    bbhdr->bbserverRx_ts.usec = htonl(reportstruct->packetTime.tv_usec);
-	    reportstruct->packetLen = mSettings->mBounceBackBytes;
+	    ReportPacket(myReport, reportstruct);
 	    rc = true;
 	} else {
 	    peerclose = true;
@@ -321,7 +334,7 @@ inline bool Server::ReadBBWithRXTimestamp () {
     } else if (n==0) {
 	peerclose = true;
     } else {
-	reportstruct->emptyreport=1;
+	PostNullEvent();
     }
     return rc;
 }

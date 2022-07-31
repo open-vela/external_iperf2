@@ -566,7 +566,7 @@ void Client::Run () {
  */
 void Client::RunTCP () {
     int burst_remaining = 0;
-    int burst_id = 1;
+    uint32_t burst_id = 1;
     int writelen = mSettings->mBufLen;
 
     now.setnow();
@@ -1425,7 +1425,7 @@ inline void Client::WriteTcpTxHdr (struct ReportStruct *reportstruct, int burst_
 }
 
 // See payloads.h
-void Client::WriteTcpTxBBHdr (struct ReportStruct *reportstruct, int bbid, int final) {
+void Client::WriteTcpTxBBHdr (struct ReportStruct *reportstruct, uint32_t bbid, int final) {
     struct bounceback_hdr * mBuf_bb = reinterpret_cast<struct bounceback_hdr *>(mSettings->mBuf);
     // store packet ID into buffer
     uint32_t flags = HEADER_BOUNCEBACK;
