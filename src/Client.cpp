@@ -1441,9 +1441,7 @@ void Client::WriteTcpTxBBHdr (struct ReportStruct *reportstruct, uint32_t bbid, 
     if (isTcpQuickAck(mSettings)) {
 	bbflags |= HEADER_BBQUICKACK;
     }
-    if (isModeTime(mSettings)) {
-	mBuf_bb->bbRunTime = htonl((mSettings->mAmount + (100 * 5))); // add 5 seconds slop
-    }
+    mBuf_bb->bbRunTime = 0x0;
     if (final) {
 	bbflags |= HEADER_BBSTOP;
     }
