@@ -1219,6 +1219,9 @@ bool Listener::apply_client_settings_tcp (thread_Settings *server) {
 	struct client_tcp_testhdr *hdr = reinterpret_cast<struct client_tcp_testhdr *>(server->mBuf);
 	uint32_t flags = ntohl(hdr->base.flags);
 	if (flags & HEADER_BOUNCEBACK) {
+	    if (!isServerModeTime(server)) {
+		unsetModeTime(server);
+	    }
 	    struct bounceback_hdr *bbhdr = reinterpret_cast<struct bounceback_hdr *>(server->mBuf);
 	    setBounceBack(server);
 	    nread = recvn(server->mSock, readptr, sizeof(struct bounceback_hdr), 0);
