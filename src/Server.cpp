@@ -397,7 +397,7 @@ void Server::RunBounceBackTCP () {
 	    }
 	    if ((n = writen(mySocket, mSettings->mBuf, mSettings->mBounceBackBytes, &reportstruct->writecnt)) == mSettings->mBounceBackBytes) {
 		reportstruct->emptyreport=0;
-		reportstruct->packetLen += n;
+		reportstruct->packetLen = n;
 		ReportPacket(myReport, reportstruct);
 	    } else {
 		break;
