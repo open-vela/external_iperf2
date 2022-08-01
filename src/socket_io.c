@@ -154,6 +154,9 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
 		    nread = -1;
 		    sInterupted = 1;
 		    goto DONE;
+		} else {
+		    nread = -2;
+		    goto DONE;
 		}
 #ifdef HAVE_THREAD_DEBUG
 		WARN_errno(1, "recvn non-fatal");
