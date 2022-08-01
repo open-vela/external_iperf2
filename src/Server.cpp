@@ -372,6 +372,9 @@ void Server::RunBounceBackTCP () {
     reportstruct->packetTime.tv_sec = now.getSecs();
     reportstruct->packetTime.tv_usec = now.getUsecs();
     reportstruct->packetLen = mSettings->mBounceBackBytes;
+    reportstruct->emptyreport=0;
+    ReportPacket(myReport, reportstruct);
+
     while (InProgress()) {
 	int n;
 	reportstruct->emptyreport=1;
