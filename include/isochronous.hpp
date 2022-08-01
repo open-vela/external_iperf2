@@ -48,6 +48,7 @@
 #ifndef ISOCHRONOUS_H
 #define ISOCHRONOUS_H
 
+#include <time.h>
 #include "Settings.hpp"
 #include "Timestamp.hpp"
 
