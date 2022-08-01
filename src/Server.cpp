@@ -314,27 +314,33 @@ void Server::PostNullEvent () {
 inline bool Server::ReadBBWithRXTimestamp () {
     bool rc = false;
     int n;
-    if ((n = recvn(mySocket, mSettings->mBuf, mSettings->mBounceBackBytes, 0)) == mSettings->mBounceBackBytes) {
-	struct bounceback_hdr *bbhdr = reinterpret_cast<struct bounceback_hdr *>(mSettings->mBuf);
-	uint16_t bbflags = ntohs(bbhdr->bbflags);
-	if (!(bbflags & HEADER_BBSTOP)) {
-	    now.setnow();
-	    reportstruct->packetTime.tv_sec = now.getSecs();
-	    reportstruct->packetTime.tv_usec = now.getUsecs();
-	    reportstruct->emptyreport=0;
-	    reportstruct->packetLen = mSettings->mBounceBackBytes;
-	    // write the rx timestamp back into the payload
-	    bbhdr->bbserverRx_ts.sec = htonl(reportstruct->packetTime.tv_sec);
-	    bbhdr->bbserverRx_ts.usec = htonl(reportstruct->packetTime.tv_usec);
-	    ReportPacket(myReport, reportstruct);
-	    rc = true;
-	} else {
+    while (1) {
+	if ((n = recvn(mySocket, mSettings->mBuf, mSettings->mBounceBackBytes, 0)) == mSettings->mBounceBackBytes) {
+	    struct bounceback_hdr *bbhdr = reinterpret_cast<struct bounceback_hdr *>(mSettings->mBuf);
+	    uint16_t bbflags = ntohs(bbhdr->bbflags);
+	    if (!(bbflags & HEADER_BBSTOP)) {
+		now.setnow();
+		reportstruct->packetTime.tv_sec = now.getSecs();
+		reportstruct->packetTime.tv_usec = now.getUsecs();
+		reportstruct->emptyreport=0;
+		reportstruct->packetLen = mSettings->mBounceBackBytes;
+		// write the rx timestamp back into the payload
+		bbhdr->bbserverRx_ts.sec = htonl(reportstruct->packetTime.tv_sec);
+		bbhdr->bbserverRx_ts.usec = htonl(reportstruct->packetTime.tv_usec);
+		ReportPacket(myReport, reportstruct);
+		rc = true;
+	    } else {
+		peerclose = true;
+	    }
+	    break;
+	} else if (n==0) {
 	    peerclose = true;
+	    break;
+	} else if (n == -2){
+	    PostNullEvent();
+	} else {
+	    break;
 	}
-    } else if (n==0) {
-	peerclose = true;
-    } else {
-	PostNullEvent();
     }
     return rc;
 }
