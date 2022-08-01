@@ -355,9 +355,11 @@ void Server::RunBounceBackTCP () {
     if (mSettings->mInterval && (mSettings->mIntervalMode == kInterval_Time)) {
 	int sotimer = static_cast<int>(round(mSettings->mInterval / 2.0));
 	SetSocketOptionsSendTimeout(mSettings, sotimer);
+	SetSocketOptionsReceiveTimeout(mSettings, sotimer);
     } else if (isModeTime(mSettings)) {
 	int sotimer = static_cast<int>(round(mSettings->mAmount * 10000) / 2);
 	SetSocketOptionsSendTimeout(mSettings, sotimer);
+	SetSocketOptionsReceiveTimeout(mSettings, sotimer);
     }
     myReport->info.ts.prevsendTime = myReport->info.ts.startTime;
     now.setnow();
