@@ -183,7 +183,7 @@ inline unsigned int FrameCounter::get (long *ticks_remaining) {
     assert(ticks_remaining != NULL);
     Timestamp sampleTime;  // Constructor will initialize timestamp to now
     long usecs = -startTime.subUsec(sampleTime);
-    unsigned int counter = static_cast<unsigned int>(usecs / period);
+    unsigned int counter = static_cast<unsigned int>(usecs / period) + 1;
     // figure out how many usecs before the next frame counter tick
     // the caller can use this to delay until the next tick
     *ticks_remaining = (counter * period) - usecs;
