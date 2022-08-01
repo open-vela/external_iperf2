@@ -50,6 +50,8 @@
 #include "isochronous.hpp"
 #include "delay.h"
 
+#define BILLION 1000000000
+
 using namespace Isochronous;
 
 FrameCounter::FrameCounter (double value, const Timestamp& start) : frequency(value) {
@@ -163,7 +165,18 @@ unsigned int FrameCounter::wait_tick (void) {
 	framecounter = get(&remaining);
 	if ((framecounter - lastcounter) > 1)
 	    slip++;
-    	delay_loop(remaining);
+//    	delay_loop(remaining);
+	remaining *= 1000;
+	struct timespec tv0={0,0}, tv1;
+	tv0.tv_sec = (remaining / BILLION);
+	tv0.tv_nsec += (remaining % BILLION);
+	if (tv0.tv_nsec >= BILLION) {
+	    tv0.tv_sec++;
+	    tv0.tv_nsec -= BILLION;
+	}
+	int rc = nanosleep(&tv0, &tv1);
+	WARN_errno((rc != 0), "nanosleep wait_tick");	    ;
+//	printf("****** rc = %d, remain %ld.%ld\n", rc, tv1.tv_sec, tv1.tv_nsec);
 	framecounter ++;
     }
     lastcounter = framecounter;
