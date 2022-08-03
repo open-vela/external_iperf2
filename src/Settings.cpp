@@ -1264,12 +1264,13 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	if (bouncebackperiod) {
 	    bouncebackperiod = 0;
 	    setPeriodicBurst(mExtSettings);
-	    if (optarg && (atof(optarg) > 1e-5)) { // limit to 10 usecs
-		mExtSettings->mFPS = 1.0/atof(optarg);
-	    } else {
-		if (atof(optarg) != 0)
-		    fprintf(stderr, "WARN: bouncback-period too small, must be greater than 10 usecs\n");
-		unsetPeriodicBurst(mExtSettings);
+	    if (optarg) {
+		float value = atof(optarg);
+		if (value  > 1e-5) { // limit to 10 usecs
+		    mExtSettings->mFPS = 1.0/atof(optarg);
+		} else {
+		    mExtSettings->mFPS = -1;
+		}
 	    }
 	}
 	break;
@@ -1513,7 +1514,13 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		setTcpQuickAck(mExtSettings);
 	    }
 #endif
-
+	    // default bounceback period to 1 second
+	    if (!isPeriodicBurst(mExtSettings)) {
+		mExtSettings->mFPS = 1.0;
+		setPeriodicBurst(mExtSettings);
+	    } else if (mExtSettings->mFPS <= 1e-5) {
+		unsetPeriodicBurst(mExtSettings);
+	    }
 	}
 
 	if (isPeriodicBurst(mExtSettings)) {
