@@ -226,6 +226,16 @@ void thread_start(struct thread_Settings* thread) {
 	thread_debug("Thread_start info %p id=%d ", (void *)thread, (int)thread->mTID);
 #endif
     } else {
+#if defined(HAVE_POSIX_THREAD)
+        pthread_attr_t attr;
+        int policy;
+        struct sched_param schedparam;
+
+        pthread_getschedparam(pthread_self(), &policy, &schedparam);
+        pthread_attr_init(&attr);
+        pthread_attr_setschedpolicy(&attr, policy);
+        pthread_attr_setschedparam(&attr, &schedparam);
+#endif
         // increment thread count
         Condition_Lock(thread_sNum_cond);
         thread_sNum++;
@@ -236,7 +246,7 @@ void thread_start(struct thread_Settings* thread) {
 
 #if defined(HAVE_POSIX_THREAD)
         // pthreads -- spawn new thread
-        if (pthread_create(&thread->mTID, NULL, thread_run_wrapper, thread) != 0) {
+        if (pthread_create(&thread->mTID, &attr, thread_run_wrapper, thread) != 0) {
             WARN(1, "pthread_create");
 
             // decrement thread count
@@ -252,6 +262,7 @@ void thread_start(struct thread_Settings* thread) {
 	    }
             Condition_Unlock(thread_sNum_cond);
         }
+        pthread_attr_destroy(&attr);
 #if HAVE_THREAD_DEBUG
 	thread_debug("Thread_run_wrapper(%p mode=%x) thread counts tot/trfc=%d/%d (id=%d)", (void *)thread, thread->mThreadMode, thread_sNum, thread_trfc_sNum, (int)thread->mTID);
 #endif
