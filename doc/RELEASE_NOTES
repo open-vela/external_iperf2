@@ -1,6 +1,19 @@
 See doc/DESIGN_NOTES for some description around the software design
 See doc/CLOCKSYNC_NOTES for some description around synchronizing the realtime clocks
 
+2.1.8 (as of August 5th, 2022)
+------------------------------
+o Add support for --bounceback to perform a repsonsiveness test (see man page for other options)
+o add support for working loads with --bounceback
+o Fix to wait_tick with Mac OS X
+o Various python pyflows commits
+o add support for client side tcp-write-time histograms and mean/min/max
+o add support for human readable dscp or -T values (see man page)
+o udp_accept no longer accepts packets from a previous run as a new connection, this can occur with long network delays
+o multiple isoch bug fixes for both UDP and TCP
+o isoch server provides mean/min/max/stdev for both frames and packets
+o UDP max MTU discovery, requires configure.ac will support --enable-discover-defaultlen prior to compile
+
 
 2.1.7 (as of April 5th, 2022)
 ----------------------------
