@@ -1251,6 +1251,12 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 	    setNoDelay(mExtSettings);
 	    if (optarg) {
 		mExtSettings->mBounceBackBurst = atoi(optarg);
+		if (mExtSettings->mBounceBackBurst <= 0) {
+		    fprintf(stderr, "WARN: invalid bounceback value, setting it to 10\n");
+		    mExtSettings->mBounceBackBurst = 10;
+		}
+	    } else {
+		mExtSettings->mBounceBackBurst = -1;
 	    }
 	}
 	if (bouncebackhold) {
@@ -1520,6 +1526,9 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 		setPeriodicBurst(mExtSettings);
 	    } else if (mExtSettings->mFPS <= 1e-5) {
 		unsetPeriodicBurst(mExtSettings);
+	    }
+	    if (isPeriodicBurst(mExtSettings) && (mExtSettings->mBounceBackBurst == -1))  {
+		mExtSettings->mBounceBackBurst = 10;
 	    }
 	}
 
