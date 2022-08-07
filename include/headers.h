@@ -122,13 +122,15 @@ typedef bool _Bool;
 #ifdef HAVE_LINUX_SOCKIOS_H
 #include <linux/sockios.h>
 #endif
+#if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
+#include <net/ethernet.h>
+#endif
 #if ((HAVE_TUNTAP_TAP) || (HAVE_TUNTAP_TUN))
 #include <linux/if_tun.h>
 #endif
 
 // AF_PACKET HEADERS
 #if defined(HAVE_LINUX_FILTER_H) && defined(HAVE_AF_PACKET)
-#include <net/ethernet.h>
 // Bummer, AF_PACKET requires kernel headers as <netpacket/packet.h> isn't sufficient
 #include <linux/filter.h>
 #include <linux/if_packet.h>
