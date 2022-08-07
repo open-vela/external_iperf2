@@ -169,8 +169,8 @@ Enable IPv6 reception by setting the domain and socket to AF_INET6 (Can receive 
 set target bandwidth to \fIn\fR bits/sec (default 1 Mbit/sec) or
 \fIn\fR packets per sec. This may be used with TCP or UDP. Optionally, for variable loads, use format of  mean,standard deviation
 .TP
-.BR "    --bounceback "
-run a tcp bounceback test (set size with -l or --len, defaults to 100 bytes)
+.BR "    --bounceback[=" \fIn\fR "]"
+run a TCP bounceback or rps test with optional number writes in a burst per value of n. The default is ten writes every period and the default period is one second (Note: set size with -l or --len which defaults to 100 bytes)
 .TP
 .BR "    --bounceback-congest[="\fBup|down|bidir][\fR,\fIn\fR\fB]\fR
 request a concurrent working load or TCP stream(s), defaults to full duplex (or bidir) unless the \fBup\fR or \fBdown\fR option is provided. The number of TCP streams defaults to 1 and can be changed via the n value, e.g. \fB--bounceback-congest=down,4\fR will use four TCP streams from server to the client as the working load. The IP ToS will be BE (0x0) for working load traffic.
@@ -178,8 +178,8 @@ request a concurrent working load or TCP stream(s), defaults to full duplex (or 
 .BR "    --bounceback-hold " \fIn\fR
 request the server to insert a delay of n milliseconds between its read and write (default is no delay)
 .TP
-.BR "    --bounceback-period " \fIn\fR
-request the client schedule a send every n seconds (w/o option bouncebacks are immediately scheduled. With command option and no optional value given, the interval will be one second.)
+.BR "    --bounceback-period[=" \fIn\fR "]"
+request the client schedule its send(s) every n seconds (default is one second, use zero value for immediate or continuous back to back)
 .TP
 .BR "    --bounceback-no-quickack "
 request the server not set the TCP_QUICKACK socket option (disabling TCP ACK delays) during a bounceback test (see NOTES)
@@ -368,6 +368,65 @@ TCP congestion window and round trip time (sampled where NA indicates no value)
 .br
 .B NetPwr (*nix only)
 Network power defined as (throughput / RTT)
+
+.PP
+
+.B iperf -c host.doamin.com -i 1 --bounceback --permit-key=mytest --hide-ips
+.br
+------------------------------------------------------------
+.br
+Client connecting to (**hidden**), TCP port 5001
+.br
+Bursting:  100 Byte writes 10 times every 1.00 second(s)
+.br
+Bounce-back test (size= 100 Byte) (server hold req=0 usecs)
+.br
+TCP window size: 16.0 KByte (default)
+.br
+------------------------------------------------------------
+.br
+[mytest(1)] local *.*.*.96 port 38044 connected with *.*.*.123 port 5001 (bb len/hold=100/0) (icwnd/mss/irtt=14/1448/10605)
+.br
+[ ID] Interval        Transfer    Bandwidth         BB cnt=avg/min/max/stdev         Rtry  Cwnd/RTT    RPS
+.br
+[mytest(1)] 0.00-1.00 sec  1.95 KBytes  16.0 Kbits/sec    10=11.949/9.662/19.597/3.127 ms    0   14K/10930 us    83 rps
+.br
+[mytest(1)] 1.00-2.00 sec  1.95 KBytes  16.0 Kbits/sec    10=10.004/9.651/10.322/0.232 ms    0   14K/10244 us    99 rps
+.br
+[mytest(1)] 2.00-3.00 sec  1.95 KBytes  16.0 Kbits/sec    10=10.582/9.720/14.831/1.573 ms    0   14K/10352 us    94 rps
+.br
+[mytest(1)] 3.00-4.00 sec  1.95 KBytes  16.0 Kbits/sec    10=11.303/9.940/15.114/2.026 ms    0   14K/10832 us    88 rps
+.br
+[mytest(1)] 4.00-5.00 sec  1.95 KBytes  16.0 Kbits/sec    10=11.148/9.671/14.803/1.837 ms    0   14K/10858 us    89 rps
+.br
+[mytest(1)] 5.00-6.00 sec  1.95 KBytes  16.0 Kbits/sec    10=10.207/9.695/10.729/0.356 ms    0   14K/10390 us    97 rps
+.br
+[mytest(1)] 6.00-7.00 sec  1.95 KBytes  16.0 Kbits/sec    10=10.871/9.770/14.387/1.547 ms    0   14K/10660 us    91 rps
+.br
+[mytest(1)] 7.00-8.00 sec  1.95 KBytes  16.0 Kbits/sec    10=11.224/9.760/14.993/1.837 ms    0   14K/11027 us    89 rps
+.br
+[mytest(1)] 8.00-9.00 sec  1.95 KBytes  16.0 Kbits/sec    10=10.719/9.887/14.553/1.455 ms    0   14K/10620 us    93 rps
+.br
+[mytest(1)] 9.00-10.00 sec  1.95 KBytes  16.0 Kbits/sec    10=10.775/9.689/14.746/1.562 ms    0   14K/10596 us    92 rps
+.br
+[mytest(1)] 0.00-10.02 sec  19.5 KBytes  16.0 Kbits/sec    100=10.878/9.651/19.597/1.743 ms    0   14K/11676 us    91 rps
+.br
+[  1] 0.00-10.02 sec BB8(f)-PDF: bin(w=100us):cnt(100)=97:5,98:8,99:10,100:8,101:12,102:10,103:6,104:7,105:2,106:2,107:3,108:3,109:2,110:1,114:1,115:1,118:1,120:2,121:1,124:1,125:1,128:1,140:1,143:1,144:1,146:2,148:1,149:2,150:1,151:1,152:1,196:1 (5.00/95.00/99.7%=97/149/196,Outliers=0,obl/obu=0/0)
+.br
+
+.TP
+.B where
+.B BB cnt=avg/min/max/stdev
+Count of bouncebacks, average time, minimum time, maximum time, standard deviation units of ms
+.br
+.B Rtry
+Total number of TCP retries
+.br
+.B Cwnd/RTT (*nix only)
+TCP congestion window and round trip time (sampled where NA indicates no value)
+.br
+.B RPS
+Responses per second
 
 .PP
 
@@ -815,12 +874,13 @@ directly rate limit the writes with TCP testing when using --reverse.
 .P
 .B Bounceback
 The bounceback test allows one to measure network responsiveness (which, in this test, is an inverse of latency.)
-Latency is merely delay in units of time. Latency metrics require one to know the delay of what's being measured.
-For bounceback it's a client write to a server read followed by a server write and then the client read. The original
-write is bounce backed. Iperf 2 sets up the socket with TCP_NODELAY and possibly TCP_QUICKACK (unless disabled).
-The client sends a small write (which defaults to 100 bytes unless -l is set) and issues a read waiting for the "bounceback"
-from the server. The server waits for a read and then optionally delays before sending the payload back.
-This repeats until the traffic ends.
+The units are responses per second or rps. Latency is merely delay in units of time. Latency metrics require one
+to know the delay of what's being measured. For bounceback it's a client write to a server read followed by a server
+write and then the client read. The original write is bounce backed. Iperf 2 sets up the socket with TCP_NODELAY
+and possibly TCP_QUICKACK (unless disabled). The client sends a small write (which defaults to 100 bytes unless -l is set)
+and issues a read waiting for the "bounceback" from the server. The server waits for a read and then
+optionally delays before sending the payload back. This repeats until the traffic ends. Results
+are shown in units of rps and time delays.
 .P
 The TCP_QUICKACK socket option will be enabled during bounceback tests when the bounceback-hold
 is set to a non-zero value. The socket option is applied after every read() on the server
