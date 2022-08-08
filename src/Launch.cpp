@@ -402,6 +402,7 @@ void client_init(struct thread_Settings *clients) {
 	    Settings_Copy(clients, &next, 1);
 	    if (next != NULL) {
 		unsetBounceBack(next);
+		unsetPeriodicBurst(next);
 		unsetTxHoldback(next); // don't delay working load threads
 		next->mTOS = 0; // disable any QoS on the congestion stream
 		if (isWorkingLoadUp(clients) && isWorkingLoadDown(clients)) {
