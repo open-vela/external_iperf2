@@ -615,12 +615,10 @@ void Settings_Interpret (char option, const char *optarg, struct thread_Settings
 		exit(1);
 	    }
 	    mExtSettings->mInterval = static_cast<unsigned int>(ceil(itime * 1e6));
-	    if (!mExtSettings->mInterval) {
-		fprintf (stderr, "Interval per -i cannot be zero\n");
-		exit(1);
-	    }
 	    mExtSettings->mIntervalMode = kInterval_Time;
-	    if (mExtSettings->mInterval < SMALLEST_INTERVAL) {
+	    if (mExtSettings->mInterval <= 0) {
+		mExtSettings->mInterval = -1;
+	    } else if (mExtSettings->mInterval < SMALLEST_INTERVAL) {
 		mExtSettings->mInterval = SMALLEST_INTERVAL;
 		fprintf (stderr, report_interval_small, (double) mExtSettings->mInterval / 1e3);
 	    }
@@ -1524,6 +1522,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    if (!isPeriodicBurst(mExtSettings)) {
 		mExtSettings->mFPS = 1.0;
 		setPeriodicBurst(mExtSettings);
+		if (mExtSettings->mIntervalMode == kInterval_None) {
+		    mExtSettings->mIntervalMode = kInterval_Time;
+		    mExtSettings->mInterval = 1;
+		}
 	    } else if (mExtSettings->mFPS <= 1e-5) {
 		unsetPeriodicBurst(mExtSettings);
 	    }
@@ -1957,6 +1959,10 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	    mExtSettings->mIfrnametx=NULL;
 	}
 #endif
+    }
+    if ((mExtSettings->mIntervalMode == kInterval_Time) && (mExtSettings->mIntervalMode <= 0)) {
+	mExtSettings->mIntervalMode = kInterval_None;
+	mExtSettings->mInterval = 0;
     }
 }
 
