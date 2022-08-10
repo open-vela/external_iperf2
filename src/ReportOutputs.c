@@ -1478,7 +1478,11 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 	b += strlen(b);
     }
     if (isBounceBack(report->common)) {
-	snprintf(b, SNBUFFERSIZE-strlen(b), " (bb len/hold=%d/%d)", report->common->bbsize, report->common->bbhold);
+	if (isTcpQuickAck(report->common)) {
+	    snprintf(b, SNBUFFERSIZE-strlen(b), " (bb w/quickack len/hold=%d/%d)", report->common->bbsize, report->common->bbhold);
+	} else {
+	    snprintf(b, SNBUFFERSIZE-strlen(b), " (bb len/hold=%d/%d)", report->common->bbsize, report->common->bbhold);
+	}
 	b += strlen(b);
     }
     if (isL2LengthCheck(report->common)) {
