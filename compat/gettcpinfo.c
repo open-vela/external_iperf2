@@ -69,7 +69,11 @@ inline void gettcpinfo (int sock, struct iperf_tcpstats *stats) {
     struct tcp_connection_info tcp_info_buf;
     socklen_t tcp_info_length = sizeof(struct tcp_connection_info);
     if ((sock > 0) && !(getsockopt(sock, IPPROTO_TCP, TCP_CONNECTION_INFO, &tcp_info_buf, &tcp_info_length) < 0)) {
+#ifdef __APPLE__
+	stats->cwnd = tcp_info_buf.tcpi_snd_cwnd / 1024;
+#else
 	stats->cwnd = tcp_info_buf.tcpi_snd_cwnd * tcp_info_buf.tcpi_maxseg / 1024;
+#endif
 	stats->rtt = tcp_info_buf.tcpi_rttcur * 1000; // OS X units is ms
 	stats->rttvar = tcp_info_buf.tcpi_rttvar;
 	stats->retry_tot = tcp_info_buf.tcpi_txretransmitpackets;
