@@ -1525,7 +1525,7 @@ void reporter_print_connection_report (struct ConnectionInfo *report) {
 	}
     }
 #if HAVE_DECL_TCP_QUICKACK
-    if (isTcpQuickAck(report->common)) {
+    if (isTcpQuickAck(report->common) && !isBounceBack(report->common)) {
 	snprintf(b, SNBUFFERSIZE-strlen(b), " (qack)");
 	b += strlen(b);
     }
