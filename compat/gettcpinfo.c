@@ -58,8 +58,7 @@ inline void gettcpinfo (int sock, struct iperf_tcpstats *stats) {
 #if HAVE_DECL_TCP_INFO
     struct tcp_info tcp_info_buf;
     socklen_t tcp_info_length = sizeof(struct tcp_info);
-    if ((sock > 0) &&							\
-	!(getsockopt(sock, IPPROTO_TCP, TCP_INFO, &tcp_info_buf, &tcp_info_length) < 0)) {
+    if ((sock > 0) && !(getsockopt(sock, IPPROTO_TCP, TCP_INFO, &tcp_info_buf, &tcp_info_length) < 0)) {
         stats->cwnd = tcp_info_buf.tcpi_snd_cwnd * tcp_info_buf.tcpi_snd_mss / 1024;
 	stats->rtt = tcp_info_buf.tcpi_rtt;
 	stats->rttvar = tcp_info_buf.tcpi_rttvar;
@@ -67,11 +66,10 @@ inline void gettcpinfo (int sock, struct iperf_tcpstats *stats) {
 	stats->mss_negotiated = tcp_info_buf.tcpi_snd_mss;
 	stats->isValid  = true;
 #elif HAVE_DECL_TCP_CONNECTION_INFO
-	struct tcp_connection_info tcp_info_buf;
-	socklen_t tcp_info_length = sizeof(struct tcp_connection_info);
-	if ((sock > 0) &&						\
-	    !(getsockopt(sock, IPPROTO_TCP, TCP_CONNECTION_INFO, &tcp_info_buf, &tcp_info_length) < 0)) {
-        stats->cwnd = tcp_info_buf.tcpi_snd_cwnd * tcp_info_buf.tcpi_maxseg / 1024;
+    struct tcp_connection_info tcp_info_buf;
+    socklen_t tcp_info_length = sizeof(struct tcp_connection_info);
+    if ((sock > 0) && !(getsockopt(sock, IPPROTO_TCP, TCP_CONNECTION_INFO, &tcp_info_buf, &tcp_info_length) < 0)) {
+	stats->cwnd = tcp_info_buf.tcpi_snd_cwnd * tcp_info_buf.tcpi_maxseg / 1024;
 	stats->rtt = tcp_info_buf.tcpi_rttcur * 1000; // OS X units is ms
 	stats->rttvar = tcp_info_buf.tcpi_rttvar;
 	stats->retry_tot = tcp_info_buf.tcpi_txretransmitpackets;
