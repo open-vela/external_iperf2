@@ -436,7 +436,7 @@ void tcp_output_write_bb (struct TransferInfo *stats) {
     _print_stats_common(stats);
     char rps_string[40];
     if (stats->final) {
-        double rps = ((stats->fBBrunning > 0) && (stats->bbrtt.total.cnt > 0)) ? ((int) ((double) stats->bbrtt.total.cnt / stats->fBBrunning)) : 0;
+        double rps = ((stats->fBBrunning > 0) && (stats->bbrtt.total.cnt > 0)) ? ((double) stats->bbrtt.total.cnt / stats->fBBrunning) : 0;
 	if (rps < 10)
 	    snprintf(rps_string, sizeof(rps_string), "%0.1f", rps);
 	else
@@ -489,7 +489,7 @@ void tcp_output_write_bb (struct TransferInfo *stats) {
 	    histogram_print(stats->bbrtt_histogram, stats->ts.iStart, stats->ts.iEnd);
 	}
     } else {
-	double rps = ((stats->bbrtt.current.cnt > 0) && (stats->iBBrunning > 0)) ? ((int) ((double) stats->bbrtt.current.cnt / stats->iBBrunning)) : 0;
+	double rps = ((stats->bbrtt.current.cnt > 0) && (stats->iBBrunning > 0)) ? ((double) stats->bbrtt.current.cnt / stats->iBBrunning) : 0;
 	if (rps < 10)
 	    snprintf(rps_string, sizeof(rps_string), "%0.1f", rps);
 	else
