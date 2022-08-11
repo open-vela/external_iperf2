@@ -1,3 +1,4 @@
+
 /*---------------------------------------------------------------
  * Copyright (c) 1999,2000,2001,2002,2003
  * The Board of Trustees of the University of Illinois
@@ -914,13 +915,6 @@ void reporter_handle_packet_client (struct ReporterData *data, struct ReportStru
 void reporter_handle_packet_bb_client (struct ReporterData *data, struct ReportStruct *packet) {
     if (!packet->emptyreport && (packet->packetLen > 0)) {
         struct TransferInfo *stats = &data->info;
-	if (isBounceBack(stats->common) && isPeriodicBurst(stats->common)) {
-	    if ((packet->BBTime0.tv_usec == packet->sentTime.tv_usec)	\
-		&& (packet->BBTime0.tv_sec == packet->sentTime.tv_sec)) {
-		// First of the burst, update the transfer info struct so iFirst is known
-		stats->ts.BBTime0 = packet->sentTime;
-	    }
-	}
 	stats->total.Bytes.current += packet->packetLen;
 	double bbrtt = TimeDifference(packet->packetTime, packet->sentTime);
 	double bbowdto = TimeDifference(packet->sentTimeRX, packet->sentTime);
@@ -928,9 +922,11 @@ void reporter_handle_packet_bb_client (struct ReporterData *data, struct ReportS
 	double asym = bbowdfro - bbowdto;
 	stats->ts.prevpacketTime = packet->packetTime;
 #if 0
-	fprintf(stderr, "BB Debug: ctx=%lx.%lx srx=%lx.%lx stx=%lx.%lx crx=%lx.%lx\n", packet->sentTime.tv_sec, packet->sentTime.tv_usec, packet->sentTimeRX.tv_sec, packet->sentTimeRX.tv_usec, packet->sentTimeTX.tv_sec, packet->sentTimeTX.tv_usec, packet->packetTime.tv_sec, packet->packetTime.tv_usec);
+	fprintf(stderr, "BB Debug: ctx=%lx.%lx srx=%lx.%lx stx=%lx.%lx crx=%lx.%lx\n", packet->sentTime.tv_sec, packet->sentTime.tv_usec, packet->sentTimeRX.tv_sec, packet->sentTimeRX.tv_usec, packet->sentTimeTX.tv_sec, packet->sentTimeTX.tv_usec, packet->packetTime.tv_sec, packet->pAckettime.tv_usec);
 	fprintf(stderr, "BB Debug: ctx=%ld.%ld srx=%ld.%ld stx=%ld.%ld crx=%ld.%ld\n", packet->sentTime.tv_sec, packet->sentTime.tv_usec, packet->sentTimeRX.tv_sec, packet->sentTimeRX.tv_usec, packet->sentTimeTX.tv_sec, packet->sentTimeTX.tv_usec, packet->packetTime.tv_sec, packet->packetTime.tv_usec);
 #endif
+	stats->iBBrunning += bbrtt;
+	stats->fBBrunning += bbrtt;
 	reporter_update_mmm(&stats->bbrtt.current, bbrtt);
 	reporter_update_mmm(&stats->bbrtt.total, bbrtt);
 	reporter_update_mmm(&stats->bbowdto.total, bbowdto);
@@ -1106,6 +1102,7 @@ static inline void reporter_reset_transfer_stats_client_tcp (struct TransferInfo
     stats->sock_callstats.write.tcpstats.retry = 0;
 #endif
     if (isBounceBack(stats->common)) {
+	stats->iBBrunning = 0;
 	reporter_reset_mmm(&stats->bbrtt.current);
 	reporter_reset_mmm(&stats->bbowdto.current);
 	reporter_reset_mmm(&stats->bbowdfro.current);
@@ -1591,7 +1588,6 @@ void reporter_transfer_protocol_client_bb_tcp (struct ReporterData *data, int fi
     struct TransferInfo *stats = &data->info;
 
     if (final) {
-        stats->ts.iLastBB = TimeDifference(stats->ts.packetTime, stats->ts.startTime);
 	if ((stats->cntBytes > 0) && stats->output_handler && !TimeZero(stats->ts.intervalTime)) {
 	    // print a partial interval report if enable and this a final
 	    if ((stats->output_handler) && !(stats->isMaskOutput)) {
@@ -1608,19 +1604,12 @@ void reporter_transfer_protocol_client_bb_tcp (struct ReporterData *data, int fi
 	reporter_set_timestamps_time(&stats->ts, TOTAL);
 	stats->final=1;
     } else {
-        stats->ts.iLastBB = TimeDifference(stats->ts.prevpacketTime, stats->ts.startTime);
-	stats->ts.iFirstBB = TimeDifference(stats->ts.BBTime0, stats->ts.startTime);
-	stats->ts.iRunningBB += (stats->ts.iLastBB - stats->ts.iFirstBB);
-	stats->final=0;
 	stats->cntBytes = stats->total.Bytes.current - stats->total.Bytes.prev;
     }
     if ((stats->output_handler) && !(stats->isMaskOutput))
-	(*stats->output_handler)(stats);
+        (*stats->output_handler)(stats);
     if (!final) {
 	reporter_reset_transfer_stats_client_tcp(stats);
-	if (isBounceBack(stats->common) && !isPeriodicBurst(stats->common)) {
-	    stats->ts.BBTime0 = stats->ts.prevpacketTime;
-	}
     }
 }
 
@@ -1637,6 +1626,7 @@ void reporter_transfer_protocol_server_bb_tcp (struct ReporterData *data, int fi
 	    }
         }
 #if HAVE_TCP_STATS
+
 	stats->sock_callstats.write.tcpstats.retry = stats->sock_callstats.write.tcpstats.retry_tot;
 #endif
 	stats->cntBytes = stats->total.Bytes.current;
@@ -1743,6 +1733,7 @@ int reporter_condprint_time_interval_report (struct ReporterData *data, struct R
     // Print a report if packet time exceeds the next report interval time,
     // Also signal to the caller to move to the next report (or packet ring)
     // if there was output. This will allow for more precise interval sum accounting.
+    // printf("***** pt = %ld.%ld next = %ld.%ld\n", packet->packetTime.tv_sec, packet->packetTime.tv_usec, stats->ts.nextTime.tv_sec, stats->ts.nextTime.tv_usec);
     if (TimeDifference(stats->ts.nextTime, packet->packetTime) < 0) {
 	assert(data->transfer_protocol_handler!=NULL);
 	advance_jobq = 1;

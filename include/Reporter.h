@@ -310,9 +310,6 @@ enum TimeStampType {
 struct ReportTimeStamps {
     double iStart;
     double iEnd;
-    double iLastBB;
-    double iFirstBB;
-    double iRunningBB;
     double significant_partial;
     struct timeval startTime;
     struct timeval matchTime;
@@ -323,7 +320,6 @@ struct ReportTimeStamps {
     struct timeval intervalTime;
     struct timeval IPGstart;
     struct timeval nextTCPSampleTime;
-    struct timeval BBTime0;
 };
 
 struct TransferInfo {
@@ -363,6 +359,8 @@ struct TransferInfo {
     bool isEnableTcpInfo;
     struct RunningMMMStats write_mmm;
     struct histogram *write_histogram;
+    double iBBrunning;
+    double fBBrunning;
 };
 
 struct SumReport {

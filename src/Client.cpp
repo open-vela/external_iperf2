@@ -395,7 +395,6 @@ inline void Client::SetReportStartTime () {
     myReport->info.ts.startTime.tv_usec = now.getUsecs();
     myReport->info.ts.IPGstart = myReport->info.ts.startTime;
     myReport->info.ts.prevpacketTime = myReport->info.ts.startTime;
-    myReport->info.ts.BBTime0 = myReport->info.ts.startTime;
     if (!TimeZero(myReport->info.ts.intervalTime)) {
 	myReport->info.ts.nextTime = myReport->info.ts.startTime;
 	TimeAdd(myReport->info.ts.nextTime, myReport->info.ts.intervalTime);
@@ -1011,7 +1010,6 @@ void Client::RunBounceBackTCP () {
 	    PostNullEvent(); // this will set the now timestamp
 	    reportstruct->sentTime.tv_sec = now.getSecs();
 	    reportstruct->sentTime.tv_usec = now.getUsecs();
-	    reportstruct->BBTime0 = reportstruct->sentTime;
 	    isFirst = true;
 	} else {
 	    burst_id++;
