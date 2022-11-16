@@ -226,6 +226,7 @@ static void kalman_update (struct kalman_state *state, double measurement) {
 #ifdef HAVE_CLOCK_GETTIME
 // Delay calls for systems with clock_gettime
 // Working units are nanoseconds and structures are timespec
+#ifdef HAVE_KALMAN
 static void timespec_add_double (struct timespec *tv0, double value) {
     tv0->tv_nsec += (unsigned long) value;
     if (tv0->tv_nsec >= BILLION) {
@@ -252,6 +253,7 @@ static void timespec_add( struct timespec *tv0, struct timespec *tv1)
 	tv0->tv_sec++;
     }
 }
+#endif
 static inline
 int timespec_greaterthan(struct timespec tv1, struct timespec tv0) {
     if (tv1.tv_sec > tv0.tv_sec ||					\
