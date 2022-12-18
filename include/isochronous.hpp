@@ -48,7 +48,6 @@
 #ifndef ISOCHRONOUS_H
 #define ISOCHRONOUS_H
 
-#include <time.h>
 #include "Settings.hpp"
 #include "Timestamp.hpp"
 
@@ -56,33 +55,21 @@
 namespace Isochronous {
     class FrameCounter {
     public :
-        FrameCounter(double, const Timestamp& start);
-        FrameCounter(double);
-        ~FrameCounter();
-	unsigned int get(void) const;
+	FrameCounter(double);
 	unsigned int get(long *);
-	unsigned int get(const Timestamp&) const;
 	unsigned int period_us(void);
 	unsigned int wait_tick(void);
 	unsigned int wait_sync(long sec, long usec);
 	long getSecs(void);
 	long getUsecs(void);
 	void reset(void);
-        Timestamp next_slot(void);
 	unsigned int slip;
-    private :
-	double frequency;
-	Timestamp startTime;
-	Timestamp nextslotTime;
-	unsigned int period;  // units microseconds or 100 ns
-	unsigned int lastcounter;
-	unsigned int slot_counter;
-#ifdef WIN32
-	int mySetWaitableTimer (long delay_time);
-	HANDLE my_timer;	// Timer handle
-	LARGE_INTEGER delay;    // units is 100 nanoseconds
-#endif
 
+    private :
+	Timestamp startTime;
+	double frequency;
+	unsigned int period;  // units microseconds
+	unsigned int lastcounter;
     }; // end class FrameCounter
 }
 #endif // ISOCHRONOUS_H
