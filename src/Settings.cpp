@@ -359,6 +359,8 @@ void Settings_Initialize (struct thread_Settings *main) {
     setDontRoute(main);
 #endif
     main->mFPS = 1;
+
+    Condition_Initialize(&main->awake_me);
 } // end Settings
 
 void Settings_Copy (struct thread_Settings *from, struct thread_Settings **into, int copyall) {
