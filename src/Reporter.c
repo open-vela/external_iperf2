@@ -807,7 +807,7 @@ static void reporter_handle_rxmsg_oneway_transit (struct TransferInfo *stats, st
 	stats->burstid_transition = true;
     } else if (stats->burstid_transition && packet->frameID && (packet->frameID != stats->isochstats.frameID)) {
 	stats->burstid_transition = false;
-	fprintf(stderr,"%sError: expected burst id %u but got %" PRIdMAX "\n", \
+	fprintf(stderr,"%sError: expected burst id %" PRIu32 " but got %" PRIdMAX "\n", \
 		stats->common->transferIDStr, stats->isochstats.frameID + 1, packet->frameID);
 	stats->isochstats.frameID = packet->frameID;
     }
@@ -827,7 +827,7 @@ static inline void reporter_handle_txmsg_oneway_transit (struct TransferInfo *st
 	// printf("***Burst id = %ld, transit = %f\n", packet->frameID, stats->transit.lastTransit);
 	if (isIsochronous(stats->common)) {
 	    if (packet->frameID && (packet->frameID != (stats->isochstats.frameID + 1))) {
-		fprintf(stderr,"%sError: expected burst id %u but got %" PRIdMAX "\n", \
+		fprintf(stderr,"%sError: expected burst id %" PRIu32 " but got %" PRIdMAX "\n", \
 			stats->common->transferIDStr, stats->isochstats.frameID + 1, packet->frameID);
 	    }
 	    stats->isochstats.frameID = packet->frameID;

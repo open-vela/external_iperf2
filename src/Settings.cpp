@@ -1562,7 +1562,7 @@ void Settings_ModalOptions (struct thread_Settings *mExtSettings) {
 	        mExtSettings->mBurstSize = byte_atoi("1M"); //default to 1 Mbyte
 	    }
 	    if (static_cast<int> (mExtSettings->mBurstSize) < mExtSettings->mBufLen) {
-		fprintf(stderr, "ERROR: option of --burst-size %d must be equal or larger to write length (-l) %d\n", mExtSettings->mBurstSize, mExtSettings->mBufLen);
+		fprintf(stderr, "ERROR: option of --burst-size %" PRIu32 " must be equal or larger to write length (-l) %d\n", mExtSettings->mBurstSize, mExtSettings->mBufLen);
 		bail = true;
 	    }
 	} else if (!isBounceBack(mExtSettings) && (static_cast<int> (mExtSettings->mBurstSize) > 0)) {
