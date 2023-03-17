@@ -83,7 +83,7 @@ public:
     /* -------------------------------------------------------------------
      * Create a timestamp, with the given seconds/microseconds
      * ------------------------------------------------------------------- */
-    Timestamp(long sec, long usec) {
+    Timestamp(time_t sec, long usec) {
         set(sec, usec);
     }
 
@@ -111,7 +111,7 @@ public:
     /* -------------------------------------------------------------------
      * Set timestamp to the given seconds/microseconds
      * ------------------------------------------------------------------- */
-    void set(long sec, long usec) {
+    void set(time_t sec, long usec) {
         assert(sec  >= 0);
         assert(usec >= 0  &&  usec < kMillion);
 
@@ -123,14 +123,14 @@ public:
      * Set timestamp to the given seconds
      * ------------------------------------------------------------------- */
     void set(double sec) {
-        mTime.tv_sec  = (long) sec;
+        mTime.tv_sec  = (time_t) sec;
         mTime.tv_usec = (long) ((sec - mTime.tv_sec) * kMillion);
     }
 
     /* -------------------------------------------------------------------
      * return seconds portion of timestamp
      * ------------------------------------------------------------------- */
-    long inline getSecs(void) {
+    time_t inline getSecs(void) {
         return mTime.tv_sec;
     }
 
@@ -240,8 +240,8 @@ public:
      * TODO optimize?
      * ------------------------------------------------------------------- */
     void add(double sec) {
-        mTime.tv_sec  += (long) sec;
-        mTime.tv_usec += (long) ((sec - ((long) sec)) * kMillion);
+        mTime.tv_sec  += (time_t) sec;
+        mTime.tv_usec += (long) ((sec - ((time_t) sec)) * kMillion);
 
         // watch for overflow
         if (mTime.tv_usec >= kMillion) {
