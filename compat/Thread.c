@@ -232,6 +232,10 @@ void thread_start(struct thread_Settings* thread) {
         struct sched_param schedparam;
 
         pthread_getschedparam(pthread_self(), &policy, &schedparam);
+        // Make sure reporter thread has higher priority to avoid dropping reports
+        if ((thread->mThreadMode == kMode_Reporter) || (thread->mThreadMode == kMode_ReporterClient)) {
+            schedparam.sched_priority++;
+        }
         pthread_attr_init(&attr);
         pthread_attr_setschedpolicy(&attr, policy);
         pthread_attr_setschedparam(&attr, &schedparam);
