@@ -239,6 +239,7 @@ void thread_start(struct thread_Settings* thread) {
         pthread_attr_init(&attr);
         pthread_attr_setschedpolicy(&attr, policy);
         pthread_attr_setschedparam(&attr, &schedparam);
+        pthread_attr_setstacksize(&attr, CONFIG_UTILS_IPERF2_STACKSIZE);
 #endif
         // increment thread count
         Condition_Lock(thread_sNum_cond);
