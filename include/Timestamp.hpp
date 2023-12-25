@@ -124,7 +124,7 @@ public:
      * ------------------------------------------------------------------- */
     void set(double sec) {
         mTime.tv_sec  = (time_t) sec;
-        mTime.tv_usec = (long) ((sec - mTime.tv_sec) * kMillion);
+        mTime.tv_usec = (long) ((sec - mTime.tv_sec) * (double)kMillion);
     }
 
     /* -------------------------------------------------------------------
@@ -241,7 +241,7 @@ public:
      * ------------------------------------------------------------------- */
     void add(double sec) {
         mTime.tv_sec  += (time_t) sec;
-        mTime.tv_usec += (long) ((sec - ((time_t) sec)) * kMillion);
+        mTime.tv_usec += (long) ((sec - ((time_t) sec)) * (double)kMillion);
 
         // watch for overflow
         if (mTime.tv_usec >= kMillion) {
