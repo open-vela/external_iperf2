@@ -290,8 +290,8 @@ const char short_options[] = "146b:c:def:hi:l:mn:o:p:rst:uvw:x:y:zAB:CDF:H:IL:M:
 #define DEFAULTS()
 
 const long kDefault_UDPRate = 1024 * 1024; // -u  if set, 1 Mbit/sec
-#if defined(CONFIG_TOOLS_IPERF2_TCP_BUFSIZE)
-const int kDefault_TCPBufLen = CONFIG_TOOLS_IPERF2_TCP_BUFSIZE;
+#if defined(CONFIG_UTILS_IPERF2_TCP_BUFSIZE)
+const int kDefault_TCPBufLen = CONFIG_UTILS_IPERF2_TCP_BUFSIZE;
 #else
 const int kDefault_TCPBufLen = 128 * 1024; // TCP default read/write size
 #endif
@@ -331,8 +331,8 @@ void Settings_Initialize (struct thread_Settings *main) {
     main->mAmount       = 1000;          // -t,  10 seconds, units is 10 ms
     main->mIntervalMode = kInterval_None;// -i   none, time, packets, or bursts
     // skip version                      // -v,
-#if defined (CONFIG_TOOLS_IPERF2_RECV_BUFSIZE)
-    main->mTCPWin       = CONFIG_TOOLS_IPERF2_RECV_BUFSIZE;// -w,  ie. don't set window
+#if defined(CONFIG_UTILS_IPERF2_RECV_BUFSIZE)
+    main->mTCPWin       = CONFIG_UTILS_IPERF2_RECV_BUFSIZE;// -w,  ie. don't set window
 #endif
 
     // more esoteric options
