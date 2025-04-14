@@ -1588,7 +1588,7 @@ void Client::AwaitServerFinPacket () {
             // socket ready to read, this packet size
 	    // is set by the server.  Assume it's large enough
 	    // to contain the final server packet
-	    rc = read(mySocket, mSettings->mBuf, MAXUDPBUF);
+	    rc = read(mySocket, mSettings->mBuf, MIN(MAXUDPBUF, mSettings->mBufLen));
 
 	    // dump any 2.0.13 client acks sent at the start of traffic
 	    if (rc == sizeof(client_hdr_ack)) {
