@@ -244,6 +244,8 @@ bool Client::my_connect (bool close_on_fail) {
 	    assert(reporthdr);
 	    PostReport(reporthdr);
 	} else {
+	    // After the socket is closed, synchronization is required
+	    mSettings->mSock=mySocket;
 	    PostReport(InitConnectionReport(mSettings));
 	}
     }
