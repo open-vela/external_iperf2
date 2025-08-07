@@ -237,7 +237,6 @@ struct thread_Settings {
     // chars
     char   mFormat;                 // -f
     int mTTL;                    // -T
-    char pad1[2];
     // structs or miscellaneous
     iperf_sockaddr peer;
     Socklen_t size_peer;
