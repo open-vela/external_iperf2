@@ -181,16 +181,9 @@ int recvn (int inSock, char *outBuf, int inLen, int flags) {
 		    nread = inLen - nleft;
 		    goto DONE;
 		}
-#ifdef HAVE_THREAD_DEBUG
-		WARN_errno(1, "recvn non-fatal");
-#endif
+		// WARN_errno(1, "recvn non-fatal");
 		break;
 	    case 0:
-#ifdef HAVE_THREAD_DEBUG
-		WARN(1, "recvn peer close");
-#endif
-		nread = inLen - nleft;
-		goto DONE;
 		// read timeout - retry
 		break;
 	    default :
